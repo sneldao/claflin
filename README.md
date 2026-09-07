@@ -18,7 +18,7 @@ The current release supports **paper trading with live venue estimates**:
 
 No stock or amount is preselected. Paper records are simulations, not wallet positions or call receipts. They are visible to anyone using that browser profile, do not sync to an account, and can be explicitly deleted.
 
-**Voice boundary:** optional browser dictation or a typed instruction updates the same draft. It is not a live Hetty conversation and never authorizes a trade. The structured broker-tool bridge remains unimplemented.
+**Voice:** “Ring Hetty” opens a live ElevenLabs ConvAI voice session (`POST /api/hetty/session` mints a short-lived signed URL; the API key and agent id stay server-side). Hetty’s tool calls are *client tools* that execute against the desk in the caller’s browser — she can choose the instrument, set the instruction and amount, request an estimate, describe the desk, and record a paper trade only on explicit confirmation. She cannot sign, submit or reconcile — nothing moves onchain. The provisioned agent is `ELEVENLABS_AGENT_HETTY` (see `scripts/create-hetty-agent.mjs`). If the voice session is not configured, the rest of the desk is unaffected.
 
 **Live execution boundary:** there is no transaction construction, signing or submission in the desk. Account eligibility, funding, allowances, router compatibility and outcome reconciliation remain release gates. Paper trading does not establish eligibility for the live products.
 

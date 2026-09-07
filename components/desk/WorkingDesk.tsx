@@ -5,9 +5,10 @@ import { HOUSE_DESKS } from '@/lib/house';
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import { DeskInstrument } from './DeskInstrument';
+import { useCallback, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
-import { VoiceIntent } from './VoiceIntent';
+import { HettyCall } from './HettyCall';
 import { HettyStatus } from './HettyStatus';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
@@ -17,16 +18,22 @@ import styles from './WorkingDesk.module.css';
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const hetty = HOUSE_DESKS[0];
+  const [hettyLive, setHettyLive] = useState(false);
+  const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
   const selected = DESK_INSTRUMENTS.find(s => s.id === desk.state.draft.instrumentId);
   const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
-  const instrumentStage = desk.state.stage === 'review' || desk.state.stage === 'saved'
-    ? 'confirmation'
-    : desk.state.stage === 'loading'
-      ? 'conversation'
-      : 'arrival';
-  const instrumentLabel = selected
-    ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'CALLING THE VENUE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
-    : 'PAPER TRADING / NO LIVE ORDERS';
+  const instrumentStage = hettyLive
+    ? 'conversation'
+    : desk.state.stage === 'review' || desk.state.stage === 'saved'
+      ? 'confirmation'
+      : desk.state.stage === 'loading'
+        ? 'conversation'
+        : 'arrival';
+  const instrumentLabel = hettyLive
+    ? 'HETTY — ON THE LINE'
+    : selected
+      ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'CALLING THE VENUE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
+      : 'PAPER TRADING / NO LIVE ORDERS';
 
   const loadInstrument = (instrumentId: string) => {
     desk.edit({ ...desk.state.draft, instrumentId });
@@ -60,10 +67,10 @@ export function WorkingDesk() {
         <aside className={styles.support} aria-label="Your broker and instruction input">
           <div id="hetty" className={styles.brokerNote}>
             <span>YOUR AI BROKER</span><h2>{hetty.name}.</h2><p>{hetty.approach}</p>
-            <details><summary>About Hetty</summary><p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. Her role is to help make trading decisions clear, not to make them for you.</p><p>Live conversations are not connected in this release. You can prepare an instruction directly or use optional dictation below.</p></details>
+            <details><summary>About Hetty</summary><p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. Her role is to help make trading decisions clear, not to make them for you.</p><p>Ring her below for a live voice session — she can draft, quote and record paper trades on your ticket while you watch. She cannot place real orders; this release is paper-only.</p></details>
           </div>
           <div id="on-desk"><DeskBoard desk={desk} /></div>
-          <VoiceIntent onApply={desk.edit} disabled={desk.state.stage === 'loading'} />
+          <HettyCall desk={desk} onLiveChange={handleLiveChange} />
         </aside>
       </div>
       <PaperHistory desk={desk} />

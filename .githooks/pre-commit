@@ -23,6 +23,7 @@ SKIP_PATTERNS=(
   "contracts-deploy/"
   "tsconfig.tsbuildinfo"
   "tests/"
+  "docs/PRODUCT_DIRECTION.md"
 )
 
 # ─────────────────────────────────────────────

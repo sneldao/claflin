@@ -51,13 +51,23 @@ desk and are not product setup steps:
 ```
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
-ELEVENLABS_API_KEY=
 ELEVENLABS_WEBHOOK_SECRET=
 ARBITRUM_RPC_URL=
 FACILITATOR_PRIVATE_KEY=
 AGENT_WALLET=
 PAYMENT_RECEIVER=
 ```
+
+The live "Ring Hetty" voice session needs two variables — without them the
+desk still works and the call card reports the line as not connected:
+
+```
+ELEVENLABS_API_KEY=
+ELEVENLABS_AGENT_HETTY=
+```
+
+Provision the agent once with `node --env-file=.env.local scripts/create-hetty-agent.mjs`,
+then set the printed id.
 
 After updating env vars, trigger a manual redeploy — Vercel only picks up new
 values on the next build.

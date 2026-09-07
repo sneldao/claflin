@@ -1,6 +1,6 @@
 # Claflin Product Direction
 
-**Status:** Canonical product cutover approved, 2026-09-05. The old onboarding/directory approach is retired. `/` is Hetty's desk, connecting live estimates to explicit review and local paper records. `/desk` redirects there; development studies are not client navigation. Live execution and the Hetty conversation bridge remain unimplemented.
+**Status:** Canonical product cutover approved, 2026-09-05. The old onboarding/directory approach is retired. `/` is Hetty's desk, connecting live estimates to explicit review and local paper records. `/desk` redirects there; development studies are not client navigation. Live execution remains unimplemented. Hetty is live on the desk as an ElevenLabs voice session whose client tools drive the same paper draft — drafting, quoting and recording are voice-reachable; signing and submission are not.
 
 **Governing decision:** there are no existing users or collaborators requiring preservation of the old experience. Be intentional about replacement: preserve useful technical capabilities selectively, not legacy flows, identities or product assumptions. Git history is the reference for the retired approach.
 
