@@ -45,6 +45,8 @@ Remaining within this milestone:
 
 ## 3. Establish account access and transaction preparation
 
+The capability-tier model (anonymous desk → account → authority) and the identity mechanism recommendation are in [docs/AUTH_AND_ACCESS.md](docs/AUTH_AND_ACCESS.md). Voice remains a channel over the shared draft, never an authentication boundary.
+
 - Decide the client wallet/account and funding model, and the applicable eligibility policy for Coinbase Tokenized Stocks.
 - Verify the execution router against the actual factory and selected pools. The historical router constant is not execution acceptance evidence.
 - Bind a proposal to product, account, chain, side, exact amounts, fee/slippage bounds and validity. Separate token allowances from swap authorization.
