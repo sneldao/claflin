@@ -49,11 +49,11 @@ export function WorkingDesk() {
           <h1 id="desk-title">Your trading<br /><em>desk.</em></h1>
           <p>A clear view of the trade before you make it. Explore Coinbase Tokenized Stocks on Base, review the terms, and decide for yourself.</p>
           <p className={styles.welcomeNote}>Hetty’s desk is open for paper trading. Start with a stock.</p>
-          <HettyStatus desk={desk} />
           <div className={styles.instrumentShell} data-stage={instrumentStage}>
             <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} label={instrumentLabel} /></div>
             <p className={styles.instrumentCaption} aria-hidden="true"><span>CLAFLIN / DESK INSTRUMENT</span>ENAMEL · BRASS · LIGHT</p>
           </div>
+          <HettyStatus desk={desk} />
         </section>
         <TradeTicket desk={desk} />
         <aside className={styles.support} aria-label="Your broker and instruction input">

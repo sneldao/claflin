@@ -178,7 +178,7 @@
 .history { border-top: 1px solid var(--desk-line); padding-top: 35px; }
 .history h2 { font: 38px var(--font-display), serif; margin: 15px 0 !important; }
 .history > div > p:not(.eyebrow) { color: var(--desk-muted); font-size: 13px; }
-.empty { color: var(--desk-muted); padding-block: 28px; font-size: 14px; }
+.empty { color: var(--desk-muted); padding: 26px 22px; font-size: 14px; border: 1px dashed var(--desk-line); border-radius: 2px; background: #101f1a55; }
 .record { padding: 25px 0; border-bottom: 1px solid var(--desk-line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 15px 25px; align-items: center; }
 .record h3 { font: 20px var(--font-display), serif; margin: 12px 0; overflow-wrap: anywhere; }
 .record span, .record small { font: 10px/1.8 var(--font-mono), monospace; color: var(--desk-muted); }
