@@ -10,13 +10,29 @@ import { PaperHistory } from './PaperHistory';
 import { VoiceIntent } from './VoiceIntent';
 import { HettyStatus } from './HettyStatus';
 import { DeskBoard } from './DeskBoard';
+import { TickerTape } from './TickerTape';
+import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const hetty = HOUSE_DESKS[0];
+  const selected = DESK_INSTRUMENTS.find(s => s.id === desk.state.draft.instrumentId);
   const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
-  const instrumentStage = desk.state.stage === 'review' || desk.state.stage === 'saved' ? 'confirmation' : 'arrival';
+  const instrumentStage = desk.state.stage === 'review' || desk.state.stage === 'saved'
+    ? 'confirmation'
+    : desk.state.stage === 'loading'
+      ? 'conversation'
+      : 'arrival';
+  const instrumentLabel = selected
+    ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'CALLING THE VENUE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
+    : 'PAPER TRADING / NO LIVE ORDERS';
+
+  const loadInstrument = (instrumentId: string) => {
+    desk.edit({ ...desk.state.draft, instrumentId });
+    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
+    document.getElementById('amount')?.focus();
+  };
 
   return <div className={styles.workspace}>
     <div className={styles.room} aria-hidden="true"><div className={styles.window}><i /><i /><i /></div><div className={styles.lightPool} /></div>
@@ -25,6 +41,7 @@ export function WorkingDesk() {
       <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#on-desk">On your desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a></nav>
     </header>
     <main id="main-content" className={styles.main}>
+      <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       <div className={styles.mode}><span>HETTY / BASE</span><strong>PAPER TRADING</strong><span>Live estimates. No real funds move.</span></div>
       <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
         <section className={styles.introduction} aria-labelledby="desk-title">
@@ -34,7 +51,7 @@ export function WorkingDesk() {
           <p className={styles.welcomeNote}>Hetty’s desk is open for paper trading. Start with a stock.</p>
           <HettyStatus desk={desk} />
           <div className={styles.instrumentShell} data-stage={instrumentStage}>
-            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} /></div>
+            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} label={instrumentLabel} /></div>
             <p className={styles.instrumentCaption} aria-hidden="true"><span>CLAFLIN / DESK INSTRUMENT</span>ENAMEL · BRASS · LIGHT</p>
           </div>
         </section>

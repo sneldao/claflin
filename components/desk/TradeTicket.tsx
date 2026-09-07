@@ -35,6 +35,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
     data-slip={slipActive ? 'true' : 'false'}
     data-acknowledged={recorded ? 'true' : 'false'}
   >
+    {recorded && <span className={styles.stamp} aria-hidden="true"><span>RECORDED</span><small>PAPER · THIS BROWSER</small></span>}
     <div className={styles.paperTop}>
       <HouseMark small />
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>

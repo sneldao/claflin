@@ -46,7 +46,8 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | House mark and optional instrument rendering | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
 | Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
-| Thin HTTP boundary | `lib/trading/http.ts`, `app/api/stocks/quote/route.ts` |
+| Thin HTTP boundary | `lib/trading/http.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
+| Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `components/desk/TickerTape.tsx` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 
 Trading uses decimal strings and integer base units. The service verifies chain, pool/factory, token order, decimals and output at a recent block. Estimates are never called executable orders. Reference observations have explicit freshness and uncertainty labels.

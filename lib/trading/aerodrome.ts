@@ -12,15 +12,15 @@ const quoterAbi = [
   'function factory() view returns (address)',
   'function quoteExactInput(bytes path,uint256 amountIn) returns (uint256 amountOut,uint160[] prices,uint32[] ticks,uint256 gasEstimate)',
 ];
-const feedAbi = [
+export const feedAbi = [
   'function decimals() view returns (uint8)',
   'function latestRoundData() view returns (uint80 roundId,int256 answer,uint256 startedAt,uint256 updatedAt,uint80 answeredInRound)',
 ];
 
-const BASE = ethers.Network.from(8453);
+export const BASE = ethers.Network.from(8453);
 
 /** Prefer env, then rotate public Base endpoints when one rate-limits. */
-function baseRpcCandidates(): string[] {
+export function baseRpcCandidates(): string[] {
   const fromEnv = [BASE_RPC_URL, process.env.BASE_RPC_FALLBACK_URL].filter((u): u is string => Boolean(u && u.trim()));
   const publicFallbacks = [
     'https://mainnet.base.org',
@@ -31,7 +31,7 @@ function baseRpcCandidates(): string[] {
   return [...new Set([...fromEnv, ...publicFallbacks].map(u => u.replace(/\/+$/, '')))];
 }
 
-function isTransientRpcError(error: unknown): boolean {
+export function isTransientRpcError(error: unknown): boolean {
   const info = error && typeof error === 'object' && 'info' in error
     ? (error as { info?: { error?: { code?: number; message?: string }; responseStatus?: string } }).info
     : undefined;
@@ -51,7 +51,7 @@ function isTransientRpcError(error: unknown): boolean {
     || message.includes('fetch failed');
 }
 
-async function withRpcRetry<T>(run: () => Promise<T>, attempts = 2): Promise<T> {
+export async function withRpcRetry<T>(run: () => Promise<T>, attempts = 2): Promise<T> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
