@@ -40,7 +40,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'",
       // ElevenLabs voice session (wss + https) and same-origin API. Dev adds
       // same-origin ws for HMR — 'self' already covers wss on modern engines.
-      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io${isDev ? ' ws://localhost:*' : ''}`,
+      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io${isDev ? ' ws://localhost:*' : ''}`,
       "media-src 'self' blob:", // ConvAI audio + worklet buffers
       "worker-src 'self' blob:", // AudioWorklet / Three.js workers
       "img-src 'self' data: blob:",
@@ -49,6 +49,7 @@ const nextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
+      "frame-src https://auth.privy.io https://*.privy.io", // Privy login modal iframe
     ].join('; ');
     return [
       {
@@ -113,8 +114,12 @@ const nextConfig = {
     ];
   },
 
-  // Webpack configuration — no retired client-only SDKs to externalize.
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
+    // Privy ships optional Farcaster mini-app imports that are not installed.
+    config.plugins.push(
+      new webpack.IgnorePlugin({ resourceRegExp: /^@farcaster\/mini-app-solana$/ }),
+      new webpack.IgnorePlugin({ resourceRegExp: /^@farcaster\/mini-app-wagmi-connector$/ }),
+    );
     return config;
   },
 };

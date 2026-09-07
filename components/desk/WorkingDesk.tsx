@@ -12,11 +12,15 @@ import { HettyCall } from './HettyCall';
 import { HettyStatus } from './HettyStatus';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
+import { useDeskAuth } from '@/components/auth/AuthProvider';
+import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
 export function WorkingDesk() {
   const desk = useTradingDesk();
+  const auth = useDeskAuth();
+  usePaperSync(desk);
   const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
@@ -46,7 +50,16 @@ export function WorkingDesk() {
     <div className={styles.room} aria-hidden="true"><div className={styles.window}><i /><i /><i /></div><div className={styles.lightPool} /></div>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, your trading desk"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>A CONSIDERED APPROACH</small></span></Link>
-      <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#on-desk">On your desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a></nav>
+      <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#on-desk">On your desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a>
+        {auth.enabled && (auth.authenticated ? (
+          <span className={styles.authChip}>
+            <span className={styles.authLabel} title={auth.label ?? 'Signed in'}>{auth.label ?? 'Signed in'}</span>
+            <button type="button" onClick={auth.logout}>Sign out</button>
+          </span>
+        ) : (
+          <button type="button" className={styles.authLink} onClick={auth.login}>Sign in</button>
+        ))}
+      </nav>
     </header>
     <main id="main-content" className={styles.main}>
       <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />

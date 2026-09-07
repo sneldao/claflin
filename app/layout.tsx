@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Fraunces, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { HOUSE } from '@/lib/house';
+import { DeskAuthProvider } from '@/components/auth/AuthProvider';
 
 // Distinctive type: Fraunces (variable display) + IBM Plex Sans (body) + JetBrains Mono (codes & balances)
 const displayFont = Fraunces({
@@ -99,7 +100,12 @@ export default function RootLayout({
           Skip to main content
         </a>
         
-        {children}
+        {/*
+          Optional account tier: mounts Privy only when the app is configured
+          (NEXT_PUBLIC_PRIVY_APP_ID/CLIENT_ID). Otherwise this is a no-op
+          context — the paper desk stays anonymous.
+        */}
+        <DeskAuthProvider>{children}</DeskAuthProvider>
       </body>
     </html>
   );

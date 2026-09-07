@@ -48,7 +48,7 @@ Open decision: Privy vs Dynamic vs a lean Auth.js + wallet-link stack. Privy is 
 ## Phasing
 
 1. **Now (done):** anonymous paper desk; server-side key isolation; rate-limited session minting; CSP + permissions headers; voice bound to client tools with confirmation gating.
-2. **Account tier:** Privy login (email/social, wallet link optional) → session cookie → `/api/hetty/session` requires it → paper records sync to the account (Upstash/Redis or a real store), transcripts attach to the conversation's owning account.
+2. **Account tier (scaffolded):** `components/auth/AuthProvider.tsx` mounts Privy only when `NEXT_PUBLIC_PRIVY_APP_ID`/`NEXT_PUBLIC_PRIVY_CLIENT_ID` are set — otherwise the desk is unchanged and the SDK never enters the bundle. A "Sign in" control appears in the header; `/api/hetty/session` binds the call to the verified account when a token is presented (per-user limits) and stays anonymous otherwise; `POST/GET /api/paper` syncs records to the account (Redis) when signed in. Remaining: provision the Privy app, decide on transcript storage, add session-cookie hardening if/when privileged routes need it.
 3. **Authority tier:** wallet binding + eligibility service → execution adapter behind explicit per-trade authorization. Voice may narrate and draft; the signature ceremony happens on-screen.
 
 ## What is explicitly out
