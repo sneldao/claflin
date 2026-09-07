@@ -40,7 +40,7 @@ Remaining acceptance work:
 Remaining within this milestone:
 
 - Microphone consent is requested by the browser at ring time; dropped calls and mic denial surface honest errors. The desk never auto-launches a call.
-- Post-call transcripts are not wired to the desk; the retained webhook pipeline remains dormant.
+- Post-call transcripts save to the account when signed in (`/api/hetty/transcript`, 30-day TTL); anonymous calls store nothing. The retained webhook pipeline remains dormant.
 - Recording, account binding and a live-execution tool surface remain gated work, not voice-reachable.
 
 ## 3. Establish account access and transaction preparation

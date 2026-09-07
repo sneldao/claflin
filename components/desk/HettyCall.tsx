@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
+import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { resolveDeskAlias } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
@@ -131,13 +132,58 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   });
 
   const [callError, setCallError] = useState<string | null>(null);
+  const auth = useDeskAuth();
+  const authRef = useRef(auth);
+  useEffect(() => { authRef.current = auth; });
+
+  // Transcript capture — stored to the account only when signed in.
+  // Anonymous calls leave no record, consistent with the tier model.
+  const turnsRef = useRef<Array<{ role: 'user' | 'agent'; text: string; at: number }>>([]);
+  const convIdRef = useRef<string | null>(null);
+  const startedAtRef = useRef<number>(0);
+  const flushedRef = useRef(false);
+
+  const flushTranscript = useCallback(async () => {
+    if (flushedRef.current || !convIdRef.current || turnsRef.current.length === 0) return;
+    flushedRef.current = true;
+    const a = authRef.current;
+    if (!a.authenticated) return;
+    try {
+      const token = await a.getAccessToken();
+      if (!token) return;
+      await fetch('/api/hetty/transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          conversationId: convIdRef.current,
+          turns: turnsRef.current.slice(0, 500),
+          startedAt: startedAtRef.current || Date.now(),
+          endedAt: Date.now(),
+        }),
+      });
+    } catch { /* transcript loss is not a desk error */ }
+  }, []);
+
   const conversation = useConversation({
     onError: (e: unknown) => setCallError(
       /notallowed|permission|denied|getusermedia/i.test(String((e as { name?: string; message?: string })?.name ?? '') + ' ' + String((e as { message?: string })?.message ?? e))
         ? 'The microphone was not allowed. Grant mic access and ring again.'
         : 'The line dropped. Ring again when you are ready.'
     ),
-    onDisconnect: () => onLiveChange(false),
+    onMessage: (m: { message: string; role?: string; source?: string }) => {
+      const text = typeof m.message === 'string' ? m.message.trim() : '';
+      if (!text) return;
+      turnsRef.current.push({ role: (m.role === 'user' || m.source === 'user') ? 'user' : 'agent', text: text.slice(0, 4000), at: Date.now() });
+    },
+    onConversationMetadata: (m: { conversation_id?: string }) => { convIdRef.current = m?.conversation_id ?? null; },
+    onConnect: () => {
+      startedAtRef.current = Date.now();
+      turnsRef.current = [];
+      convIdRef.current = null;
+      flushedRef.current = false;
+      setCallError(null);
+    },
+    onDisconnect: () => { onLiveChange(false); void flushTranscript(); },
   });
   const live = conversation.status === 'connected';
   const connecting = conversation.status === 'connecting';
@@ -187,7 +233,9 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
         )}
       </div>
       {callError && <p role="alert" className={styles.callError}>{callError}</p>}
-      <p className={styles.callFoot}>Your browser will ask for the microphone when you ring.</p>
+      <p className={styles.callFoot}>
+        Your browser will ask for the microphone when you ring.{auth.enabled ? ' Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : ''}
+      </p>
     </section>
   );
 }
