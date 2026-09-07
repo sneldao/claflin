@@ -147,12 +147,20 @@ export function createDeskInstrument(
   const paperMat = new THREE.MeshStandardMaterial({ color: '#e7dfc9', roughness: 0.92, metalness: 0.02 });
   const slip = mesh(new THREE.BoxGeometry(1.5, 0.018, 1.05), paperMat, -0.55, 0.97, 1.28);
   slip.castShadow = true;
+  // The slip carries what it prints: the instrument line, painted onto
+  // its face so a close read shows the instruction, not blank paper.
+  const slipCanvas = document.createElement('canvas');
+  slipCanvas.width = 512;
+  slipCanvas.height = 340;
+  const slipContext = slipCanvas.getContext('2d');
+  const slipTexture = new THREE.CanvasTexture(slipCanvas);
+  slipTexture.colorSpace = THREE.SRGBColorSpace;
   const slipPrint = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.3, 0.16),
-    new THREE.MeshBasicMaterial({ color: '#4a5a43', toneMapped: false }),
+    new THREE.PlaneGeometry(1.32, 0.88),
+    new THREE.MeshBasicMaterial({ map: slipTexture, transparent: true, toneMapped: false }),
   );
   slipPrint.rotation.x = -Math.PI / 2;
-  slipPrint.position.set(0, 0.011, 0.18);
+  slipPrint.position.set(0, 0.011, 0.02);
   slip.add(slipPrint);
   slip.visible = false;
   // The needle on the brass dial — settles to a new bearing per stage.
@@ -216,6 +224,28 @@ export function createDeskInstrument(
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 
+  function paintSlip() {
+    if (!slipContext) return;
+    const c = slipContext;
+    c.clearRect(0, 0, 512, 340);
+    c.strokeStyle = '#27362b';
+    c.lineWidth = 4;
+    c.strokeRect(18, 18, 476, 304);
+    c.fillStyle = '#27362b';
+    c.font = '28px monospace';
+    c.fillText('CLAFLIN & CO.', 44, 66);
+    c.font = '22px monospace';
+    c.fillText('QUOTATION SLIP — PAPER', 44, 104);
+    c.moveTo(44, 128); c.lineTo(468, 128); c.lineWidth = 2; c.stroke();
+    c.font = '30px monospace';
+    c.fillText(displayLabel.slice(0, 22), 44, 182);
+    c.font = '22px monospace';
+    c.fillStyle = '#59614d';
+    c.fillText('SIMULATION — NO ORDER PLACED', 44, 240);
+    c.fillText('NOT AN OFFER', 44, 274);
+    slipTexture.needsUpdate = true;
+  }
+
   function paintDisplay() {
     if (!displayContext) return;
     displayContext.fillStyle = '#0a1913';
@@ -231,6 +261,7 @@ export function createDeskInstrument(
     displayContext.fillText(displayLabel, 46, 207);
     displayTexture.needsUpdate = true;
     indicator.emissiveIntensity = stage === 'conversation' ? 1.5 : 0.7;
+    paintSlip();
   }
 
   function stop() {
@@ -256,12 +287,18 @@ export function createDeskInstrument(
     slip.position.z = 1.28 + slipProgress * 1.05;
     slip.rotation.x = slipProgress * -0.14;
     slip.visible = slipProgress > 0.02;
+    // During a call the needle sweeps the dial — a live "line is open"
+    // reading. Otherwise it eases to the stage's bearing.
+    if (stage === 'conversation' && !reducedMotion.matches) {
+      needleTarget = Math.sin(time * 0.0016) * 0.55;
+    }
     needleAngle += (needleTarget - needleAngle) * blend;
     needlePivot.rotation.y = needleAngle;
     renderer.render(scene, camera);
+    const sweeping = stage === 'conversation' && !reducedMotion.matches;
     const unsettled = Math.abs(assembly.rotation.y - x) + Math.abs(assembly.rotation.x - y) + Math.abs(handset.position.y - lift)
       + Math.abs(slipTarget - slipProgress) + Math.abs(needleTarget - needleAngle);
-    if (unsettled > 0.0005) frame = requestAnimationFrame(render);
+    if (sweeping || unsettled > 0.0005) frame = requestAnimationFrame(render);
     else lastTime = 0;
   }
 
@@ -360,6 +397,7 @@ export function createDeskInstrument(
       geometries.forEach(geometry => geometry.dispose());
       materials.forEach(material => material.dispose());
       displayTexture.dispose();
+      slipTexture.dispose();
       environment.dispose();
       key.shadow.map?.dispose();
       renderer.dispose();

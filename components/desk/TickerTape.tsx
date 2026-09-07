@@ -37,7 +37,12 @@ export const TickerTape = memo(function TickerTape({ onSelect, disabled }: { onS
 
   return (
     <div className={styles.tape} role="region" aria-label="Indicative reference marks">
-      <span className={styles.tapeLabel}>THE TAPE · INDICATIVE</span>
+      <span
+        className={styles.tapeLabel}
+        title="Indicative reference marks from Chainlink feeds on Base — never offers. The estimate you review comes from the venue, not the tape."
+      >
+        THE TAPE · INDICATIVE
+      </span>
       {marks.length === 0 ? (
         <p className={styles.tapeNote} role={failed ? 'status' : undefined}>
           {failed ? 'Reference marks are unavailable — estimates are unaffected.' : 'Reading the tape…'}
