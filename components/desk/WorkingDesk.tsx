@@ -30,8 +30,9 @@ export function WorkingDesk() {
 
   const loadInstrument = (instrumentId: string) => {
     desk.edit({ ...desk.state.draft, instrumentId });
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
-    document.getElementById('amount')?.focus();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    document.getElementById('amount')?.focus({ preventScroll: true });
   };
 
   return <div className={styles.workspace}>
@@ -42,7 +43,7 @@ export function WorkingDesk() {
     </header>
     <main id="main-content" className={styles.main}>
       <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
-      <div className={styles.mode}><span>HETTY / BASE</span><strong>PAPER TRADING</strong><span>Live estimates. No real funds move.</span></div>
+      <div className={styles.mode}><span>HETTY / BASE <span className={styles.chainId}>8453</span></span><strong>PAPER TRADING</strong><span>Live estimates. No real funds move.</span></div>
       <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
         <section className={styles.introduction} aria-labelledby="desk-title">
           <p className={styles.eyebrow}>WELCOME TO CLAFLIN</p>

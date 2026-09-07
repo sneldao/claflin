@@ -12,6 +12,7 @@ export const HettyStatus = memo(function HettyStatus({ desk }: { desk: ReturnTyp
   const now = useReviewClock(state.stage === 'review');
   const expired = quote ? !estimateUsable(quote, now) : false;
   const remaining = quote ? Math.max(0, Math.ceil((quote.expiresAt - now) / 1000)) : 0;
+  const symbol = quote?.outputSymbol && quote.intent.side === 'buy' ? quote.outputSymbol : quote?.inputSymbol;
 
   let line: string;
   switch (state.stage) {
@@ -21,7 +22,7 @@ export const HettyStatus = memo(function HettyStatus({ desk }: { desk: ReturnTyp
     case 'review':
       line = expired
         ? 'That estimate expired — refresh when you are ready.'
-        : `For your review — ${remaining}s remaining on this estimate.`;
+        : `For your review${symbol ? ` — ${symbol}` : ''}, ${remaining}s remaining on this estimate.`;
       break;
     case 'saved':
       line = 'Paper trade recorded in this browser. Nothing moved onchain.';
