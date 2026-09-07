@@ -22,7 +22,7 @@ Establish measured baselines and budgets before adding substantial imagery, ambi
 | Trade preparation | `useTradingDesk` coordinates explicit requests with aborts and stale-response guards; `TradeTicket` owns the review surface. | No quote request before an explicit action. Recheck expiry at save even if background timers were throttled. |
 | Rendering | `DeskInstrument` dynamically imports Three.js; the form and records remain HTML. Production styles are separate from the development study. | Rendering must not block preparing or reviewing an instruction; verify reduced-motion, hidden state, fallback and cleanup. |
 | Return visits | `PaperHistory` reads only browser-local paper records; no directory/activity polling is required. | Storage failures are visible; paper records must not appear as real positions or cross-device memory. |
-| Voice | Optional browser dictation feeds the shared draft. The old widget and provider scripts are not loaded by the root layout. | Actual broker conversation and authenticated tool events are pending integration, not hidden active services. |
+| Voice | “Ring Hetty” starts an ElevenLabs ConvAI session (`/api/hetty/session` mints the signed URL server-side). Her client tools drive the same desk draft. The old widget and provider scripts are not loaded by the root layout. | Live conversation is real; transcripts and any account or execution authority are not wired to it. |
 
 ## Engineering constraints
 

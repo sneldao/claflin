@@ -35,13 +35,13 @@ Remaining acceptance work:
 
 ## 2. Connect Hetty to the shared instruction
 
-- Implement a structured, authenticated tool/event bridge from the voice provider into the same trading service and draft model.
-- Let Hetty clarify intent and explain the actual returned estimate. Web search is research context, never the pricing source.
-- Preserve microphone consent, clear call terms and actual transport state. Do not reintroduce the old call funnel or automatically launch calls from query parameters.
-- Keep broker identity/mandate in the house model, provider IDs in integration configuration, and trading authority outside the prompt.
-- Reuse existing voice infrastructure only where verified; do not reproduce its old UI or claim post-call transcripts are live tool events.
+**Delivered (paper scope).** “Ring Hetty” starts a live ElevenLabs ConvAI voice session: `POST /api/hetty/session` mints a short-lived signed URL server-side (API key and `ELEVENLABS_AGENT_HETTY` never reach the client; 10 sessions/minute per instance), and the desk registers seven client tools — `choose_instrument`, `set_instruction`, `set_amount`, `request_estimate`, `describe_desk`, `record_paper`, `cancel_instruction` — which execute in the caller's browser against the same `useTradingDesk` draft. Hetty reads back real estimate output, requires explicit confirmation before recording, and cannot sign or submit anything. Voice and manual input manipulate one instruction; edits still invalidate review; provider failures surface honest errors rather than fabricated quotes.
 
-**Exit evidence:** speaking and manual editing manipulate the same instruction; revisions invalidate review; provider failures cannot fabricate quotes or approval. Dictation alone does not satisfy this milestone.
+Remaining within this milestone:
+
+- Microphone consent is requested by the browser at ring time; dropped calls and mic denial surface honest errors. The desk never auto-launches a call.
+- Post-call transcripts are not wired to the desk; the retained webhook pipeline remains dormant.
+- Recording, account binding and a live-execution tool surface remain gated work, not voice-reachable.
 
 ## 3. Establish account access and transaction preparation
 
