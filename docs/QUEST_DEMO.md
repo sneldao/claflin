@@ -7,9 +7,9 @@
 ## 90-second Loom cut
 
 | :00–:10 | Open `/` — one door. Point at **PAPER TRADING** + “Live estimates. No real funds move.” No marketplace, no wallet bootstrap. |
-| :10–:20 | Hetty posture (“desk is clear”) + empty **On your desk** board. |
-| :20–:40 | Choose **NVDAc** (or AAPLc/METAc/GOOGLc), spend **25 USDC**, hit **Review estimate**. Narrate: Coinbase-issued token on Base. |
-| :40–:60 | **Quotation slip** peak — spend / receive / as-of / review window. Open details once; close. |
+| :10–:18 | The tape: live indicative marks, hover to pause, click **NVDAc** — it loads into the ticket. Stale labels show when feeds are quiet; say so honestly. |
+| :18–:40 | Spend **25 USDC**, hit **Review estimate**. While it flies, the instrument's handset lifts — the desk answers state. |
+| :40–:60 | **Quotation slip** peak — the instrument has printed the slip forward. Spend / receive / as-of / review window. Open details once; close. |
 | :60–:75 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
 | :75–:90 | Scroll to **On your desk** / paper history → **Use as a new draft**. Close on boundaries + Base Tokenized Stocks. |
 
@@ -28,7 +28,8 @@ Built for the Base Tokenized Stocks Builder Quest.
 ## Submit checklist
 
 - [ ] Confirm current quest deadline and terms on the Base form / X thread.
-- [ ] Set `BASE_RPC_URL` to a reliable Base mainnet endpoint before recording (public `mainnet.base.org` rate-limits mid-demo).
+- [ ] Set `BASE_RPC_URL` to a reliable Base mainnet endpoint before recording (public `mainnet.base.org` rate-limits and can take >20s mid-demo).
+- [ ] Record during US market hours — the tape labels marks STALE when the Chainlink feeds are quiet (weekends/holidays), which is honest but reads less impressively.
 - [ ] Deploy or use a stable public URL for the Loom (not only localhost).
 - [ ] Warm the path once before recording: Review estimate on NVDAc / 25 USDC.
 - [ ] Post Loom on X tagging @buildonbase.
