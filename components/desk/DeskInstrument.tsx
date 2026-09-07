@@ -24,6 +24,12 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
     controllerRef.current?.setStage(stage);
   }, [stage]);
 
+  // Label changes repaint the instrument display in place — they must not
+  // tear down and recreate the whole Three.js scene on every selection.
+  useEffect(() => {
+    controllerRef.current?.setLabel(label);
+  }, [label]);
+
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const sync = () => setReducedMotion(media.matches);
@@ -96,7 +102,10 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
       controllerRef.current?.dispose();
       controllerRef.current = null;
     };
-  }, [label, reducedMotion, allowScene]);
+  // label is applied live via setLabel — recreating the scene per label
+  // change would restart the instrument on every stock selection.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion, allowScene]);
 
   return (
     <div

@@ -4,6 +4,7 @@ export type DeskInstrumentStage = 'arrival' | 'conversation' | 'confirmation';
 
 export interface DeskInstrumentController {
   setStage: (stage: DeskInstrumentStage) => void;
+  setLabel: (label: string) => void;
   dispose: () => void;
 }
 
@@ -12,8 +13,9 @@ export function createDeskInstrument(
   host: HTMLElement,
   initialStage: DeskInstrumentStage,
   onUnavailable: () => void,
-  displayLabel = 'PAPER TRADING / NO LIVE ORDERS',
+  initialLabel = 'PAPER TRADING / NO LIVE ORDERS',
 ): DeskInstrumentController {
+  let displayLabel = initialLabel;
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -136,7 +138,32 @@ export function createDeskInstrument(
     mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.15, 4), darkBrass, 1.65 + Math.cos(angle) * 0.467, 1.13, 0.72 + Math.sin(angle) * 0.467);
   }
   mesh(new THREE.CylinderGeometry(0.074, 0.074, 0.025, 24), darkBrass, 2.34, 0.99, 0.15);
-  mesh(new THREE.SphereGeometry(0.043, 16, 8), indicator, 2.34, 1.016, 0.15);
+  const lamp = mesh(new THREE.SphereGeometry(0.043, 16, 8), indicator, 2.34, 1.016, 0.15);
+  void lamp;
+
+  // The slip: a paper estimate that prints forward out of the front
+  // slot when an instruction reaches review. Retracts when the desk
+  // returns to idle — a physical read on desk state, not decoration.
+  const paperMat = new THREE.MeshStandardMaterial({ color: '#e7dfc9', roughness: 0.92, metalness: 0.02 });
+  const slip = mesh(new THREE.BoxGeometry(1.5, 0.018, 1.05), paperMat, -0.55, 0.97, 1.28);
+  slip.castShadow = true;
+  const slipPrint = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.3, 0.16),
+    new THREE.MeshBasicMaterial({ color: '#4a5a43', toneMapped: false }),
+  );
+  slipPrint.rotation.x = -Math.PI / 2;
+  slipPrint.position.set(0, 0.011, 0.18);
+  slip.add(slipPrint);
+  slip.visible = false;
+  // The needle on the brass dial — settles to a new bearing per stage.
+  const needlePivot = new THREE.Group();
+  needlePivot.position.set(1.65, 1.285, 0.72);
+  assembly.add(needlePivot);
+  const needle = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.012, 0.028), brass);
+  needle.position.x = 0.12;
+  needle.castShadow = true;
+  needlePivot.add(needle);
+  mesh(new THREE.SphereGeometry(0.035, 16, 8), brass, 1.65, 1.29, 0.72);
 
   for (let i = 0; i < 10; i++) {
     slab(0.04, 0.43, 0.012, 0.015, black, -0.86 + i * 0.19, 0.97, -0.78);
@@ -182,6 +209,10 @@ export function createDeskInstrument(
   let lastTime = 0;
   let targetX = 0;
   let targetY = 0;
+  let slipProgress = stage === 'confirmation' ? 1 : 0;
+  let slipTarget = slipProgress;
+  let needleAngle = stage === 'confirmation' ? 0.55 : stage === 'conversation' ? 0 : -0.55;
+  let needleTarget = needleAngle;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 
@@ -221,8 +252,15 @@ export function createDeskInstrument(
     assembly.rotation.x += (y - assembly.rotation.x) * blend;
     handset.position.y += (lift - handset.position.y) * blend;
     handset.rotation.z = handset.position.y * -0.1;
+    slipProgress += (slipTarget - slipProgress) * blend;
+    slip.position.z = 1.28 + slipProgress * 1.05;
+    slip.rotation.x = slipProgress * -0.14;
+    slip.visible = slipProgress > 0.02;
+    needleAngle += (needleTarget - needleAngle) * blend;
+    needlePivot.rotation.y = needleAngle;
     renderer.render(scene, camera);
-    const unsettled = Math.abs(assembly.rotation.y - x) + Math.abs(assembly.rotation.x - y) + Math.abs(handset.position.y - lift);
+    const unsettled = Math.abs(assembly.rotation.y - x) + Math.abs(assembly.rotation.x - y) + Math.abs(handset.position.y - lift)
+      + Math.abs(slipTarget - slipProgress) + Math.abs(needleTarget - needleAngle);
     if (unsettled > 0.0005) frame = requestAnimationFrame(render);
     else lastTime = 0;
   }
@@ -290,6 +328,13 @@ export function createDeskInstrument(
   return {
     setStage(nextStage) {
       stage = nextStage;
+      slipTarget = nextStage === 'confirmation' ? 1 : 0;
+      needleTarget = nextStage === 'confirmation' ? 0.55 : nextStage === 'conversation' ? 0 : -0.55;
+      paintDisplay();
+      schedule();
+    },
+    setLabel(nextLabel) {
+      displayLabel = nextLabel;
       paintDisplay();
       schedule();
     },
