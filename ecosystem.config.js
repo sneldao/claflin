@@ -55,6 +55,8 @@ module.exports = {
         UPSTASH_REDIS_TOKEN: env.UPSTASH_REDIS_TOKEN || env.UPSTASH_REDIS_REST_TOKEN || '',
 
         // Chain
+        BASE_RPC_URL: env.BASE_RPC_URL || 'https://mainnet.base.org',
+        BASE_RPC_FALLBACK_URL: env.BASE_RPC_FALLBACK_URL || '',
         ARBITRUM_RPC_URL: env.ARBITRUM_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
 
         // ElevenLabs

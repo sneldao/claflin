@@ -7,7 +7,8 @@ Claflin API server. App directory: `/opt/claflin` — Port 3042 — PM2: `clafli
 ## Quick Deploy
 
 ```bash
-export UPSTASH_REDIS_REST_TOKEN=your_token_here
+export BASE_RPC_URL=https://your-base-rpc-provider
+export UPSTASH_REDIS_REST_TOKEN=your_token_here   # only if retained services use Redis
 make deploy
 ```
 
@@ -59,13 +60,17 @@ make restart    # restart without rebuilding
 
 ## Environment
 
-Secrets are written to `.env.hetzner` by deploy.sh and read by `ecosystem.config.js`.
+Secrets live in `/opt/claflin/.env.hetzner` on the server (create it from
+`.env.hetzner.example` — `deploy-hetzner.sh` never writes or overwrites it)
+and are read by `ecosystem.config.js` at `pm2 start`.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `UPSTASH_REDIS_REST_URL` | `https://game-corgi-122374.upstash.io` | Upstash instance |
-| `UPSTASH_REDIS_REST_TOKEN` | — | Set before running `make deploy` |
-| `ARBITRUM_RPC_URL` | `https://sepolia-rollup.arbitrum.io/rpc` | Optional override |
+| `BASE_RPC_URL` | `https://mainnet.base.org` | Quote service RPC — set a production provider for real traffic |
+| `BASE_RPC_FALLBACK_URL` | — | Optional second provider, rotated in after the primary |
+| `UPSTASH_REDIS_REST_URL` | `https://game-corgi-122374.upstash.io` | Upstash instance (retained services only) |
+| `UPSTASH_REDIS_REST_TOKEN` | — | Only if retained services are in use |
+| `ARBITRUM_RPC_URL` | `https://sepolia-rollup.arbitrum.io/rpc` | Optional override (retained billing) |
 
 ---
 

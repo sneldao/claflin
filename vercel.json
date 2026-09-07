@@ -15,15 +15,5 @@
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/demo",
-      "destination": "/demo/page"
-    },
-    {
-      "source": "/profile",
-      "destination": "/profile/page"
-    }
   ]
 }
