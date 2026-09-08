@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
-import { resolveDeskAlias } from '@/lib/trading/catalog';
+import { resolveDeskAlias, DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -29,6 +29,7 @@ type HettyTools = {
   record_paper: () => ToolResult;
   cancel_instruction: () => ToolResult;
   describe_desk: () => ToolResult;
+  watch_mark: (p: ToolParams) => ToolResult;
 };
 
 function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (live: boolean) => void }) {
@@ -108,6 +109,18 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
     return now.state.stage === 'saved'
       ? 'Recorded — a paper trade, in this browser only. Nothing moved onchain.'
       : `The record did not save${now.error ? ` — ${now.error}` : ''}.`;
+  });
+
+  useConversationClientTool<HettyTools>('watch_mark', async (p) => {
+    const d = deskRef.current;
+    const query = String(p.query ?? '').trim();
+    const instrument = query
+      ? resolveDeskAlias(query)
+      : DESK_INSTRUMENTS.find(s => s.id === d.state.draft.instrumentId)
+        ?? DESK_INSTRUMENTS.find(s => s.id === d.state.quote?.intent.instrumentId);
+    if (!instrument) return 'No instrument to watch — name one or record a paper trade first.';
+    d.watch(instrument.id);
+    return `${instrument.symbol} is pinned to the caller's desk — it will be waiting there next visit.`;
   });
 
   useConversationClientTool<HettyTools>('cancel_instruction', async () => {

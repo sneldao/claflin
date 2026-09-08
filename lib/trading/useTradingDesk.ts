@@ -4,8 +4,20 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
+import { DESK_INSTRUMENTS } from './catalog';
 
 const emptyDraft: TradeIntent = { instrumentId: '', side: 'buy', amount: '', unit: 'USDC' };
+const WATCH_KEY = 'claflin.watched.v1';
+const WATCH_MAX = 12;
+
+function loadWatched(storage: Storage): string[] {
+  try {
+    const raw = JSON.parse(storage.getItem(WATCH_KEY) ?? '[]');
+    if (!Array.isArray(raw)) return [];
+    const known = new Set(DESK_INSTRUMENTS.map(s => s.id));
+    return raw.filter((id): id is string => typeof id === 'string' && known.has(id)).slice(0, WATCH_MAX);
+  } catch { return []; }
+}
 
 export function useTradingDesk() {
   const [state, dispatch] = useReducer(deskReducer, emptyDraft, initialDesk);
@@ -13,6 +25,7 @@ export function useTradingDesk() {
   const [historyReady, setHistoryReady] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [watched, setWatched] = useState<string[]>([]);
   const request = useRef<AbortController | null>(null);
   const saveLock = useRef(false);
 
@@ -26,6 +39,7 @@ export function useTradingDesk() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadHistory();
+    setWatched(loadWatched(window.localStorage));
     window.addEventListener('storage', loadHistory);
     return () => { request.current?.abort(); window.removeEventListener('storage', loadHistory); };
   }, [loadHistory]);
@@ -87,9 +101,26 @@ export function useTradingDesk() {
     } catch { setStorageError('This paper record could not be deleted. Check browser storage and try again.'); }
   }, [loadHistory, state.draft, state.quote?.id]);
 
+  const watch = useCallback((instrumentId: string) => {
+    if (!DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
+    setWatched(previous => {
+      const next = previous.includes(instrumentId) ? previous : [instrumentId, ...previous].slice(0, WATCH_MAX);
+      try { window.localStorage.setItem(WATCH_KEY, JSON.stringify(next)); } catch { /* watching is optional */ }
+      return next;
+    });
+  }, []);
+
+  const unwatch = useCallback((instrumentId: string) => {
+    setWatched(previous => {
+      const next = previous.filter(id => id !== instrumentId);
+      try { window.localStorage.setItem(WATCH_KEY, JSON.stringify(next)); } catch { /* watching is optional */ }
+      return next;
+    });
+  }, []);
+
   // The desk object is explicitly memoized so parent re-renders don't create new references for children.
   return useMemo(
-    () => ({ state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord }),
-    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord],
+    () => ({ state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch }),
+    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch],
   );
 }

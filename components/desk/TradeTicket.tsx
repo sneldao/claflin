@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
@@ -9,13 +9,31 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
+const QUOTE_STAGES = [
+  'Calling the venue on Base…',
+  'Reading the pool for liquidity…',
+  'Composing your estimate…',
+];
+
+function useQuoteProgress(active: boolean): string {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    setI(0);
+    const t = setInterval(() => setI(v => (v < QUOTE_STAGES.length - 1 ? v + 1 : v)), 2400);
+    return () => clearInterval(t);
+  }, [active]);
+  return QUOTE_STAGES[i];
+}
+
 export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, historyReady, error, edit, requestQuote, save, cancel } = desk;
+  const { state, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch } = desk;
   const instrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const quote = state.quote;
   const review = useRef<HTMLElement | null>(null);
   const recorded = state.stage === 'saved';
   const now = useReviewClock(state.stage === 'review');
+  const quoteProgress = useQuoteProgress(state.stage === 'loading');
   const expired = quote ? !estimateUsable(quote, now) : false;
   useEffect(() => { if (state.stage === 'review' || recorded) review.current?.focus(); }, [state.stage, recorded]);
   const date = (ms: number) => new Date(ms).toLocaleString();
@@ -56,6 +74,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
       <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
       <button className={styles.primary} type="submit" disabled={state.stage === 'loading' || recorded}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote && !recorded ? 'Refresh estimate' : recorded ? 'Estimate locked to this record' : 'Review estimate'}<span aria-hidden="true">→</span></button>
     </form>
+    {state.stage === 'loading' && <p role="status" className={styles.quoteProgress}>{quoteProgress}</p>}
     {(state.stage === 'loading' || state.stage === 'review') && <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>}
     {(error || state.message) && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{error || state.message}</p>}
     {quote && <section ref={review} tabIndex={-1} className={`${styles.review} ${styles.slipBody}`} aria-labelledby="review-title">
@@ -87,9 +106,30 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
           <span>Paper recorded</span>
         </button>
         <p className={styles.receiptStatus} role="status">
-          {quote.intent.side === 'buy' ? 'Buy' : 'Sell'} recorded in this browser only. Nothing moved onchain. Edit the draft to start a new instruction.
+          {quote.intent.side === 'buy' ? 'Buy' : 'Sell'} recorded in this browser only. Nothing moved onchain.
         </p>
-        <button className={styles.secondary} type="button" onClick={() => edit(state.draft)}>Start a new draft</button>
+        <div className={styles.recordNext}>
+          <p className={styles.recordNextLabel}>What next?</p>
+          {instrument && (watched.includes(instrument.id) ? (
+            <button type="button" className={styles.secondary} onClick={() => unwatch(instrument.id)}>Stop watching {instrument.symbol}</button>
+          ) : (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => { watch(instrument.id); document.getElementById('on-desk')?.scrollIntoView({ block: 'start' }); }}
+            >
+              Watch {instrument.symbol} on your desk
+            </button>
+          ))}
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => { edit({ ...state.draft, amount: '' }); document.getElementById('amount')?.focus(); }}
+          >
+            Re-quote {instrument?.symbol ?? 'this mark'}
+          </button>
+          <button className={styles.secondary} type="button" onClick={cancel}>Clear the ticket</button>
+        </div>
       </>}
     </section>}
     <details className={styles.productDetails}><summary>About these products</summary>
