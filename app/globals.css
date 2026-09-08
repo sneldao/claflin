@@ -15,7 +15,11 @@ body {
 
 h1, h2, h3, .font-display {
   font-family: var(--font-display), 'Fraunces', 'Iowan Old Style', serif;
-  font-variation-settings: "opsz" 144, "SOFT" 10;
+  /* Optical size follows the rendered size — forcing opsz 144 starves the
+     hairlines of small headings. The hero display re-declares opsz 144 in
+     WorkingDesk.module.css, where it is optically correct. */
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 10;
   letter-spacing: -.015em;
 }
 
