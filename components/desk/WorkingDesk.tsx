@@ -4,19 +4,24 @@ import Link from 'next/link';
 import { HOUSE_DESKS } from '@/lib/house';
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
-import { DeskInstrument } from './DeskInstrument';
+import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
-import { HettyCall } from './HettyCall';
 import { HettyStatus } from './HettyStatus';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useEligibility } from '@/lib/trading/useEligibility';
-import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
+import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
+import { useEffect } from 'react';
 import styles from './WorkingDesk.module.css';
+
+// Three.js (~600KB) and the ElevenLabs SDK are decorative/session-only —
+// lazy-loaded so the desk's first paint stays light.
+const DeskInstrument = dynamic(() => import('./DeskInstrument').then(m => m.DeskInstrument), { ssr: false });
+const HettyCall = dynamic(() => import('./HettyCall').then(m => m.HettyCall), { ssr: false });
 
 export function WorkingDesk() {
   const desk = useTradingDesk();
@@ -26,6 +31,24 @@ export function WorkingDesk() {
   const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
+
+  // Shared-instruction deep link: ?intent=nvda&side=buy&amount=25 prefills
+  // the ticket. Strictly validated — bad params are dropped, never applied.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('intent');
+    if (!raw) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+    const instrument = resolveDeskAlias(raw);
+    if (!instrument?.quoteSupported) return;
+    const side = params.get('side') === 'sell' ? 'sell' : 'buy';
+    const amount = (params.get('amount') ?? '').trim();
+    const cleanAmount = /^(0|[1-9]\d*)(\.\d+)?$/.test(amount) ? amount : '';
+    desk.edit(side === 'sell'
+      ? { instrumentId: instrument.id, side: 'sell', unit: 'token', amount: cleanAmount }
+      : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
+    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = DESK_INSTRUMENTS.find(s => s.id === desk.state.draft.instrumentId);
   const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
   const instrumentStage = hettyLive

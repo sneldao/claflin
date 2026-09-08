@@ -6,6 +6,7 @@ import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
+import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
@@ -34,6 +35,8 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const recorded = state.stage === 'saved';
   const now = useReviewClock(state.stage === 'review');
   const quoteProgress = useQuoteProgress(state.stage === 'loading');
+  const [shareNote, setShareNote] = useState<string | null>(null);
+  useEffect(() => { if (state.stage !== 'saved') setShareNote(null); }, [state.stage]);
   const expired = quote ? !estimateUsable(quote, now) : false;
   useEffect(() => { if (state.stage === 'review' || recorded) review.current?.focus(); }, [state.stage, recorded]);
   const date = (ms: number) => new Date(ms).toLocaleString();
@@ -110,6 +113,17 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
         </p>
         <div className={styles.recordNext}>
           <p className={styles.recordNextLabel}>What next?</p>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => {
+              if (!instrument || !quote) return;
+              void shareRecord(shareText(quote.intent, quote), shareUrl(quote.intent, instrument.symbol))
+                .then(result => setShareNote(result === 'failed' ? 'Could not share — copy the address bar instead.' : result === 'copied' ? 'Link copied — paste it anywhere.' : 'Shared.'));
+            }}
+          >
+            {shareNote ?? 'Share this paper trade'}
+          </button>
           {instrument && (watched.includes(instrument.id) ? (
             <button type="button" className={styles.secondary} onClick={() => unwatch(instrument.id)}>Stop watching {instrument.symbol}</button>
           ) : (
