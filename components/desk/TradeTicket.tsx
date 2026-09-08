@@ -15,6 +15,8 @@ import styles from './WorkingDesk.module.css';
  *  copy. Ticks at 5Hz — smooth enough for a seconds readout, cheap on the tree. */
 function useQuoteElapsed(active: boolean): number {
   const [elapsed, setElapsed] = useState(0);
+  /* The clock state is intentionally synchronized to wall time in an effect. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!active) return;
     const start = Date.now();
@@ -22,6 +24,7 @@ function useQuoteElapsed(active: boolean): number {
     const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 200);
     return () => clearInterval(timer);
   }, [active]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   return elapsed;
 }
 

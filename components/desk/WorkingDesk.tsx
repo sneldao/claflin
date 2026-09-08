@@ -36,6 +36,8 @@ export function WorkingDesk() {
   // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
   const [sealDrawn, setSealDrawn] = useState(false);
   const sealRef = useRef<HTMLDivElement>(null);
+  /* The drawn state is intentionally synchronized to matchMedia in an effect. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const el = sealRef.current;
     if (!el) return;
@@ -46,6 +48,7 @@ export function WorkingDesk() {
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Shared-instruction deep link: ?intent=nvda&side=buy&amount=25 prefills
   // the ticket. Strictly validated — bad params are dropped, never applied.
