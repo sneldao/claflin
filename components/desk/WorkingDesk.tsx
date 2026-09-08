@@ -5,7 +5,7 @@ import { HOUSE_DESKS } from '@/lib/house';
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import dynamic from 'next/dynamic';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
 import { HettyStatus } from './HettyStatus';
@@ -31,6 +31,21 @@ export function WorkingDesk() {
   const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
+
+  // Colophon seal: the house mark stroke-draws once when the footer scrolls
+  // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
+  const [sealDrawn, setSealDrawn] = useState(false);
+  const sealRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sealRef.current;
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setSealDrawn(true); return; }
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setSealDrawn(true); io.disconnect(); }
+    }, { threshold: 0.35 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Shared-instruction deep link: ?intent=nvda&side=buy&amount=25 prefills
   // the ticket. Strictly validated — bad params are dropped, never applied.
@@ -72,20 +87,31 @@ export function WorkingDesk() {
   };
 
   // Pointer drives the room: the light pool follows, the window drifts
-  // against it, the instrument tilts. Written as CSS vars directly on the
-  // element — no React re-render per frame.
+  // against it, the instrument tilts. Coalesced to one rAF per frame and
+  // written as CSS vars directly on the element — no React re-render, no
+  // redundant style invalidation between pointermove bursts.
+  const parallax = useRef({ px: 0, py: 0, raf: 0 });
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     const r = el.getBoundingClientRect();
-    el.style.setProperty('--px', String(((e.clientX - r.left) / r.width - 0.5) * 2));
-    el.style.setProperty('--py', String(((e.clientY - r.top) / r.height - 0.5) * 2));
+    const p = parallax.current;
+    p.px = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    p.py = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    if (p.raf) return;
+    p.raf = requestAnimationFrame(() => {
+      p.raf = 0;
+      el.style.setProperty('--px', String(p.px));
+      el.style.setProperty('--py', String(p.py));
+    });
   }, []);
+  useEffect(() => () => cancelAnimationFrame(parallax.current.raf), []);
 
-  return <div className={styles.workspace} onPointerMove={handlePointerMove} data-live={hettyLive ? 'true' : 'false'}>
+  return <div className={styles.workspace} onPointerMove={handlePointerMove} data-live={hettyLive ? 'true' : 'false'} data-desk-stage={desk.state.stage}>
     <div className={styles.room} aria-hidden="true">
       <div className={styles.window}><i /><i /><i /></div>
       <div className={styles.lightShaft} />
       <div className={styles.lightPool} />
+      <div className={styles.tradeLamp} />
       <div className={styles.motes}><i /><i /><i /><i /><i /><i /></div>
     </div>
     <header className={styles.header}>
@@ -153,6 +179,13 @@ export function WorkingDesk() {
         <details><summary>Other desks, in time</summary><ul>{HOUSE_DESKS.slice(1).map(broker => <li key={broker.id}><strong>{broker.name}</strong><span>{broker.market} · Planned</span><p>{broker.approach}</p></li>)}</ul><p>These desks are not yet available. Their markets, accounts and permissions will be explicit before they open.</p></details>
       </section>
     </main>
+    <div ref={sealRef} className={styles.seal} data-drawn={sealDrawn ? 'true' : 'false'} aria-hidden="true">
+      <svg width="88" height="88" viewBox="0 0 56 56" fill="none">
+        <path className={styles.sealOuter} d="M28 4 50 17v22L28 52 6 39V17L28 4Z" stroke="currentColor" pathLength={1} />
+        <path className={styles.sealMid} d="M28 10 44 20v16L28 46 12 36V20L28 10Z" stroke="currentColor" opacity=".45" pathLength={1} />
+        <path className={styles.sealInner} d="M35 20a11 11 0 1 0 0 16M21 14v28M27 12v8m0 16v8M33 15v5m0 16v5" stroke="currentColor" strokeWidth="1.5" pathLength={1} />
+      </svg>
+    </div>
     <footer className={styles.footer}><span>CLAFLIN &amp; CO. / THE BROKERAGE HOUSE</span><span>Independent thinking. Explicit decisions.</span></footer>
   </div>;
 }

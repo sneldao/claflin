@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
@@ -10,22 +10,22 @@ import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
-const QUOTE_STAGES = [
-  'Calling the venue on Base…',
-  'Reading the pool for liquidity…',
-  'Composing your estimate…',
-];
-
-function useQuoteProgress(active: boolean): string {
-  const [i, setI] = useState(0);
+/** Honest quote status — the real elapsed wait. The venue does not expose
+ *  granular steps to the client, so we show the actual time spent, not staged
+ *  copy. Ticks at 5Hz — smooth enough for a seconds readout, cheap on the tree. */
+function useQuoteElapsed(active: boolean): number {
+  const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     if (!active) return;
-    setI(0);
-    const t = setInterval(() => setI(v => (v < QUOTE_STAGES.length - 1 ? v + 1 : v)), 2400);
-    return () => clearInterval(t);
+    const start = Date.now();
+    setElapsed(0);
+    const timer = setInterval(() => setElapsed((Date.now() - start) / 1000), 200);
+    return () => clearInterval(timer);
   }, [active]);
-  return QUOTE_STAGES[i];
+  return elapsed;
 }
+
+const AMOUNT_CHIPS = { buy: ['10', '25', '100'], sell: ['1', '5', '10'] } as const;
 
 export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { state, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch } = desk;
@@ -34,10 +34,14 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const review = useRef<HTMLElement | null>(null);
   const recorded = state.stage === 'saved';
   const now = useReviewClock(state.stage === 'review');
-  const quoteProgress = useQuoteProgress(state.stage === 'loading');
+  const quoteElapsed = useQuoteElapsed(state.stage === 'loading');
   const [shareNote, setShareNote] = useState<string | null>(null);
   useEffect(() => { if (state.stage !== 'saved') setShareNote(null); }, [state.stage]);
   const expired = quote ? !estimateUsable(quote, now) : false;
+  /* Freshness of the review window, 1 → just quoted, 0 → expired. Drives the
+     draining brass rule on the slip header. Hidden once the trade is recorded. */
+  const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
+  const slipStyle = { '--review-fresh': reviewFresh } as CSSProperties;
   useEffect(() => { if (state.stage === 'review' || recorded) review.current?.focus(); }, [state.stage, recorded]);
   const date = (ms: number) => new Date(ms).toLocaleString();
 
@@ -64,23 +68,35 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
     </div>
     <h2 id="instruction-title">{recorded ? 'Paper recorded.' : slipActive ? 'Quotation slip.' : 'What would you like to trade?'}</h2>
     <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
-      <label htmlFor="stock">Stock</label>
-      <select id="stock" value={state.draft.instrumentId} required onChange={e => edit({ ...state.draft, instrumentId: e.target.value })}>
-        <option value="" disabled>Choose a stock</option>
-        {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => <option key={stock.id} value={stock.id}>{stock.name} · {stock.symbol}</option>)}
-      </select>
+      <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
+        <legend>Stock</legend>
+        {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
+          <label key={stock.id} className={styles.plaque}>
+            <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} disabled={state.stage === 'loading' || recorded} onChange={() => edit({ ...state.draft, instrumentId: stock.id })} />
+            <span className={styles.plaqueSymbol}>{stock.symbol}</span>
+            <span className={styles.plaqueName}>{stock.name}</span>
+          </label>
+        ))}
+      </fieldset>
       <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
       <div className={styles.fields}>
         <div><label htmlFor="side">Instruction</label><select id="side" value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
         <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
       </div>
+      <div className={styles.amountChips} role="group" aria-label="Quick amounts">
+        {AMOUNT_CHIPS[state.draft.side].map(value => (
+          <button key={value} type="button" className={styles.amountChip} data-active={state.draft.amount === value ? 'true' : 'false'} aria-label={`Set amount to ${value} ${state.draft.unit}`} disabled={state.stage === 'loading' || recorded} onClick={() => edit({ ...state.draft, amount: value })}>
+            {state.draft.side === 'buy' ? `$${value}` : value}
+          </button>
+        ))}
+      </div>
       <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
       <button className={styles.primary} type="submit" disabled={state.stage === 'loading' || recorded}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote && !recorded ? 'Refresh estimate' : recorded ? 'Estimate locked to this record' : 'Review estimate'}<span aria-hidden="true">→</span></button>
     </form>
-    {state.stage === 'loading' && <p role="status" className={styles.quoteProgress}>{quoteProgress}</p>}
+    {state.stage === 'loading' && <p role="status" className={styles.quoteProgress}>Calling the venue on Base · {quoteElapsed.toFixed(1)}s</p>}
     {(state.stage === 'loading' || state.stage === 'review') && <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>}
     {(error || state.message) && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{error || state.message}</p>}
-    {quote && <section ref={review} tabIndex={-1} className={`${styles.review} ${styles.slipBody}`} aria-labelledby="review-title">
+    {quote && <section ref={review} tabIndex={-1} className={`${styles.review} ${styles.slipBody}`} style={slipStyle} aria-labelledby="review-title">
       <div className={styles.reviewHeading}><h3 id="review-title">{recorded ? 'Acknowledged.' : 'For your review.'}</h3><span>{recorded ? 'RECORDED / PAPER TRADE' : expired ? 'EXPIRED' : 'PAPER ESTIMATE'}</span></div>
       <dl className={styles.slipLedger}>
         <div className={styles.slipHighlight}><dt>You would spend</dt><dd>{quote.inputAmount} {quote.inputSymbol}</dd></div>
