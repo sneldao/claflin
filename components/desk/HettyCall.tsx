@@ -201,7 +201,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   const live = conversation.status === 'connected';
   const connecting = conversation.status === 'connecting';
 
-  useEffect(() => { onLiveChange(live || connecting); }, [live, connecting, onLiveChange]);
+  useEffect(() => { onLiveChange(live); }, [live, onLiveChange]);
   useEffect(() => () => { conversation.endSession(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ring = async () => {
@@ -219,15 +219,15 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
       <div className={styles.boardHead}>
-        <p className={styles.eyebrow}>THE DOOR</p>
+        <p className={styles.eyebrow}>AI · BASE DESK</p>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={live && conversation.isSpeaking ? 'true' : 'false'} aria-hidden="true" />
-          {live ? 'LINE 1 · LIVE' : connecting ? 'LINE 1 · RINGING' : 'LINE 1 · OPEN'}
+          {live ? 'LINE 01 · CONNECTED' : connecting ? 'LINE 01 · RINGING' : 'LINE 01'}
         </span>
       </div>
-      <h2 id="call-title" className={styles.boardTitle}>Ring when you want her.</h2>
+      <h2 id="call-title" className={styles.boardTitle}>Hetty.</h2>
       <p className={styles.callNote}>
-        She drafts, quotes, and records paper — only if you say so. Nothing moves onchain. The desk never rings itself.
+        Speak your instruction. Review it on the same ticket.
       </p>
       <div className={styles.callActions}>
         {!live && !connecting && (

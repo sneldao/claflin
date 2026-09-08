@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import postcss from 'postcss';
 import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } from '../lib/house';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -38,6 +39,40 @@ describe('one canonical house', () => {
     assert.match(desk, /PAPER TRADING/);
     assert.match(desk, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
+  });
+  it('puts the ticket before the room and introduces the line only once', () => {
+    const desk = source('components/desk/WorkingDesk.tsx');
+    assert.doesNotMatch(desk, /styles\.introduction|<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
+    assert.equal(desk.match(/<HettyCall desk=/g)?.length, 1);
+    assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall desk='));
+    assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
+  });
+  it('shows continuity only when there is work, without hiding storage failures', () => {
+    const desk = source('components/desk/WorkingDesk.tsx');
+    assert.match(desk, /const hasContinuity = desk\.watched\.length > 0 \|\| desk\.records\.length > 0/);
+    assert.match(desk, /const hasHistory = desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)/);
+    assert.match(desk, /hasContinuity && <div id="on-desk"/);
+    assert.match(desk, /hasHistory && <PaperHistory/);
+  });
+  it('parses the desk stylesheet and resolves its component class references', () => {
+    const css = postcss.parse(source('components/desk/WorkingDesk.module.css'));
+    const classes = new Set<string>();
+    css.walkRules(rule => {
+      for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
+    });
+    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory']) {
+      for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
+        assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
+      }
+    }
+  });
+  it('keeps the receiver down until a real voice connection exists', () => {
+    const call = source('components/desk/HettyCall.tsx');
+    assert.match(call, /onLiveChange\(live\)/);
+    assert.doesNotMatch(call, /onLiveChange\(live \|\| connecting\)/);
+    const desk = source('components/desk/WorkingDesk.tsx');
+    const stage = desk.slice(desk.indexOf('const instrumentStage'), desk.indexOf('const instrumentLabel'));
+    assert.doesNotMatch(stage, /loading/);
   });
   it('retires marketplace distribution without intercepting quote or webhook infrastructure', () => {
     for (const path of ['/api/agents', '/api/agents/', '/api/agents/general_helper', '/api/sdk/register', '/api/ratings']) assert.equal(isRetiredMarketplaceApi(path), true);

@@ -69,7 +69,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
-    <h2 id="instruction-title">{recorded ? 'Paper recorded.' : slipActive ? 'Quotation slip.' : 'What would you like to trade?'}</h2>
+    <h1 id="instruction-title">{recorded ? 'Paper recorded.' : slipActive ? 'For your review.' : 'Draft a paper trade.'}</h1>
     <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
       <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
         <legend>Stock</legend>
@@ -94,7 +94,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
         ))}
       </div>
       <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
-      <button className={styles.primary} type="submit" disabled={state.stage === 'loading' || recorded}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote && !recorded ? 'Refresh estimate' : recorded ? 'Estimate locked to this record' : 'Review estimate'}<span aria-hidden="true">→</span></button>
+      <button className={styles.primary} type="submit" disabled={state.stage === 'loading' || recorded}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote && !recorded ? 'Refresh estimate' : recorded ? 'Recorded estimate' : 'Review estimate'}<span aria-hidden="true">→</span></button>
     </form>
     {state.stage === 'loading' && <p role="status" className={styles.quoteProgress}>Calling the venue on Base · {quoteElapsed.toFixed(1)}s</p>}
     {(state.stage === 'loading' || state.stage === 'review') && <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>}

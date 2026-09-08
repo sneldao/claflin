@@ -35,9 +35,26 @@ export function createDeskInstrument(
   environmentScene.dispose();
   generator.dispose();
 
-  const enamel = new THREE.MeshStandardMaterial({ color: '#172e29', metalness: 0.45, roughness: 0.24 });
-  const black = new THREE.MeshStandardMaterial({ color: '#0b1713', metalness: 0.25, roughness: 0.31 });
-  const brass = new THREE.MeshStandardMaterial({ color: '#b89b63', metalness: 0.86, roughness: 0.3 });
+  const finishCanvas = document.createElement('canvas');
+  finishCanvas.width = finishCanvas.height = 256;
+  const finishContext = finishCanvas.getContext('2d');
+  if (finishContext) {
+    const pixels = finishContext.createImageData(256, 256);
+    let seed = 1929;
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const grain = 170 + (seed % 65);
+      pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = grain;
+      pixels.data[i + 3] = 255;
+    }
+    finishContext.putImageData(pixels, 0, 0);
+  }
+  const finishTexture = new THREE.CanvasTexture(finishCanvas);
+  finishTexture.wrapS = finishTexture.wrapT = THREE.RepeatWrapping;
+  finishTexture.repeat.set(4, 4);
+  const enamel = new THREE.MeshStandardMaterial({ color: '#203d30', metalness: 0.3, roughness: 0.38, bumpMap: finishTexture, bumpScale: 0.008 });
+  const black = new THREE.MeshStandardMaterial({ color: '#0b1713', metalness: 0.12, roughness: 0.4 });
+  const brass = new THREE.MeshStandardMaterial({ color: '#b89b63', metalness: 0.86, roughness: 0.46, roughnessMap: finishTexture });
   const darkBrass = new THREE.MeshStandardMaterial({ color: '#6e6144', metalness: 0.8, roughness: 0.4 });
   const rubber = new THREE.MeshStandardMaterial({ color: '#121915', roughness: 0.85 });
   const glass = new THREE.MeshStandardMaterial({ color: '#091a12', metalness: 0.18, roughness: 0.19 });
@@ -255,7 +272,7 @@ export function createDeskInstrument(
     displayContext.fillText('CLAFLIN  /  PRIVATE LINE', 46, 63);
     displayContext.fillStyle = '#e4c485';
     displayContext.font = '54px monospace';
-    displayContext.fillText(stage === 'arrival' ? 'HETTY  —  AT THE DESK' : stage === 'conversation' ? 'CONVERSATION STUDY' : 'REVIEW INSTRUCTION', 46, 146);
+    displayContext.fillText(stage === 'arrival' ? 'HETTY  —  AT THE DESK' : stage === 'conversation' ? 'HETTY — ON THE LINE' : 'REVIEW INSTRUCTION', 46, 146);
     displayContext.fillStyle = '#a9bc91';
     displayContext.font = '24px monospace';
     displayContext.fillText(displayLabel, 46, 207);
@@ -313,6 +330,7 @@ export function createDeskInstrument(
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
+    camera.zoom = Math.min(1.35, Math.max(1, camera.aspect / 1.22));
     camera.position.set(7.7, 8.8, 12.4).multiplyScalar(Math.max(1, 1.22 / camera.aspect));
     camera.lookAt(0, 0.65, 0);
     camera.updateProjectionMatrix();
@@ -397,6 +415,7 @@ export function createDeskInstrument(
       geometries.forEach(geometry => geometry.dispose());
       materials.forEach(material => material.dispose());
       displayTexture.dispose();
+      finishTexture.dispose();
       slipTexture.dispose();
       environment.dispose();
       key.shadow.map?.dispose();

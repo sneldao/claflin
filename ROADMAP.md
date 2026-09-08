@@ -1,21 +1,23 @@
 # Claflin Roadmap
 
-**Updated: 2026-09-08.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience.
+**Updated: 2026-09-09.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience.
 
-[Product Direction](docs/PRODUCT_DIRECTION.md) owns the experience. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. [Auth and access](docs/AUTH_AND_ACCESS.md) owns identity tiers. This roadmap owns sequencing and release gates.
+[Product Direction](docs/PRODUCT_DIRECTION.md) owns jobs, principles, and information hierarchy. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. [Auth and access](docs/AUTH_AND_ACCESS.md) owns identity tiers. This roadmap owns sequencing, known gaps, house-desk order, and release gates.
 
 ## Current product
 
-- `/` is Hetty's desk. `/desk` is an alias, not a second product. Former marketplace, demo, profile, dashboard, broker-profile, listing and admin pages redirect to `/`.
+- `/` is Claflin's desk. Hetty is the current Base broker, not the house. `/desk` is an alias, not a second product. Former marketplace, demo, profile, dashboard, broker-profile, listing and admin pages redirect to `/`.
 - No onboarding wizard, broker questionnaire, directory, ratings, streaks or free-call funnel is mounted. The paper desk does not require a wallet, an account, or a microphone.
-- The desk has an empty initial stock/amount, a concise house introduction, explicit paper mode, a trade ticket, an “On your desk” board (watched marks, in-progress draft, last paper), local paper history, and optional shareable intent links (`?intent=`). Product, price-source and simulation details are disclosed in context.
-- A live tape (`/api/stocks/marks`) shows indicative Chainlink reference marks for the quote-supported instruments — never offers — with explicit stale/unavailable labels. Tape marks load the instrument into the ticket. The desk instrument reflects desk state physically: handset raised while a quote is in flight or Hetty is on the line, a paper slip printed at review, a dial bearing per stage.
-- A live ElevenLabs voice session (“Ring Hetty”) drives the same draft through client tools executing in the caller's browser: `choose_instrument`, `set_instruction`, `set_amount`, `request_estimate`, `describe_desk`, `record_paper`, `cancel_instruction`, `watch_mark`. Session URLs are minted server-side (`/api/hetty/session`); the agent id and API key never reach the client. Hetty cannot sign, submit or reconcile — paper only.
+- The seated first pass put the ticket and the line on one writing surface and removed the competing hero, empty continuity sections, and future-desks grid. Paper-only disclosures, review safeguards, and opt-in microphone/audio are preserved. Browser and responsive QA of that pass were skipped; the visual result is unverified.
+- The job is paper estimate → review → local record, optionally driven by the line. Surfaces exist to serve that job: ticket, tape, board (when something exists), paper history, shareable `?intent=` drafts. They are not a landing inventory. Organisation is accepted; the room is still a neat interface rather than a physical brokerage — see §1.
+- A live tape (`/api/stocks/marks`) shows indicative Chainlink reference marks for the quote-supported instruments — never offers — with explicit stale/unavailable labels. Tape marks load the instrument into the ticket. The receiver is furniture beside the line. Handset pickup is reserved for an actual voice connection, not a pending quote. The object still lazy-loads behind a visibly different SVG after intersection and idle time; that is a defect.
+- A live ElevenLabs voice session (“Ring Hetty”) drives the same draft through client tools executing in the caller's browser: `choose_instrument`, `set_instruction`, `set_amount`, `request_estimate`, `describe_desk`, `record_paper`, `cancel_instruction`, `watch_mark`. Session URLs are minted server-side (`/api/hetty/session`); the agent id and API key never reach the client. Hetty cannot sign, submit or reconcile — paper only. She belongs on a nameplate, not as the principal heading.
 - Read-only Aerodrome estimates use `MixedRouteQuoterV3`, the verified factory selector and canonical USDC pool identities. Buy amounts are USDC spend; sell amounts are token quantity. Amount math uses strings and integers.
 - The workflow supports review, edits, expiry, refresh, cancellation and explicit recording of simulated outcomes in browser-local storage. Optional Sign in (Privy, env-gated) copies paper records to the account and writes call transcripts server-side. Sync is best-effort: local storage stays authoritative; deletes are not propagated; transcripts have no client read surface; ringing Hetty does not send the account token. This is not live access.
 - No wallet signing, order submission or real position reconciliation is implemented. A read-only Coinbase Verifications check exists in source (`lib/eligibility.ts`, `/api/eligibility`) for a later authority tier. It is not shown on the paper desk.
 - Public broker discovery/listing and ratings APIs return 410 through the routing layer. Former provider/settlement modules remain source infrastructure, not the product's identity or navigation model. No database deletion was performed.
 - `/desk-study` and `/widget-probe` are development references only and return not-found in production.
+- House sequence (Jesse / Isabel / Arbitrum) lives in §5. It is strategy, not first-page IA. A restrained directory detail may acknowledge planned desks; a four-card grid must not return.
 
 ## Immediate opportunity
 
@@ -23,16 +25,21 @@ The user supplied Base's September 2 Builder Quest announcement for projects hel
 
 ## 1. Finish the first useful client journey
 
-**Implemented foundation:** canonical root entry; house-first copy and navigation; four configured paper-quote candidates; exact-input estimates; explicit review and local paper records; live voice over the same draft; tape and desk board.
+**Implemented foundation:** canonical root entry; four configured paper-quote candidates; exact-input estimates; explicit review and local paper records; live voice over the same draft; tape and desk board. Seated first pass: ticket and line share one writing surface; hero, empty continuity, and future-desks grid removed. House copy and room tone exist; they are weather, not the product.
 
 Remaining acceptance work:
 
-- Review the normal first visit, return visit, unavailable quote and expired review against the desired quality—not only component styling.
+- Keep the consolidated interface. Rebuild the physical context around it: blotter, cropped ledger and correspondence, frosted partitions, ticker strip, receiver to one side. Most objects are not click targets.
+- Replace the receiver's SVG-then-idle-load with a still from the actual model, camera, and lighting; swap only after the matching WebGL frame; reuse that still for reduced motion. Do not eagerly load Three.js as the fix.
+- Make Claflin the display identity. Hetty is a nameplate beside the line, not the principal heading. Leave room for Livermore/Solana and Benham/Robinhood Chain without a four-card grid.
+- Treat paper as the house language: blotter = draft, slip = returned estimate, ledger = saved records, pigeonholes = watched work. A dossier must not pretend to be a legal certificate.
+- Show the board and last paper only when something exists. Do not fill empty continuity.
+- Review the normal first visit, return visit, unavailable quote and expired review against the hierarchy in [Product Direction](docs/PRODUCT_DIRECTION.md)—not only component styling. Browser and responsive QA of the seated pass were skipped; do them on this pass.
 - Verify understandable product/unit distinctions, keyboard/mobile/reduced-motion behavior and actionable error recovery.
 - Keep essential state stable; background updates must not replace the instrument, amount or terms under review.
 - Measure user comprehension and intent-to-reviewed-estimate friction. Do not measure success by paid minutes, onboarding completion, sign-ins or trading frequency.
 
-**Exit evidence:** a client reaches useful work without a tour and can explain the product, amount, paper status, estimate and recorded result. Automated checks supplement rather than substitute for product acceptance.
+**Exit evidence:** it feels like sitting at a desk, not looking at a page. A client reaches the ticket or the line without a tour or the broker as heading, and can explain the product, amount, paper status, estimate and recorded result. The receiver is complete on first paint. A four-desk footer is not that evidence. Automated checks supplement rather than substitute for product acceptance. A screenshot of the seated pass is useful feedback for the next refinement.
 
 ## 2. Connect Hetty to the shared instruction
 

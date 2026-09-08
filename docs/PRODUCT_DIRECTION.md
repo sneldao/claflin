@@ -1,18 +1,20 @@
 # Claflin Product Direction
 
-**Status:** Canonical product cutover approved, 2026-09-05; implementation notes refreshed 2026-09-08. The old onboarding/directory approach is retired. `/` is Hetty's desk: live estimates, explicit review, local paper records, a tape of indicative marks, and a live ElevenLabs voice session whose client tools drive the same paper draft. `/desk` redirects there; `/desk-study` is a development-only fixture, not the product. Live execution remains unimplemented. Signing and submission are not voice-reachable. An optional Sign in control may appear when Privy is configured — it does not gate the desk and is not live access.
+**Status:** Canonical product cutover approved, 2026-09-05; seated working desk first pass, 2026-09-09. The old onboarding/directory approach is retired. `/` is Claflin's desk. Hetty is the current Base relationship, not the house identity. Live execution remains unimplemented. An optional Sign in control may appear when Privy is configured — it does not gate the desk and is not live access. Browser and responsive QA of the seated pass were skipped; the visual result is unverified.
 
 **Governing decision:** there are no existing users or collaborators requiring preservation of the old experience. Be intentional about replacement: preserve useful technical capabilities selectively, not legacy flows, identities or product assumptions. Git history is the reference for the retired approach.
 
-First arrival is the product, not a prerequisite tour. The client is in a room: house stance, paper mode, an empty ticket, Hetty’s plate, and a door that does not ring itself. No default trade, mandatory personality questionnaire, dial exercise, free-call funnel or marketplace should intervene. Permissions and detailed terms belong at the relevant action. Navigation should describe the client's work—not directories, design studies or implementation milestones.
+**This document owns jobs, principles, and information hierarchy. It does not own page anatomy.** Do not implement a section because it is named here. The ticket or the line is first; everything else is the room.
+
+**Governing idea:** you are not looking at a trading application with antique styling. You are giving an instruction to a house that keeps a record.
 
 ## The central idea
 
 **Claflin is a voice-first trading product expressed as a Deco-futurist brokerage house. Specialist AI brokers help clients turn trading intent into clearly understood, explicitly authorized, verifiable execution.**
 
-This is a brokerage from a future imagined through Art Deco: architectural, tactile, technologically sophisticated, and personal. Historic manners and materials coexist with contemporary information and explicit modern safeguards. The world should make trading more understandable and direct, not add a ceremonial layer in front of it.
+This is a brokerage from a future imagined through Art Deco: architectural, tactile, technologically sophisticated, and personal. Historic manners and materials coexist with contemporary information and explicit modern safeguards. The world should make trading more understandable and direct, not add a ceremonial layer in front of it. Use a coherent period-inspired world; do not claim a strict reconstruction across eras.
 
-Hetty is the first relationship and Base the first intended execution network, followed by Jesse Livermore on Solana and Isabel Benham on Robinhood Chain. Each desk combines a recognizable approach with actual market access. One broker first does not mean one broker forever.
+Claflin is the institution. The durable identity order is **Claflin → active desk and market → broker → current instruction.** Hetty is the first relationship and Base the first intended execution network, followed by Jesse Livermore on Solana and Isabel Benham on Robinhood Chain. Each desk combines a recognizable approach with actual market access. Changing desks later should change the nameplate, working material, and manner — not replace the house. One broker first does not mean one broker forever.
 
 The primary loop is **express intent → resolve the instrument and access → obtain a quote → review and authorize → execute → verify the outcome and position**. A client who knows what they want can go directly to that path. Reading a letter or discussing a thesis is an optional entry/support path, never a required first step.
 
@@ -34,13 +36,42 @@ Return visits should make it easy to review actual orders/positions, resume a pe
 
 ## Decisions that govern the product
 
-1. **One convincing Hetty first; a curated house over time.** Personality explains how a broker thinks; a real desk mandate explains what they can do. Expand specialist coverage after proving the first relationship, not by adding interchangeable AI inventory.
-2. **Behavior establishes the world.** A receiver connecting, research returning, or an instruction becoming a paper ticket carries meaning. Glows, arbitrary number animations, fake quotations, and mechanical gestures that only advance tutorials do not substitute for it.
+1. **Claflin is the institution; the broker is the current relationship.** Personality explains how a broker thinks; a real desk mandate explains what they can do. Launch on Base with Hetty; keep the house ready for Livermore/Solana and Benham/Robinhood Chain. Do not make the first broker the brand. A modest brass nameplate beside the line is enough. Expand specialist coverage after proving the first relationship, not by adding interchangeable AI inventory.
+2. **Behavior establishes the world.** A receiver connecting, a quotation slip arriving, or an instruction becoming a filed paper record carries meaning. Glows, arbitrary number animations, fake quotations, and mechanical gestures that only advance tutorials do not substitute for it.
 3. **Trade facilitation is primary.** Instrument access, quote quality, order review, execution, and outcome tracking take priority over editorial content and call telemetry. Keep call controls/terms available, but do not make publications or prolonged conversation a prerequisite for a trade.
-4. **Clarity wins over theater.** No artificial connection waits, obscure controls, surprise microphone activation, fictional market data presented as real, or aesthetic treatment that conceals a financial boundary.
+4. **Clarity wins over theater.** No artificial connection waits, obscure controls, surprise microphone activation, fictional market data presented as real, or aesthetic treatment that conceals a financial boundary. A certificate-inspired dossier must not pretend to be a legal ownership certificate.
 5. **Continuity, not consumption.** Help clients resume notes and unresolved questions. Do not reward paid minutes, daily calling streaks, or trading frequency.
 6. **Progressive disclosure, not hidden terms.** Keep provider/protocol detail secondary; expose AI identity, paper-only status, trial terms, paid rate, actual cap, and required approval before the relevant action.
-7. **Immersion is optional; usability is not.** The complete journey must work without ambient audio, spatial motion, a pointer gesture, or a desktop-sized viewport.
+7. **Immersion is optional; usability is not.** The complete journey must work without ambient audio, spatial motion, a pointer gesture, or a desktop-sized viewport. Most objects establish the room; the client must never play "find the trading controls."
+8. **A desk, not a page.** The ticket or the line is the first semantic thing. The receiver, a nameplate, the tape, and the room are weather — they must not become a hero, a tour, or a second homepage. Do not introduce the broker four times. Do not explain the house on first arrival. Navigation describes the client's work, not page chapters.
+9. **Paper is the house language.** The blotter is the draft; a returned estimate is a quotation slip; saved work is a ledger; watched marks are pigeonholes; the ticker is labelled reference, never a fabricated screen. One document whose state you understand — not separate decorative animations.
+
+## Information hierarchy
+
+`/` is a desk. It is not a landing page with a form attached. Identity and attention are different layers. When a proposal adds a surface, say which it belongs to.
+
+**Identity** — durable, so later desks can change the nameplate without replacing the house:
+
+| Order | Layer | Now | Later |
+|---|---|---|---|
+| 1 | **Claflin** | The house. Wordmark, blotter, document conventions, the record. | Unchanged. |
+| 2 | **Active desk and market** | Base · Coinbase Tokenized Stocks · paper. | Solana, Robinhood Chain, then Arbitrum — as those mandates are ready. |
+| 3 | **Broker** | Hetty, on a modest nameplate beside the line. | Livermore, Benham, a future Arbitrum broker. Manner and working material change; the house does not. |
+| 4 | **Current instruction** | The ticket or slip under review. | The same quotation/ticket contract. |
+
+**Attention** — what may own the first viewport:
+
+| Order | Layer | What the client can do | Not this |
+|---|---|---|---|
+| 1 | **The work** | Draft, review, or record on the ticket. A slip under review comes forward and quiets the rest. | A hero headline, sculpture, or character card that the ticket must compete with. |
+| 2 | **The line** | Ring the current broker once. She drives the same draft. The desk never rings itself. | Plate + status + call section + open-door card as four introductions. The broker as the principal display heading. |
+| 3 | **Continuity** | Resume a draft, a watched mark, or the last paper record — when one exists. | An empty ledger or empty board as a first-class chapter. |
+| 4 | **Weather** | Notice paper mode, indicative tape, the room, opt-in floor tone. | Chapters titled for atmosphere. Paper mode said in four places. |
+| 5 | **Myth** | Feel a house that keeps paper, a ticker, and a record. Objects cropped, overlapping, used. | A house explainer, a planned-desks grid, carnival as page content, or a fully simulated office the client must hunt through. |
+
+Art direction may still specify material, light, and tone. It must not specify this outline. Implementation that follows a composition recipe over this table is wrong even if it matches an older paragraph in this file.
+
+The seated first pass (`WorkingDesk.tsx`) consolidated the ticket and the line onto one writing surface and removed the competing hero, empty continuity, and future-desks grid. That solved organisation. It did not yet make a place: the receiver still loads in behind a visibly different SVG, the composition still leans on Hetty as display identity, and the room is a neat interface rather than a physical brokerage. Those are known gaps, not a contract. [ROADMAP.md](../ROADMAP.md) §1 owns the next pass.
 
 ## The specialist brokerage house
 
@@ -55,7 +86,7 @@ Use clear introductions such as "Hetty — your Base broker" only when the acces
 
 The chain does not determine the strategy. Base is not inherently conservative, nor Solana inherently speculative. Each desk needs a supported-instrument catalog, venue/access policy, permissions, risk boundaries, and evidence of operational readiness. Personality cannot override shared safeguards. Primary-network assignments are mandates, not hardcoded identity: broker identity, execution network, client account, call-payment network, and identity-registry network remain distinct.
 
-Keep one house identity, quotation/ticket conventions, and consent model. Vary voice, editorial perspective, specialist working material, and restrained desk accents rather than create separate themed applications. "Other desks" becomes a small curated directory only as those desks become ready.
+Keep one house identity, quotation/ticket conventions, and consent model. Vary voice, editorial perspective, specialist working material, and restrained desk accents rather than create separate themed applications. This table is house strategy, not first-page information architecture. Do not render it as a product grid on `/`. A restrained house-directory detail may acknowledge planned desks; a four-desk explainer must not return. Sequence and gates live in [ROADMAP.md](../ROADMAP.md). "Other desks" becomes a small curated directory only as those desks become ready.
 
 A handoff preserves the question, selected publication edition, and permitted research context. Explain what is shared, destination coverage/account requirements, and changed call terms. Ask before transferring private context. Do not silently move transaction authority, bridge funds, switch accounts, or reuse an approval for the new desk.
 
@@ -63,12 +94,14 @@ A handoff preserves the question, selected publication edition, and permitted re
 
 Prices belong to the client's work, not to decorative atmosphere. Resolve the exact instrument before showing an actionable price: a company ticker alone cannot identify a tokenized issuer/product, contract or mint, network, venue, rights, restrictions, or unit of ownership.
 
-| Surface | Role | Required distinction |
-|---|---|---|
-| Arrival: tape | Indicative Chainlink reference marks for the quote-supported instruments. Click loads the ticket. Not an offer. | Source, as-of / stale / unavailable labels. Never mix with the venue estimate. |
-| Arrival: "On your desk" | A compact board for watched instruments, an in-progress draft, or the last paper record. A new client can have an empty board. | Working context, not a feed. Holdings are not invented. |
-| Conversation: quotation slip | Focus on the selected instrument, with optional price history/fundamentals and supporting research. | Underlying-stock reference price versus the particular tokenized product's indicative price. Label delayed, stale, closed-session, and unavailable data. |
-| Confirmation: quote-bound ticket | Review terms for the exact side and size at the chosen venue, or the explicit simulation model. | Executable/indicative/simulated status, spend or quantity, fees, slippage/price impact as applicable, validity, network, and authorizing account. Call charges remain separate. |
+| Layer | Physical analogue | Role | Required distinction |
+|---|---|---|---|
+| Weather: tape | Ticker machine | Indicative Chainlink reference marks for the quote-supported instruments. Click loads the ticket. Not an offer. Not a hero. | Source, as-of / stale / unavailable labels. Never mix with the venue estimate. Never fabricate prices for atmosphere. |
+| Continuity: board | Pigeonholes | Watched instruments, an in-progress draft, or the last paper record — when one exists. | Working context, not a feed. An empty board is not a section that must be filled. Holdings are not invented. |
+| Work: product dossier | Correspondence / file | Focus on the selected instrument: issuer, network, rights, restrictions, optional price history and research. | Underlying-stock reference versus the tokenized product. A dossier is not a legal ownership certificate. Label delayed, stale, closed-session, and unavailable data. |
+| Work: quotation slip | Incoming telegram | A returned estimate, with source and timestamp. Arrives beside the instruction. | Not a fill. Not executable until review. |
+| Work: quote-bound ticket | Blotter / handwritten instruction | The editable draft, then the reviewed terms. First semantic thing when a review is active. | Executable/indicative/simulated status, spend or quantity, fees, slippage/price impact as applicable, validity, network, and authorizing account. Call charges remain separate. |
+| Continuity: ledger | Leather ledger | Actual saved paper records after explicit approval. | Not invented history. Not a wallet position or call receipt. |
 
 Use structured, appropriately licensed market data for prices and a venue adapter for actionable quotes; a web-search summary or language-model answer is not an execution quote. A market's last close is not a current offer, and an underlying stock price does not prove the cost or rights of a tokenized representation. Units must say shares, token units, or underlying-equivalent units accurately.
 
@@ -108,11 +141,13 @@ Build credibility through useful reasoning, reproducible sources, honest revisio
 
 ## Adaptive and adaptable desk
 
+**Target behavior for a later desk, not the current page outline.** Do not build ranking, pins, or “why shown” as first-page architecture.
+
 **Adaptive** means the system surfaces relevant work. **Adaptable** means the client controls that workspace. Neither means rearranging essential controls unpredictably or inventing personal knowledge.
 
 | Context | Useful desk emphasis | Boundary |
 |---|---|---|
-| First visit or no history | Hetty's actual coverage, instrument search or voice trading-intent entry, and optional supporting research. | The trading entry is primary; no required letter, invented familiarity, or compulsory questionnaire. |
+| First visit or no history | Ticket or the line, with coverage visible as weather, and optional supporting research. | The trading entry is primary; no required letter, house explainer, broker-as-heading, invented familiarity, or compulsory questionnaire. |
 | Returning client | Verified orders/positions where connected, a pending intent, or watched instruments; relevant notes/letters support the next decision. | Use permitted, fresh records; a past discussion is not proof of a current position. |
 | Arrival from a publication | Keep that exact edition/passage in view with "Discuss this thesis". | Do not substitute a newer edition silently; flag corrections and offer the newer version. |
 | Relevant news or theme | A concise, sourced "Why this is on your desk" note, linked to the relevant letter or watchlist. | Explain relevance and freshness; popularity is not a recommendation or an instruction. |
@@ -130,7 +165,7 @@ These are target behaviors. See [ROADMAP.md](../ROADMAP.md) for implementation g
 
 | Stage | Client experience | Required evidence or control |
 |---|---|---|
-| Arrival | Find a supported instrument or express a trading intent to the broker. | Actual coverage and paper/testnet/live mode are clear. Direct trading entry remains available without reading research or completing a content tour. |
+| Arrival | Find a supported instrument or express a trading intent to the broker. The ticket or the line is first; the room is around it. | Actual coverage and paper/testnet/live mode are clear without a hero tour. Direct trading entry remains available without reading research, a house explainer, or the broker as a heading. |
 | Connection | Establish the voice session and the account/network needed for the intended trade. | Separate microphone/call terms, account permissions, funding, and transaction authority; no silent bridging or approval. |
 | Conversation / preparation | Resolve product, side, size, access, and quote; ask only the questions needed to clarify intent or explain material terms. | Research is available on demand. Prices are sourced and identified as reference, indicative, or executable; a letter is not a quote. |
 | Confirmation and execution | Review exact terms, explicitly authorize, and submit through the approved adapter. | Bound quote/account/product/size/fees/expiry; mode-aware validation. No live execution until release gates pass, and no success claim from an acknowledgement alone. |
@@ -139,12 +174,14 @@ These are target behaviors. See [ROADMAP.md](../ROADMAP.md) for implementation g
 
 A transcript is supporting evidence, not a substitute for a structured paper instruction. Payment for a conversation is never evidence that a paper trade was recorded, and neither is evidence of a real-market order. A shared `?intent=` link prefills a draft on the recipient's desk; it does not copy a record, a position, or an approval.
 
-## Hetty: presence before persona inventory
+## The broker: presence before persona inventory
 
-- Cast and evaluate her voice as a character in this establishment, not as a vendor preset. Provider names and IDs remain implementation details.
+Hetty is the current relationship on the Base desk. She is not Claflin's display identity. Later desks keep the same house and change the nameplate.
+
+- Cast and evaluate the voice as a character in this establishment, not as a vendor preset. Provider names and IDs remain implementation details.
 - Establish a recognizable greeting, cadence, vocabulary, interruption behavior, and conservative reasoning. Warmth comes from attentive service, not a cartoon mascot.
-- Identify her as an AI broker inspired by history, not the actual historical person or an authentic reproduction. Do not imply a professional license or affiliation that has not been established.
-- Her confidence must track the evidence. Acknowledge missing or stale information, cite sources, and refuse to invent a quote or claim an unperformed action.
+- Identify the broker as an AI character inspired by history, not the actual historical person or an authentic reproduction. Do not imply a professional license or affiliation that has not been established. Historical detail (Hetty working from a bank rather than a private office; trunks and papers) may inform the room; it must not become a biographical exhibit.
+- Confidence must track the evidence. Acknowledge missing or stale information, cite sources, and refuse to invent a quote or claim an unperformed action.
 - A voice-preview control must play an actual, representative sample. Omit it when no usable sample exists; a descriptive toast is not a preview.
 - Returning to a prior topic must be grounded in available records, not fabricated recollection.
 
@@ -161,49 +198,67 @@ The September 5 review used repository documentation and source, not a live visu
 | [Sylva](https://github.com/MengTo/sylva) | Scene and interface sharing depth, a memorable central subject, responsive materials, a composed static first frame. | Moss/pollen, signature composition, source code/artwork, or shader controls everywhere. Its own code/design/artwork have no reuse license; use as a principle-level reference only. |
 | [MengTo Skills](https://github.com/MengTo/Skills) | Small, coherent workflows for art direction, tactile surfaces, motion, and lifecycle/performance verification. | A wholesale skill import, mandatory smooth scrolling, or marketing-page conventions applied to a working product. |
 
-**Art Deco supplies the architecture. Retro-futurism supplies the instruments. Sylva supplies the standard of spatial integration. Hetty supplies the relationship.**
+**Art Deco supplies the architecture. Retro-futurism supplies the instruments. Sylva supplies the standard of spatial integration. The house supplies the room. The active broker supplies the relationship.**
 
-### The signature object and composition
+The physical brokerage is the stronger immersiveness path: dark wood, frosted glass, brass signs, blotters, ledgers, pigeonholes, a ticker feeding a strip of paper, correspondence that looks handled. Not rows of traders staring at screens. Not a spectacular telephone. Keep the consolidated interface; rebuild the physical context around it.
 
-The Claflin desk instrument is an original precision object: a sculptural receiver, stepped enamel/brass enclosure, recessed information display, and deliberate physical controls. It is not an off-the-shelf rotary phone or beige CRT. Do not squeeze the application into the object's display.
+### A seated desk, not a layout contract
 
-- **Background:** architectural depth and controlled light that imply an establishment, without a cluttered historical set.
-- **Middle ground:** the instrument and Hetty's identity establish presence and the primary invitation.
-- **Foreground:** readable working notes and paper instructions are real semantic interface elements, sharing the scene's material and lighting logic.
+The seated first pass put the ticket and the line on one writing surface (green felt, walnut, brass). That is the organisation to keep. The next pass must make the space larger than the interface: a substantial blotter in the working foreground; the receiver partly to one side, no longer the centrepiece; a thick ledger and correspondence extending beyond the frame; frosted partitions, brass lettering, shallow pigeonholes, perhaps the edge of a safe; a ticker feeding a narrow strip into a loose accumulation of paper. Objects should be cropped, overlap, cast shadows, and show use. Everything politely fitting inside its allotted rectangle is still a page.
 
-The same environment persists through arrival, conversation, and confirmation. Confirmation brings the instruction forward and quiets the setting; departure and return should continue that visual logic when implemented. The desk is where the product happens, not an image above a separate dashboard.
+The receiver is furniture: a sculptural enamel/brass object with a recessed display. It is not an off-the-shelf rotary phone, not the brand, and not the primary invitation. Reserve handset pickup for an actual voice connection — not a pending quote. Do not squeeze the application into the object's display.
+
+Working notes and paper instructions are the semantic interface. They share the scene's material and lighting. Confirmation brings the instruction forward and quiets the setting. Do not specify background / middle ground / foreground as information architecture.
+
+### Receiver: a complete desk immediately
+
+The first pass lazy-loads Three.js behind a visibly different SVG after intersection and `requestIdleCallback`. That break in the illusion is a defect. Do not fix it by eagerly loading everything.
+
+- Serve an optimised still rendered from the actual model, camera, and lighting as part of the initial composition.
+- Start loading the visible scene promptly, without the idle gate.
+- Replace the still only after the matching WebGL frame has rendered.
+- Keep that same finished still for unsupported devices and reduced motion.
+
+The visitor should see a complete desk immediately. It subsequently becomes interactive — not visibly "loads in."
 
 ### Material, type, and motion
 
-The first study explores deep green/ink, dark enamel, brushed brass, warm illuminated glass, and ivory working paper. It retains Fraunces / IBM Plex Sans / JetBrains Mono while testing a more architectural wordmark and a clearer distinction between display, readable prose, and numeric/instrument labels. Final visual tuning is not yet accepted.
+The first study explores deep green/ink, dark enamel, brushed brass, warm illuminated glass, and ivory working paper. It retains Fraunces / IBM Plex Sans / JetBrains Mono while testing a more architectural wordmark and a clearer distinction between display, readable prose, and numeric/instrument labels. Final visual tuning is not yet accepted. Browser QA of the seated pass was skipped.
 
 Use Deco geometry in silhouettes, proportions, framing, and identity rather than repetitive fan ornaments. Material depth must share a light direction. Stronger physical feedback belongs to interactive states, not every surface. Critical terms, controls, and content remain readable and usable independently of the scene.
 
-Motion should establish continuity and respond to meaningful events. Restrained pointer-responsive reflections or depth may establish material; they must be additive for touch/keyboard users. No artificial waits, simulated malfunctions, or success indicators without evidence. A labeled design study may illustrate states, but must never represent them as a real connection or persisted instruction.
+Motion should establish continuity and respond to meaningful events. A quotation slip arriving beside the instruction, then becoming a filed paper record after explicit approval, is the signature interaction — one document whose changing state you understand. Restrained pointer-responsive reflections or depth may establish material; they must be additive for touch/keyboard users. No artificial waits, simulated malfunctions, or success indicators without evidence.
 
-Three.js is justified for the original object, not as a reason to rebuild the app or add effects everywhere. Use a complete static fallback, bounded pixel ratio, visibility-aware scheduling, no continuous idle render loop, and full resource cleanup. The first study uses existing CSS/React for interaction; it does not add a second motion library or a scroll engine.
+Three.js is justified for selective movement of the receiver, paper transport, and depth — not a fully simulated office and not a reason to rebuild the app. Use a complete static still (not a different SVG), bounded pixel ratio, no continuous idle render loop, and full resource cleanup. The first study uses existing CSS/React for interaction; it does not add a second motion library or a scroll engine.
 
-Sound may include a restrained receiver click, paper movement, or distant office activity. It must be opt-in, controllable, and quiet or absent during speech. Preserve voice intelligibility; no aggressive period filtering or automatic background soundtrack. The live desk offers an opt-in floor tone (`Hear the floor`); it stays off by default, dies while Hetty is speaking, and is not a soundtrack. Voice casting remains separate work.
+Sound may include a restrained receiver click, paper movement, or distant office activity. It must be opt-in, controllable, and quiet or absent during speech. Preserve voice intelligibility; no aggressive period filtering or automatic background soundtrack. The live desk offers an opt-in floor tone (`Hear the floor`); it stays off by default, dies while the line is live, and is not a soundtrack. Voice casting remains separate work.
 
 ### Review artifact and open decisions
 
-The live product composition is `/` (`components/desk/WorkingDesk.tsx` and the desk instrument). It owns arrival, conversation, and confirmation as real desk stages driven by `useTradingDesk` and the Hetty session — not scripted study states.
+The live product is `/`, driven by `useTradingDesk` and the current broker session. Stages are desk states (draft, review, saved, on the line), not landing-page sections. The seated first pass is organisation accepted in source; making it a physical place is the next acceptance work, not a competing art brief.
 
 `/desk-study` (`app/desk-study/page.tsx`, `components/desk/DeskStudy.tsx`, `lib/desk-study.ts`) remains a development-only fixture: three manually selectable states, in-memory acknowledgement, no records, no market-data or microphone access, noindex, absent from client navigation and production. Do not treat it as the product or as visual acceptance of `/`.
 
 Geometry, wordmark, and CSS fallback are original; no reference assets or code were transplanted. Three.js and its bundled environment helper are the rendering dependency, not Sylva's implementation.
 
-Browser visual and device validation remain required; source, type, and build checks do not certify the composition's appearance or frame rate.
+Browser visual and device validation remain required; they were skipped for the seated pass. Source, type, and build checks do not certify the composition's appearance or frame rate.
 
-Open decisions: final instrument/material tuning, exact historical vocabulary, identity/portrait treatment, Hetty's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
+Open decisions: physical-room still and lighting, receiver still-then-WebGL swap, how far paper analogues go before they become decoration, exact historical vocabulary, identity/portrait treatment, the current broker's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
 
 ### Explicit exclusions
 
-- Directory-first onboarding, provider-name chips, decorative count-up codes, and star ratings as the primary basis for choosing Hetty.
-- A bouncing/celebrating telephone mascot as the core brand presence.
+- Directory-first onboarding, provider-name chips, decorative count-up codes, and star ratings as the primary basis for choosing a broker.
+- A bouncing/celebrating telephone mascot as the core brand presence, or a spectacular phone as the product.
+- Making the first broker the house identity or the principal display heading.
 - Streak pressure, paid-call consumption incentives, or trading gamification.
 - Fake market activity or unsourced quotations used as credible-looking atmosphere.
 - Mandatory rotary gestures, autoplay ambience, cinematic loading delays, or a WebGL rebuild without a demonstrated experience need and performance budget.
+- A landing-page outline: hero stance, signature object, character plate, then the ticket.
+- A house-strategy grid (Jesse / Isabel / Arbitrum) as first-page content.
+- Repeating the broker as plate, status, call section, and open-door card.
+- A visibly different SVG or enamel fallback that "loads in" to the real receiver.
+- A fully simulated office, or props that hide the trading controls.
+- A certificate-shaped object presented as legal ownership or custody.
 
 ## Trust and accessibility are part of the experience
 
@@ -240,8 +295,8 @@ Evaluate publications and adaptation by their contribution to discovery, compreh
 
 ## Documentation ownership
 
-- **This document** owns enduring product principles, the client journey, exclusions, and reference-dependent decisions.
-- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, known implementation gaps, and release evidence.
+- **This document** owns enduring product principles, the client journey, information hierarchy (house identity and attention), exclusions, and reference-dependent decisions. It does not own a component list or a visual stack.
+- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, known implementation gaps (receiver still-then-WebGL, broker-as-heading leftover, physical room around the seated pass), house-desk order, and release evidence.
 - **[AUTH_AND_ACCESS.md](AUTH_AND_ACCESS.md)** owns capability tiers and what the account scaffold actually does.
 - **[README.md](../README.md)** owns orientation, setup, and the documentation map.
 - **Technical documents** own implementation details and dated observations, not independent product strategies. Distinguish historical behavior, current code, and proposed behavior explicitly.

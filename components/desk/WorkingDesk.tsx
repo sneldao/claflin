@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { HOUSE, HOUSE_DESKS } from '@/lib/house';
+import { HOUSE } from '@/lib/house';
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
-import { HettyStatus } from './HettyStatus';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
@@ -19,16 +18,18 @@ import styles from './WorkingDesk.module.css';
 
 // Three.js (~600KB) and the ElevenLabs SDK are decorative/session-only —
 // lazy-loaded so the desk's first paint stays light.
-const DeskInstrument = dynamic(() => import('./DeskInstrument').then(m => m.DeskInstrument), { ssr: false });
+const DeskInstrument = dynamic(() => import('./DeskInstrument').then(m => m.DeskInstrument));
 function HettyDoorShell() {
   return (
-    <section id="hetty" className={styles.call} aria-labelledby="call-title">
+    <section id="hetty" className={styles.call} aria-labelledby="call-title" aria-busy="true">
       <div className={styles.boardHead}>
-        <p className={styles.eyebrow}>THE DOOR</p>
-        <span className={styles.callLine}>LINE 1 · OPEN</span>
+        <p className={styles.eyebrow}>AI · BASE DESK</p>
+        <span className={styles.callLine}>LINE 01</span>
       </div>
-      <h2 id="call-title" className={styles.boardTitle}>Ring when you want her.</h2>
-      <p className={styles.callNote}>Preparing the line…</p>
+      <h2 id="call-title" className={styles.boardTitle}>Hetty.</h2>
+      <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
+      <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
+      <p className={styles.callFoot}>The microphone stays off until you ring.</p>
     </section>
   );
 }
@@ -39,10 +40,11 @@ export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
   usePaperSync(desk);
-  const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
   const tone = useRoomTone(hettyLive);
+  const hasContinuity = desk.watched.length > 0 || desk.records.length > 0;
+  const hasHistory = desk.records.length > 0 || Boolean(desk.storageError);
 
   // Colophon seal: the house mark stroke-draws once when the footer scrolls
   // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
@@ -80,18 +82,16 @@ export function WorkingDesk() {
     document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const selected = DESK_INSTRUMENTS.find(s => s.id === desk.state.draft.instrumentId);
-  const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
+  const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'saved';
   const instrumentStage = hettyLive
     ? 'conversation'
     : desk.state.stage === 'review' || desk.state.stage === 'saved'
       ? 'confirmation'
-      : desk.state.stage === 'loading'
-        ? 'conversation'
-        : 'arrival';
+      : 'arrival';
   const instrumentLabel = hettyLive
     ? 'HETTY — ON THE LINE'
     : selected
-      ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'CALLING THE VENUE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
+      ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'REQUESTING ESTIMATE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
       : 'PAPER TRADING / NO LIVE ORDERS';
 
   const loadInstrument = (instrumentId: string) => {
@@ -107,6 +107,7 @@ export function WorkingDesk() {
   // redundant style invalidation between pointermove bursts.
   const parallax = useRef({ px: 0, py: 0, raf: 0 });
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const el = e.currentTarget;
     const r = el.getBoundingClientRect();
     const p = parallax.current;
@@ -119,35 +120,39 @@ export function WorkingDesk() {
       el.style.setProperty('--py', String(p.py));
     });
   }, []);
+  const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    cancelAnimationFrame(parallax.current.raf);
+    parallax.current.raf = 0;
+    e.currentTarget.style.setProperty('--px', '0');
+    e.currentTarget.style.setProperty('--py', '0');
+  }, []);
   useEffect(() => () => cancelAnimationFrame(parallax.current.raf), []);
 
-  return <div className={styles.workspace} onPointerMove={handlePointerMove} data-live={hettyLive ? 'true' : 'false'} data-desk-stage={desk.state.stage}>
+  return <div className={styles.workspace} onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave} data-live={hettyLive ? 'true' : 'false'} data-desk-stage={desk.state.stage}>
     <div className={styles.room} aria-hidden="true">
       <div className={styles.window}>
         <i /><i /><i />
         <div className={styles.street}><b /><b /><b /><b /><b /><b /></div>
         <div className={styles.pitGlow} />
       </div>
-      <div className={styles.closedDoor}><span>LIVERMORE</span><small>CLOSED</small></div>
-      <div className={styles.scar}>1929 · THE HOUSE REMEMBERS</div>
+      <div className={styles.wallPanels} />
       <div className={styles.lightShaft} />
       <div className={styles.lightPool} />
       <div className={styles.tradeLamp} />
-      <div className={styles.motes}><i /><i /><i /><i /><i /><i /></div>
     </div>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, the office above the pit"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>{HOUSE.tagline.toUpperCase()}</small></span></Link>
       <nav aria-label="Desk navigation">
-        <a href="#instruction">The desk</a>
-        <a href="#hetty">Hetty</a>
-        <a href="#on-desk">On your desk</a>
-        <a href="#paper-history">Your record</a>
+        <a href="#instruction">Your ticket</a>
+        <a href="#hetty">The line</a>
+        {hasHistory && <a href="#paper-history">Your record</a>}
         <button
           type="button"
           className={styles.toneToggle}
           aria-pressed={tone.enabled}
           onClick={() => tone.setEnabled(!tone.enabled)}
         >
+          <span className={styles.soundBars} aria-hidden="true"><i /><i /><i /><i /></span>
           {tone.enabled ? (hettyLive ? 'Floor held' : 'Floor open') : 'Hear the floor'}
         </button>
         {auth.enabled && (auth.authenticated ? (
@@ -161,64 +166,39 @@ export function WorkingDesk() {
       </nav>
     </header>
     <main id="main-content" className={styles.main}>
-      <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
-      <div className={styles.mode}><span>HETTY · THIS DESK</span><strong>PAPER TRADING</strong><span>Live estimates. No real funds move.</span></div>
+      <div className={styles.mode}><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></div>
       <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
-        <section className={styles.introduction} aria-labelledby="desk-title">
-          <h1 id="desk-title">The pit is<br /><span>downstairs.</span></h1>
-          <p>This desk is for deciding.</p>
+        <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
+        <TradeTicket desk={desk} />
+        <aside className={styles.support} aria-label="Hetty’s direct line">
+          <HettyCall desk={desk} onLiveChange={handleLiveChange} />
           <div className={styles.instrumentShell} data-stage={instrumentStage}>
             <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} label={instrumentLabel} /></div>
-            <p className={styles.instrumentCaption} aria-hidden="true"><span>THE RECEIVER</span>HER LINE</p>
           </div>
-          <HettyStatus desk={desk} />
-          <figure className={styles.hettyPlate}>
-            <svg className={styles.hettyStill} viewBox="0 0 72 88" fill="none" aria-hidden="true">
-              <rect x="1" y="1" width="70" height="86" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M36 18c-7 0-13 7-13 16 0 6 3 11 8 14-8 4-14 12-15 22h40c-1-10-7-18-15-22 5-3 8-8 8-14 0-9-6-16-13-16Z" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M24 78h24" stroke="currentColor" opacity=".45" />
-            </svg>
-            <figcaption>
-              <span>THIS DESK</span>
-              <strong>{hetty.name}</strong>
-              <p>I do not cheer a fill.</p>
-              <details>
-                <summary>About Hetty</summary>
-                <p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
-              </details>
-            </figcaption>
-          </figure>
-        </section>
-        <TradeTicket desk={desk} />
-        <aside className={styles.support} aria-label="The door and your working surface">
-          <HettyCall desk={desk} onLiveChange={handleLiveChange} />
-          <div id="on-desk"><DeskBoard desk={desk} /></div>
+          <div className={styles.deskInscription}>
+            <span>The pit is downstairs.</span>
+            <p>This desk is for deciding.</p>
+          </div>
+          <details className={styles.aboutHetty}>
+            <summary>About Hetty</summary>
+            <p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
+          </details>
         </aside>
       </div>
-      <PaperHistory desk={desk} />
-      <section id="house" className={styles.house} aria-labelledby="house-title">
-        <p className={styles.eyebrow}>THIS FLOOR</p>
-        <h2 id="house-title">Four doors. One is open.</h2>
-        <p>The carnival stays behind the closed ones.</p>
-        <ul className={styles.doors}>
-          {HOUSE_DESKS.map(broker => (
-            <li key={broker.id} data-open={broker.status === 'paper' ? 'true' : 'false'}>
-              <strong>{broker.name}</strong>
-              <span>{broker.status === 'paper' ? 'Open' : 'Closed'} · {broker.market}</span>
-              <p>{broker.approach}</p>
-            </li>
-          ))}
-        </ul>
-        <p>Closed doors open when the desk is ready. Not before.</p>
-      </section>
+      <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+      {hasContinuity && <div id="on-desk"><DeskBoard desk={desk} /></div>}
+      {hasHistory && <PaperHistory desk={desk} />}
     </main>
-    <div ref={sealRef} className={styles.seal} data-drawn={sealDrawn ? 'true' : 'false'} aria-hidden="true">
-      <svg width="88" height="88" viewBox="0 0 56 56" fill="none">
-        <path className={styles.sealOuter} d="M28 4 50 17v22L28 52 6 39V17L28 4Z" stroke="currentColor" pathLength={1} />
-        <path className={styles.sealMid} d="M28 10 44 20v16L28 46 12 36V20L28 10Z" stroke="currentColor" opacity=".45" pathLength={1} />
-        <path className={styles.sealInner} d="M35 20a11 11 0 1 0 0 16M21 14v28M27 12v8m0 16v8M33 15v5m0 16v5" stroke="currentColor" strokeWidth="1.5" pathLength={1} />
-      </svg>
-    </div>
-    <footer className={styles.footer}><span>CLAFLIN &amp; CO. / THE OFFICE ABOVE THE PIT</span><span>I do not cheer a fill.</span></footer>
+    <footer className={styles.footer}>
+      <span>YOUR INSTRUCTION. YOUR DECISION.</span>
+      <div ref={sealRef} className={styles.seal} data-drawn={sealDrawn ? 'true' : 'false'} aria-hidden="true">
+        <svg width="36" height="36" viewBox="0 0 56 56" fill="none">
+          <path className={styles.sealOuter} d="M28 4 50 17v22L28 52 6 39V17L28 4Z" stroke="currentColor" pathLength={1} />
+          <path className={styles.sealMid} d="M28 10 44 20v16L28 46 12 36V20L28 10Z" stroke="currentColor" opacity=".45" pathLength={1} />
+          <path className={styles.sealInner} d="M35 20a11 11 0 1 0 0 16M21 14v28M27 12v8m0 16v8M33 15v5m0 16v5" stroke="currentColor" strokeWidth="1.5" pathLength={1} />
+        </svg>
+      </div>
+      <span>THE OFFICE ABOVE THE PIT</span>
+    </footer>
   </div>;
 }

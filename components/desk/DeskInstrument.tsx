@@ -6,7 +6,7 @@ import styles from './DeskInstrument.module.css';
 
 function stageCaption(stage: DeskInstrumentStage) {
   if (stage === 'confirmation') return 'REVIEW INSTRUCTION';
-  if (stage === 'conversation') return 'CONVERSATION STUDY';
+  if (stage === 'conversation') return 'HETTY — ON THE LINE';
   return 'HETTY — AT THE DESK';
 }
 

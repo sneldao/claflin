@@ -1,12 +1,12 @@
 # Claflin — your trading desk
 
-**A voice-first trading product expressed as a Deco-futurist brokerage house — the office above the pit.** Clients express an intent, understand the product and terms, authorize a decision, and verify the result. Voice, research, publications and personalization support that job.
+**A voice-first trading product expressed as a Deco-futurist brokerage house — the office above the pit.** Clients give an instruction to a house that keeps a record. Voice, research, publications and personalization support that job.
 
-Hetty / Base comes first, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace or a claim of current live execution.
+Claflin is the institution. Hetty / Base is the first relationship, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace or a claim of current live execution. The first broker is not the brand.
 
 ## One front door
 
-`/` is Hetty's desk. No welcome wizard, directory, personality questionnaire, free-call funnel, automatic microphone request, wallet bootstrapping, ratings or streaks precede the work.
+`/` is Claflin's desk. The ticket or the line is first; the room is around it. No welcome wizard, directory, personality questionnaire, house explainer, broker-as-heading, free-call funnel, automatic microphone request, wallet bootstrapping, ratings or streaks precede the work.
 
 The current release supports **paper trading with live venue estimates**:
 
@@ -72,15 +72,16 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 
 - The old approach is retired, not a compatibility target. There are no existing-user or collaborator constraints requiring it to remain in the product.
 - Preserve useful implementation capabilities selectively; do not preserve the old discovery, onboarding or billing-led experience.
-- Give the client one coherent place to work. Explain permissions and terms at the relevant action rather than build a prerequisite tour.
-- Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline.
+- Give the client one coherent place to work. The first semantic thing is the ticket or the line. Do not list page inventory as the product, and do not make the first broker the house identity.
+- Explain permissions and terms at the relevant action rather than build a prerequisite tour or a house-strategy grid.
+- Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline. Say paper mode once.
 - A provider configuration or historical token listing is not evidence of operational readiness.
 - Sign-in, a linked wallet, or a passing eligibility check is not live access.
 - Use the existing Next.js/React/TypeScript, ethers, Zod, Tailwind and Three.js stack; do not introduce a framework migration for this cutover.
 
 ## Canonical documentation
 
-- [Product Direction](docs/PRODUCT_DIRECTION.md): enduring product and design decisions.
+- [Product Direction](docs/PRODUCT_DIRECTION.md): jobs, principles, and information hierarchy — not page anatomy.
 - [Roadmap](ROADMAP.md): current state and next release gates.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.
 - [Architecture](docs/AGENTIC_ARCHITECTURE.md): domain boundaries, integration evidence and retained implementation references.

@@ -6,18 +6,18 @@
 
 ## 90-second Loom cut
 
-| :00–:10 | Open `/` — one door. Point at **The pit is downstairs** + **PAPER TRADING**. No marketplace, no wallet bootstrap. If Sign in is visible (Privy configured), ignore it — it is not live access. |
+| :00–:10 | Open `/` — one door. Point at **Claflin**, the **ticket**, and **paper mode**. The work is first; Hetty is the line beside it, not the brand. No marketplace, no wallet bootstrap, no house tour. If Sign in is visible (Privy configured), ignore it — it is not live access. |
 | :10–:18 | The tape: live indicative marks, hover to pause, click **NVDAc** — it loads into the ticket. Stale labels show when feeds are quiet; say so honestly. |
-| :18–:40 | Spend **25 USDC**, hit **Review estimate**. While it flies, the instrument's handset lifts — the desk answers state. |
-| :40–:60 | **Quotation slip** peak — the instrument has printed the slip forward. Spend / receive / as-of / review window. Open details once; close. |
+| :18–:40 | Spend **25 USDC**, hit **Review estimate**. The ticket is the blotter; do not wait for the receiver to “load in,” and do not treat a raised handset as quote state — pickup is reserved for a live line. |
+| :40–:60 | **Quotation slip** on the ticket — spend / receive / as-of / review window. Open details once; close. |
 | :60–:75 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
 | :75–:90 | Scroll to **On your desk** / paper history → **Use as a new draft**. Close on boundaries + Base Tokenized Stocks. |
 
-Optional 15s: narrow viewport or reduced-motion — ticket still works; enamel instrument stays readable.
+Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still (when it exists) stays readable. Browser QA of the seated pass was skipped — confirm the still does not flash a different SVG before recording.
 
 ## X post draft (tag @buildonbase)
 
-Claflin — a Deco desk for Coinbase Tokenized Stocks on Base.
+Claflin — a house desk for Coinbase Tokenized Stocks on Base.
 
 Intent → live Aerodrome estimate → explicit review → paper record.
 No fake fills. No marketplace. Just a clearer neobrokerage loop for eligible non-US users.
