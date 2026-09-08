@@ -254,6 +254,8 @@
 .authLabel { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--desk-ink); }
 .authChip button { background: none; border: none; color: var(--desk-muted); font: inherit; text-transform: uppercase; letter-spacing: .1em; padding: 8px; min-height: 44px; }
 .authChip button:hover { color: var(--desk-brass); }
+.liveAccess { margin: 10px 0 0 !important; font: 10px/1.5 var(--font-mono), monospace !important; letter-spacing: .06em; color: var(--desk-muted); }
+.liveAccess .authLink { padding: 4px 8px; min-height: 32px; font-size: 10px; }
 .boardTitle { font: 26px/1.2 var(--font-display), serif !important; margin: 12px 0 14px !important; color: var(--desk-ink); }
 .boardEmpty { color: var(--desk-muted); font-size: 13px; line-height: 1.7; margin: 0 !important; padding: 22px 20px; border: 1px dashed var(--desk-line); border-radius: 2px; background: #101f1a55; }
 .boardList { list-style: none; padding: 0; margin: 0; }

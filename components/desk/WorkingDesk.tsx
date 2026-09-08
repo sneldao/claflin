@@ -14,6 +14,7 @@ import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
+import { useEligibility } from '@/lib/trading/useEligibility';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
@@ -21,6 +22,7 @@ export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
   usePaperSync(desk);
+  const eligibility = useEligibility();
   const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
@@ -77,6 +79,25 @@ export function WorkingDesk() {
           <HettyStatus desk={desk} />
         </section>
         <TradeTicket desk={desk} />
+        {auth.enabled && (
+          <p className={styles.liveAccess} aria-live="polite">
+            {eligibility.stage === 'signed_out' && 'Live access — sign in to begin verification.'}
+            {eligibility.stage === 'no_wallet' && (
+              <>Live access — <button type="button" className={styles.authLink} onClick={auth.linkWallet}>link a wallet</button> to check Coinbase verification.</>
+            )}
+            {eligibility.stage === 'checking' && 'Live access — checking Coinbase verification…'}
+            {eligibility.stage === 'done' && eligibility.eligible && `Verified onchain (Coinbase · ${eligibility.country ?? 'residence attested'}) — live execution arrives in a later release.`}
+            {eligibility.stage === 'done' && !eligibility.eligible && (
+              eligibility.reason === 'restricted_jurisdiction'
+                ? `Live access — this wallet's verified country (${eligibility.country ?? 'restricted'}) is not eligible for these products.`
+                : eligibility.reason === 'no_country_attestation'
+                  ? 'Live access — complete the country attestation on Coinbase Verifications.'
+                  : eligibility.reason === 'check_unavailable'
+                    ? 'Live access — the verification check is unavailable right now.'
+                    : 'Live access — no Coinbase verification on this wallet yet.'
+            )}
+          </p>
+        )}
         <aside className={styles.support} aria-label="Your broker and instruction input">
           <div id="hetty" className={styles.brokerNote}>
             <span>YOUR AI BROKER</span><h2>{hetty.name}.</h2><p>{hetty.approach}</p>

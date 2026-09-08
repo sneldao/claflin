@@ -19,6 +19,9 @@ export interface DeskAuth {
   authenticated: boolean;
   userId: string | null;
   label: string | null;
+  /** Wallet bound to the account (embedded or linked external). Null until linked. */
+  walletAddress: string | null;
+  linkWallet: () => void;
   login: () => void;
   logout: () => void;
   getAccessToken: () => Promise<string | null>;
@@ -26,6 +29,7 @@ export interface DeskAuth {
 
 const ANON: DeskAuth = {
   enabled: false, ready: true, authenticated: false, userId: null, label: null,
+  walletAddress: null, linkWallet: () => {},
   login: () => {}, logout: () => {}, getAccessToken: async () => null,
 };
 
