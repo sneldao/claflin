@@ -71,8 +71,22 @@ export function WorkingDesk() {
     document.getElementById('amount')?.focus({ preventScroll: true });
   };
 
-  return <div className={styles.workspace}>
-    <div className={styles.room} aria-hidden="true"><div className={styles.window}><i /><i /><i /></div><div className={styles.lightPool} /></div>
+  // Pointer drives the room: the light pool follows, the window drifts
+  // against it, the instrument tilts. Written as CSS vars directly on the
+  // element — no React re-render per frame.
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--px', String(((e.clientX - r.left) / r.width - 0.5) * 2));
+    el.style.setProperty('--py', String(((e.clientY - r.top) / r.height - 0.5) * 2));
+  }, []);
+
+  return <div className={styles.workspace} onPointerMove={handlePointerMove}>
+    <div className={styles.room} aria-hidden="true">
+      <div className={styles.window}><i /><i /><i /></div>
+      <div className={styles.lightPool} />
+      <div className={styles.motes}><i /><i /><i /><i /><i /><i /></div>
+    </div>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, your trading desk"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>A CONSIDERED APPROACH</small></span></Link>
       <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#on-desk">On your desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a>
