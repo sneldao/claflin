@@ -6,20 +6,33 @@ import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
 export const DeskBoard = memo(function DeskBoard({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, records, historyReady, edit, watched, unwatch } = desk;
+  const { state, records, historyReady, edit, watched, watch, unwatch } = desk;
   const draftInstrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const latest = records[0];
   const hasDraft = Boolean(state.draft.instrumentId && state.draft.amount);
   const empty = historyReady && records.length === 0 && !hasDraft && watched.length === 0 && state.stage === 'draft';
+  const pinned = watched.length + (hasDraft ? 1 : 0) + (latest ? 1 : 0);
+  /* The first mark worth pinning: whatever is on the ticket, else the first
+     quotable instrument on the desk. */
+  const suggestion = draftInstrument ?? DESK_INSTRUMENTS.find(s => s.quoteSupported && !watched.includes(s.id));
 
   return (
     <section className={styles.board} aria-labelledby="board-title">
-      <p className={styles.eyebrow}>ON YOUR DESK</p>
+      <div className={styles.boardHead}>
+        <p className={styles.eyebrow}>ON YOUR DESK</p>
+        <span className={styles.boardTally}>{empty || pinned === 0 ? 'CLEAR' : `${pinned} PINNED`}</span>
+      </div>
       <h2 id="board-title" className={styles.boardTitle}>Working surface.</h2>
       {empty && (
-        <p className={styles.boardEmpty}>
-          Nothing pinned yet. Your first watched instrument or paper record will appear here.
-        </p>
+        <div className={styles.boardEmpty}>
+          <span className={styles.boardPin} aria-hidden="true" />
+          <p>Nothing pinned yet. Watched instruments and your last paper trade rest here, where you left them.</p>
+          {suggestion && (
+            <button type="button" onClick={() => watch(suggestion.id)}>
+              Pin {suggestion.symbol} to the desk
+            </button>
+          )}
+        </div>
       )}
       <ul className={styles.boardList}>
         {watched.map(id => {

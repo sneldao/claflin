@@ -107,7 +107,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
     await waitFor(x => x.state.stage === 'saved' || x.error !== null, 3000);
     const now = deskRef.current;
     return now.state.stage === 'saved'
-      ? 'Recorded — a paper trade, in this browser only. Nothing moved onchain.'
+      ? 'Recorded — a paper trade. Nothing moved onchain.'
       : `The record did not save${now.error ? ` — ${now.error}` : ''}.`;
   });
 
@@ -218,7 +218,13 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   return (
     <section className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
-      <p className={styles.eyebrow}>THE LINE</p>
+      <div className={styles.boardHead}>
+        <p className={styles.eyebrow}>THE LINE</p>
+        <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
+          <span className={styles.callDot} data-speaking={live && conversation.isSpeaking ? 'true' : 'false'} aria-hidden="true" />
+          {live ? 'LINE 1 · LIVE' : connecting ? 'LINE 1 · RINGING' : 'LINE 1 · OPEN'}
+        </span>
+      </div>
       <h2 id="call-title" className={styles.boardTitle}>Speak with Hetty.</h2>
       <p className={styles.callNote}>
         A live voice session on this desk. Hetty can draft your instruction, request a live estimate, and — only when you say so — record a paper trade. She cannot place real orders; nothing moves onchain.

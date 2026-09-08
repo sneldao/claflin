@@ -13,7 +13,6 @@ import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
-import { useEligibility } from '@/lib/trading/useEligibility';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { useEffect } from 'react';
 import styles from './WorkingDesk.module.css';
@@ -27,7 +26,6 @@ export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
   usePaperSync(desk);
-  const eligibility = useEligibility();
   const hetty = HOUSE_DESKS[0];
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
@@ -146,28 +144,10 @@ export function WorkingDesk() {
           <HettyStatus desk={desk} />
         </section>
         <TradeTicket desk={desk} />
-        {auth.enabled && (
-          <p className={styles.liveAccess} aria-live="polite">
-            {eligibility.stage === 'signed_out' && 'Live access — sign in to begin verification.'}
-            {eligibility.stage === 'no_wallet' && (
-              <>Live access — <button type="button" className={styles.authLink} onClick={auth.linkWallet}>link a wallet</button> to check Coinbase verification.</>
-            )}
-            {eligibility.stage === 'checking' && 'Live access — checking Coinbase verification…'}
-            {eligibility.stage === 'done' && eligibility.eligible && `Verified onchain (Coinbase · ${eligibility.country ?? 'residence attested'}) — live execution arrives in a later release.`}
-            {eligibility.stage === 'done' && !eligibility.eligible && (
-              eligibility.reason === 'restricted_jurisdiction'
-                ? `Live access — this wallet's verified country (${eligibility.country ?? 'restricted'}) is not eligible for these products.`
-                : eligibility.reason === 'no_country_attestation'
-                  ? 'Live access — complete the country attestation on Coinbase Verifications.'
-                  : eligibility.reason === 'check_unavailable'
-                    ? 'Live access — the verification check is unavailable right now.'
-                    : 'Live access — no Coinbase verification on this wallet yet.'
-            )}
-          </p>
-        )}
         <aside className={styles.support} aria-label="Your broker and instruction input">
           <div id="hetty" className={styles.brokerNote}>
             <span>YOUR AI BROKER</span><h2>{hetty.name}.</h2><p>{hetty.approach}</p>
+            <p className={styles.brokerSign} aria-hidden="true">— at your desk, {hetty.name}</p>
             <details><summary>About Hetty</summary><p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. Her role is to help make trading decisions clear, not to make them for you.</p><p>Ring her below for a live voice session — she can draft, quote and record paper trades on your ticket while you watch. She cannot place real orders; this release is paper-only.</p></details>
           </div>
           <div id="on-desk"><DeskBoard desk={desk} /></div>
@@ -179,7 +159,7 @@ export function WorkingDesk() {
         <p className={styles.eyebrow}>ONE HOUSE. DISTINCT PERSPECTIVES.</p>
         <h2 id="house-title">Hetty first. A house over time.</h2>
         <p>Research and specialist judgment belong beside the trade—not in the way of it.</p>
-        <details><summary>Other desks, in time</summary><ul>{HOUSE_DESKS.slice(1).map(broker => <li key={broker.id}><strong>{broker.name}</strong><span>{broker.market} · Planned</span><p>{broker.approach}</p></li>)}</ul><p>These desks are not yet available. Their markets, accounts and permissions will be explicit before they open.</p></details>
+        <details><summary>Other desks, in time</summary><ul>{HOUSE_DESKS.slice(1).map((broker, i) => <li key={broker.id}><strong>{broker.name}</strong><span>DESK {String(i + 2).padStart(2, '0')} · {broker.market} · Planned</span><p>{broker.approach}</p></li>)}</ul><p>These desks are not yet available. Their markets, accounts and permissions will be explicit before they open.</p></details>
       </section>
     </main>
     <div ref={sealRef} className={styles.seal} data-drawn={sealDrawn ? 'true' : 'false'} aria-hidden="true">
