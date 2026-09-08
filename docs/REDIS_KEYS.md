@@ -1,17 +1,32 @@
 # Redis Key Naming Conventions
 
-Single source of truth for all Redis keys in the Claflin system.
+The anonymous paper desk does not use Redis. Account-tier paper backup and
+transcript write do. Everything under **Retained marketplace keys** is
+historical source, not a current product store.
 
-## Naming rules
+## Current desk keys
 
-1. **Namespace prefix** — every key starts with a domain namespace (`agent:`, `call:`, `payment:`, etc.)
+| Key | Type | TTL | Description |
+|-----|------|-----|-------------|
+| `paper:{userId}` | JSON array | none | Account-bound paper records (schema-validated, max 100). Local browser storage stays authoritative; this is a best-effort copy. Deletes are not propagated. |
+| `transcript:{userId}:{conversationId}` | JSON object | 30 days | Write-only Hetty call transcript. No client GET. |
+| `transcripts:{userId}` | Set | none | Conversation ids stored for that account. No expiry companion to the transcript TTL — treat as a known gap. |
+
+These JSON blobs are intentional. Do not rewrite them as hashes without a
+migration. In-process rate limits for quotes and Hetty sessions are not
+Redis keys.
+
+## Naming rules (new keys)
+
+1. **Namespace prefix** — every key starts with a domain namespace (`paper:`, `transcript:`, or a retained prefix).
 2. **Colon separator** — segments separated by `:`, never dots or slashes
-3. **Entity ID** — append the entity ID after the namespace (`agent:agent_123`, `call:call_456`)
-4. **Index sets** — `{namespace}_index` or `{namespace}_index:{subkey}` for collections
-5. **TTL** — all ephemeral keys (sessions, rate limits, signal sessions) must have a TTL set via `setex` or `expire`
-6. **No nested JSON** — store fields as hash keys, not JSON blobs (except for list/stream data)
+3. **Entity ID** — append the entity ID after the namespace
+4. **TTL** — ephemeral keys (transcripts, rate limits, signal sessions) must have a TTL
+5. Prefer hashes for new structured records; the desk keys above are the documented JSON exception
 
-## Key registry
+## Retained marketplace keys
+
+Not used by the paper desk. Do not create new product features on these.
 
 ### Agents
 
@@ -78,12 +93,12 @@ Single source of truth for all Redis keys in the Claflin system.
 |-----|------|-----|-------------|
 | `delegation:{delegationId}` | Hash | none | ERC-8004 delegation record |
 
-### Transcripts
+### Transcripts (legacy webhook / SSE path — dormant)
 
 | Key | Type | TTL | Description |
 |-----|------|-----|-------------|
-| `transcript:{conversationId}` | List | none | Transcript messages (capped at 200) |
-| `transcript:{conversationId}` | Pub/Sub | — | Real-time transcript channel for SSE |
+| `transcript:{conversationId}` | List | none | Legacy webhook transcript messages (capped at 200). Distinct from `transcript:{userId}:{conversationId}`. |
+| `transcript:{conversationId}` | Pub/Sub | — | Real-time transcript channel for the old SSE path |
 
 ### Events
 
@@ -105,4 +120,4 @@ Single source of truth for all Redis keys in the Claflin system.
 2. Use the pattern `{namespace}:{id}` or `{namespace}_index` for collections
 3. Add the key to the table above
 4. Set a TTL if the key is ephemeral
-5. Use `hset`/`hgetall` for structured data, not JSON strings
+5. Prefer `hset`/`hgetall` for new structured records; desk `paper:` / `transcript:` keys are the documented JSON exception

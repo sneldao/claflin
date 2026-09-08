@@ -1,10 +1,11 @@
 export const HOUSE = Object.freeze({
   name: 'Claflin',
-  title: 'Claflin — your trading desk',
-  description: 'A considered approach to tokenized stocks on Base. Explore Hetty’s desk, review live estimates, and make explicit decisions. Paper trading only for now.',
+  title: 'Claflin — the office above the pit',
+  tagline: 'The office above the pit',
+  description: 'The pit is downstairs. This desk is for deciding. Paper trading on Coinbase Tokenized Stocks on Base.',
   mode: 'paper' as const,
   liveExecutionEnabled: false as const,
-  voiceConversationEnabled: false as const,
+  voiceConversationEnabled: true as const,
 });
 
 export const HOUSE_DESKS = Object.freeze([

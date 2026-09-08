@@ -8,7 +8,7 @@ Claflin API server. App directory: `/opt/claflin` — Port 3042 — PM2: `clafli
 
 ```bash
 export BASE_RPC_URL=https://your-base-rpc-provider
-export UPSTASH_REDIS_REST_TOKEN=your_token_here   # only if retained services use Redis
+export UPSTASH_REDIS_REST_TOKEN=your_token_here   # needed for account-tier paper/transcripts or retained services
 make deploy
 ```
 

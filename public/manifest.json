@@ -1,7 +1,7 @@
 {
-  "name": "Claflin — your trading desk",
+  "name": "Claflin — the office above the pit",
   "short_name": "Claflin",
-  "description": "A considered approach to tokenized stocks on Base. Explore Hetty’s desk, review live estimates, and make explicit decisions. Paper trading only for now.",
+  "description": "The pit is downstairs. This desk is for deciding. Paper trading on Coinbase Tokenized Stocks on Base.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#15251f",

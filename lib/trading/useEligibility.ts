@@ -11,9 +11,10 @@ export type EligibilityState =
   | { stage: 'done'; eligible: boolean; country: string | null; reason: string | null };
 
 /**
- * Read-only eligibility gate for the future live desk: when signed in with a
- * linked wallet, checks Coinbase Verifications onchain via /api/eligibility.
- * Nothing is authorized by this — it reports the signal honestly.
+ * Read-only eligibility check for the future live desk. Not mounted on the
+ * paper desk — authority-tier UI must not appear until a ticket can use it.
+ * When called, a signed-in linked wallet is checked via /api/eligibility.
+ * Nothing is authorized by this; it reports the signal only.
  */
 export function useEligibility(): EligibilityState {
   const auth = useDeskAuth();

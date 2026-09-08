@@ -1,10 +1,10 @@
 # Claflin Product Direction
 
-**Status:** Canonical product cutover approved, 2026-09-05. The old onboarding/directory approach is retired. `/` is Hetty's desk, connecting live estimates to explicit review and local paper records. `/desk` redirects there; development studies are not client navigation. Live execution remains unimplemented. Hetty is live on the desk as an ElevenLabs voice session whose client tools drive the same paper draft — drafting, quoting and recording are voice-reachable; signing and submission are not.
+**Status:** Canonical product cutover approved, 2026-09-05; implementation notes refreshed 2026-09-08. The old onboarding/directory approach is retired. `/` is Hetty's desk: live estimates, explicit review, local paper records, a tape of indicative marks, and a live ElevenLabs voice session whose client tools drive the same paper draft. `/desk` redirects there; `/desk-study` is a development-only fixture, not the product. Live execution remains unimplemented. Signing and submission are not voice-reachable. An optional Sign in control may appear when Privy is configured — it does not gate the desk and is not live access.
 
 **Governing decision:** there are no existing users or collaborators requiring preservation of the old experience. Be intentional about replacement: preserve useful technical capabilities selectively, not legacy flows, identities or product assumptions. Git history is the reference for the retired approach.
 
-First arrival is the product, not a prerequisite tour. Introduce the house and Hetty, state current paper mode, and let the client choose a stock and amount. No default trade, mandatory personality questionnaire, dial exercise, free-call funnel or marketplace should intervene. Permissions and detailed terms belong at the relevant action. Navigation should describe the client's work—not directories, design studies or implementation milestones.
+First arrival is the product, not a prerequisite tour. The client is in a room: house stance, paper mode, an empty ticket, Hetty’s plate, and a door that does not ring itself. No default trade, mandatory personality questionnaire, dial exercise, free-call funnel or marketplace should intervene. Permissions and detailed terms belong at the relevant action. Navigation should describe the client's work—not directories, design studies or implementation milestones.
 
 ## The central idea
 
@@ -65,7 +65,8 @@ Prices belong to the client's work, not to decorative atmosphere. Resolve the ex
 
 | Surface | Role | Required distinction |
 |---|---|---|
-| Arrival: "On your desk" | A compact board for watched instruments, explicitly shared holdings, or a recent subject. No unrelated scrolling feed is required. | Source, as-of time, quote currency, instrument identity, and market/session status. A new client can have an empty board. |
+| Arrival: tape | Indicative Chainlink reference marks for the quote-supported instruments. Click loads the ticket. Not an offer. | Source, as-of / stale / unavailable labels. Never mix with the venue estimate. |
+| Arrival: "On your desk" | A compact board for watched instruments, an in-progress draft, or the last paper record. A new client can have an empty board. | Working context, not a feed. Holdings are not invented. |
 | Conversation: quotation slip | Focus on the selected instrument, with optional price history/fundamentals and supporting research. | Underlying-stock reference price versus the particular tokenized product's indicative price. Label delayed, stale, closed-session, and unavailable data. |
 | Confirmation: quote-bound ticket | Review terms for the exact side and size at the chosen venue, or the explicit simulation model. | Executable/indicative/simulated status, spend or quantity, fees, slippage/price impact as applicable, validity, network, and authorizing account. Call charges remain separate. |
 
@@ -136,7 +137,7 @@ These are target behaviors. See [ROADMAP.md](../ROADMAP.md) for implementation g
 | Outcome | See the order/transaction status, fill or failure, costs, and verified position/balance effect. | Distinguish submitted, venue-accepted/filled, chain inclusion/finality where applicable, and rejected/reverted/expired/unknown outcomes. Separate the trade record from the call receipt. |
 | Return | Review verified orders/positions, resume a pending intent, or initiate the next intended trade. | Fresh account data and relevant supporting notes; preserve publication editions and explain suggestions without manufacturing current holdings. |
 
-A transcript is supporting evidence, not a substitute for a structured paper instruction. Payment for a conversation is never evidence that a paper trade was recorded, and neither is evidence of a real-market order.
+A transcript is supporting evidence, not a substitute for a structured paper instruction. Payment for a conversation is never evidence that a paper trade was recorded, and neither is evidence of a real-market order. A shared `?intent=` link prefills a draft on the recipient's desk; it does not copy a record, a position, or an approval.
 
 ## Hetty: presence before persona inventory
 
@@ -182,17 +183,19 @@ Motion should establish continuity and respond to meaningful events. Restrained 
 
 Three.js is justified for the original object, not as a reason to rebuild the app or add effects everywhere. Use a complete static fallback, bounded pixel ratio, visibility-aware scheduling, no continuous idle render loop, and full resource cleanup. The first study uses existing CSS/React for interaction; it does not add a second motion library or a scroll engine.
 
-Sound may include a restrained receiver click, paper movement, or distant office activity. It must be opt-in, controllable, and quiet or absent during speech. Preserve voice intelligibility; no aggressive period filtering or automatic background soundtrack. The first study is silent; voice casting and sound design are separate work.
+Sound may include a restrained receiver click, paper movement, or distant office activity. It must be opt-in, controllable, and quiet or absent during speech. Preserve voice intelligibility; no aggressive period filtering or automatic background soundtrack. The live desk offers an opt-in floor tone (`Hear the floor`); it stays off by default, dies while Hetty is speaking, and is not a soundtrack. Voice casting remains separate work.
 
 ### Review artifact and open decisions
 
-The implementation is at `/desk-study` (`app/desk-study/page.tsx`, `components/desk/`, `lib/desk-instrument.ts`, `lib/desk-study.ts`). It provides three manually selectable states: arrival, scripted conversation, and an editable fictional paper instruction. Acknowledgement is in-memory only and resets when details change; no record is saved or submitted.
+The live product composition is `/` (`components/desk/WorkingDesk.tsx` and the desk instrument). It owns arrival, conversation, and confirmation as real desk stages driven by `useTradingDesk` and the Hetty session — not scripted study states.
 
-The study bypasses wallet/voice providers via `AppProviders`, performs no market-data or transaction requests, has no microphone/audio access, and is marked noindex. The existing live application remains at `/`. Geometry, wordmark, and CSS fallback are original; no reference assets or code were transplanted. Three.js and its bundled environment helper are the rendering dependency, not Sylva's implementation.
+`/desk-study` (`app/desk-study/page.tsx`, `components/desk/DeskStudy.tsx`, `lib/desk-study.ts`) remains a development-only fixture: three manually selectable states, in-memory acknowledgement, no records, no market-data or microphone access, noindex, absent from client navigation and production. Do not treat it as the product or as visual acceptance of `/`.
 
-Use the study to review silhouette, depth, hierarchy, and continuity at desktop and narrow widths before integrating live services. Browser visual and device validation remain required; source, type, and build checks do not certify the composition's appearance or frame rate.
+Geometry, wordmark, and CSS fallback are original; no reference assets or code were transplanted. Three.js and its bundled environment helper are the rendering dependency, not Sylva's implementation.
 
-Open decisions: final instrument/material tuning, exact historical vocabulary, identity/portrait treatment, Hetty's voice and sonic character, measured device budgets, and the live working-note/instruction data contract. Preserve reference attribution and update this section rather than creating a competing design brief.
+Browser visual and device validation remain required; source, type, and build checks do not certify the composition's appearance or frame rate.
+
+Open decisions: final instrument/material tuning, exact historical vocabulary, identity/portrait treatment, Hetty's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
 
 ### Explicit exclusions
 
@@ -221,7 +224,7 @@ The intended expansion is Hetty/Base first, Jesse/Solana after that trading flow
 
 Robinhood's official documentation describes a live permissionless EVM L2, but permissionless network access does not establish unrestricted eligibility for its Stock Tokens. Their underlying-equity exposure, multiplier-adjusted units/prices, and venue-specific execution need an explicit adapter. See [Robinhood Chain integration baseline](AGENTIC_ARCHITECTURE.md#robinhood-chain-integration-baseline) for dated source findings; no Robinhood API or chain configuration is changed by this document.
 
-Base-first execution is the target. The client-facing house model lives in `lib/house.ts`; historical provider configuration is not the source of client identity. A canonical Base catalog and read-only Aerodrome estimate adapter support the current paper flow. Account eligibility, signing and live execution remain unimplemented. Retained Arbitrum billing/identity infrastructure is separate: do not globally replace chain constants or infer market access from a broker name.
+Base-first execution is the target. The client-facing house model lives in `lib/house.ts`; historical provider configuration is not the source of client identity. A canonical Base catalog and read-only Aerodrome estimate adapter support the current paper flow. Optional Sign in (Privy) is an account-tier scaffold — paper backup and transcript write, not a front door. A read-only Coinbase Verifications check exists in source for a later authority tier and is not shown on the paper desk. Signing and live execution remain unimplemented. Retained Arbitrum billing/identity infrastructure is separate: do not globally replace chain constants or infer market access from a broker name.
 
 Live execution is a core planned milestone, released only after appropriate integrations, eligibility/compliance review, security verification, and transaction authorization are proven. Paper/testnet validation precedes it but does not replace it as the product goal. Publishing letters does not authorize transactions, and editorial readiness is not a prerequisite for the direct trading path. Telephony, alternative payment protocols, and general agent delegation remain optional, needs-driven work.
 
@@ -239,6 +242,7 @@ Evaluate publications and adaptation by their contribution to discovery, compreh
 
 - **This document** owns enduring product principles, the client journey, exclusions, and reference-dependent decisions.
 - **[ROADMAP.md](../ROADMAP.md)** owns sequencing, known implementation gaps, and release evidence.
+- **[AUTH_AND_ACCESS.md](AUTH_AND_ACCESS.md)** owns capability tiers and what the account scaffold actually does.
 - **[README.md](../README.md)** owns orientation, setup, and the documentation map.
 - **Technical documents** own implementation details and dated observations, not independent product strategies. Distinguish historical behavior, current code, and proposed behavior explicitly.
 

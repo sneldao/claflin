@@ -25,7 +25,7 @@ export const HettyStatus = memo(function HettyStatus({ desk }: { desk: ReturnTyp
         : `For your review${symbol ? ` — ${symbol}` : ''}, ${remaining}s remaining on this estimate.`;
       break;
     case 'saved':
-      line = 'Paper trade recorded in this browser. Nothing moved onchain.';
+      line = 'Paper trade recorded. Nothing moved onchain.';
       break;
     default:
       line = state.draft.instrumentId

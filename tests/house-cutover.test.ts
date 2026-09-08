@@ -6,11 +6,11 @@ import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } fro
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 describe('one canonical house', () => {
-  it('starts with Hetty and never advertises planned desks or voice as live', () => {
+  it('starts with Hetty, paper-only execution, live voice, and planned desks marked planned', () => {
     assert.equal(HOUSE_DESKS[0].id, 'hetty');
     assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Arbitrum']);
     assert.equal(HOUSE.liveExecutionEnabled, false);
-    assert.equal(HOUSE.voiceConversationEnabled, false);
+    assert.equal(HOUSE.voiceConversationEnabled, true);
     assert.ok(HOUSE_DESKS.slice(1).every(d => d.status === 'planned'));
   });
   it('renders the desk at root with no onboarding, directory, or automatic call entry', () => {
@@ -32,10 +32,12 @@ describe('one canonical house', () => {
   });
   it('has no developer navigation or directory selling points in the desk', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
-    assert.doesNotMatch(desk, /href="\/desk-study"|Broker directory|Exact instrument|token decimals|per minute|Start a free call/);
-    assert.match(desk, /Your trading/);
+    assert.doesNotMatch(desk, /href="\/desk-study"|Broker directory|Exact instrument|token decimals|per minute|Start a free call|Live access|useEligibility|YOUR AI BROKER|WELCOME TO CLAFLIN|A CONSIDERED APPROACH/);
+    assert.match(desk, /The pit is/);
     assert.match(desk, /About Hetty/);
     assert.match(desk, /PAPER TRADING/);
+    assert.match(desk, /Hear the floor/);
+    assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
   });
   it('retires marketplace distribution without intercepting quote or webhook infrastructure', () => {
     for (const path of ['/api/agents', '/api/agents/', '/api/agents/general_helper', '/api/sdk/register', '/api/ratings']) assert.equal(isRetiredMarketplaceApi(path), true);

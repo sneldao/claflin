@@ -1,10 +1,14 @@
-# Voice Transport: Widget Engine
+# Voice Transport: Widget Engine (retained)
 
 ## Scope and status
 
-**Updated:** 2026-09-05. The controlled ElevenLabs widget engine is implemented. Historical browser observations below are dated evidence, not a guarantee of current provider behavior or a completed end-to-end client experience.
+**Archive for the old widget path. Not the live Hetty session.**
 
-[Product Direction](PRODUCT_DIRECTION.md) owns the visible experience: the client's working desk with Hetty. [ROADMAP.md](../ROADMAP.md) owns priorities and verification gates. This document owns voice transport and its evidence requirements. It does not require preserving the directory, five-step onboarding, or operator-console UI.
+**Updated:** 2026-09-08. The desk voice path is `components/desk/HettyCall.tsx` plus `POST /api/hetty/session` (ConvAI signed URL, client tools against the paper draft). The historical `<elevenlabs-convai>` widget, `WidgetEngine`, and `/api/webhooks/elevenlabs` are retained source, not mounted by the root layout and not how Hetty rings today.
+
+The notes below are dated evidence about that retained stack, not a guarantee of current provider behavior and not setup instructions for the paper desk.
+
+[Product Direction](PRODUCT_DIRECTION.md) owns the visible experience. [ROADMAP.md](../ROADMAP.md) owns priorities. [Architecture](AGENTIC_ARCHITECTURE.md) describes the live Hetty path.
 
 ## Why a controlled widget
 

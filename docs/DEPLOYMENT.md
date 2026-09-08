@@ -7,16 +7,19 @@
 | Vercel | `your-claflin-app.vercel.app` | Auto-deploys from `main`; serves the desk UI and `/api/*` |
 | VPS (Hetzner) | `api.your-claflin-app.com` | PM2 standalone server on port 3042; ~52 MB |
 
-The client-facing product is the paper trading desk at `/`. The only mounted
-API routes are `/api/stocks/quote` (read-only estimate service) and
-`/api/webhooks/elevenlabs` (retained call-billing infrastructure). Retired
-marketplace APIs (`/api/agents`, `/api/ratings`, `/api/sdk/register`) return
-410 through `proxy.ts`; retired client pages redirect to `/` via
-`next.config.js`.
+The client-facing product is the paper trading desk at `/`. Mounted desk
+routes: `/api/stocks/quote` (read-only estimates), `/api/stocks/marks`
+(indicative tape), `/api/hetty/session` (voice signed URL), and — when an
+account is configured — `/api/paper` and `/api/hetty/transcript`.
+`/api/eligibility` is a read-only authority-tier check, not a paper-desk
+surface. `/api/webhooks/elevenlabs` is retained call-billing infrastructure
+and is not on the live Hetty path. Retired marketplace APIs (`/api/agents`,
+`/api/ratings`, `/api/sdk/register`) return 410 through `proxy.ts`; retired
+client pages redirect to `/` via `next.config.js`.
 
-Both targets share the same **Upstash Redis** instance
-(`game-corgi-122374.upstash.io`), used only by retained services — the paper
-desk itself needs no Redis.
+Both targets can share the same **Upstash Redis** instance. The anonymous
+paper desk (estimates, tape, local records, ringing Hetty) does not need
+Redis. Account-tier paper backup and transcript write do.
 
 ---
 
@@ -44,9 +47,10 @@ NEXT_PUBLIC_APP_URL=https://your-claflin-app.vercel.app
 API_PROXY_TARGET=https://api.your-claflin-app.com
 ```
 
-**Only if the retained services are in use** (ElevenLabs webhook, Arbitrum
-call billing, Redis-backed modules). These are NOT required for the paper
-desk and are not product setup steps:
+**Only if account-tier backup or retained services are in use** (paper
+sync, transcript write, ElevenLabs webhook, Arbitrum call billing). These
+are NOT required for the anonymous paper desk and are not product setup
+steps:
 
 ```
 UPSTASH_REDIS_REST_URL=
@@ -64,6 +68,15 @@ desk still works and the call card reports the line as not connected:
 ```
 ELEVENLABS_API_KEY=
 ELEVENLABS_AGENT_HETTY=
+```
+
+Optional Sign in (does not gate the desk; not live access):
+
+```
+NEXT_PUBLIC_PRIVY_APP_ID=
+NEXT_PUBLIC_PRIVY_CLIENT_ID=
+PRIVY_APP_ID=
+PRIVY_APP_SECRET=
 ```
 
 Provision the agent once with `node --env-file=.env.local scripts/create-hetty-agent.mjs`,
@@ -116,8 +129,10 @@ OPTIONS preflights and stamps CORS headers on every API response — but prefer
 the proxy.
 
 If neither is set, Vercel's serverless functions handle API calls directly.
-That is sufficient for the current desk: `/api/stocks/quote` runs fine as a
-serverless route (it only needs `BASE_RPC_URL`).
+That is sufficient for the current desk: `/api/stocks/quote` and
+`/api/stocks/marks` run as serverless routes (they need `BASE_RPC_URL`).
+Account-tier paper and transcript routes also need Redis and Privy server
+credentials.
 
 Leave `API_PROXY_TARGET` **unset** on the VPS itself and in local dev, or the
 server will proxy its own routes back to itself.
@@ -126,10 +141,11 @@ server will proxy its own routes back to itself.
 
 ## After Any Deployment
 
-1. `GET /` — the desk renders, paper mode is explicit, no stock preselected.
+1. `GET /` — the desk renders, paper mode is explicit, no stock preselected. Sign in appears only if Privy public env is set; there is no “Live access” banner.
 2. `GET /api/stocks/quote?instrumentId=<catalog-id>&side=buy&amount=100` —
    returns an estimate labelled with venue/reference freshness (requires
    `BASE_RPC_URL` for reliable results).
-3. `GET /api/agents` — returns `410 marketplace_retired`.
-4. `/marketplace`, `/demo`, `/profile`, `/dashboard` — redirect to `/`.
-5. `/desk-study` and `/widget-probe` — not-found in production.
+3. `GET /api/stocks/marks` — returns indicative marks with stale/unavailable labels.
+4. `GET /api/agents` — returns `410 marketplace_retired`.
+5. `/marketplace`, `/demo`, `/profile`, `/dashboard` — redirect to `/`.
+6. `/desk-study` and `/widget-probe` — not-found in production.

@@ -217,17 +217,17 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   };
 
   return (
-    <section className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
+    <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
       <div className={styles.boardHead}>
-        <p className={styles.eyebrow}>THE LINE</p>
+        <p className={styles.eyebrow}>THE DOOR</p>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={live && conversation.isSpeaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'LINE 1 · LIVE' : connecting ? 'LINE 1 · RINGING' : 'LINE 1 · OPEN'}
         </span>
       </div>
-      <h2 id="call-title" className={styles.boardTitle}>Speak with Hetty.</h2>
+      <h2 id="call-title" className={styles.boardTitle}>Ring when you want her.</h2>
       <p className={styles.callNote}>
-        A live voice session on this desk. Hetty can draft your instruction, request a live estimate, and — only when you say so — record a paper trade. She cannot place real orders; nothing moves onchain.
+        She drafts, quotes, and records paper — only if you say so. Nothing moves onchain. The desk never rings itself.
       </p>
       <div className={styles.callActions}>
         {!live && !connecting && (

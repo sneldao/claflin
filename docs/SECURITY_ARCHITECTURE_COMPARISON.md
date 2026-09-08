@@ -1,5 +1,7 @@
 # Security Architecture
 
+**Retained call-billing reference. Not the paper desk and not live stock execution.** Call-payment receipts stay separate from paper records and from any future trade receipt.
+
 ## Payment Security Model
 
 All payments are **user-settled** — the server holds no private keys for payment transactions.

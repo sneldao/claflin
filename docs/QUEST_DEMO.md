@@ -6,7 +6,7 @@
 
 ## 90-second Loom cut
 
-| :00–:10 | Open `/` — one door. Point at **PAPER TRADING** + “Live estimates. No real funds move.” No marketplace, no wallet bootstrap. |
+| :00–:10 | Open `/` — one door. Point at **The pit is downstairs** + **PAPER TRADING**. No marketplace, no wallet bootstrap. If Sign in is visible (Privy configured), ignore it — it is not live access. |
 | :10–:18 | The tape: live indicative marks, hover to pause, click **NVDAc** — it loads into the ticket. Stale labels show when feeds are quiet; say so honestly. |
 | :18–:40 | Spend **25 USDC**, hit **Review estimate**. While it flies, the instrument's handset lifts — the desk answers state. |
 | :40–:60 | **Quotation slip** peak — the instrument has printed the slip forward. Spend / receive / as-of / review window. Open details once; close. |
@@ -38,4 +38,4 @@ Built for the Base Tokenized Stocks Builder Quest.
 
 ## Do not demo
 
-Fake live fills, wallet signing that doesn’t exist, marketplace directory, free-call funnel, or claiming regulated brokerage status.
+Fake live fills, wallet signing that doesn’t exist, marketplace directory, free-call funnel, “live access” or eligibility as a feature, or claiming regulated brokerage status.

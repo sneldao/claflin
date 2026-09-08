@@ -64,7 +64,7 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Claflin — your trading desk. A considered approach to tokenized stocks on Base.',
+        alt: 'Claflin — the office above the pit. Paper trading on Coinbase Tokenized Stocks on Base.',
         type: 'image/png',
       },
     ],

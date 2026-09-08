@@ -1,6 +1,6 @@
 # Performance Notes
 
-**Scope:** Source-based implementation notes and verification priorities, updated 2026-09-05. These are not measured performance results.
+**Scope:** Source-based implementation notes and verification priorities, updated 2026-09-08. These are not measured performance results.
 
 [Product Direction](PRODUCT_DIRECTION.md) sets the priority: facilitate intended trades through a responsive desk. [ROADMAP.md](../ROADMAP.md) owns sequencing. Optimize time to a valid quote, clear review, reliable execution, and verified outcome—not time spent reading or talking. Publications, ranking, and the scene must not sit on the critical trading path.
 
@@ -18,11 +18,11 @@ Establish measured baselines and budgets before adding substantial imagery, ambi
 
 | Surface | Current mechanism | Caveat or next verification |
 |---|---|---|
-| Initial page | `app/page.tsx` renders `WorkingDesk` directly. No global wallet/widget providers, onboarding, directory or call meter are mounted. | Verify the normal root entry, not only an alternate preview route. No measured speed improvement is claimed from source changes alone. |
+| Initial page | `app/page.tsx` renders `WorkingDesk` directly. No onboarding, directory or call meter. Optional Privy mounts only when public env is set, via `next/dynamic`. | Verify the normal root entry, not only an alternate preview route. No measured speed improvement is claimed from source changes alone. |
 | Trade preparation | `useTradingDesk` coordinates explicit requests with aborts and stale-response guards; `TradeTicket` owns the review surface. | No quote request before an explicit action. Recheck expiry at save even if background timers were throttled. |
-| Rendering | `DeskInstrument` dynamically imports Three.js; the form and records remain HTML. Production styles are separate from the development study. | Rendering must not block preparing or reviewing an instruction; verify reduced-motion, hidden state, fallback and cleanup. |
-| Return visits | `PaperHistory` reads only browser-local paper records; no directory/activity polling is required. | Storage failures are visible; paper records must not appear as real positions or cross-device memory. |
-| Voice | “Ring Hetty” starts an ElevenLabs ConvAI session (`/api/hetty/session` mints the signed URL server-side). Her client tools drive the same desk draft. The old widget and provider scripts are not loaded by the root layout. | Live conversation is real; transcripts and any account or execution authority are not wired to it. |
+| Rendering | `DeskInstrument` dynamically imports Three.js; the form and records remain HTML. `/desk-study` is a development fixture, not the product. | Rendering must not block preparing or reviewing an instruction; verify reduced-motion, hidden state, fallback and cleanup. |
+| Return visits | `PaperHistory` reads browser-local paper records. Signed-in clients may also pull account copies (add-only). | Storage failures are visible; paper records must not appear as real positions. Account copies are not a second source of truth. |
+| Voice | “Ring Hetty” starts an ElevenLabs ConvAI session (`/api/hetty/session` mints the signed URL server-side). Her client tools drive the same desk draft. The old widget is not loaded. | Live conversation is real. Transcript POST is write-only when a bearer token is present; the ring request does not send one. No execution authority. |
 
 ## Engineering constraints
 
