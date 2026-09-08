@@ -49,7 +49,14 @@ Open decision: Privy vs Dynamic vs a lean Auth.js + wallet-link stack. Privy is 
 
 1. **Now (done):** anonymous paper desk; server-side key isolation; rate-limited session minting; CSP + permissions headers; voice bound to client tools with confirmation gating.
 2. **Account tier (scaffolded):** `components/auth/AuthProvider.tsx` mounts Privy only when `NEXT_PUBLIC_PRIVY_APP_ID`/`NEXT_PUBLIC_PRIVY_CLIENT_ID` are set — otherwise the desk is unchanged and the SDK never enters the bundle. A "Sign in" control appears in the header; `/api/hetty/session` binds the call to the verified account when a token is presented (per-user limits) and stays anonymous otherwise; `POST/GET /api/paper` syncs records to the account (Redis) when signed in; `POST /api/hetty/transcript` stores the call transcript to the account (30-day TTL, schema-validated) — anonymous calls leave no record. Remaining: provision the Privy app, add session-cookie hardening if/when privileged routes need it.
-3. **Authority tier:** wallet binding + eligibility service → execution adapter behind explicit per-trade authorization. Voice may narrate and draft; the signature ceremony happens on-screen.
+3. **Authority tier (decided, staged):** progressive authority — the safe, high-friction path is the default and smoothness is earned, not offered.
+
+   - **L1 — verified + own-custody + per-trade signature (default).** Eligibility is checked onchain via **Coinbase Verifications** — Base-native EAS attestations, issuer-aligned (the same entity issuing the tokens attests to the account). A wallet is eligible when it holds a live "Verified Account" attestation AND a "Verified Country" attestation outside US/territories (Reg-S posture). Every trade is a fresh signature on the user's own wallet — visible, deliberate, legible. `lib/eligibility.ts` implements the read-only check (Base mainnet, EAS predeploy + Coinbase indexer/attester).
+   - **L2 — bounded delegation (opt-in, later).** Only after L1 verification: the user signs a scoped delegation policy (instruments, size caps, expiry, revocable — the retained ERC-8004 model fits) once, then trades flow within bounds. L2 never relaxes eligibility — it requires it plus a stricter bar.
+   - **Custody.** Own-wallet default; a Privy embedded wallet remains user-controlled (exportable keys) and can be offered as a "we provision one" option without weakening self-custody.
+   - **Fallback.** Self Protocol (passport-ZK) remains the fallback for non-Coinbase users; it asserts passport facts, not residence — sufficient signal, weaker than issuer attestation.
+
+   Voice may narrate and draft at any tier; the signature ceremony happens on-screen.
 
 ## What is explicitly out
 

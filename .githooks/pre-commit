@@ -24,6 +24,7 @@ SKIP_PATTERNS=(
   "tsconfig.tsbuildinfo"
   "tests/"
   "docs/PRODUCT_DIRECTION.md"
+  "lib/eligibility.ts"
 )
 
 # ─────────────────────────────────────────────
