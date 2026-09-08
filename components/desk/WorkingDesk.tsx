@@ -81,9 +81,10 @@ export function WorkingDesk() {
     el.style.setProperty('--py', String(((e.clientY - r.top) / r.height - 0.5) * 2));
   }, []);
 
-  return <div className={styles.workspace} onPointerMove={handlePointerMove}>
+  return <div className={styles.workspace} onPointerMove={handlePointerMove} data-live={hettyLive ? 'true' : 'false'}>
     <div className={styles.room} aria-hidden="true">
       <div className={styles.window}><i /><i /><i /></div>
+      <div className={styles.lightShaft} />
       <div className={styles.lightPool} />
       <div className={styles.motes}><i /><i /><i /><i /><i /><i /></div>
     </div>

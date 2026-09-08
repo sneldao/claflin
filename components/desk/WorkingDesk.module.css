@@ -31,6 +31,20 @@
 .workspace a { color: inherit; text-decoration: none; }
 .room { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; background: linear-gradient(110deg, var(--desk-deep), transparent 55%); --px: 0; --py: 0; }
 .workspace { --px: 0; --py: 0; }
+/* Film grain — the room is a photograph, not a render. */
+.room::before {
+  content: ''; position: absolute; inset: -50%; z-index: 1; pointer-events: none; opacity: .05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Volumetric shafts falling from the window. */
+.lightShaft {
+  position: absolute; top: -8%; right: -4%; width: 60%; height: 130%;
+  background: linear-gradient(115deg, transparent 30%, #b8c4ab0d 42%, #d9cfae1f 50%, #b8c4ab0d 58%, transparent 70%);
+  transform: rotate(-14deg); filter: blur(6px); pointer-events: none;
+}
+.workspace[data-live="true"] .lightPool { background: radial-gradient(ellipse at 59% 43%, #d9b96b33, transparent 59%); }
+.workspace[data-live="true"] .lightShaft { opacity: 1.6; }
+.lightShaft { transition: opacity 800ms; }
 .room::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 34%, transparent 52%, #050c0977 100%); }
 .window { position: absolute; top: -175px; right: 2%; width: 570px; height: 870px; transform: rotate(-28deg) skewY(14deg) translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -8px), 0); border: 1px solid var(--desk-line); opacity: .55; transition: transform 700ms cubic-bezier(.16, .8, .3, 1); }
 .window i { position: absolute; inset: 0 60px; border: 1px solid var(--desk-line); }
@@ -85,6 +99,13 @@
 
 /* ————— The tape: indicative reference marks ————— */
 .tape { display: flex; align-items: stretch; gap: 0; border-top: 1px solid var(--desk-brass-dim); border-bottom: 1px solid var(--desk-brass-dim); min-height: 52px; position: relative; }
+/* A mark ticks when a fresh figure arrives — like a real machine. */
+@keyframes tapeTick {
+  0% { transform: translateY(-6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.tapePrice { animation: tapeTick 300ms cubic-bezier(.2, .9, .3, 1.2) both; }
+@media (prefers-reduced-motion: reduce) { .tapePrice { animation: none; } }
 .tape::before, .tape::after {
   content: ''; position: absolute; left: 0; right: 0; height: 4px; pointer-events: none;
   background: radial-gradient(circle 1.6px at 8px 2px, var(--desk-brass-dim) 98%, transparent);
@@ -98,8 +119,9 @@
 .tapeTrack { display: flex; width: max-content; animation: tapeRun 44s linear infinite; }
 .tapeWindow:hover .tapeTrack, .tapeWindow:focus-within .tapeTrack { animation-play-state: paused; }
 .tapeCopy { display: flex; align-items: stretch; }
-.tapeItem { display: flex; align-items: center; gap: 10px; padding: 10px 26px; background: transparent; border: 0; border-right: 1px solid var(--desk-line); color: var(--desk-ink); white-space: nowrap; }
-.tapeItem:hover:not(:disabled) { background: #c5ac7814; }
+.tapeItem { display: flex; align-items: center; gap: 10px; padding: 10px 26px; background: transparent; border: 0; border-right: 1px solid var(--desk-line); color: var(--desk-ink); white-space: nowrap; transition: background 180ms, transform 120ms ease-out; }
+.tapeItem:hover:not(:disabled) { background: #c5ac7814; transform: translateY(-1px); }
+.tapeItem:active:not(:disabled) { transform: translateY(0); }
 .tapeItem:focus-visible { outline: 2px solid var(--desk-brass); outline-offset: -2px; }
 .tapeItem:disabled { color: var(--desk-muted); }
 .tapeSymbol { font: 11px/1 var(--font-mono), monospace; letter-spacing: .12em; color: var(--desk-brass); }
@@ -158,7 +180,20 @@
 .brokerNote span { font: 10px var(--font-mono), monospace; color: var(--desk-brass); letter-spacing: .08em; }
 .brokerNote p { font: 22px/1.5 var(--font-display), serif; margin: 12px 0 !important; }
 .brokerNote small, .footnote { color: var(--desk-muted); font-size: 11px !important; line-height: 1.7; }
-.ticket { position: relative; color-scheme: light; background: linear-gradient(145deg, var(--desk-paper-light), var(--desk-paper)); color: var(--desk-paper-ink); padding: clamp(20px, 3vw, 40px); border-top: 4px solid var(--desk-brass); box-shadow: 4px 6px 0 #b3a98c, 0 18px 50px #0004; }
+.ticket { position: relative; color-scheme: light; background: linear-gradient(145deg, var(--desk-paper-light), var(--desk-paper)); color: var(--desk-paper-ink); padding: clamp(20px, 3vw, 40px); border-top: 4px solid var(--desk-brass); box-shadow: 4px 6px 0 #b3a98c, 0 18px 50px #0004; transition: transform 260ms cubic-bezier(.16,.8,.3,1), box-shadow 260ms; }
+/* The ticket breathes under the hand — a hair of lift, a deeper shadow. */
+@media (hover: hover) {
+  .ticket:hover { transform: translateY(-2px); box-shadow: 4px 8px 0 #b3a98c, 0 24px 60px #0006; }
+}
+/* The stamp echoes once after landing — an ink ring expanding off it. */
+.stamp::after { content: ''; position: absolute; inset: -2px; border: 2px solid #7a5f28; border-radius: 6px; opacity: 0; }
+.ticket[data-acknowledged="true"] .stamp::after { animation: stampEcho 700ms ease-out 240ms both; }
+@keyframes stampEcho { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ticket { transition: none; }
+  .ticket:hover { transform: none; }
+  .ticket[data-acknowledged="true"] .stamp::after { animation: none; }
+}
 .stamp { position: absolute; top: 90px; right: 30px; display: grid; place-items: center; gap: 3px; padding: 10px 16px; transform: rotate(9deg); border: 2px solid #7a5f28; border-radius: 4px; box-shadow: inset 0 0 0 1px #7a5f2855; color: #7a5f28; font: 700 14px/1 var(--font-mono), monospace; letter-spacing: .2em; text-align: center; opacity: .82; pointer-events: none; mix-blend-mode: multiply; }
 .stamp small { font-size: 7px; letter-spacing: .14em; font-weight: 500; }
 .ticket[data-acknowledged="true"] .stamp { animation: stampIn 420ms cubic-bezier(.2, 1.4, .32, 1) both; }

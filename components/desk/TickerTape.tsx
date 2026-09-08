@@ -78,7 +78,8 @@ function TapeItem({ mark, onSelect, disabled }: { mark: DeskMark; onSelect: (id:
       title={`${mark.name} — ${price ? `$${price} reference` : 'reference unavailable'}${stale ? ' (stale)' : ''}. Load into the ticket.`}
     >
       <span className={styles.tapeSymbol}>{mark.symbol}</span>
-      <span className={styles.tapePrice}>{price ? `$${price}` : '—'}</span>
+      {/* key on the price re-mounts the digit on each new mark — the tape ticks. */}
+      <span key={price ?? 'none'} className={styles.tapePrice}>{price ? `$${price}` : '—'}</span>
       {stale && <span className={styles.tapeStale}>STALE</span>}
     </button>
   );
