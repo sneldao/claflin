@@ -16,7 +16,7 @@ export function ClosedDesk({ desk, onReturn }: { desk: HouseDesk; onReturn: () =
       <span className={styles.paperNumber}>—</span>
     </div>
     <h1 id="instruction-title">This desk is not open.</h1>
-    <p className={styles.notice} role="status">{desk.name} / {desk.market} is planned. An instruction from the Base desk cannot come with you.</p>
+    <p className={styles.notice} role="status">{desk.name} / {desk.market} is a planned desk. An instruction from the Base desk cannot come with you.</p>
     <div className={styles.ticketSurface}>
       <p className={styles.closedBoundary}>No quote, no paper file, no live order.</p>
       <p className={styles.product}>{desk.approach}</p>

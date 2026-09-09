@@ -3,9 +3,10 @@
 import { memo, useEffect, useState } from 'react';
 import type { DeskMark, MarksResult } from '@/lib/trading/marks-shared';
 import { markPrice } from '@/lib/trading/marks-shared';
+import { fetchJson } from '@/lib/api-client';
 import styles from './WorkingDesk.module.css';
 
-const REFRESH_MS = 90_000;
+const REFRESH_MS = 120_000;
 
 /**
  * The house tape — indicative Chainlink reference marks for the
@@ -19,13 +20,15 @@ export const TickerTape = memo(function TickerTape({ onSelect, disabled }: { onS
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      try {
-        const response = await fetch('/api/stocks/marks', { cache: 'no-store' });
-        if (!response.ok) throw new Error('marks_unavailable');
-        const body = (await response.json()) as MarksResult;
-        if (!cancelled) { setResult(body); setFailed(false); }
-      } catch {
-        if (!cancelled) setFailed(true);
+      const result = await fetchJson<MarksResult>('/api/stocks/marks');
+      if (cancelled) return;
+      if (result.ok) {
+        setResult(result.data);
+        setFailed(false);
+      } else {
+        // Keep the last good tape on screen through transient failures;
+        // only a cold failure (never had marks) shows the note.
+        setFailed(result.error.status === 0 || result.error.status >= 500 || result.error.status === 404);
       }
     };
     void load();

@@ -614,6 +614,9 @@
 .deskInscription { position: relative; z-index: 2; margin-top: 8px; color: var(--desk-brass); }
 .deskInscription > span { font: 22px/1.3 var(--font-display), serif; }
 .deskInscription > p { margin-top: 4px; font-size: 11px; color: var(--desk-muted); }
+.deskNote { margin-top: 10px; max-width: 340px; font-size: 10.5px; line-height: 1.7; font-style: italic; color: var(--desk-muted); opacity: .85; }
+.deskNote[data-muted="true"] { opacity: .55; }
+.deskNoteSource { font-style: normal; letter-spacing: .02em; }
 .aboutHetty { position: relative; z-index: 2; max-width: 360px; color: var(--desk-muted); font-size: 11px; line-height: 1.8; }
 .aboutHetty summary { min-height: 36px; padding: 10px 0; width: fit-content; }
 .aboutHetty p { padding-bottom: 12px; }

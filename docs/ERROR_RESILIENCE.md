@@ -41,15 +41,18 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
   cookies. Reflecting any Origin is therefore safe; set
   `CORS_ALLOWED_ORIGINS` to restrict.
 
-### 3. Resilient client (`lib/api-client.ts` + `lib/useSWR.ts`)
+### 3. Resilient client (`lib/api-client.ts`)
 
-- `apiFetch()` — 12s timeout, jittered exponential backoff, retries **only**
-  idempotent GETs (never replay a POST/payment), fast-fails when offline.
+- `apiFetch()` — per-attempt timeout, jittered exponential backoff honoring
+  `Retry-After` on 429s, retries **only** idempotent GET/HEAD (never replay a
+  POST/payment), and a `fetchJson()` wrapper that resolves instead of throwing
+  for desk call sites.
 - `ApiError` — typed `kind` (`offline | network | timeout | http | parse`) +
   `friendlyMessage` in the Claflin broker-desk voice. Raw
-  "Failed to fetch" never reaches the UI.
-- SWR keeps previous data, retries with a capped outer backoff, and exposes
-  `errorKind` / `isRetrying`.
+  "Failed to fetch" and JSON-parse errors (`Unexpected token '<'`) never reach
+  the UI — non-JSON responses are refused before parsing.
+- Retired era's `lib/useSWR.ts` is no longer present; the tape and quote
+  fetches use `fetchJson()` directly and keep their own last-known-good state.
 
 ## Client recovery requirements
 
@@ -74,9 +77,9 @@ a static "we keep redialing" note instead of being spammed).
 
 ## Previously recorded verification
 
-The following results were recorded before the September 5 documentation alignment; they were not rerun for this docs-only change. Revalidate them when modifying the proxy or retry implementation.
+Revalidated 2026-09-09 against the current implementation (JSON-safe API 404s in `proxy.ts`, marks stale-serving, api-client retry/`Retry-After` contract):
 
-- `OPTIONS /api/agents` → 204 with full CORS headers (was: no handler).
-- `GET /api/agents` returning 500 **still carries** `Access-Control-Allow-Origin`.
-- Proxied responses carry exactly one `Access-Control-Allow-Origin`.
-- `tests/api-client.test.ts` — 17 tests for classification, retry, backoff.
+- `tests/api-client.test.ts` — 18 tests for classification, retry, backoff, parse refusal — passing.
+- `proxy.ts` answers unknown `/api/*` paths with a JSON 404 (`error: not_found`, `no-store`) instead of the HTML 404 page, so clients can never parse `"<!DOCTYPE"` as JSON.
+- `GET /api/stocks/marks` serves the last-known-good tape stale (up to 30 minutes, `X-Marks-Stale: true`) when the RPC refresh fails, instead of an immediate 503.
+- API responses still carry centrally-stamped CORS headers via `proxy.ts` (`applyCorsHeaders`); retired-marketplace 410s unchanged.

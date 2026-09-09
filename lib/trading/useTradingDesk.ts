@@ -8,6 +8,7 @@ import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord 
 import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
+import { fetchJson } from '../api-client';
 
 const WATCH_MAX = 12;
 
@@ -101,12 +102,11 @@ export function useTradingDesk() {
     dispatch({ type: 'request', requestId });
     const timeout = setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetch(`/api/stocks/quote?${new URLSearchParams(intent)}`, { signal: controller.signal, cache: 'no-store' });
-      const body = await response.json();
+      const response = await fetchJson<unknown>(`/api/stocks/quote?${new URLSearchParams(intent)}`, { signal: controller.signal, cache: 'no-store' });
       if (requestGen.current !== gen || deskIdRef.current !== originDesk) return;
-      if (!response.ok) throw new Error(typeof body.message === 'string' ? body.message.slice(0, 240) : 'An estimate is unavailable. Please retry.');
+      if (!response.ok) throw new Error(response.error.message);
       let result;
-      try { result = parseEstimate(body); } catch { throw new Error('The estimate could not be verified. Please request a new one.'); }
+      try { result = parseEstimate(response.data); } catch { throw new Error('The estimate could not be verified. Please request a new one.'); }
       if (!estimateUsable(result, Date.now())) throw new Error('The estimate expired while loading. Please retry.');
       if (!canReviewOnDesk(result, originDesk)) throw new Error('This quotation belongs to another desk.');
       dispatch({ type: 'quoted', requestId, quote: result });
@@ -195,13 +195,17 @@ export function useTradingDesk() {
     if (isOpenDesk(deskId)) {
       try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
     }
-    const { parked, entered } = switchDeskSession(
-      { deskId, state, viewedRecordId, error },
-      id,
-      sessions.current,
-      isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) : null,
-    );
-    sessions.current = parked;
+    let entered: ParkedDesk = { deskId: id, state: initialDesk(isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
+    try {
+      const result = switchDeskSession(
+        { deskId, state, viewedRecordId, error },
+        id,
+        sessions.current,
+        isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) : null,
+      );
+      sessions.current = result.parked;
+      entered = result.entered;
+    } catch { /* An unreachable guard violation must not crash the desk switch; the destination starts fresh. */ }
     setDeskId(entered.deskId);
     dispatch({ type: 'hydrate', state: entered.state });
     setViewedRecordId(entered.viewedRecordId);

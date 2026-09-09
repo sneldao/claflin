@@ -31,6 +31,28 @@ export function proxy(request: NextRequest) {
     );
   }
 
+  /* A miss on the API surface must answer JSON, not the HTML 404 page —
+     a client parsing `{}` from "<!DOCTYPE …" is how raw parse errors
+     reach the desk. Known-but-unimplemented routes get honest copy. */
+  const route = request.nextUrl.pathname;
+  const hasRouteHandler = [
+    '/api/stocks/quote',
+    '/api/stocks/marks',
+    '/api/hetty/session',
+    '/api/hetty/transcript',
+    '/api/paper',
+    '/api/eligibility',
+  ].some(path => route === path || route.startsWith(`${path}/`));
+  if (!hasRouteHandler) {
+    return applyCorsHeaders(
+      request,
+      NextResponse.json(
+        { error: 'not_found', message: 'That desk service does not exist here.' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } },
+      ),
+    );
+  }
+
   return applyCorsHeaders(request, NextResponse.next());
 }
 

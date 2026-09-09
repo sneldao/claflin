@@ -6,14 +6,15 @@
 
 ## 90-second Loom cut
 
-| :00–:10 | Open `/` — one door. Point at **Claflin**, the **ticket**, and **paper mode**. The work is first; Hetty is the line beside it, not the brand. No marketplace, no wallet bootstrap, no house tour. If Sign in is visible (Privy configured), ignore it — it is not live access. |
+| :00–:10 | Open `/` — one door. Point at **Claflin**, the **ticket**, and **paper mode**. The work is first; Hetty Green is the line beside it, not the brand. No marketplace, no wallet bootstrap, no house tour. If Sign in is visible (Privy configured), ignore it — it is not live access. |
 | :10–:18 | The tape: live indicative marks, hover to pause, click **NVDAc** — it loads into the ticket. Stale labels show when feeds are quiet; say so honestly. |
-| :18–:40 | Spend **25 USDC**, hit **Review estimate**. The ticket is the blotter; do not wait for the receiver to “load in,” and do not treat a raised handset as quote state — pickup is reserved for a live line. |
-| :40–:60 | **Quotation slip** on the ticket — spend / receive / as-of / review window. Open details once; close. |
-| :60–:75 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
-| :75–:90 | Point at **Filed to your paper ledger** and the ledger line marked just filed. Open it — same record. Close on boundaries + Base Tokenized Stocks. |
+| :18–:38 | Spend **25 USDC**, hit **Review estimate**. The ticket is the blotter; do not wait for the receiver to “load in,” and do not treat a raised handset as quote state — pickup is reserved for a live line. |
+| :38–:56 | **Quotation slip** on the ticket — spend / receive / as-of / review window. Open details once; close. |
+| :56–:70 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
+| :70–:78 | The **note of the day** under “The pit is downstairs” — one attributed line of house color (how its financiers worked, principles that have held). Say what it is: an observation from the house, not advice. Live-call variant: ask Hetty for “a thought from the house” — `share_desk_note` speaks the same line verbatim, once per call. |
+| :78–:90 | Point at **Filed to your paper ledger** and the ledger line marked just filed. Open it — same record. Close on boundaries + Base Tokenized Stocks. |
 
-Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still stays readable. After recording, point at the compact ledger without scrolling on desktop; on a phone the just-filed line sits above the receipt.
+Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still stays readable. After recording, point at the compact ledger without scrolling on desktop; on a phone the just-filed line sits above the receipt. On a phone the note of the day may sit below the fold — skip the :70–:78 beat or scroll to it briefly rather than implying the viewer saw it.
 
 ## X post draft (tag @buildonbase)
 
@@ -38,4 +39,4 @@ Built for the Base Tokenized Stocks Builder Quest.
 
 ## Do not demo
 
-Fake live fills, wallet signing that doesn’t exist, marketplace directory, free-call funnel, “live access” or eligibility as a feature, or claiming regulated brokerage status.
+Fake live fills, wallet signing that doesn’t exist, marketplace directory, free-call funnel, “live access” or eligibility as a feature, claiming regulated brokerage status, or presenting the note of the day as advice, a signal, or a claim about current markets.

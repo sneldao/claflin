@@ -32,6 +32,8 @@ function userBudget(userId: string): boolean {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  /* no-store on success; failures must not be cached either, so a transient
+     outage or a stale proxy cannot pin a 404/5xx for this route. */
   const headers = { 'Cache-Control': 'no-store' };
 
   // Optional account binding: a valid Privy token scopes the session to that

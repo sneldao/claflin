@@ -3,8 +3,9 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
-import { resolveDeskAlias, DESK_INSTRUMENTS } from '@/lib/trading/catalog';
-import { ARCHIVE_READONLY, RECORD_UNAVAILABLE, canFileForeground, speakForeground } from '@/lib/trading/desk-documents';
+import { fetchJson } from '@/lib/api-client';
+import { resolveDeskAlias } from '@/lib/trading/catalog';
+import { foregroundGuard, chooseInstrumentResult, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -31,6 +32,7 @@ type HettyTools = {
   cancel_instruction: () => ToolResult;
   describe_desk: () => ToolResult;
   watch_mark: (p: ToolParams) => ToolResult;
+  share_desk_note: () => ToolResult;
 };
 
 function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (live: boolean) => void }) {
@@ -50,71 +52,59 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('choose_instrument', async (p) => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const refusal = foregroundGuard(d.foreground);
+    if (refusal) return refusal;
     const query = String(p.query ?? '');
     const instrument = resolveDeskAlias(query);
-    if (!instrument) {
-      return `"${query || 'That'}" is not on this desk. Supported: NVDAc, AAPLc, METAc and GOOGLc — Coinbase-issued tokens on Base.`;
-    }
+    if (!instrument) return chooseInstrumentResult(query);
     d.edit({ ...d.state.draft, instrumentId: instrument.id });
     return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
   });
 
   useConversationClientTool<HettyTools>('set_instruction', async (p) => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const refusal = foregroundGuard(d.foreground);
+    if (refusal) return refusal;
     const side = String(p.side ?? '');
+    if (side !== 'buy' && side !== 'sell') return setInstructionResult(side);
     if (side === 'buy') {
       d.edit({ instrumentId: d.state.draft.instrumentId, side: 'buy', unit: 'USDC', amount: '' });
-      return 'Buy set — the amount is a USDC spend.';
-    }
-    if (side === 'sell') {
+    } else {
       d.edit({ instrumentId: d.state.draft.instrumentId, side: 'sell', unit: 'token', amount: '' });
-      return 'Sell set — the amount is a token quantity.';
     }
-    return 'The instruction must be buy or sell.';
+    return setInstructionResult(side);
   });
 
   useConversationClientTool<HettyTools>('set_amount', async (p) => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const refusal = foregroundGuard(d.foreground);
+    if (refusal) return refusal;
     const clean = String(p.amount ?? '').trim();
     if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
       return `"${clean || 'That'}" is not a usable amount — say a plain number, like 25 or 0.5.`;
     }
     d.edit({ ...d.state.draft, amount: clean });
-    const unit = d.state.draft.side === 'sell' ? 'tokens' : 'USDC';
-    return `${clean} ${unit} is on the ticket.`;
+    return setAmountResult(d.state.draft.side, clean);
   });
 
   useConversationClientTool<HettyTools>('request_estimate', async () => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const refusal = foregroundGuard(d.foreground);
+    if (refusal) return refusal;
     if (d.state.stage === 'loading') return 'An estimate is already on its way.';
     const before = d.state.quote?.id;
     await d.requestQuote();
     await waitFor(x => x.state.stage === 'review' || x.state.stage === 'draft', 4000);
     const now = deskRef.current;
     const quote = now.state.quote;
-    if (now.state.stage === 'review' && quote && quote.id !== before) {
-      const window_ = Math.max(0, Math.ceil((quote.expiresAt - Date.now()) / 1000));
-      return `Estimate on the slip: the caller would spend ${quote.inputAmount} ${quote.inputSymbol} and receive ${quote.outputAmount} ${quote.outputSymbol}, via Aerodrome on Base. ${window_} seconds to review before it expires. It is a paper estimate — not an offer.`;
-    }
+    if (now.state.stage === 'review' && quote && quote.id !== before) return estimateSpokenResult(quote, Date.now());
     return `The estimate did not come through${now.error ? ` — ${now.error}` : ''}. Offer to adjust or retry.`;
   });
 
   useConversationClientTool<HettyTools>('record_paper', async () => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
-    if (d.foreground.kind === 'receipt') return 'That instruction is already filed.';
-    if (!canFileForeground(d.state, d.viewedRecordId) || !d.state.quote) return 'There is no estimate under review. Request one first.';
-    if (!estimateUsable(d.state.quote, Date.now())) return 'That estimate has expired — request a fresh one before recording.';
-    if (!d.historyReady) return 'Browser storage is unavailable, so nothing can be recorded right now.';
+    const refusal = recordPaperGuard(d.state, d.foreground, d.historyReady, Date.now());
+    if (refusal) return refusal;
     d.save();
     await waitFor(x => x.state.stage === 'saved' || x.error !== null, 3000);
     const now = deskRef.current;
@@ -125,30 +115,34 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('watch_mark', async (p) => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE_MESSAGE;
     const query = String(p.query ?? '').trim();
-    const instrument = query
-      ? resolveDeskAlias(query)
-      : DESK_INSTRUMENTS.find(s => s.id === d.foreground.instrumentId);
-    if (!instrument) return 'No instrument to watch — name one, or put a stock on the ticket first.';
-    d.watch(instrument.id);
-    return `${instrument.symbol} is watched on this desk — it will be in the tray next visit.`;
+    const instrumentId = watchTarget(d.foreground, query);
+    if (!instrumentId) return 'No instrument to watch — name one, or put a stock on the ticket first.';
+    d.watch(instrumentId);
+    return `${deskSymbol(instrumentId)} is watched on this desk — it will be in the tray next visit.`;
   });
 
   useConversationClientTool<HettyTools>('cancel_instruction', async () => {
     const d = deskRef.current;
-    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
-    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const refusal = foregroundGuard(d.foreground);
+    if (refusal) return refusal;
     d.cancel();
     return 'The ticket is clear.';
   });
 
   useConversationClientTool<HettyTools>('describe_desk', async () => {
     const d = deskRef.current;
-    const parts = [speakForeground(d.state, d.viewedRecordId, d.records)];
-    if (d.records.length) parts.push(`${d.records.length} paper record${d.records.length === 1 ? '' : 's'} in the ledger.`);
-    if (d.watched.length) parts.push(`${d.watched.length} watched mark${d.watched.length === 1 ? '' : 's'} in the tray.`);
-    return parts.join(' ');
+    return describeDesk(d.state, d.foreground, d.records, d.watched);
+  });
+
+  /* The note of the day is furniture, not document state: it is speakable on
+     any foreground, but once per call, and the line is exactly the desk
+     note — Hetty never improvises an aphorism. */
+  useConversationClientTool<HettyTools>('share_desk_note', async () => {
+    if (deskNoteShared.current) return DESK_NOTE_ALREADY_SHARED;
+    deskNoteShared.current = true;
+    return deskNoteSpokenLine(deskRef.current.deskId);
   });
 
   const [callError, setCallError] = useState<string | null>(null);
@@ -158,6 +152,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   // Transcript capture — stored to the account only when signed in.
   // Anonymous calls leave no record, consistent with the tier model.
+  const deskNoteShared = useRef(false);
   const turnsRef = useRef<Array<{ role: 'user' | 'agent'; text: string; at: number }>>([]);
   const convIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
@@ -201,6 +196,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
       turnsRef.current = [];
       convIdRef.current = null;
       flushedRef.current = false;
+      deskNoteShared.current = false;
       setCallError(null);
     },
     onDisconnect: () => { onLiveChange(false); void flushTranscript(); },
@@ -213,20 +209,31 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   const ring = async () => {
     setCallError(null);
+    const result = await fetchJson<{ signedUrl?: string }>('/api/hetty/session', { method: 'POST', cache: 'no-store' });
+    if (!result.ok) {
+      const e = result.error;
+      setCallError(e.retryAfterSeconds
+        ? `The line is busy. Try again in about ${Math.max(1, Math.ceil(e.retryAfterSeconds / 5) * 5)} seconds.`
+        : e.code === 'not_connected'
+          ? 'Hetty’s line is not connected on this deployment.'
+          : e.message);
+      return;
+    }
+    if (!result.data.signedUrl) {
+      setCallError('Hetty’s line is unavailable. Please try again shortly.');
+      return;
+    }
     try {
-      const response = await fetch('/api/hetty/session', { method: 'POST', cache: 'no-store' });
-      const body = await response.json();
-      if (!response.ok || !body.signedUrl) throw new Error(typeof body.message === 'string' ? body.message : 'Hetty’s line is unavailable.');
-      conversation.startSession({ signedUrl: body.signedUrl });
-    } catch (e) {
-      setCallError(e instanceof Error ? e.message : 'Hetty’s line is unavailable.');
+      conversation.startSession({ signedUrl: result.data.signedUrl });
+    } catch {
+      setCallError('The line could not be opened. Check the microphone permission and ring again.');
     }
   };
 
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
       <div className={styles.brokerPlate}>
-        <h2 id="call-title">Hetty <small>AI BROKER · BASE</small></h2>
+        <h2 id="call-title">Hetty Green <small>AI BROKER · BASE</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={live && conversation.isSpeaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : connecting ? 'RINGING' : 'DIRECT LINE'}

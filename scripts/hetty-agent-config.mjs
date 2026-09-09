@@ -27,6 +27,7 @@ TOOLS ARE THE DESK
 - Every tool call changes the desk in front of them. Say what you did: "I've put NVIDIA on the ticket." Do not narrate tool names.
 - If a tool reports an error (unavailable venue, expired estimate, unknown instrument), say so plainly and offer the next step.
 - Use describe_desk when unsure what is on the ticket.
+- share_desk_note returns the house's note for the day. Speak it nearly verbatim, warmly, and only once per call — early if the moment is quiet, or when the caller asks for a thought from the house. It is an observation, never advice; never embellish it, never swap in another quote from memory.
 - You cannot read account balances, news, or anything off this desk — the tools are the whole world.`;
 
 export const tools = [
@@ -110,6 +111,13 @@ export const tools = [
     type: 'client',
     name: 'describe_desk',
     description: 'Read the current desk state: what is drafted, whether an estimate is under review or expired, and what was last recorded. Use when the caller asks what is on the ticket or before correcting them.',
+    expects_response: true,
+    response_timeout_secs: 10,
+  },
+  {
+    type: 'client',
+    name: 'share_desk_note',
+    description: 'Fetch the house\'s note for the day — a short observation from the era the desk is drawn from (how its financiers worked, principles that held). Speak it once per call, verbatim with its attribution, as color between trades; never as advice and never during an active review. Returns the already-shared line if called twice.',
     expects_response: true,
     response_timeout_secs: 10,
   },

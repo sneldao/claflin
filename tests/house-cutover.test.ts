@@ -7,9 +7,11 @@ import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } fro
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 describe('one canonical house', () => {
-  it('starts with Hetty, paper-only execution, live voice, and planned desks marked planned', () => {
+  it('starts with Hetty Green, paper-only execution, live voice, and planned desks marked planned', () => {
     assert.equal(HOUSE_DESKS[0].id, 'hetty');
+    assert.equal(HOUSE_DESKS[0].name, 'Hetty Green');
     assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Arbitrum']);
+    assert.equal(HOUSE_DESKS[3].name, 'Jay Cooke');
     assert.equal(HOUSE.liveExecutionEnabled, false);
     assert.equal(HOUSE.voiceConversationEnabled, true);
     assert.ok(HOUSE_DESKS.slice(1).every(d => d.status === 'planned'));
@@ -117,7 +119,8 @@ describe('one canonical house', () => {
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
     assert.match(source('components/desk/PaperLedger.tsx'), /The archive/);
     assert.match(source('components/desk/PaperLedger.tsx'), /ledgerPreview/);
-    assert.match(source('components/desk/HettyCall.tsx'), /foreground\.instrumentId/);
+    assert.match(source('components/desk/HettyCall.tsx'), /watchTarget\(d\.foreground/);
+    assert.match(source('lib/trading/voice-tools.ts'), /foreground\.instrumentId/);
     assert.doesNotMatch(source('components/desk/TradeTicket.tsx'), /scrollIntoView/);
     assert.match(source('components/desk/PaperHistory.tsx'), /Open this record/);
   });
@@ -129,6 +132,28 @@ describe('one canonical house', () => {
     const stageSetter = renderer.slice(renderer.indexOf('setStage(nextStage)'), renderer.indexOf('setReview(reviewing)'));
     assert.doesNotMatch(stageSetter, /slipTarget/);
     assert.match(renderer, /slipTarget = reviewing \? 1 : 0/);
+  });
+  it('keeps the voice tool surface in step between the browser and the agent config', () => {
+    const call = source('components/desk/HettyCall.tsx');
+    const config = source('scripts/hetty-agent-config.mjs');
+    const browserTools = [...call.matchAll(/useConversationClientTool<HettyTools>\('([a-z_]+)'/g)].map(m => m[1]);
+    const configTools = [...config.matchAll(/name: '([a-z_]+)',\n\s+description:/g)].map(m => m[1]);
+    assert.equal(browserTools.length, configTools.length, 'every configured tool is registered in the browser');
+    for (const tool of configTools) assert.ok(browserTools.includes(tool), `${tool} missing from HettyCall`);
+    assert.ok(configTools.includes('share_desk_note'), 'the desk note tool is provisioned');
+    assert.match(config, /never embellish it/);
+  });
+  it('never surfaces a raw parse error from the ring button or the tape', () => {
+    const call = source('components/desk/HettyCall.tsx');
+    assert.match(call, /fetchJson<\{ signedUrl\?: string \}>\('\/api\/hetty\/session'/);
+    assert.doesNotMatch(call, /await response\.json\(\)/);
+    const tape = source('components/desk/TickerTape.tsx');
+    assert.match(tape, /fetchJson<MarksResult>\('\/api\/stocks\/marks'\)/);
+    const desk = source('lib/trading/useTradingDesk.ts');
+    assert.match(desk, /fetchJson<unknown>\(`\/api\/stocks\/quote/);
+    const proxy = source('proxy.ts');
+    assert.match(proxy, /not_found/);
+    assert.match(source('app/api/stocks/marks/route.ts'), /X-Marks-Stale/);
   });
   it('keeps the receiver down until a real voice connection exists', () => {
     const call = source('components/desk/HettyCall.tsx');

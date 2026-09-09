@@ -9,10 +9,10 @@ export const HOUSE = Object.freeze({
 });
 
 export const HOUSE_DESKS = Object.freeze([
-  Object.freeze({ id: 'hetty', name: 'Hetty', market: 'Base', approach: 'Independent judgment. Capital preservation. Deliberate decisions.', status: 'paper' as const }),
-  Object.freeze({ id: 'jesse', name: 'Jesse Livermore', market: 'Solana', approach: 'Price action, timing, and disciplined speculation.', status: 'planned' as const }),
-  Object.freeze({ id: 'isabel', name: 'Isabel Benham', market: 'Robinhood Chain', approach: 'Fundamental analysis and patient investigation.', status: 'planned' as const }),
-  Object.freeze({ id: 'arbitrum', name: 'A future desk', market: 'Arbitrum', approach: 'Mandate and broker to be defined after the first three desks.', status: 'planned' as const }),
+  Object.freeze({ id: 'hetty', name: 'Hetty Green', shortName: 'Hetty', market: 'Base', approach: 'Independent judgment. Capital preservation. Deliberate decisions.', status: 'paper' as const }),
+  Object.freeze({ id: 'jesse', name: 'Jesse Livermore', shortName: 'Jesse', market: 'Solana', approach: 'Price action, timing, and disciplined speculation.', status: 'planned' as const }),
+  Object.freeze({ id: 'isabel', name: 'Isabel Benham', shortName: 'Isabel', market: 'Robinhood Chain', approach: 'Fundamental analysis and patient investigation.', status: 'planned' as const }),
+  Object.freeze({ id: 'arbitrum', name: 'Jay Cooke', shortName: 'Jay', market: 'Arbitrum', approach: 'Building the rails that let everyone else move money.', status: 'planned' as const }),
 ]);
 
 export type HouseDesk = (typeof HOUSE_DESKS)[number];

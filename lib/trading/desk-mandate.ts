@@ -2,10 +2,14 @@ import { OPEN_DESK_ID, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import type { QuoteEstimate, TradeIntent } from './domain';
 import { initialDesk, type DeskState } from './workflow';
 
-/** Today's venue quotes are Base paper estimates. They belong only to Hetty's desk. */
-export function quoteDeskId(quote: Pick<QuoteEstimate, 'chainId' | 'mode'>): HouseDeskId {
+/**
+ * Which desk a quotation belongs to, or null when it belongs to no open desk.
+ * Today's venue quotes are Base paper estimates, so they belong only to Hetty;
+ * anything else is refused rather than silently reassigned.
+ */
+export function quoteDeskId(quote: Pick<QuoteEstimate, 'chainId' | 'mode'>): HouseDeskId | null {
   if (quote.chainId === 8453 && quote.mode === 'paper') return OPEN_DESK_ID;
-  return OPEN_DESK_ID;
+  return null;
 }
 
 export function canReviewOnDesk(quote: Pick<QuoteEstimate, 'chainId' | 'mode' | 'liveExecutionEnabled'>, deskId: HouseDeskId): boolean {
@@ -69,7 +73,10 @@ export function switchDeskSession(
   const parkedCurrent = parkDeskWork(current);
   const nextParked = { ...parked, [current.deskId]: parkedCurrent };
   const entered = enterDesk(destination, nextParked, persistedDraft);
-  if (current.state.quote && entered.deskId !== current.deskId && entered.state.quote) {
+  /* Each desk keeps its own quotation; the boundary is that this switch must
+     not deliver the departing desk's quotation to the destination. A parked
+     desk resuming its own earlier quotation is legitimate recovery. */
+  if (current.state.quote && entered.state.quote?.id === current.state.quote.id) {
     throw new Error('A quotation cannot travel with a desk switch.');
   }
   return { parked: nextParked, entered };

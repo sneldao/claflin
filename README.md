@@ -18,7 +18,7 @@ The current release supports **paper trading with live venue estimates**:
 
 No stock or amount is preselected. Paper records are simulations, not fills, submissions, wallet positions, or call receipts. They live in this browser first. Visiting Jesse, Isabel, or Arbitrum from the house directory is a closed room — an approval from the Base desk cannot come with you. When an optional account is configured and the client is signed in, new records are also copied to that account (best-effort; local storage stays authoritative; deletes are local-only and can reappear from the account copy). Records are visible to anyone using that browser profile.
 
-**Voice:** “Ring Hetty” opens a live ElevenLabs ConvAI voice session (`POST /api/hetty/session` mints a short-lived signed URL; the API key and agent id stay server-side). Hetty’s tool calls are *client tools* that execute against the desk in the caller’s browser — she can choose the instrument, set the instruction and amount, request an estimate, describe the desk, pin a watched mark, and record a paper trade only on explicit confirmation. She cannot sign, submit or reconcile — nothing moves onchain. The provisioned agent is `ELEVENLABS_AGENT_HETTY` (see `scripts/create-hetty-agent.mjs`). If the voice session is not configured, the rest of the desk is unaffected.
+**Voice:** “Ring Hetty” opens a live ElevenLabs ConvAI voice session (`POST /api/hetty/session` mints a short-lived signed URL; the API key and agent id stay server-side). Hetty’s tool calls are *client tools* that execute against the desk in the caller’s browser — she can choose the instrument, set the instruction and amount, request an estimate, describe the desk, pin a watched mark, share the desk's note of the day, and record a paper trade only on explicit confirmation. She cannot sign, submit or reconcile — nothing moves onchain. The provisioned agent is `ELEVENLABS_AGENT_HETTY` (see `scripts/create-hetty-agent.mjs`). If the voice session is not configured, the rest of the desk is unaffected.
 
 **Account (optional):** when `NEXT_PUBLIC_PRIVY_APP_ID` and `NEXT_PUBLIC_PRIVY_CLIENT_ID` are set, a Sign in control appears. Sign-in never gates the tape, estimates, paper records or ringing Hetty. It unlocks best-effort paper backup and write-only transcript storage. It is not live access, eligibility, or a wallet requirement.
 
@@ -42,17 +42,18 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Responsibility | Source |
 |---|---|
 | House identity, desk sequence and capability labels | `lib/house.ts` |
+| Period desk notes (one attributed note of the day, never advice) | `lib/desk-notes.ts` |
 | Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
 | Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
 | Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperLedger.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |
 | House mark and desk instrument | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
 | Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
-| Thin HTTP boundary | `lib/trading/http.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
+| Thin HTTP boundary | `lib/trading/http.ts`, `lib/api-client.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
 | Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Optional account, paper backup, transcript write | `components/auth/AuthProvider.tsx`, `lib/auth.ts`, `lib/trading/usePaperSync.ts`, `app/api/paper/route.ts`, `app/api/hetty/transcript/route.ts` |
-| Voice session | `components/desk/HettyCall.tsx`, `app/api/hetty/session/route.ts` |
+| Voice session | `components/desk/HettyCall.tsx`, `lib/trading/voice-tools.ts`, `lib/desk-notes.ts`, `app/api/hetty/session/route.ts` |
 | Eligibility check (source only; not a paper-desk surface) | `lib/eligibility.ts`, `app/api/eligibility/route.ts` |
 | Shareable paper-intent links | `lib/share.ts` |
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { HOUSE } from '@/lib/house';
+import type { HouseDeskId } from '@/lib/house';
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import dynamic from 'next/dynamic';
@@ -17,6 +18,7 @@ import { ClosedDesk } from './ClosedDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useRoomTone } from '@/lib/desk-tone';
+import { deskNoteOfTheDay } from '@/lib/desk-notes';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
@@ -26,7 +28,7 @@ function HettyDoorShell() {
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" aria-busy="true">
       <div className={styles.brokerPlate}>
-        <h2 id="call-title">Hetty <small>AI BROKER · BASE</small></h2>
+        <h2 id="call-title">Hetty Green <small>AI BROKER · BASE</small></h2>
         <span className={styles.callLine}>DIRECT LINE</span>
       </div>
       <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
@@ -37,6 +39,17 @@ function HettyDoorShell() {
 }
 
 const HettyCall = dynamic(() => import('./HettyCall').then(m => m.HettyCall), { ssr: false, loading: HettyDoorShell });
+
+/** A quiet line from the era — one note of the day, never an instruction to trade. */
+function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean }) {
+  const note = deskNoteOfTheDay(deskId);
+  return (
+    <p className={styles.deskNote} data-muted={muted ? 'true' : 'false'}>
+      {note.text}
+      {note.attribution && <span className={styles.deskNoteSource}> — {note.attribution}</span>}
+    </p>
+  );
+}
 
 export function WorkingDesk() {
   const desk = useTradingDesk();
@@ -195,10 +208,11 @@ export function WorkingDesk() {
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>
             <p>This desk is for deciding.</p>
+            <DeskNoteLine deskId={desk.deskId} muted={!open} />
           </div>
           {open && <details className={styles.aboutHetty}>
-            <summary>About Hetty</summary>
-            <p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
+            <summary>About Hetty Green</summary>
+            <p>Hetty Green is an AI character inspired by the historical financier, not the person herself or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
           </details>}
         </aside>
       </div>

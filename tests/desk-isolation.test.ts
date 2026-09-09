@@ -5,6 +5,11 @@ import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/
 import { deskReducer, initialDesk } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
 import { canFileOnDesk, canReviewOnDesk, emptyDraft, enterDesk, parkDeskWork, quoteDeskId, switchDeskSession } from '../lib/trading/desk-mandate';
+import type { QuoteEstimate } from '../lib/trading/domain';
+
+function quoteWithChainMode(base: QuoteEstimate, chainId: number, mode: string): Pick<QuoteEstimate, 'chainId' | 'mode'> {
+  return { chainId, mode } as unknown as Pick<QuoteEstimate, 'chainId' | 'mode'>;
+}
 import { liveEvidence, paperEvidence, paperOutcomeCopy } from '../lib/trading/outcomes';
 import { canFileForeground, foregroundDocument, groupRecordsByDay, ledgerPreview, recordedDayLabel, speakForeground } from '../lib/trading/desk-documents';
 
@@ -29,6 +34,12 @@ function storage(): PaperStorage {
 }
 
 describe('paper evidence is not a live outcome', () => {
+  it('assigns a quotation to no desk when it is not a Base paper estimate', () => {
+    assert.equal(quoteDeskId(quote), 'hetty');
+    assert.equal(quoteDeskId(quoteWithChainMode(quote, 10, 'paper')), null, 'a non-Base chain belongs to no open desk');
+    assert.equal(quoteDeskId(quoteWithChainMode(quote, 8453, 'live')), null, 'a live quote belongs to no paper desk');
+    assert.equal(canReviewOnDesk(quoteWithChainMode(quote, 10, 'paper'), 'hetty'), false, 'a non-Base quote is not reviewable on the open desk');
+  });
   it('describes a filed paper record as filed, never filled, submitted, or a position', () => {
     const record = savePaperRecord(storage(), reviewed(), now + 1);
     const evidence = paperEvidence(record);
@@ -81,6 +92,22 @@ describe('a desk switch cannot carry an approval', () => {
     const closed = enterDesk('jesse', {}, intent);
     assert.deepEqual(closed.state.draft, emptyDraft());
     assert.equal(closed.state.quote, null);
+  });
+  it('lets a parked desk resume its own quotation while the other desk holds a different one', () => {
+    const aapl = DESK_INSTRUMENTS.find(item => item.symbol === 'AAPLc')!;
+    const jesseIntent: TradeIntent = { instrumentId: aapl.id, side: 'buy', unit: 'USDC', amount: '100' };
+    const jesseQuote: QuoteEstimate = { ...quote, id: 'quote-jesse', intent: jesseIntent, instrumentAddress: aapl.contractAddress, instrumentName: aapl.name, outputSymbol: 'AAPLc' };
+    const jesseReviewed = deskReducer(deskReducer(initialDesk(jesseIntent), { type: 'request', requestId: 'r2' }), { type: 'quoted', requestId: 'r2', quote: jesseQuote });
+
+    // Hetty is reviewing her own quote; the client visits Jesse.
+    const away = switchDeskSession({ deskId: 'hetty', state: reviewed(), viewedRecordId: null, error: null }, 'jesse', {}, null);
+    assert.equal(away.parked.hetty?.state.quote?.id, quote.id);
+    assert.equal(away.entered.deskId, 'jesse');
+
+    // Jesse now holds his own quote; returning to Hetty resumes her parked work.
+    const back = switchDeskSession({ deskId: 'jesse', state: jesseReviewed, viewedRecordId: null, error: null }, 'hetty', away.parked, null);
+    assert.equal(back.entered.deskId, 'hetty');
+    assert.equal(back.entered.state.quote?.id, quote.id, 'each desk keeps its own quotation');
   });
   it('parks an in-flight estimate as a recoverable draft, not a resumable request', () => {
     const loading = deskReducer(initialDesk(intent), { type: 'request', requestId: 'inflight' });
