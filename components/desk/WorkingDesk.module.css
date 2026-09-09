@@ -189,7 +189,7 @@
   .tapeTrack { animation: none; }
   .lightPool { animation: none; }
 }
-@media (max-width: 800px) {
+@media (max-width: 760px) {
   .tapeLabel { margin-right: 10px; }
   .tapeItem { padding: 10px 18px; }
 }
@@ -214,13 +214,13 @@
 .doors strong { color: var(--desk-ink); font: 18px/1.2 var(--font-display), serif; font-weight: 400; overflow-wrap: anywhere; }
 .doors span { font: 10px/1.4 var(--font-mono), monospace; letter-spacing: .08em; color: var(--desk-brass); }
 .doors p { margin: 0; font-size: 13px; line-height: 1.55; }
-@media (max-width: 800px) {
+@media (max-width: 760px) {
   .closedDoor, .scar { display: none; }
   .hettyPlate { grid-template-columns: 56px minmax(0, 1fr); }
   .hettyStill { width: 56px; height: 68px; }
   .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 375px) {
+@media (max-width: 374px) {
   .doors { grid-template-columns: minmax(0, 1fr); }
 }
 .ticket label { margin-bottom: 8px; }
@@ -292,7 +292,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ticket[data-acknowledged="true"] .stamp, .ticket[data-acknowledged="true"] { animation: none; }
 }
-@media (max-width: 800px) {
+@media (max-width: 760px) {
   .stamp { top: 84px; right: 14px; transform: rotate(7deg) scale(.9); }
   .ticket[data-acknowledged="true"] .stamp { animation-name: stampInMobile; }
   @keyframes stampInMobile {
@@ -327,8 +327,7 @@
 .plaqueSymbol { font: 600 15px/1 var(--font-mono), monospace; letter-spacing: .04em; color: var(--desk-brass); }
 .plaques .plaque:has(input:checked) .plaqueSymbol { color: #a88f5d; }
 .plaqueName { font: 11px/1.3 var(--font-display), serif; color: var(--desk-paper-ink); overflow-wrap: anywhere; }
-@media (max-width: 800px) { .plaques { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 375px) { .plaques { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 374px) { .plaques { grid-template-columns: minmax(0, 1fr); } }
 .fields { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 16px; }
 .amountChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .amountChip { padding: 8px 14px; min-height: 36px; font: 600 13px var(--font-mono), monospace; letter-spacing: .02em; color: var(--desk-paper-ink); border: 1px solid #27362b40; background: transparent; transition: background var(--dur-1, 240ms) var(--ease-swift, ease-out), border-color var(--dur-1, 240ms), transform 120ms var(--ease-swift, ease-out); }
@@ -404,7 +403,7 @@
 .noticeActions { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-top: 30px; }
 .noticeActions button { padding: 14px 22px; border: 1px solid var(--desk-brass); background: var(--desk-brass); color: var(--desk-deep); }
 .noticeActions a { padding: 12px 0; text-decoration: underline; }
-@media (max-width: 800px) {
+@media (max-width: 760px) {
   .header, .main, .footer { width: calc(100% - 40px); }
   .header { align-items: flex-start; padding-block: 25px; flex-direction: column; }
   .header nav { gap: 16px; }
@@ -418,7 +417,7 @@
   .record { grid-template-columns: minmax(0, 1fr); }
   .record button { justify-self: start; }
 }
-@media (max-width: 375px) {
+@media (max-width: 374px) {
   .header, .main, .footer { width: calc(100% - 28px); }
   .ticket { padding: 18px; }
   .fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -523,7 +522,7 @@
   .grid[data-review="true"] .quotationSlip { animation: none; transform: none; }
   .instrumentCaption { opacity: 1; }
 }
-@media (max-width: 800px) {
+@media (max-width: 760px) {
   .instrumentCaption { display: none; }
 }
 
@@ -677,10 +676,11 @@
 }
 @media (max-width: 760px) {
   .header, .main, .footer { width: calc(100% - 32px); }
-  .header { min-height: 76px; flex-direction: row; flex-wrap: wrap; align-items: center; padding-block: 16px 8px; gap: 12px; }
+  .header { min-height: 64px; flex-direction: row; flex-wrap: wrap; align-items: center; padding-block: 12px 6px; gap: 8px; }
   .brand strong { font-size: 23px; }
-  .brand small { font-size: 7px; }
-  .header nav { gap: 16px; flex: 1 0 100%; justify-content: flex-start; font-size: 11px; }
+  .brand small { display: none; }
+  .header nav { gap: 12px; flex: 1 0 100%; justify-content: flex-start; font-size: 11px; }
+  .authLabel { display: none; }
   .toneToggle { margin-left: auto; padding-left: 12px; font-size: 8px; }
   .mode { padding: 8px 0 12px; gap: 8px; min-height: 44px; font-size: 10px; }
   .modeMarket { display: none; }
@@ -1067,10 +1067,34 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 /* ————— Live line on small screens: the working strip comes first —————
    The call is sticky within the support column, but on mobile the support
    sits below the ticket. While live, the support (line + controls) moves
-   above the ticket and ledger so End/Mute never disappear a scroll away. */
+   above the ticket and ledger so End/Mute never disappear a scroll away.
+   The actions row itself sticks to the viewport top while a long slip
+   scrolls beneath it. */
 @media (max-width: 760px) {
   .grid[data-live="true"] .support { grid-column: 1; grid-row: 1; }
   .grid[data-live="true"] .ticket { grid-column: 1; grid-row: 2; }
   .grid[data-live="true"] .paperLedger { grid-column: 1; grid-row: 3; }
   .grid[data-live="true"] .instrumentShell { max-width: 460px; margin: -8px auto -24px; }
+  .call[data-live="true"] .callActions {
+    position: sticky;
+    top: 8px;
+    z-index: 8;
+    background: color-mix(in srgb, var(--desk-room) 94%, transparent);
+    border: 1px solid var(--desk-line);
+    border-radius: 2px;
+    padding: 8px;
+  }
+}
+
+/* ————— Tape on small screens: swipe, don't watch —————
+   The infinite marquee gives no touch affordance and burns battery.
+   On mobile the track stops running and the window becomes a snap
+   scroller; the machine graphic shrinks so marks own the width. */
+@media (max-width: 760px) {
+  .tickerStation { margin: 16px 0 0 8px; }
+  .tapeMachine { width: 64px; left: -52px; top: -40px; }
+  .spilledTape { display: none; }
+  .tickerStation .tapeWindow { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+  .tickerStation .tapeTrack { animation: none; }
+  .tickerStation .tapeItem { scroll-snap-align: start; }
 }

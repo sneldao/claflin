@@ -48,8 +48,37 @@ function Drawer({ className, trigger, title, testId, children }: {
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
+  /* Open modally where supported; fall back to a non-modal open panel so
+     older browsers still get the disclosure, without crashing on a missing
+     showModal. Focus always lands on Close, and always returns to the
+     trigger — including Escape and backdrop dismiss. */
+  const openDrawer = () => {
+    const panel = ref.current;
+    if (!panel) return;
+    try {
+      if (typeof panel.showModal === 'function') panel.showModal();
+      else panel.setAttribute('open', '');
+    } catch {
+      try { panel.setAttribute('open', ''); } catch { /* panel stays shut */ }
+    }
+    setOpen(true);
+    queueMicrotask(() => closeRef.current?.focus());
+  };
+  const closeDrawer = () => {
+    const panel = ref.current;
+    if (!panel) return;
+    try {
+      if (panel.hasAttribute('open') && typeof panel.close !== 'function') panel.removeAttribute('open');
+      else panel.close();
+    } catch {
+      try { panel.removeAttribute('open'); } catch { /* already shut */ }
+    }
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
   const focusables = () => {
     if (!ref.current) return [] as HTMLElement[];
     return Array.from(ref.current.querySelectorAll<HTMLElement>(
@@ -72,10 +101,11 @@ function Drawer({ className, trigger, title, testId, children }: {
   return (
     <div className={className ? `${styles.drawer} ${className}` : styles.drawer} data-open={open ? 'true' : 'false'}>
       <button
+        ref={triggerRef}
         type="button"
         className={styles.drawerToggle}
         aria-expanded={open}
-        onClick={() => { ref.current?.showModal(); setOpen(true); queueMicrotask(() => closeRef.current?.focus()); }}
+        onClick={openDrawer}
       >
         {trigger}
       </button>
@@ -84,15 +114,15 @@ function Drawer({ className, trigger, title, testId, children }: {
         className={styles.drawerPanel}
         aria-label={title}
         data-testid={testId}
-        onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
-        onClose={() => setOpen(false)}
+        onClick={(e) => { if (e.target === ref.current) closeDrawer(); }}
+        onClose={() => { setOpen(false); triggerRef.current?.focus(); }}
         onKeyDown={trapFocus}
       >
         <button
           ref={closeRef}
           type="button"
           className={styles.drawerClose}
-          onClick={() => ref.current?.close()}
+          onClick={closeDrawer}
           aria-label={`Close ${title.toLowerCase()}`}
         >
           ×
