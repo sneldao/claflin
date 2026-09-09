@@ -218,14 +218,13 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'}>
-      <div className={styles.boardHead}>
-        <p className={styles.eyebrow}>AI · BASE DESK</p>
+      <div className={styles.brokerPlate}>
+        <h2 id="call-title">Hetty <small>AI BROKER · BASE</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={live && conversation.isSpeaking ? 'true' : 'false'} aria-hidden="true" />
-          {live ? 'LINE 01 · CONNECTED' : connecting ? 'LINE 01 · RINGING' : 'LINE 01'}
+          {live ? 'CONNECTED' : connecting ? 'RINGING' : 'DIRECT LINE'}
         </span>
       </div>
-      <h2 id="call-title" className={styles.boardTitle}>Hetty.</h2>
       <p className={styles.callNote}>
         Speak your instruction. Review it on the same ticket.
       </p>

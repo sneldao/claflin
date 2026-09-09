@@ -93,7 +93,7 @@ for file in $STAGED_FILES; do
   fi
 
   # Skip binary files
-  if [[ "$file" =~ \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|mp3|mp4|wav)$ ]]; then
+  if [[ "$file" =~ \.(png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|mp3|mp4|wav)$ ]]; then
     continue
   fi
 

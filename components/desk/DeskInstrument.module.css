@@ -48,4 +48,8 @@
 }
 .instrument[data-reduced-motion="true"] .instrumentCanvas { opacity: 0 !important; }
 .instrument[data-reduced-motion="true"] .instrumentFallback { opacity: 1 !important; }
+.poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.instrument[data-poster="true"] .instrumentCanvas { position: absolute; inset: 0; transform: none; filter: none; transition: none; }
+.instrument[data-poster="true"][data-ready="true"] .poster { opacity: 0; }
+.instrument[data-poster="true"][data-reduced-motion="true"] .poster { opacity: 1; transition: none; }
 

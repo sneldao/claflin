@@ -60,11 +60,41 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory']) {
+    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'HouseDirectory', 'BrokerageRoom', 'TickerTape']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
     }
+  });
+  it('gives the house a directory without presenting planned desks as active controls', () => {
+    const directory = source('components/desk/HouseDirectory.tsx');
+    assert.match(directory, /HOUSE_DESKS/);
+    assert.match(directory, /Planned/);
+    assert.doesNotMatch(directory, /onClick|href=|<button/);
+    assert.doesNotMatch(source('components/desk/HettyCall.tsx'), /className=\{styles\.boardTitle\}>Hetty\./);
+  });
+  it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
+    const desk = source('components/desk/WorkingDesk.tsx');
+    assert.match(desk, /import \{ DeskInstrument \} from '\.\/DeskInstrument'/);
+    assert.match(desk, /<DeskInstrument eager poster="\/desk-receiver\.webp"/);
+    const receiver = source('components/desk/DeskInstrument.tsx');
+    assert.match(receiver, /if \(eager\)/);
+    assert.match(receiver, /loading="eager"/);
+    assert.match(receiver, /labelRef\.current/);
+    const renderer = source('lib/desk-instrument.ts');
+    assert.ok(renderer.indexOf('renderer.render(scene, camera)') < renderer.indexOf('onReady?.()'));
+    const poster = readFileSync(new URL('../public/desk-receiver.webp', import.meta.url));
+    assert.equal(poster.toString('ascii', 8, 12), 'WEBP');
+    assert.ok(poster.length < 200_000, 'receiver first paint should stay lightweight');
+  });
+  it('can present a quotation slip while the voice line remains connected', () => {
+    const receiver = source('components/desk/DeskInstrument.tsx');
+    assert.match(receiver, /setReview\(reviewing\)/);
+    assert.match(source('components/desk/WorkingDesk.tsx'), /reviewing=\{reviewActive\}/);
+    const renderer = source('lib/desk-instrument.ts');
+    const stageSetter = renderer.slice(renderer.indexOf('setStage(nextStage)'), renderer.indexOf('setReview(reviewing)'));
+    assert.doesNotMatch(stageSetter, /slipTarget/);
+    assert.match(renderer, /slipTarget = reviewing \? 1 : 0/);
   });
   it('keeps the receiver down until a real voice connection exists', () => {
     const call = source('components/desk/HettyCall.tsx');

@@ -10,6 +10,9 @@ import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
+import { DeskInstrument } from './DeskInstrument';
+import { BrokerageRoom, DeskObjects, TapeMachine } from './BrokerageRoom';
+import { HouseDirectory } from './HouseDirectory';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useRoomTone } from '@/lib/desk-tone';
@@ -18,15 +21,13 @@ import styles from './WorkingDesk.module.css';
 
 // Three.js (~600KB) and the ElevenLabs SDK are decorative/session-only —
 // lazy-loaded so the desk's first paint stays light.
-const DeskInstrument = dynamic(() => import('./DeskInstrument').then(m => m.DeskInstrument));
 function HettyDoorShell() {
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" aria-busy="true">
-      <div className={styles.boardHead}>
-        <p className={styles.eyebrow}>AI · BASE DESK</p>
-        <span className={styles.callLine}>LINE 01</span>
+      <div className={styles.brokerPlate}>
+        <h2 id="call-title">Hetty <small>AI BROKER · BASE</small></h2>
+        <span className={styles.callLine}>DIRECT LINE</span>
       </div>
-      <h2 id="call-title" className={styles.boardTitle}>Hetty.</h2>
       <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
       <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
       <p className={styles.callFoot}>The microphone stays off until you ring.</p>
@@ -135,6 +136,7 @@ export function WorkingDesk() {
         <div className={styles.street}><b /><b /><b /><b /><b /><b /></div>
         <div className={styles.pitGlow} />
       </div>
+      <BrokerageRoom />
       <div className={styles.wallPanels} />
       <div className={styles.lightShaft} />
       <div className={styles.lightPool} />
@@ -143,6 +145,7 @@ export function WorkingDesk() {
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, the office above the pit"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>{HOUSE.tagline.toUpperCase()}</small></span></Link>
       <nav aria-label="Desk navigation">
+        <HouseDirectory />
         <a href="#instruction">Your ticket</a>
         <a href="#hetty">The line</a>
         {hasHistory && <a href="#paper-history">Your record</a>}
@@ -169,11 +172,12 @@ export function WorkingDesk() {
       <div className={styles.mode}><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></div>
       <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
+        <DeskObjects />
         <TradeTicket desk={desk} />
-        <aside className={styles.support} aria-label="Hetty’s direct line">
+        <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} onLiveChange={handleLiveChange} />
           <div className={styles.instrumentShell} data-stage={instrumentStage}>
-            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} label={instrumentLabel} /></div>
+            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} /></div>
           </div>
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>
@@ -185,7 +189,10 @@ export function WorkingDesk() {
           </details>
         </aside>
       </div>
-      <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+      <div className={styles.tickerStation}>
+        <TapeMachine />
+        <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+      </div>
       {hasContinuity && <div id="on-desk"><DeskBoard desk={desk} /></div>}
       {hasHistory && <PaperHistory desk={desk} />}
     </main>

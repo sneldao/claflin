@@ -41,7 +41,7 @@ export const TickerTape = memo(function TickerTape({ onSelect, disabled }: { onS
         className={styles.tapeLabel}
         title="Indicative reference marks from Chainlink feeds on Base — never offers. The estimate you review comes from the venue, not the tape."
       >
-        HOUSE TAPE · RUNNING
+        REFERENCE TAPE
       </span>
       {marks.length === 0 ? (
         <p className={styles.tapeNote} role={failed ? 'status' : undefined}>

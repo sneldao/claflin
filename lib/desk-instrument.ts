@@ -5,6 +5,7 @@ export type DeskInstrumentStage = 'arrival' | 'conversation' | 'confirmation';
 export interface DeskInstrumentController {
   setStage: (stage: DeskInstrumentStage) => void;
   setLabel: (label: string) => void;
+  setReview: (reviewing: boolean) => void;
   dispose: () => void;
 }
 
@@ -14,8 +15,11 @@ export function createDeskInstrument(
   initialStage: DeskInstrumentStage,
   onUnavailable: () => void,
   initialLabel = 'PAPER TRADING / NO LIVE ORDERS',
+  onReady?: () => void,
+  initialReview = initialStage === 'confirmation',
 ): DeskInstrumentController {
   let displayLabel = initialLabel;
+  let firstFrame = true;
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.setClearColor(0x000000, 0);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -234,7 +238,7 @@ export function createDeskInstrument(
   let lastTime = 0;
   let targetX = 0;
   let targetY = 0;
-  let slipProgress = stage === 'confirmation' ? 1 : 0;
+  let slipProgress = initialReview ? 1 : 0;
   let slipTarget = slipProgress;
   let needleAngle = stage === 'confirmation' ? 0.55 : stage === 'conversation' ? 0 : -0.55;
   let needleTarget = needleAngle;
@@ -272,7 +276,7 @@ export function createDeskInstrument(
     displayContext.fillText('CLAFLIN  /  PRIVATE LINE', 46, 63);
     displayContext.fillStyle = '#e4c485';
     displayContext.font = '54px monospace';
-    displayContext.fillText(stage === 'arrival' ? 'HETTY  —  AT THE DESK' : stage === 'conversation' ? 'HETTY — ON THE LINE' : 'REVIEW INSTRUCTION', 46, 146);
+    displayContext.fillText(stage === 'arrival' ? 'CLAFLIN  &  CO.' : stage === 'conversation' ? 'LINE CONNECTED' : 'REVIEW INSTRUCTION', 46, 146);
     displayContext.fillStyle = '#a9bc91';
     displayContext.font = '24px monospace';
     displayContext.fillText(displayLabel, 46, 207);
@@ -312,6 +316,10 @@ export function createDeskInstrument(
     needleAngle += (needleTarget - needleAngle) * blend;
     needlePivot.rotation.y = needleAngle;
     renderer.render(scene, camera);
+    if (firstFrame) {
+      firstFrame = false;
+      onReady?.();
+    }
     const sweeping = stage === 'conversation' && !reducedMotion.matches;
     const unsettled = Math.abs(assembly.rotation.y - x) + Math.abs(assembly.rotation.x - y) + Math.abs(handset.position.y - lift)
       + Math.abs(slipTarget - slipProgress) + Math.abs(needleTarget - needleAngle);
@@ -383,9 +391,12 @@ export function createDeskInstrument(
   return {
     setStage(nextStage) {
       stage = nextStage;
-      slipTarget = nextStage === 'confirmation' ? 1 : 0;
       needleTarget = nextStage === 'confirmation' ? 0.55 : nextStage === 'conversation' ? 0 : -0.55;
       paintDisplay();
+      schedule();
+    },
+    setReview(reviewing) {
+      slipTarget = reviewing ? 1 : 0;
       schedule();
     },
     setLabel(nextLabel) {
