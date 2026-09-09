@@ -5,7 +5,7 @@ import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
-import { activeRecordId, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
+import { ARCHIVE_READONLY, activeRecordId, browsingArchive, canFileForeground, foregroundDocument, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 
@@ -36,6 +36,7 @@ export function useTradingDesk() {
   const [viewedRecordId, setViewedRecordId] = useState<string | null>(null);
   const [deskReady, setDeskReady] = useState(false);
   const request = useRef<AbortController | null>(null);
+  const requestGen = useRef(0);
   const saveLock = useRef(false);
   const sessions = useRef<Partial<Record<HouseDeskId, ParkedDesk>>>({});
   const deskIdRef = useRef(deskId);
@@ -65,15 +66,24 @@ export function useTradingDesk() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const edit = useCallback((draft: TradeIntent) => {
+    if (browsingArchive(state, viewedRecordId)) {
+      setError(ARCHIVE_READONLY);
+      return;
+    }
     request.current?.abort();
+    requestGen.current += 1;
     setError(null);
     setViewedRecordId(null);
     dispatch({ type: 'edit', draft });
-  }, []);
+  }, [state, viewedRecordId]);
 
   const requestQuote = useCallback(async () => {
     if (!isOpenDesk(deskId)) {
       setError('This desk is not open.');
+      return;
+    }
+    if (browsingArchive(state, viewedRecordId)) {
+      setError(ARCHIVE_READONLY);
       return;
     }
     setError(null);
@@ -84,26 +94,30 @@ export function useTradingDesk() {
     const controller = new AbortController();
     request.current = controller;
     const requestId = crypto.randomUUID();
+    const originDesk = deskId;
+    const gen = ++requestGen.current;
     dispatch({ type: 'request', requestId });
     const timeout = setTimeout(() => controller.abort(), 25000);
     try {
       const response = await fetch(`/api/stocks/quote?${new URLSearchParams(intent)}`, { signal: controller.signal, cache: 'no-store' });
       const body = await response.json();
+      if (requestGen.current !== gen || deskIdRef.current !== originDesk) return;
       if (!response.ok) throw new Error(typeof body.message === 'string' ? body.message.slice(0, 240) : 'An estimate is unavailable. Please retry.');
       let result;
       try { result = parseEstimate(body); } catch { throw new Error('The estimate could not be verified. Please request a new one.'); }
       if (!estimateUsable(result, Date.now())) throw new Error('The estimate expired while loading. Please retry.');
-      if (!canReviewOnDesk(result, deskId)) throw new Error('This quotation belongs to another desk.');
+      if (!canReviewOnDesk(result, originDesk)) throw new Error('This quotation belongs to another desk.');
       dispatch({ type: 'quoted', requestId, quote: result });
     } catch (e) {
+      if (requestGen.current !== gen || deskIdRef.current !== originDesk) return;
       dispatch({ type: 'failed', requestId, message: controller.signal.aborted ? 'The request was cancelled or timed out. You can retry.' : e instanceof Error ? e.message : 'An estimate is unavailable.' });
     } finally { clearTimeout(timeout); }
-  }, [deskId, state.draft]);
+  }, [deskId, state, viewedRecordId]);
 
   const save = useCallback(() => {
     if (saveLock.current || !historyReady) return;
-    if (!state.quote || !canReviewOnDesk(state.quote, deskId)) {
-      setError('This desk cannot file that quotation.');
+    if (!canFileForeground(state, viewedRecordId) || !state.quote || !canReviewOnDesk(state.quote, deskId)) {
+      setError(browsingArchive(state, viewedRecordId) ? ARCHIVE_READONLY : 'This desk cannot file that quotation.');
       return;
     }
     saveLock.current = true;
@@ -115,14 +129,19 @@ export function useTradingDesk() {
       setError(null);
     } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
-  }, [deskId, historyReady, state]);
+  }, [deskId, historyReady, state, viewedRecordId]);
 
   const cancel = useCallback(() => {
+    if (browsingArchive(state, viewedRecordId)) {
+      setError(ARCHIVE_READONLY);
+      return;
+    }
     request.current?.abort();
+    requestGen.current += 1;
     setViewedRecordId(null);
     dispatch({ type: 'cancel' });
     setError(null);
-  }, []);
+  }, [state, viewedRecordId]);
 
   const openRecord = useCallback((id: string) => {
     setViewedRecordId(id);
@@ -139,6 +158,7 @@ export function useTradingDesk() {
       if (viewedRecordId === id) setViewedRecordId(null);
       if (state.quote?.id === id) {
         request.current?.abort();
+        requestGen.current += 1;
         setError(null);
         dispatch({ type: 'edit', draft: emptyDraft() });
       }
@@ -167,6 +187,7 @@ export function useTradingDesk() {
   const switchDesk = useCallback((id: HouseDeskId) => {
     if (id === deskId || !getHouseDesk(id)) return;
     request.current?.abort();
+    requestGen.current += 1;
     if (isOpenDesk(deskId)) {
       try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
     }
@@ -193,16 +214,17 @@ export function useTradingDesk() {
   }, [deskId, error, state, viewedRecordId]);
 
   const focusedRecordId = activeRecordId(state, viewedRecordId);
+  const foreground = foregroundDocument(state, viewedRecordId);
   const activeDesk = getHouseDesk(deskId) ?? getHouseDesk(OPEN_DESK_ID)!;
   const open = isOpenDesk(deskId);
 
   return useMemo(
     () => ({
-      deskId, activeDesk, open, switchDesk,
+      deskId, activeDesk, open, switchDesk, foreground,
       state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
       loadHistory, removeRecord, watched, watch, unwatch,
       viewedRecordId, focusedRecordId, openRecord, dismissRecord,
     }),
-    [deskId, activeDesk, open, switchDesk, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
+    [deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

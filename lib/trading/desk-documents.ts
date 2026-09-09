@@ -77,3 +77,101 @@ export function compactPaperEntry(record: PaperRecord) {
 export function formatRecordedTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+function startOfLocalDay(ms: number): number {
+  const day = new Date(ms);
+  day.setHours(0, 0, 0, 0);
+  return day.getTime();
+}
+
+export function recordedDayLabel(ms: number, now = Date.now()): string {
+  const day = startOfLocalDay(ms);
+  const today = startOfLocalDay(now);
+  const diff = today - day;
+  if (diff === 0) return 'Today';
+  if (diff === 86_400_000) return 'Yesterday';
+  return new Date(ms).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: new Date(ms).getFullYear() === new Date(now).getFullYear() ? undefined : 'numeric',
+  });
+}
+
+export function formatRecordedWhen(ms: number, now = Date.now()): string {
+  return `${recordedDayLabel(ms, now)} · ${formatRecordedTime(ms)}`;
+}
+
+export function groupRecordsByDay(records: PaperRecord[], now = Date.now()): { label: string; records: PaperRecord[] }[] {
+  const groups: { label: string; records: PaperRecord[] }[] = [];
+  for (const record of records) {
+    const label = recordedDayLabel(record.createdAt, now);
+    const last = groups[groups.length - 1];
+    if (last?.label === label) last.records.push(record);
+    else groups.push({ label, records: [record] });
+  }
+  return groups;
+}
+
+export type ForegroundKind = 'draft' | 'pending' | 'quotation' | 'receipt' | 'archive';
+
+export type ForegroundDocument = {
+  kind: ForegroundKind;
+  quoteId: string | null;
+  recordId: string | null;
+  actionable: boolean;
+  readonly: boolean;
+};
+
+/** Looking at a filed record that is not the instruction currently in hand. */
+export function browsingArchive(state: DeskState, viewedRecordId: string | null): boolean {
+  return Boolean(viewedRecordId) && !(state.stage === 'saved' && state.quote?.id === viewedRecordId);
+}
+
+/** The one document the ticket, voice tools, and receiver must agree on. */
+export function foregroundDocument(state: DeskState, viewedRecordId: string | null): ForegroundDocument {
+  if (browsingArchive(state, viewedRecordId)) {
+    return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, actionable: false, readonly: true };
+  }
+  if (state.stage === 'loading') {
+    return { kind: 'pending', quoteId: null, recordId: null, actionable: false, readonly: false };
+  }
+  if (state.stage === 'review' && state.quote) {
+    return { kind: 'quotation', quoteId: state.quote.id, recordId: null, actionable: true, readonly: false };
+  }
+  if (state.stage === 'saved' && state.quote) {
+    return { kind: 'receipt', quoteId: state.quote.id, recordId: state.quote.id, actionable: false, readonly: true };
+  }
+  return { kind: 'draft', quoteId: null, recordId: null, actionable: true, readonly: false };
+}
+
+export const ARCHIVE_READONLY = 'This filed record is for reading. Return to the instruction to quote or record.';
+
+export function canFileForeground(state: DeskState, viewedRecordId: string | null): boolean {
+  const foreground = foregroundDocument(state, viewedRecordId);
+  return foreground.kind === 'quotation' && foreground.quoteId === state.quote?.id && state.stage === 'review';
+}
+
+export function speakForeground(state: DeskState, viewedRecordId: string | null, records: PaperRecord[]): string {
+  const foreground = foregroundDocument(state, viewedRecordId);
+  if (foreground.kind === 'archive') {
+    const record = records.find(item => item.id === foreground.recordId);
+    if (!record) return 'A filed paper record is on the ticket. It cannot be changed.';
+    const quote = record.quote;
+    return `The ticket is showing a filed paper record, read-only: ${quote.intent.side} ${quote.inputAmount} ${quote.inputSymbol} for ${quote.outputAmount} ${quote.outputSymbol}. It is not the live instruction. Return to the instruction to quote or record.`;
+  }
+  if (foreground.kind === 'receipt' && state.quote) {
+    const quote = state.quote;
+    return `The current instruction is filed: ${quote.intent.side} ${quote.inputAmount} ${quote.inputSymbol} for ${quote.outputAmount} ${quote.outputSymbol}.`;
+  }
+  const draft = state.draft;
+  const parts: string[] = [];
+  parts.push(draft.instrumentId ? `Instrument: ${DESK_INSTRUMENTS.find(item => item.id === draft.instrumentId)?.symbol ?? 'set'}.` : 'No instrument chosen.');
+  parts.push(draft.amount ? `${draft.side} ${draft.amount} ${draft.unit}.` : 'No amount set.');
+  if (foreground.kind === 'quotation' && state.quote) {
+    const quote = state.quote;
+    parts.push(`Estimate under review: spend ${quote.inputAmount} ${quote.inputSymbol}, receive ${quote.outputAmount} ${quote.outputSymbol}.`);
+  }
+  if (state.stage === 'cancelled') parts.push('The client decided not to record. Nothing was filed.');
+  if (foreground.kind === 'pending') parts.push('A venue estimate is on its way.');
+  return parts.join(' ');
+}

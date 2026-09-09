@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk, type DeskState } from '../lib/trading/workflow';
+import { foregroundDocument } from '../lib/trading/desk-documents';
 import type { useTradingDesk } from '../lib/trading/useTradingDesk';
 
 const require = createRequire(import.meta.url);
@@ -40,7 +41,7 @@ function render(state: DeskState, options: { time?: number; historyReady?: boole
     viewedRecordId: options.viewedRecordId ?? null, focusedRecordId: options.focusedRecordId ?? null,
     openRecord: noop, dismissRecord: noop,
     deskId: 'hetty', activeDesk: { id: 'hetty', name: 'Hetty', market: 'Base', approach: '', status: 'paper' },
-    open: true, switchDesk: noop,
+    open: true, switchDesk: noop, foreground: foregroundDocument(state, options.viewedRecordId ?? null),
   };
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }
@@ -59,6 +60,7 @@ describe('one working document at a time', () => {
   it('replaces the draft with the quotation rather than appending it', () => {
     const html = render(reviewed());
     assert.match(html, /data-ticket-view="review"/);
+    assert.match(html, /data-foreground="quotation"/);
     assert.doesNotMatch(html, /<form|<input|<select/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.match(html, /0\.02948502/);
@@ -119,10 +121,10 @@ describe('one working document at a time', () => {
     const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
     assert.doesNotMatch(html, /<form|<input|Record paper trade|Refresh estimate/);
-    assert.match(visible(html), /Filed in your paper record/);
+    assert.match(visible(html), /Filed to your paper ledger/);
     assert.match(visible(html), /This is not a fill, a submission, or a position/);
     assert.match(visible(html), /Start another instruction/);
-    assert.match(visible(html), /paper-ledger/);
+    assert.doesNotMatch(visible(html), /This is the same entry as the ledger/);
     assert.doesNotMatch(visible(html), />New instruction</);
     assert.doesNotMatch(visible(html), /Simulated outcome saved on this browser/);
     assert.match(html, /0\.02948502/);
@@ -134,8 +136,19 @@ describe('one working document at a time', () => {
       records: [record], viewedRecordId: quote.id, focusedRecordId: quote.id,
     });
     assert.match(html, /data-ticket-view="receipt"/);
+    assert.match(html, /data-foreground="archive"/);
     assert.match(visible(html), /Back to the ticket/);
+    assert.doesNotMatch(visible(html), /Start another instruction/);
     assert.doesNotMatch(html, /<form|id="amount"/);
+  });
+  it('does not offer to record a hidden quotation while a filed record is on the ticket', () => {
+    const filed = { ...quote, id: 'filed-nvda' };
+    const record = { version: 1 as const, id: filed.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote: filed };
+    const html = render(reviewed(), { records: [record], viewedRecordId: filed.id, focusedRecordId: filed.id });
+    assert.match(html, /data-foreground="archive"/);
+    assert.doesNotMatch(visible(html), /Record paper trade/);
+    assert.match(visible(html), /Back to your instruction/);
+    assert.doesNotMatch(visible(html), /Start another instruction/);
   });
   it('keeps sell inputs and outputs in their actual units', () => {
     const sell: TradeIntent = { ...intent, side: 'sell', unit: 'token', amount: '0.25' };

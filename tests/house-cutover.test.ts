@@ -53,7 +53,7 @@ describe('one canonical house', () => {
     assert.match(desk, /const hasLedger = open && \(desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)\)/);
     assert.match(desk, /hasLedger && <PaperLedger/);
     assert.match(desk, /hasTray && <div id="on-desk"/);
-    assert.match(desk, /hasLedger && <PaperHistory/);
+    assert.doesNotMatch(desk, /hasLedger && <PaperHistory/);
   });
   it('parses the desk stylesheet and resolves its component class references', () => {
     const css = postcss.parse(source('components/desk/WorkingDesk.module.css'));
@@ -66,6 +66,15 @@ describe('one canonical house', () => {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
     }
+    css.walkRules(rule => {
+      if (!/\[data-ledger="true"\]/.test(rule.selector) || !/\.ticket/.test(rule.selector)) return;
+      if (!rule.nodes?.some(node => node.type === 'decl' && node.prop === 'grid-column' && node.value === '2')) return;
+      let at = rule.parent;
+      while (at && at.type !== 'root' && at.type !== 'atrule') at = at.parent;
+      assert.equal(at?.type, 'atrule');
+      assert.equal(at.name, 'media');
+      assert.match(at.params, /min-width:\s*761px/);
+    });
   });
   it('lets the house directory visit a desk without making planned desks trade', () => {
     const directory = source('components/desk/HouseDirectory.tsx');
@@ -102,10 +111,12 @@ describe('one canonical house', () => {
     assert.match(source('lib/trading/desk-documents.ts'), /state\.stage === 'saved'/);
     const ticket = source('components/desk/TradeTicket.tsx');
     assert.match(ticket, /paperOutcomeCopy/);
-    assert.match(source('lib/trading/outcomes.ts'), /Filed in your paper record/);
+    assert.match(source('lib/trading/outcomes.ts'), /Filed to your paper ledger/);
     assert.doesNotMatch(ticket, />New instruction</);
     assert.match(ticket, /Start another instruction/);
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
+    assert.match(source('components/desk/PaperLedger.tsx'), /The archive/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /paper-ledger[\s\S]*scrollIntoView/);
     assert.match(source('components/desk/PaperHistory.tsx'), /Open this record/);
   });
   it('can present a quotation slip while the voice line remains connected', () => {

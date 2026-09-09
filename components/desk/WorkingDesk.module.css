@@ -666,10 +666,22 @@
   .deskSurface::after { inset: 10px; }
   .ticket { grid-column: 1; grid-row: 1; padding: 20px; }
   .ticket h1 { font-size: 32px; }
+  .ticket[data-acknowledged="true"] { padding: 16px 14px 12px; }
+  .ticket[data-acknowledged="true"] h1 { font-size: 28px; margin: 12px 0 14px; }
   .plaques { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fields { grid-template-columns: 86px minmax(0, 1fr); }
-  .paperLedger { grid-column: 1; grid-row: 2; }
+  .paperLedger { grid-column: 1; grid-row: 2; padding: 12px 14px 10px 16px; }
+  .ledgerLines { max-height: 168px; }
+  .ledgerLines button { min-height: 52px; padding: 8px 4px; }
   .support { grid-column: 1; grid-row: 3; padding: 0 8px; }
+  .grid[data-ledger="true"] .ticket { grid-column: 1; grid-row: 1; }
+  .grid[data-ledger="true"] .paperLedger { grid-column: 1; grid-row: 2; }
+  .grid[data-ledger="true"] .support { grid-column: 1; grid-row: 3; }
+  .grid[data-ledger="true"] .instrumentShell { max-width: 460px; margin: -12px auto -24px; }
+  .grid[data-ledger="true"][data-foreground="receipt"] .instrumentShell,
+  .grid[data-ledger="true"][data-foreground="archive"] .instrumentShell,
+  .grid[data-ledger="true"][data-foreground="receipt"] .deskInscription,
+  .grid[data-ledger="true"][data-foreground="archive"] .deskInscription { display: none; }
   .call { padding-right: 0; }
   .call .boardTitle { font-size: 44px; }
   .call .callNote { max-width: 320px; }
@@ -753,6 +765,28 @@
   box-shadow: 3px 5px 0 var(--desk-file-shadow), 0 10px 24px var(--desk-occlusion);
   color: var(--desk-paper);
 }
+@media (min-width: 761px) {
+  .grid[data-ledger="true"] .paperLedger {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    max-width: none;
+    margin-top: 0;
+    z-index: 4;
+  }
+  .grid[data-ledger="true"] .support { grid-column: 1; grid-row: 2; padding-top: 0; }
+  .grid[data-ledger="true"] .ticket { grid-column: 2; grid-row: 1 / span 2; }
+  .grid[data-ledger="true"] .instrumentShell { max-width: 280px; margin: 4px 0 0; }
+  .grid[data-ledger="true"] .deskInscription,
+  .grid[data-ledger="true"] .aboutHetty { display: none; }
+}
+.ledgerDayGroup { min-width: 0; }
+.ledgerDay { margin: 10px 0 0 !important; font: 9px/1.4 var(--font-mono), monospace; letter-spacing: .12em; color: var(--desk-brass); }
+.ledgerDayGroup:first-of-type .ledgerDay { margin-top: 0 !important; }
+.ledgerArchive { margin-top: 10px; color: var(--desk-file-paper); font-size: 11px; }
+.ledgerArchive summary { min-height: 36px; padding: 8px 0; cursor: pointer; }
+.historyEmbed { margin: 4px 0 0; padding: 0; border: 0; background: none; box-shadow: none; }
+.historyEmbed .record { margin-top: 8px; padding: 12px 0; }
 .ledgerTrayHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .ledgerTrayTitle { font: 22px/1.2 var(--font-display), serif !important; margin: 8px 0 12px !important; color: var(--desk-paper-light); }
 .ledgerLines { list-style: none; padding: 0; margin: 0; max-height: 220px; overflow: auto; }
@@ -775,6 +809,8 @@
 .ledgerLines span,
 .ledgerLines time { display: block; font: 11px/1.5 var(--font-mono), monospace; color: var(--desk-file-paper); }
 .ledgerLines li[data-current="true"] button { box-shadow: inset 3px 0 0 var(--desk-brass); padding-left: 10px; }
+.ledgerLines li[data-just-filed="true"] button { background: #c5ac7818; }
+.ledgerLines li[data-just-filed="true"] strong { color: var(--desk-brass); }
 .filedHome { margin: 0 0 12px !important; max-width: 46ch; color: var(--desk-paper-ink); font-size: 13px; line-height: 1.6; }
 .filedHome a { color: inherit; text-underline-offset: 3px; }
 .brokerPlate { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; max-width: 370px; padding: 13px 18px; margin-bottom: 16px; border: 1px solid var(--desk-brass-dim); border-radius: 2px; color: var(--desk-deep); background: linear-gradient(125deg, var(--desk-brass-dim), var(--desk-brass) 28%, var(--desk-metal-light) 60%, var(--desk-brass-dim)); box-shadow: inset 0 0 0 3px var(--desk-patina), inset 0 0 0 4px var(--desk-brass), 0 4px 0 var(--desk-walnut), 0 8px 14px var(--desk-shadow); }

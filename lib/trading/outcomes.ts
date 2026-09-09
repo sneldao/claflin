@@ -63,7 +63,7 @@ export function isPaperSuccess(evidence: PaperEvidence | LiveEvidence): boolean 
 export function paperOutcomeCopy() {
   return {
     heading: 'Paper recorded.',
-    acknowledgement: 'Filed in your paper record. No funds moved.',
+    acknowledgement: 'Filed to your paper ledger. No funds moved.',
     boundary: 'This is not a fill, a submission, or a position.',
     stamp: 'PAPER · FILED',
   } as const;

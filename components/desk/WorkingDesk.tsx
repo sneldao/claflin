@@ -7,7 +7,6 @@ import { HouseMark } from './HouseMark';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
-import { PaperHistory } from './PaperHistory';
 import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
@@ -48,6 +47,7 @@ export function WorkingDesk() {
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const tone = useRoomTone(hettyLive);
   const open = desk.open;
+  const foreground = desk.foreground;
   const hasTray = open && desk.watched.length > 0;
   const hasLedger = open && (desk.records.length > 0 || Boolean(desk.storageError));
 
@@ -86,18 +86,22 @@ export function WorkingDesk() {
       : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
     document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const selected = DESK_INSTRUMENTS.find(s => s.id === desk.state.draft.instrumentId);
-  const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'saved';
+  const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.kind === 'archive'
+    ? desk.records.find(record => record.id === foreground.recordId)?.quote.intent.instrumentId
+    : desk.state.draft.instrumentId));
+  const reviewActive = foreground.kind === 'quotation' || foreground.kind === 'receipt' || foreground.kind === 'archive';
   const instrumentStage = hettyLive
     ? 'conversation'
-    : desk.state.stage === 'review' || desk.state.stage === 'saved'
+    : reviewActive
       ? 'confirmation'
       : 'arrival';
   const instrumentLabel = hettyLive
     ? 'HETTY — ON THE LINE'
-    : selected
-      ? `${selected.symbol.toUpperCase()} · ${desk.state.stage === 'loading' ? 'REQUESTING ESTIMATE' : desk.state.stage === 'review' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
-      : 'PAPER TRADING / NO LIVE ORDERS';
+    : foreground.kind === 'archive'
+      ? 'FILED RECORD · READ ONLY'
+      : selected
+        ? `${selected.symbol.toUpperCase()} · ${foreground.kind === 'pending' ? 'REQUESTING ESTIMATE' : foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
+        : 'PAPER TRADING / NO LIVE ORDERS';
 
   const loadInstrument = (instrumentId: string) => {
     desk.edit({ ...desk.state.draft, instrumentId });
@@ -178,7 +182,7 @@ export function WorkingDesk() {
           ? <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
-      <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'}>
+      <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
         {open ? <TradeTicket desk={desk} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
@@ -203,7 +207,6 @@ export function WorkingDesk() {
         <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       </div>}
       {hasTray && <div id="on-desk"><DeskBoard desk={desk} /></div>}
-      {hasLedger && <PaperHistory desk={desk} />}
     </main>
     <footer className={styles.footer}>
       <span>YOUR INSTRUCTION. YOUR DECISION.</span>

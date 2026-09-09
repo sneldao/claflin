@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { resolveDeskAlias, DESK_INSTRUMENTS } from '@/lib/trading/catalog';
+import { ARCHIVE_READONLY, canFileForeground, speakForeground } from '@/lib/trading/desk-documents';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -48,19 +49,21 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
     }), []);
 
   useConversationClientTool<HettyTools>('choose_instrument', async (p) => {
+    const d = deskRef.current;
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     const query = String(p.query ?? '');
     const instrument = resolveDeskAlias(query);
     if (!instrument) {
       return `"${query || 'That'}" is not on this desk. Supported: NVDAc, AAPLc, METAc and GOOGLc — Coinbase-issued tokens on Base.`;
     }
-    const d = deskRef.current;
     d.edit({ ...d.state.draft, instrumentId: instrument.id });
     return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
   });
 
   useConversationClientTool<HettyTools>('set_instruction', async (p) => {
-    const side = String(p.side ?? '');
     const d = deskRef.current;
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    const side = String(p.side ?? '');
     if (side === 'buy') {
       d.edit({ instrumentId: d.state.draft.instrumentId, side: 'buy', unit: 'USDC', amount: '' });
       return 'Buy set — the amount is a USDC spend.';
@@ -73,11 +76,12 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   });
 
   useConversationClientTool<HettyTools>('set_amount', async (p) => {
+    const d = deskRef.current;
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     const clean = String(p.amount ?? '').trim();
     if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
       return `"${clean || 'That'}" is not a usable amount — say a plain number, like 25 or 0.5.`;
     }
-    const d = deskRef.current;
     d.edit({ ...d.state.draft, amount: clean });
     const unit = d.state.draft.side === 'sell' ? 'tokens' : 'USDC';
     return `${clean} ${unit} is on the ticket.`;
@@ -85,6 +89,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('request_estimate', async () => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     if (d.state.stage === 'loading') return 'An estimate is already on its way.';
     const before = d.state.quote?.id;
     await d.requestQuote();
@@ -100,14 +105,16 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('record_paper', async () => {
     const d = deskRef.current;
-    if (d.state.stage !== 'review' || !d.state.quote) return 'There is no estimate under review. Request one first.';
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    if (d.foreground.kind === 'receipt') return 'That instruction is already filed.';
+    if (!canFileForeground(d.state, d.viewedRecordId) || !d.state.quote) return 'There is no estimate under review. Request one first.';
     if (!estimateUsable(d.state.quote, Date.now())) return 'That estimate has expired — request a fresh one before recording.';
     if (!d.historyReady) return 'Browser storage is unavailable, so nothing can be recorded right now.';
     d.save();
     await waitFor(x => x.state.stage === 'saved' || x.error !== null, 3000);
     const now = deskRef.current;
     return now.state.stage === 'saved'
-      ? 'Recorded — a paper trade. Nothing moved onchain.'
+      ? 'Recorded — a paper trade, filed to the ledger. Nothing moved onchain.'
       : `The record did not save${now.error ? ` — ${now.error}` : ''}.`;
   });
 
@@ -124,27 +131,15 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   });
 
   useConversationClientTool<HettyTools>('cancel_instruction', async () => {
-    deskRef.current.cancel();
+    const d = deskRef.current;
+    if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
+    d.cancel();
     return 'The ticket is clear.';
   });
 
   useConversationClientTool<HettyTools>('describe_desk', async () => {
     const d = deskRef.current;
-    const draft = d.state.draft;
-    const parts: string[] = [];
-    if (d.state.stage === 'saved' && d.state.quote) {
-      const q = d.state.quote;
-      parts.push(`The current instruction is filed: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${q.outputAmount} ${q.outputSymbol}.`);
-    } else {
-      parts.push(draft.instrumentId ? `Instrument: ${resolveDeskAlias(draft.instrumentId)?.symbol ?? 'set'}.` : 'No instrument chosen.');
-      parts.push(draft.amount ? `${draft.side} ${draft.amount} ${draft.unit}.` : 'No amount set.');
-      if (d.state.stage === 'review' && d.state.quote) {
-        const q = d.state.quote;
-        const usable = estimateUsable(q, Date.now());
-        parts.push(`Estimate under review: spend ${q.inputAmount} ${q.inputSymbol}, receive ${q.outputAmount} ${q.outputSymbol}${usable ? '' : ' — expired'}.`);
-      }
-      if (d.state.stage === 'cancelled') parts.push('The client decided not to record. Nothing was filed.');
-    }
+    const parts = [speakForeground(d.state, d.viewedRecordId, d.records)];
     if (d.records.length) parts.push(`${d.records.length} paper record${d.records.length === 1 ? '' : 's'} in the ledger.`);
     if (d.watched.length) parts.push(`${d.watched.length} watched mark${d.watched.length === 1 ? '' : 's'} in the tray.`);
     return parts.join(' ');
@@ -232,7 +227,9 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
         </span>
       </div>
       <p className={styles.callNote}>
-        Speak your instruction. Review it on the same ticket.
+        {desk.foreground.kind === 'archive'
+          ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
+          : 'Speak your instruction. Review it on the same ticket.'}
       </p>
       <div className={styles.callActions}>
         {!live && !connecting && (

@@ -68,7 +68,7 @@ export function deskReducer(state: DeskState, action: DeskAction): DeskState {
     case 'cancel': return { ...state, stage: 'cancelled', quote: null, requestId: null, message: 'You decided not to record this instruction. Nothing was filed.' };
     case 'saved':
       if (state.stage !== 'review' || state.quote?.id !== action.quoteId || !estimateUsable(state.quote, action.now)) return state;
-      return { ...state, stage: 'saved', message: 'Filed in your paper record.' };
+      return { ...state, stage: 'saved', message: 'Filed to your paper ledger.' };
     case 'hydrate': return action.state;
   }
 }

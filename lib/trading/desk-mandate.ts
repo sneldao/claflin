@@ -45,6 +45,20 @@ export function enterDesk(
   };
 }
 
+/** Park durable work only. An in-flight estimate is not a resumable network operation. */
+export function parkDeskWork(session: ParkedDesk): ParkedDesk {
+  if (session.state.stage !== 'loading') return session;
+  return {
+    ...session,
+    viewedRecordId: null,
+    error: null,
+    state: {
+      ...initialDesk(session.state.draft),
+      message: 'The last estimate was interrupted. Review a fresh one when you are ready.',
+    },
+  };
+}
+
 /** Park the current desk, then enter another. The destination never receives the parked quotation. */
 export function switchDeskSession(
   current: ParkedDesk,
@@ -52,7 +66,8 @@ export function switchDeskSession(
   parked: Partial<Record<HouseDeskId, ParkedDesk>>,
   persistedDraft: TradeIntent | null,
 ): { parked: Partial<Record<HouseDeskId, ParkedDesk>>; entered: ParkedDesk } {
-  const nextParked = { ...parked, [current.deskId]: current };
+  const parkedCurrent = parkDeskWork(current);
+  const nextParked = { ...parked, [current.deskId]: parkedCurrent };
   const entered = enterDesk(destination, nextParked, persistedDraft);
   if (current.state.quote && entered.deskId !== current.deskId && entered.state.quote) {
     throw new Error('A quotation cannot travel with a desk switch.');

@@ -4,8 +4,9 @@ import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
-import { canFileOnDesk, canReviewOnDesk, emptyDraft, enterDesk, quoteDeskId, switchDeskSession } from '../lib/trading/desk-mandate';
+import { canFileOnDesk, canReviewOnDesk, emptyDraft, enterDesk, parkDeskWork, quoteDeskId, switchDeskSession } from '../lib/trading/desk-mandate';
 import { liveEvidence, paperEvidence, paperOutcomeCopy } from '../lib/trading/outcomes';
+import { canFileForeground, foregroundDocument, recordedDayLabel, speakForeground } from '../lib/trading/desk-documents';
 
 const now = 1788600000000;
 const stock = DESK_INSTRUMENTS[0];
@@ -38,7 +39,7 @@ describe('paper evidence is not a live outcome', () => {
     assert.equal(evidence.isSubmission, false);
     assert.equal(evidence.isPosition, false);
     const copy = paperOutcomeCopy();
-    assert.match(copy.acknowledgement, /Filed in your paper record/);
+    assert.match(copy.acknowledgement, /Filed to your paper ledger/);
     assert.match(copy.boundary, /not a fill, a submission, or a position/);
     assert.doesNotMatch(copy.heading, /fill|submit/i);
     const filled = liveEvidence('filled');
@@ -80,5 +81,51 @@ describe('a desk switch cannot carry an approval', () => {
     const closed = enterDesk('jesse', {}, intent);
     assert.deepEqual(closed.state.draft, emptyDraft());
     assert.equal(closed.state.quote, null);
+  });
+  it('parks an in-flight estimate as a recoverable draft, not a resumable request', () => {
+    const loading = deskReducer(initialDesk(intent), { type: 'request', requestId: 'inflight' });
+    const parked = parkDeskWork({ deskId: 'hetty', state: loading, viewedRecordId: null, error: null });
+    assert.equal(parked.state.stage, 'draft');
+    assert.equal(parked.state.requestId, null);
+    assert.equal(parked.state.quote, null);
+    assert.deepEqual(parked.state.draft, intent);
+    assert.match(parked.state.message ?? '', /interrupted/);
+    const late = deskReducer(parked.state, { type: 'quoted', requestId: 'inflight', quote });
+    assert.equal(late.stage, 'draft');
+    assert.equal(late.quote, null);
+    const { parked: sessions } = switchDeskSession(
+      { deskId: 'hetty', state: loading, viewedRecordId: null, error: null },
+      'jesse',
+      {},
+      intent,
+    );
+    assert.equal(sessions.hetty?.state.stage, 'draft');
+    assert.equal(enterDesk('hetty', sessions, intent).state.stage, 'draft');
+  });
+});
+
+describe('one foreground document', () => {
+  it('will not file a hidden quotation while a filed record is in the foreground', () => {
+    const review = reviewed();
+    const filedId = 'filed-elsewhere';
+    const foreground = foregroundDocument(review, filedId);
+    assert.equal(foreground.kind, 'archive');
+    assert.equal(foreground.readonly, true);
+    assert.equal(canFileForeground(review, filedId), false);
+    assert.equal(canFileForeground(review, null), true);
+    const spoken = speakForeground(review, filedId, [{
+      version: 1, id: filedId, mode: 'paper', deskId: 'hetty', createdAt: now + 1,
+      quote: { ...quote, id: filedId, outputSymbol: 'AAPLc' },
+    }]);
+    assert.match(spoken, /read-only/);
+    assert.match(spoken, /AAPLc/);
+    assert.doesNotMatch(spoken, /Estimate under review/);
+  });
+  it('labels recordings by day so yesterday and today do not collapse', () => {
+    const today = now;
+    const yesterday = now - 86_400_000;
+    assert.equal(recordedDayLabel(today, today), 'Today');
+    assert.equal(recordedDayLabel(yesterday, today), 'Yesterday');
+    assert.notEqual(recordedDayLabel(yesterday, today), recordedDayLabel(today, today));
   });
 });

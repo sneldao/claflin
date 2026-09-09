@@ -122,9 +122,13 @@ A document may change state or move between these places. It keeps one identity.
 
 Finished means `stage === 'saved'` after a verified write. A ticket that still shows the same instrument and amount is not “in progress.” Do not count a retained draft or latest record as pinned.
 
-After a successful save: the receipt remains; the ledger gains that entry; the acknowledgement is “Filed in your paper record.” Opening the entry shows the same record on the ticket, with a way back. Starting another instruction stays available and secondary. Watch, share, and re-quote are not the definition of success.
+After a successful save: the receipt remains; the ledger beside it gains that entry and marks it just filed; the acknowledgement is “Filed to your paper ledger.” Opening the entry shows the same record on the ticket, with a way back to the instruction. Starting another instruction stays available from a receipt and is not offered while browsing a different record. Watch, share, and re-quote are not the definition of success. The archive is behind that ledger, not a second chapter.
 
-A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live.
+The ticket, the voice tools, and the receiver share one **foreground document**. Browsing a filed record is read-only. A quotation still sitting in background state cannot be filed, described, or recorded as if it were on the ticket. Returning to an actionable instruction is explicit.
+
+An in-flight estimate is transient. Leaving the desk parks the draft and its inputs, not a resumable network request. On return, review a fresh estimate.
+
+A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live. Ledger lines use Today / Yesterday / date, then the time. Quote time stays secondary.
 
 **Outcome evidence is not a shared success banner.** A paper file is `{ kind: 'paper-record', status: 'filed' }`. It is not a submission, a fill, or a position. Live execution, when it exists, uses its own statuses — submitted, pending, filled, failed, unknown — and its own evidence. Receipt and ledger copy stay “filed” / “paper.” Do not say filled, submitted, or opened a position for a local simulation. Types for live outcomes may exist before any signing or submission does.
 
