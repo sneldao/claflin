@@ -1,6 +1,6 @@
 # Claflin Product Direction
 
-**Status:** Canonical product cutover approved, 2026-09-05; seated working desk first pass, 2026-09-09. The old onboarding/directory approach is retired. `/` is Claflin's desk. Hetty is the current Base relationship, not the house identity. Live execution remains unimplemented. An optional Sign in control may appear when Privy is configured — it does not gate the desk and is not live access. Browser and responsive QA of the seated pass were skipped; the visual result is unverified.
+**Status:** Canonical product cutover approved, 2026-09-05; seated working desk first pass, 2026-09-09; desk isolation and outcome evidence, 2026-09-09. The old onboarding/directory approach is retired. `/` is Claflin's desk. Hetty is the current Base relationship, not the house identity. Live execution remains unimplemented. Visiting a planned desk is a closed room, not a second trading surface. An optional Sign in control may appear when Privy is configured — it does not gate the desk and is not live access. Browser and responsive QA of the seated pass were skipped; the visual result is unverified.
 
 **Governing decision:** there are no existing users or collaborators requiring preservation of the old experience. Be intentional about replacement: preserve useful technical capabilities selectively, not legacy flows, identities or product assumptions. Git history is the reference for the retired approach.
 
@@ -88,7 +88,7 @@ The chain does not determine the strategy. Base is not inherently conservative, 
 
 Keep one house identity, quotation/ticket conventions, and consent model. Vary voice, editorial perspective, specialist working material, and restrained desk accents rather than create separate themed applications. This table is house strategy, not first-page information architecture. Do not render it as a product grid on `/`. A restrained house-directory detail may acknowledge planned desks; a four-desk explainer must not return. Sequence and gates live in [ROADMAP.md](../ROADMAP.md). "Other desks" becomes a small curated directory only as those desks become ready.
 
-A handoff preserves the question, selected publication edition, and permitted research context. Explain what is shared, destination coverage/account requirements, and changed call terms. Ask before transferring private context. Do not silently move transaction authority, bridge funds, switch accounts, or reuse an approval for the new desk.
+A handoff preserves the question, selected publication edition, and permitted research context. Explain what is shared, destination coverage/account requirements, and changed call terms. Ask before transferring private context. Do not silently move transaction authority, bridge funds, switch accounts, or reuse an approval for the new desk. The house directory may visit a planned desk; that visit is a closed room. A quotation or approval from the Base desk must not appear, save, or record there. Returning restores the parked Base work. It does not transplant it.
 
 ## Prices as working information
 
@@ -124,7 +124,9 @@ Finished means `stage === 'saved'` after a verified write. A ticket that still s
 
 After a successful save: the receipt remains; the ledger gains that entry; the acknowledgement is “Filed in your paper record.” Opening the entry shows the same record on the ticket, with a way back. Starting another instruction stays available and secondary. Watch, share, and re-quote are not the definition of success.
 
-A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live. Live execution must not reuse “paper recorded” as a generic success model.
+A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live.
+
+**Outcome evidence is not a shared success banner.** A paper file is `{ kind: 'paper-record', status: 'filed' }`. It is not a submission, a fill, or a position. Live execution, when it exists, uses its own statuses — submitted, pending, filled, failed, unknown — and its own evidence. Receipt and ledger copy stay “filed” / “paper.” Do not say filled, submitted, or opened a position for a local simulation. Types for live outcomes may exist before any signing or submission does.
 
 **Paper journey to validate:** review → save succeeds → record appears nearby → client leaves → client returns → retrieves that record. Then the failure branch. For each frame: what are they trying to establish, what owns attention, what changed, where does the work live, and can they stop here?
 

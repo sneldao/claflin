@@ -7,6 +7,7 @@ import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
+import { paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
@@ -77,6 +78,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const view = openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
   const paperSub = recorded ? 'PAPER RECORD' : view === 'draft' ? 'BASE DESK / PAPER INSTRUCTION' : 'BASE DESK / QUOTATION';
+  const filed = recorded ? paperOutcomeCopy() : null;
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
 
   const share = () => {
@@ -94,13 +96,13 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
     data-slip={slipActive ? 'true' : 'false'}
     data-acknowledged={recorded ? 'true' : 'false'}
   >
-    {recorded && <span className={styles.stamp} aria-hidden="true"><span>RECORDED</span><small>PAPER · THIS BROWSER</small></span>}
+    {recorded && <span className={styles.stamp} aria-hidden="true"><span>RECORDED</span><small>{filed?.stamp ?? 'PAPER · FILED'}</small></span>}
     <div className={styles.paperTop}>
       <HouseMark small />
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
-    <h1 id="instruction-title" ref={review} tabIndex={-1}>{recorded ? 'Paper recorded.' : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : 'Draft a paper trade.'}</h1>
+    <h1 id="instruction-title" ref={review} tabIndex={-1}>{recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : 'Draft a paper trade.'}</h1>
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
     <div key={view} className={styles.ticketSurface}>
       {view === 'draft' ? <>
@@ -157,7 +159,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
           <time dateTime={new Date(quote.quotedAt).toISOString()} title={date(quote.quotedAt)}>Quoted {new Date(quote.quotedAt).toLocaleTimeString()}</time>
           {filedRecord && <time dateTime={new Date(filedRecord.createdAt).toISOString()}>Recorded {formatRecordedTime(filedRecord.createdAt)}</time>}
         </p>
-        {recorded ? <p className={styles.quoteBoundary} role="status">Filed in your paper record. No funds moved.</p> : <>
+        {recorded ? <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p> : <>
           <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}

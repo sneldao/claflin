@@ -39,6 +39,8 @@ function render(state: DeskState, options: { time?: number; historyReady?: boole
     loadHistory: noop, removeRecord: noop, watch: noop, unwatch: noop,
     viewedRecordId: options.viewedRecordId ?? null, focusedRecordId: options.focusedRecordId ?? null,
     openRecord: noop, dismissRecord: noop,
+    deskId: 'hetty', activeDesk: { id: 'hetty', name: 'Hetty', market: 'Base', approach: '', status: 'paper' },
+    open: true, switchDesk: noop,
   };
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }
@@ -113,11 +115,12 @@ describe('one working document at a time', () => {
   });
   it('shows a compact receipt without reopening the form or asking for approval again', () => {
     const saved = deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 });
-    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, createdAt: now + 1, quote };
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote };
     const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
     assert.doesNotMatch(html, /<form|<input|Record paper trade|Refresh estimate/);
     assert.match(visible(html), /Filed in your paper record/);
+    assert.match(visible(html), /This is not a fill, a submission, or a position/);
     assert.match(visible(html), /Start another instruction/);
     assert.match(visible(html), /paper-ledger/);
     assert.doesNotMatch(visible(html), />New instruction</);
@@ -126,7 +129,7 @@ describe('one working document at a time', () => {
     assert.match(html, /Recorded/);
   });
   it('opens a filed record on the ticket without turning it into a new draft', () => {
-    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, createdAt: now + 1, quote };
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote };
     const html = render(initialDesk({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' }), {
       records: [record], viewedRecordId: quote.id, focusedRecordId: quote.id,
     });

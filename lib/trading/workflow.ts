@@ -48,7 +48,8 @@ export type DeskAction =
   | { type: 'quoted'; requestId: string; quote: QuoteEstimate }
   | { type: 'failed'; requestId: string; message: string }
   | { type: 'cancel' }
-  | { type: 'saved'; quoteId: string; now: number };
+  | { type: 'saved'; quoteId: string; now: number }
+  | { type: 'hydrate'; state: DeskState };
 
 export function initialDesk(draft: TradeIntent): DeskState {
   return { draft, stage: 'draft', requestId: null, quote: null, message: null };
@@ -68,6 +69,7 @@ export function deskReducer(state: DeskState, action: DeskAction): DeskState {
     case 'saved':
       if (state.stage !== 'review' || state.quote?.id !== action.quoteId || !estimateUsable(state.quote, action.now)) return state;
       return { ...state, stage: 'saved', message: 'Filed in your paper record.' };
+    case 'hydrate': return action.state;
   }
 }
 

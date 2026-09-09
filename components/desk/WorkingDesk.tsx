@@ -14,6 +14,7 @@ import { TickerTape } from './TickerTape';
 import { DeskInstrument } from './DeskInstrument';
 import { BrokerageRoom, DeskObjects, TapeMachine } from './BrokerageRoom';
 import { HouseDirectory } from './HouseDirectory';
+import { ClosedDesk } from './ClosedDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useRoomTone } from '@/lib/desk-tone';
@@ -44,9 +45,11 @@ export function WorkingDesk() {
   usePaperSync(desk);
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
+  useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const tone = useRoomTone(hettyLive);
-  const hasTray = desk.watched.length > 0;
-  const hasLedger = desk.records.length > 0 || Boolean(desk.storageError);
+  const open = desk.open;
+  const hasTray = open && desk.watched.length > 0;
+  const hasLedger = open && (desk.records.length > 0 || Boolean(desk.storageError));
 
   // Colophon seal: the house mark stroke-draws once when the footer scrolls
   // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
@@ -74,7 +77,7 @@ export function WorkingDesk() {
     if (!raw) return;
     window.history.replaceState(null, '', window.location.pathname + window.location.hash);
     const instrument = resolveDeskAlias(raw);
-    if (!instrument?.quoteSupported) return;
+    if (!desk.open || !instrument?.quoteSupported) return;
     const side = params.get('side') === 'sell' ? 'sell' : 'buy';
     const amount = (params.get('amount') ?? '').trim();
     const cleanAmount = /^(0|[1-9]\d*)(\.\d+)?$/.test(amount) ? amount : '';
@@ -130,7 +133,7 @@ export function WorkingDesk() {
   }, []);
   useEffect(() => () => cancelAnimationFrame(parallax.current.raf), []);
 
-  return <div className={styles.workspace} onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave} data-live={hettyLive ? 'true' : 'false'} data-desk-stage={desk.state.stage}>
+  return <div className={styles.workspace} onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave} data-live={hettyLive ? 'true' : 'false'} data-desk-stage={desk.state.stage} data-desk={desk.deskId} data-desk-open={open ? 'true' : 'false'}>
     <div className={styles.room} aria-hidden="true">
       <div className={styles.window}>
         <i /><i /><i />
@@ -146,9 +149,9 @@ export function WorkingDesk() {
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, the office above the pit"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>{HOUSE.tagline.toUpperCase()}</small></span></Link>
       <nav aria-label="Desk navigation">
-        <HouseDirectory />
-        <a href="#instruction">Your ticket</a>
-        <a href="#hetty">The line</a>
+        <HouseDirectory activeDeskId={desk.deskId} onVisit={desk.switchDesk} />
+        {open && <a href="#instruction">Your ticket</a>}
+        {open && <a href="#hetty">The line</a>}
         {hasLedger && <a href="#paper-ledger">Your record</a>}
         <button
           type="button"
@@ -170,31 +173,35 @@ export function WorkingDesk() {
       </nav>
     </header>
     <main id="main-content" className={styles.main}>
-      <div className={styles.mode}><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></div>
-      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
+      <div className={styles.mode}>
+        {open
+          ? <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+          : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
+      </div>
+      <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        <TradeTicket desk={desk} />
+        {open ? <TradeTicket desk={desk} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
-        <aside className={styles.support} aria-label="The Base desk’s direct line">
-          <HettyCall desk={desk} onLiveChange={handleLiveChange} />
-          <div className={styles.instrumentShell} data-stage={instrumentStage}>
-            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} /></div>
+        <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
+          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} />}
+          <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
+            <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
           </div>
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>
             <p>This desk is for deciding.</p>
           </div>
-          <details className={styles.aboutHetty}>
+          {open && <details className={styles.aboutHetty}>
             <summary>About Hetty</summary>
             <p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
-          </details>
+          </details>}
         </aside>
       </div>
-      <div className={styles.tickerStation}>
+      {open && <div className={styles.tickerStation}>
         <TapeMachine />
         <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
-      </div>
+      </div>}
       {hasTray && <div id="on-desk"><DeskBoard desk={desk} /></div>}
       {hasLedger && <PaperHistory desk={desk} />}
     </main>

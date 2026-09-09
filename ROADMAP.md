@@ -17,7 +17,8 @@
 - No wallet signing, order submission or real position reconciliation is implemented. A read-only Coinbase Verifications check exists in source (`lib/eligibility.ts`, `/api/eligibility`) for a later authority tier. It is not shown on the paper desk.
 - Public broker discovery/listing and ratings APIs return 410 through the routing layer. Former provider/settlement modules remain source infrastructure, not the product's identity or navigation model. No database deletion was performed.
 - `/desk-study` and `/widget-probe` are development references only and return not-found in production.
-- House sequence (Jesse / Isabel / Arbitrum) lives in §5. It is strategy, not first-page IA. A restrained directory detail may acknowledge planned desks; a four-card grid must not return.
+- House sequence (Jesse / Isabel / Arbitrum) lives in §5. It is strategy, not first-page IA. The house directory can visit a planned desk as a closed room. That visit cannot quote, file paper, ring Hetty, or carry a Base approval. A four-card grid must not return.
+- Paper success is a filed paper record, not a live outcome. Live-execution statuses exist as types only (`submitted`, `pending`, `filled`, `failed`, `unknown`). Nothing signs or submits.
 
 ## Immediate opportunity
 
@@ -75,7 +76,7 @@ Still open before any live ticket:
 
 - Complete product/access/compliance and security review for the selected products, users, venues and limits.
 - Validate user authorization, submission, duplicate prevention and reconciliation in an explicitly approved live setup.
-- Distinguish acknowledged, pending, filled, reverted, rejected, expired and unknown outcomes; reconcile ambiguity before retrying.
+- Distinguish live outcomes from paper files. A paper record is filed, never filled. Live statuses already exist as types (`submitted`, `pending`, `filled`, `failed`, `unknown`); add venue reconciliation, reverted/rejected/expired as needed, and never reuse the paper receipt as a generic success model.
 - Establish monitoring, incident/disable controls and client recovery paths. Call-payment receipts remain separate from trade receipts.
 
 **Exit evidence:** authorized transactions reconcile to venue/chain evidence and actual balances. Paper or testnet success alone does not establish live readiness.
@@ -91,7 +92,7 @@ Research, reviewed market letters, saved interests and explainable adaptation su
 | Isabel Benham / Robinhood Chain | Third. Network choice settled; token rights, eligibility, venue and integration remain to be verified. |
 | Arbitrum desk | Fourth. Mandate and broker to be defined; existing billing infrastructure does not move it forward in the sequence. |
 
-Handoffs may carry permitted context, never silent transaction authority or funds. Further route options require independent product/provider verification and transparent terms. One rejected 0x NVDAc request and an Odos infrastructure error do not establish a universal aggregator prohibition.
+Handoffs may carry permitted context, never silent transaction authority or funds. Visiting a planned desk from the house directory is already a closed room: no ticket, no quote, no recording, and no transplanted approval. Further route options require independent product/provider verification and transparent terms. One rejected 0x NVDAc request and an Odos infrastructure error do not establish a universal aggregator prohibition.
 
 ## Not backlog
 

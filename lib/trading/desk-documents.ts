@@ -1,10 +1,20 @@
 import { z } from 'zod';
+import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
 import { DESK_INSTRUMENTS } from './catalog';
 import { parseIntent, type TradeIntent } from './domain';
 import type { PaperRecord } from './paper-records';
 import type { DeskState } from './workflow';
 
 export const DRAFT_STORAGE_KEY = 'claflin.draft.v1';
+export const WATCH_STORAGE_KEY = 'claflin.watched.v1';
+
+export function draftStorageKey(deskId: HouseDeskId = OPEN_DESK_ID): string {
+  return deskId === OPEN_DESK_ID ? DRAFT_STORAGE_KEY : `${DRAFT_STORAGE_KEY}.${deskId}`;
+}
+
+export function watchStorageKey(deskId: HouseDeskId = OPEN_DESK_ID): string {
+  return deskId === OPEN_DESK_ID ? WATCH_STORAGE_KEY : `${WATCH_STORAGE_KEY}.${deskId}`;
+}
 
 const persistedDraftSchema = z.object({
   instrumentId: z.string().min(1),
@@ -33,21 +43,22 @@ export function persistableDraft(state: DeskState): TradeIntent | null {
   try { return parseIntent(state.draft); } catch { return null; }
 }
 
-export function readPersistedDraft(storage: Pick<Storage, 'getItem'>): TradeIntent | null {
+export function readPersistedDraft(storage: Pick<Storage, 'getItem'>, deskId: HouseDeskId = OPEN_DESK_ID): TradeIntent | null {
   try {
-    const raw = storage.getItem(DRAFT_STORAGE_KEY);
+    const raw = storage.getItem(draftStorageKey(deskId));
     if (!raw) return null;
     return parseIntent(persistedDraftSchema.parse(JSON.parse(raw)));
   } catch { return null; }
 }
 
-export function writePersistedDraft(storage: Pick<Storage, 'setItem' | 'removeItem'>, state: DeskState): void {
+export function writePersistedDraft(storage: Pick<Storage, 'setItem' | 'removeItem'>, state: DeskState, deskId: HouseDeskId = OPEN_DESK_ID): void {
+  const key = draftStorageKey(deskId);
   const draft = persistableDraft(state);
   if (!draft) {
-    storage.removeItem(DRAFT_STORAGE_KEY);
+    storage.removeItem(key);
     return;
   }
-  storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  storage.setItem(key, JSON.stringify(draft));
 }
 
 export function compactPaperEntry(record: PaperRecord) {

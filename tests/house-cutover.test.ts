@@ -49,8 +49,8 @@ describe('one canonical house', () => {
   });
   it('shows continuity only when there is work, without hiding storage failures', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
-    assert.match(desk, /const hasTray = desk\.watched\.length > 0/);
-    assert.match(desk, /const hasLedger = desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)/);
+    assert.match(desk, /const hasTray = open && desk\.watched\.length > 0/);
+    assert.match(desk, /const hasLedger = open && \(desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)\)/);
     assert.match(desk, /hasLedger && <PaperLedger/);
     assert.match(desk, /hasTray && <div id="on-desk"/);
     assert.match(desk, /hasLedger && <PaperHistory/);
@@ -61,17 +61,24 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'BrokerageRoom', 'TickerTape']) {
+    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
     }
   });
-  it('gives the house a directory without presenting planned desks as active controls', () => {
+  it('lets the house directory visit a desk without making planned desks trade', () => {
     const directory = source('components/desk/HouseDirectory.tsx');
     assert.match(directory, /HOUSE_DESKS/);
-    assert.match(directory, /Planned/);
-    assert.doesNotMatch(directory, /onClick|href=|<button/);
+    assert.match(directory, /Visit · planned/);
+    assert.match(directory, /onVisit/);
+    assert.match(directory, /<button/);
+    assert.doesNotMatch(directory, /requestQuote|Record paper|Ring Hetty|href=/);
+    const desk = source('components/desk/WorkingDesk.tsx');
+    assert.match(desk, /<ClosedDesk /);
+    assert.match(desk, /switchDesk/);
+    assert.match(source('components/desk/ClosedDesk.tsx'), /This desk is not open/);
+    assert.match(source('components/desk/ClosedDesk.tsx'), /No quote, no paper file, no live order/);
     assert.doesNotMatch(source('components/desk/HettyCall.tsx'), /className=\{styles\.boardTitle\}>Hetty\./);
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
@@ -94,7 +101,8 @@ describe('one canonical house', () => {
     assert.match(board, /WATCHING/);
     assert.match(source('lib/trading/desk-documents.ts'), /state\.stage === 'saved'/);
     const ticket = source('components/desk/TradeTicket.tsx');
-    assert.match(ticket, /Filed in your paper record/);
+    assert.match(ticket, /paperOutcomeCopy/);
+    assert.match(source('lib/trading/outcomes.ts'), /Filed in your paper record/);
     assert.doesNotMatch(ticket, />New instruction</);
     assert.match(ticket, /Start another instruction/);
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
@@ -103,7 +111,7 @@ describe('one canonical house', () => {
   it('can present a quotation slip while the voice line remains connected', () => {
     const receiver = source('components/desk/DeskInstrument.tsx');
     assert.match(receiver, /setReview\(reviewing\)/);
-    assert.match(source('components/desk/WorkingDesk.tsx'), /reviewing=\{reviewActive\}/);
+    assert.match(source('components/desk/WorkingDesk.tsx'), /reviewing=\{open && reviewActive\}/);
     const renderer = source('lib/desk-instrument.ts');
     const stageSetter = renderer.slice(renderer.indexOf('setStage(nextStage)'), renderer.indexOf('setReview(reviewing)'));
     assert.doesNotMatch(stageSetter, /slipTarget/);

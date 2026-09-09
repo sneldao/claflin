@@ -1,27 +1,33 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
-import { activeRecordId, readPersistedDraft, writePersistedDraft } from './desk-documents';
+import { activeRecordId, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
+import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 
-const emptyDraft: TradeIntent = { instrumentId: '', side: 'buy', amount: '', unit: 'USDC' };
-const WATCH_KEY = 'claflin.watched.v1';
 const WATCH_MAX = 12;
 
-function loadWatched(storage: Storage): string[] {
+function loadWatched(storage: Storage, deskId: HouseDeskId): string[] {
+  if (!isOpenDesk(deskId)) return [];
   try {
-    const raw = JSON.parse(storage.getItem(WATCH_KEY) ?? '[]');
+    const raw = JSON.parse(storage.getItem(watchStorageKey(deskId)) ?? '[]');
     if (!Array.isArray(raw)) return [];
     const known = new Set(DESK_INSTRUMENTS.map(s => s.id));
     return raw.filter((id): id is string => typeof id === 'string' && known.has(id)).slice(0, WATCH_MAX);
   } catch { return []; }
 }
 
+function readHistory(deskId: HouseDeskId): PaperRecord[] {
+  return isOpenDesk(deskId) ? loadPaperRecords(window.localStorage, deskId) : [];
+}
+
 export function useTradingDesk() {
-  const [state, dispatch] = useReducer(deskReducer, emptyDraft, initialDesk);
+  const [deskId, setDeskId] = useState<HouseDeskId>(OPEN_DESK_ID);
+  const [state, dispatch] = useReducer(deskReducer, emptyDraft(), initialDesk);
   const [records, setRecords] = useState<PaperRecord[]>([]);
   const [historyReady, setHistoryReady] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -31,9 +37,12 @@ export function useTradingDesk() {
   const [deskReady, setDeskReady] = useState(false);
   const request = useRef<AbortController | null>(null);
   const saveLock = useRef(false);
+  const sessions = useRef<Partial<Record<HouseDeskId, ParkedDesk>>>({});
+  const deskIdRef = useRef(deskId);
+  deskIdRef.current = deskId;
 
   const loadHistory = useCallback(() => {
-    try { setRecords(loadPaperRecords(window.localStorage)); setHistoryReady(true); setStorageError(null); }
+    try { setRecords(readHistory(deskIdRef.current)); setHistoryReady(true); setStorageError(null); }
     catch { setHistoryReady(false); setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.'); }
   }, []);
 
@@ -42,17 +51,17 @@ export function useTradingDesk() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadHistory();
-    setWatched(loadWatched(window.localStorage));
-    const restored = readPersistedDraft(window.localStorage);
+    setWatched(loadWatched(window.localStorage, OPEN_DESK_ID));
+    const restored = readPersistedDraft(window.localStorage, OPEN_DESK_ID);
     if (restored) dispatch({ type: 'edit', draft: restored });
     setDeskReady(true);
     window.addEventListener('storage', loadHistory);
     return () => { request.current?.abort(); window.removeEventListener('storage', loadHistory); };
   }, [loadHistory]);
   useEffect(() => {
-    if (!deskReady) return;
-    try { writePersistedDraft(window.localStorage, state); } catch { /* draft resume is optional */ }
-  }, [deskReady, state]);
+    if (!deskReady || !isOpenDesk(deskId)) return;
+    try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
+  }, [deskReady, deskId, state]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const edit = useCallback((draft: TradeIntent) => {
@@ -63,6 +72,10 @@ export function useTradingDesk() {
   }, []);
 
   const requestQuote = useCallback(async () => {
+    if (!isOpenDesk(deskId)) {
+      setError('This desk is not open.');
+      return;
+    }
     setError(null);
     let intent: TradeIntent;
     try { intent = parseIntent(state.draft); }
@@ -80,24 +93,29 @@ export function useTradingDesk() {
       let result;
       try { result = parseEstimate(body); } catch { throw new Error('The estimate could not be verified. Please request a new one.'); }
       if (!estimateUsable(result, Date.now())) throw new Error('The estimate expired while loading. Please retry.');
+      if (!canReviewOnDesk(result, deskId)) throw new Error('This quotation belongs to another desk.');
       dispatch({ type: 'quoted', requestId, quote: result });
     } catch (e) {
       dispatch({ type: 'failed', requestId, message: controller.signal.aborted ? 'The request was cancelled or timed out. You can retry.' : e instanceof Error ? e.message : 'An estimate is unavailable.' });
     } finally { clearTimeout(timeout); }
-  }, [state.draft]);
+  }, [deskId, state.draft]);
 
   const save = useCallback(() => {
     if (saveLock.current || !historyReady) return;
+    if (!state.quote || !canReviewOnDesk(state.quote, deskId)) {
+      setError('This desk cannot file that quotation.');
+      return;
+    }
     saveLock.current = true;
     try {
-      const saved = savePaperRecord(window.localStorage, state, Date.now());
+      const saved = savePaperRecord(window.localStorage, state, Date.now(), deskId);
       setRecords(previous => [saved, ...previous.filter(record => record.id !== saved.id)]);
       setViewedRecordId(saved.id);
       dispatch({ type: 'saved', quoteId: saved.id, now: saved.createdAt });
       setError(null);
     } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
-  }, [historyReady, state]);
+  }, [deskId, historyReady, state]);
 
   const cancel = useCallback(() => {
     request.current?.abort();
@@ -122,38 +140,69 @@ export function useTradingDesk() {
       if (state.quote?.id === id) {
         request.current?.abort();
         setError(null);
-        dispatch({ type: 'edit', draft: { instrumentId: '', side: 'buy', amount: '', unit: 'USDC' } });
+        dispatch({ type: 'edit', draft: emptyDraft() });
       }
       loadHistory();
     } catch { setStorageError('This paper record could not be deleted. Check browser storage and try again.'); }
   }, [loadHistory, state.quote?.id, viewedRecordId]);
 
   const watch = useCallback((instrumentId: string) => {
-    if (!DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
+    if (!isOpenDesk(deskId) || !DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
     setWatched(previous => {
       const next = previous.includes(instrumentId) ? previous : [instrumentId, ...previous].slice(0, WATCH_MAX);
-      try { window.localStorage.setItem(WATCH_KEY, JSON.stringify(next)); } catch { /* watching is optional */ }
+      try { window.localStorage.setItem(watchStorageKey(deskId), JSON.stringify(next)); } catch { /* watching is optional */ }
       return next;
     });
-  }, []);
+  }, [deskId]);
 
   const unwatch = useCallback((instrumentId: string) => {
+    if (!isOpenDesk(deskId)) return;
     setWatched(previous => {
       const next = previous.filter(id => id !== instrumentId);
-      try { window.localStorage.setItem(WATCH_KEY, JSON.stringify(next)); } catch { /* watching is optional */ }
+      try { window.localStorage.setItem(watchStorageKey(deskId), JSON.stringify(next)); } catch { /* watching is optional */ }
       return next;
     });
-  }, []);
+  }, [deskId]);
 
-  // The desk object is explicitly memoized so parent re-renders don't create new references for children.
+  const switchDesk = useCallback((id: HouseDeskId) => {
+    if (id === deskId || !getHouseDesk(id)) return;
+    request.current?.abort();
+    if (isOpenDesk(deskId)) {
+      try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
+    }
+    const { parked, entered } = switchDeskSession(
+      { deskId, state, viewedRecordId, error },
+      id,
+      sessions.current,
+      isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) : null,
+    );
+    sessions.current = parked;
+    setDeskId(entered.deskId);
+    dispatch({ type: 'hydrate', state: entered.state });
+    setViewedRecordId(entered.viewedRecordId);
+    setError(entered.error);
+    try {
+      setRecords(readHistory(entered.deskId));
+      setWatched(loadWatched(window.localStorage, entered.deskId));
+      setHistoryReady(true);
+      setStorageError(null);
+    } catch {
+      setHistoryReady(false);
+      setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.');
+    }
+  }, [deskId, error, state, viewedRecordId]);
+
   const focusedRecordId = activeRecordId(state, viewedRecordId);
+  const activeDesk = getHouseDesk(deskId) ?? getHouseDesk(OPEN_DESK_ID)!;
+  const open = isOpenDesk(deskId);
 
   return useMemo(
     () => ({
+      deskId, activeDesk, open, switchDesk,
       state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
       loadHistory, removeRecord, watched, watch, unwatch,
       viewedRecordId, focusedRecordId, openRecord, dismissRecord,
     }),
-    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
+    [deskId, activeDesk, open, switchDesk, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

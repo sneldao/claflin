@@ -15,6 +15,19 @@ export const HOUSE_DESKS = Object.freeze([
   Object.freeze({ id: 'arbitrum', name: 'A future desk', market: 'Arbitrum', approach: 'Mandate and broker to be defined after the first three desks.', status: 'planned' as const }),
 ]);
 
+export type HouseDesk = (typeof HOUSE_DESKS)[number];
+export type HouseDeskId = HouseDesk['id'];
+
+export const OPEN_DESK_ID: HouseDeskId = 'hetty';
+
+export function getHouseDesk(id: string): HouseDesk | undefined {
+  return HOUSE_DESKS.find(desk => desk.id === id);
+}
+
+export function isOpenDesk(id: string): id is typeof OPEN_DESK_ID {
+  return id === OPEN_DESK_ID;
+}
+
 export const RETIRED_CLIENT_PATHS = Object.freeze([
   '/marketplace', '/demo', '/dashboard', '/profile', '/list-your-broker', '/admin', '/admin/analytics',
 ]);
