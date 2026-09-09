@@ -118,9 +118,11 @@ function buildStorageState(records: PaperRecord[]) {
   };
 }
 
-async function mockApi(page: Page, { staleMarkId }: { staleMarkId?: string } = {}) {
+async function mockApi(page: Page, { now, staleMarkId }: { now?: number; staleMarkId?: string } = {}) {
+  const time = now ?? Date.now();
+  const quoteId = `quote-${time}`;
   await page.route('**/api/stocks/marks', async route => {
-    const body = makeMarks(Date.now(), staleMarkId);
+    const body = makeMarks(time, staleMarkId);
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
 
@@ -134,7 +136,7 @@ async function mockApi(page: Page, { staleMarkId }: { staleMarkId?: string } = {
     if (!found) {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'unknown_instrument' }) });
     }
-    const quote = makeEstimate(found, side, amount, `quote-${Date.now()}`, Date.now());
+    const quote = makeEstimate(found, side, amount, quoteId, time);
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(quote) });
   });
 }
@@ -151,21 +153,24 @@ async function filePaperRecord(page: Page) {
   await expect(page.getByText('0.02948502').first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Record paper trade' }).click();
   await expect(page.getByText('Filed to your paper ledger')).toBeVisible({ timeout: 30000 });
+  const justFiled = page.locator('[data-just-filed="true"]');
+  await expect(justFiled).toBeVisible({ timeout: 30000 });
+  await expect(justFiled).toBeInViewport({ ratio: 1 });
 }
 
 test.describe('desktop filing flow', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   test('loads the desk and reference tape', async ({ page }) => {
-    await page.goto('/');
     await mockApi(page);
+    await page.goto('/');
     await expect(page.getByRole('region', { name: 'Indicative reference marks' })).toBeVisible();
     await expect(page.getByRole('button', { name: /GOOGLc/ })).toBeVisible();
   });
 
   test('files a paper record through the ticket and shows receipt', async ({ page }) => {
-    await page.goto('/');
     await mockApi(page);
+    await page.goto('/');
 
     await filePaperRecord(page);
     await expect(page.getByRole('button', { name: 'Start another instruction' })).toBeVisible();
@@ -176,41 +181,91 @@ test.describe('desktop filing flow', () => {
     await expect(page.getByText('Filed to your paper ledger')).not.toBeVisible();
   });
 
-  test('shows a STALE label when a mark is stale', async ({ page }) => {
+  test('files a paper record after inspecting quote details', async ({ page }) => {
+    const now = Date.now();
+    await page.clock.install();
+    await page.clock.setSystemTime(now);
+    await mockApi(page, { now });
     await page.goto('/');
+
+    await selectInstrument(page);
+    await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
+    await page.getByRole('button', { name: 'Review estimate' }).click();
+
+    await page.getByRole('button', { name: /Quote & product details/ }).click();
+    const quoteDialog = page.getByRole('dialog', { name: 'Quote and product details' });
+    await expect(quoteDialog).toBeVisible();
+    await page.getByRole('button', { name: 'Close quote and product details' }).click();
+    await expect(quoteDialog).not.toBeVisible();
+
+    await page.getByRole('button', { name: 'Record paper trade' }).click();
+    await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
+    const justFiled = page.locator('[data-just-filed="true"]');
+    await expect(justFiled).toBeVisible();
+    await expect(justFiled).toBeInViewport({ ratio: 1 });
+  });
+
+  test('shows a STALE label when a mark is stale', async ({ page }) => {
     await mockApi(page, { staleMarkId: stock.id });
+    await page.goto('/');
     await expect(page.getByText('STALE').first()).toBeVisible();
     await expect(page.getByText('Reference marks are stale')).toBeVisible();
   });
 
   test('Product dossier and Quote & product details open as overlays without extending the page', async ({ page }) => {
+    const now = Date.now();
+    await page.clock.install();
+    await page.clock.setSystemTime(now);
+    await mockApi(page, { now });
     await page.goto('/');
-    await mockApi(page);
 
     const before = await page.evaluate(() => document.documentElement.scrollHeight);
 
-    await page.getByText('Product dossier').click();
-    await expect(page.getByText('Coinbase-issued tokenized products')).toBeVisible();
+    await page.getByRole('button', { name: 'Product dossier' }).click();
+    const productDialog = page.getByRole('dialog', { name: 'Product dossier' });
+    await expect(productDialog).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Close product dossier' })).toBeVisible();
+
+    const productBox = await productDialog.boundingBox();
+    expect(productBox).not.toBeNull();
+    const { width: vw } = page.viewportSize()!;
+    expect(productBox!.x + productBox!.width).toBeLessThanOrEqual(vw);
+    expect(productBox!.x + productBox!.width).toBeGreaterThanOrEqual(vw - 420);
+    expect(productBox!.y).toBeGreaterThanOrEqual(0);
+    expect(productBox!.width).toBeLessThanOrEqual(420);
+
     const afterDossier = await page.evaluate(() => document.documentElement.scrollHeight);
     expect(afterDossier).toBeLessThanOrEqual(before + 10);
+
     await page.getByRole('button', { name: 'Close product dossier' }).click();
+    await expect(productDialog).not.toBeVisible();
 
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
     await page.getByRole('button', { name: 'Review estimate' }).click();
-    const beforeQuote = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.getByText('Quote & product details').click();
+    await expect(page.getByText('0.02948502').first()).toBeVisible();
 
-    await expect(page.getByText('This paper trade uses the quoted output')).toBeVisible();
-    const panel = page.getByTestId('quote-details-panel');
-    await expect(panel).toBeVisible();
+    const beforeQuote = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.getByRole('button', { name: /Quote & product details/ }).click();
+
+    const quoteDialog = page.getByRole('dialog', { name: 'Quote and product details' });
+    await expect(quoteDialog).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Close quote and product details' })).toBeVisible();
+
+    const quoteBox = await quoteDialog.boundingBox();
+    expect(quoteBox).not.toBeNull();
+    expect(quoteBox!.x + quoteBox!.width).toBeLessThanOrEqual(vw);
+    expect(quoteBox!.x + quoteBox!.width).toBeGreaterThanOrEqual(vw - 420);
+    expect(quoteBox!.y).toBeGreaterThanOrEqual(0);
+    expect(quoteBox!.width).toBeLessThanOrEqual(420);
+
     const afterQuote = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 80);
+    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 10);
   });
 
   test('About Hetty Green opens as a popover without extending the page', async ({ page }) => {
-    await page.goto('/');
     await mockApi(page);
+    await page.goto('/');
     const before = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.getByText('About Hetty Green').click();
     await expect(page.getByText('AI character inspired by the historical financier')).toBeVisible();
@@ -218,24 +273,42 @@ test.describe('desktop filing flow', () => {
     expect(after).toBeLessThanOrEqual(before + 10);
   });
 
-  test('disclosures can be opened and closed from the keyboard', async ({ page }) => {
+  test('drawers can be opened, navigated and dismissed from the keyboard', async ({ page }) => {
+    const now = Date.now();
+    await page.clock.install();
+    await page.clock.setSystemTime(now);
+    await mockApi(page, { now });
     await page.goto('/');
-    await mockApi(page);
 
-    await page.getByText('Product dossier').focus();
+    const toggle = page.getByRole('button', { name: 'Product dossier' });
+    await toggle.focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Coinbase-issued tokenized products')).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Product dossier' });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Close product dossier' })).toBeFocused();
 
-    await page.getByRole('button', { name: 'Close product dossier' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(toggle).toBeFocused();
+
+    await toggle.focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Coinbase-issued tokenized products')).not.toBeVisible();
+    await expect(dialog).toBeVisible();
+    const closeButton = page.getByRole('button', { name: 'Close product dossier' });
+    await expect(closeButton).toBeFocused();
+
+    // Tab and Shift+Tab should keep focus inside the modal.
+    const activeIsInDialog = async () => page.evaluate(() => document.activeElement?.closest('dialog[aria-label]') !== null);
+    await page.keyboard.press('Tab');
+    expect(await activeIsInDialog()).toBe(true);
+    await page.keyboard.press('Shift+Tab');
+    expect(await activeIsInDialog()).toBe(true);
   });
 
   test('respects prefers-reduced-motion', async ({ page }) => {
-    await page.goto('/');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mockApi(page);
-    await page.reload();
+    await page.goto('/');
 
     const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
     expect(reducedMotion).toBe(true);
@@ -247,12 +320,13 @@ test.describe('desktop filing flow', () => {
   });
 
   test('recovers from a missing record that was opened then deleted elsewhere', async ({ browser }) => {
-    const record = makeRecord(0, Date.now());
+    const now = Date.now();
+    const record = makeRecord(0, now);
     const context = await browser.newContext({ storageState: buildStorageState([record]) });
     const page = await context.newPage();
     await page.setViewportSize({ width: 1280, height: 720 });
+    await mockApi(page, { now });
     await page.goto('/');
-    await mockApi(page);
 
     // Open the seeded record from the ledger.
     const ledger = page.locator('#paper-ledger');
@@ -276,34 +350,42 @@ test.describe('mobile filing flow', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test('files a paper record through the ticket on a narrow viewport', async ({ page }) => {
-    await page.goto('/');
     await mockApi(page);
+    await page.goto('/');
     await filePaperRecord(page);
     await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
   });
 
   test('drawers render as bottom sheets and do not trap horizontal overflow', async ({ page }) => {
+    const now = Date.now();
+    await page.clock.install();
+    await page.clock.setSystemTime(now);
+    await mockApi(page, { now });
     await page.goto('/');
-    await mockApi(page);
 
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
     await page.getByRole('button', { name: 'Review estimate' }).click();
-    await page.getByText('Quote & product details').click();
+    await page.getByRole('button', { name: /Quote & product details/ }).click();
 
-    await expect(page.getByText('This paper trade uses the quoted output')).toBeVisible();
-    const panel = page.getByTestId('quote-details-panel');
-    await expect(panel).toBeVisible();
-    const box = await panel.boundingBox();
+    const dialog = page.getByRole('dialog', { name: 'Quote and product details' });
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeLessThanOrEqual(390);
+    const { width: vw, height: vh } = page.viewportSize()!;
+    // Bottom sheet anchored to the bottom of the viewport, nearly full width, no horizontal overflow.
+    expect(box!.x).toBe(0);
+    expect(box!.width).toBeGreaterThanOrEqual(vw * 0.9);
+    expect(box!.width).toBeLessThanOrEqual(vw);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(vh);
+    expect(box!.y).toBeGreaterThanOrEqual(vh * 0.25);
   });
 });
 
 test.describe('ledger preview', () => {
   test('shows empty history until a record is filed, then previews the latest', async ({ page }) => {
-    await page.goto('/');
     await mockApi(page);
+    await page.goto('/');
     await expect(page.locator('#paper-ledger')).not.toBeVisible();
 
     await filePaperRecord(page);
@@ -319,8 +401,8 @@ test.describe('ledger preview', () => {
     const context = await browser.newContext({ storageState: buildStorageState(records) });
     const page = await context.newPage();
     await page.setViewportSize({ width: 1280, height: 720 });
+    await mockApi(page, { now });
     await page.goto('/');
-    await mockApi(page);
 
     const lines = page.locator('#paper-ledger ol > li');
     await expect(lines).toHaveCount(5);
