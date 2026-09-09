@@ -43,7 +43,12 @@ export const BASE_WETH: Address =
 export const AERODROME_MIXED_QUOTER: Address =
   '0xCd2A7D98e82D6107eac1828ce8DeAA6acB65b555';
 
-/** Historical router candidate; compatibility with current pools is unverified. Not used for submission. */
+/**
+ * Aerodrome: SlipStream Swap Router.
+ * Verified 2026-09-09 on BaseScan as the active CL router
+ * (exactInputSingle/exactOutput). The router derives the pool
+ * from tokenIn, tokenOut, and tickSpacing using the default CL factory.
+ */
 export const AERODROME_SWAP_ROUTER: Address =
   '0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5';
 

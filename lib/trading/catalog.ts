@@ -73,6 +73,11 @@ export function getQuotePair(stock: DeskInstrument): Readonly<VenuePair> {
   return pair;
 }
 
+export function getQuotePairByPoolAddress(poolAddress: string): Readonly<VenuePair> | undefined {
+  const lower = poolAddress.toLowerCase();
+  return DESK_INSTRUMENTS.flatMap(s => s.venuePairs).find(p => p.poolAddress.toLowerCase() === lower);
+}
+
 export function resolveDeskAlias(query: string): DeskInstrument | undefined {
   const alias = query.trim().toLowerCase();
   const names: Record<string, string> = { nvidia: 'NVDAc', apple: 'AAPLc', meta: 'METAc', google: 'GOOGLc', alphabet: 'GOOGLc' };
