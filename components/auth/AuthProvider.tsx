@@ -13,6 +13,13 @@ import dynamic from 'next/dynamic';
  * anonymous bundle.
  */
 
+export type SendTransactionRequest = {
+  to: `0x${string}`;
+  data: `0x${string}`;
+  value?: bigint;
+  chainId: number;
+};
+
 export interface DeskAuth {
   enabled: boolean;
   ready: boolean;
@@ -25,12 +32,15 @@ export interface DeskAuth {
   login: () => void;
   logout: () => void;
   getAccessToken: () => Promise<string | null>;
+  /** Send a pre-built transaction through the connected wallet. Returns the tx hash. Throws if no wallet. */
+  sendTransaction: (tx: SendTransactionRequest) => Promise<`0x${string}`>;
 }
 
 const ANON: DeskAuth = {
   enabled: false, ready: true, authenticated: false, userId: null, label: null,
   walletAddress: null, linkWallet: () => {},
   login: () => {}, logout: () => {}, getAccessToken: async () => null,
+  sendTransaction: async () => { throw new Error('Wallet not connected.'); },
 };
 
 export const DeskAuthContext = createContext<DeskAuth>(ANON);
