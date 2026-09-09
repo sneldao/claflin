@@ -18,7 +18,7 @@ function makeQuote(intent: TradeIntent, now: number): QuoteEstimate {
   };
 }
 
-describe('read-only venue smoke check', () => {
+describe('quote handler contract', () => {
   it('returns a paper-only estimate for a valid quote request', async () => {
     const now = Date.now();
     const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };

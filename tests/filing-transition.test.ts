@@ -41,7 +41,7 @@ function injectWorkingDeskCss() {
   document.head.appendChild(style);
 }
 
-describe('mobile filing transition through actual buttons', () => {
+describe('mobile filing integration through actual buttons', () => {
   let root: Root | null = null;
   let desk: ReturnType<typeof useTradingDesk> | null = null;
 
@@ -88,7 +88,7 @@ describe('mobile filing transition through actual buttons', () => {
     return Array.from(container.querySelectorAll('button')).find(b => text.test(b.textContent ?? ''));
   }
 
-  it('files a paper record through the ticket buttons and places the compact ledger above the receipt on mobile', async () => {
+  it('files a paper record through the ticket buttons and reaches the receipt/ledger state on a narrow viewport', async () => {
     const now = Date.now();
     const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };
 
@@ -130,7 +130,7 @@ describe('mobile filing transition through actual buttons', () => {
     assert.ok(ledger!.querySelector('[data-just-filed="true"]'), 'the just-filed line should be highlighted');
     assert.ok(container.textContent?.includes('Filed to your paper ledger'), 'receipt copy should be visible');
 
-    // Mobile layout is driven by the wrapper's data attributes: receipt state plus a ledger.
+    // The filing transition is verified through the actual controls; jsdom does not prove visual layout.
     const main = container.querySelector('main') as HTMLElement | null;
     assert.equal(main?.getAttribute('data-foreground'), 'receipt', 'the grid should be in receipt foreground');
     assert.equal(main?.getAttribute('data-ledger'), 'true', 'the grid should know a ledger is present');
