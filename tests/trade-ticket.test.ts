@@ -30,13 +30,15 @@ const quote: QuoteEstimate = {
   blockNumber: 123, blockTimestamp: now / 1000 - 2, quotedAt: now, expiresAt: now + 30000, assumptions: PAPER_ASSUMPTIONS,
 };
 const reviewed = (): DeskState => ({ ...initialDesk(intent), stage: 'review', quote });
-function render(state: DeskState, options: { time?: number; historyReady?: boolean; error?: string } = {}) {
+function render(state: DeskState, options: { time?: number; historyReady?: boolean; error?: string; records?: ReturnType<typeof useTradingDesk>['records']; viewedRecordId?: string | null; focusedRecordId?: string | null } = {}) {
   const clock = mock.method(Date, 'now', () => options.time ?? now);
   const noop = () => {};
   const desk: ReturnType<typeof useTradingDesk> = {
     state, historyReady: options.historyReady ?? true, error: options.error ?? null, storageError: null,
-    records: [], watched: [], edit: noop, requestQuote: async () => {}, save: noop, cancel: noop,
+    records: options.records ?? [], watched: [], edit: noop, requestQuote: async () => {}, save: noop, cancel: noop,
     loadHistory: noop, removeRecord: noop, watch: noop, unwatch: noop,
+    viewedRecordId: options.viewedRecordId ?? null, focusedRecordId: options.focusedRecordId ?? null,
+    openRecord: noop, dismissRecord: noop,
   };
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }
@@ -110,13 +112,27 @@ describe('one working document at a time', () => {
     assert.match(render(states[2]), /Venue unavailable/);
   });
   it('shows a compact receipt without reopening the form or asking for approval again', () => {
-    const html = render(deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 }));
+    const saved = deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 });
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, createdAt: now + 1, quote };
+    const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
     assert.doesNotMatch(html, /<form|<input|Record paper trade|Refresh estimate/);
-    assert.match(visible(html), /New instruction/);
-    assert.match(visible(html), /Your record/);
+    assert.match(visible(html), /Filed in your paper record/);
+    assert.match(visible(html), /Start another instruction/);
+    assert.match(visible(html), /paper-ledger/);
+    assert.doesNotMatch(visible(html), />New instruction</);
     assert.doesNotMatch(visible(html), /Simulated outcome saved on this browser/);
     assert.match(html, /0\.02948502/);
+    assert.match(html, /Recorded/);
+  });
+  it('opens a filed record on the ticket without turning it into a new draft', () => {
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, createdAt: now + 1, quote };
+    const html = render(initialDesk({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' }), {
+      records: [record], viewedRecordId: quote.id, focusedRecordId: quote.id,
+    });
+    assert.match(html, /data-ticket-view="receipt"/);
+    assert.match(visible(html), /Back to the ticket/);
+    assert.doesNotMatch(html, /<form|id="amount"/);
   });
   it('keeps sell inputs and outputs in their actual units', () => {
     const sell: TradeIntent = { ...intent, side: 'sell', unit: 'token', amount: '0.25' };

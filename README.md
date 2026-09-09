@@ -44,7 +44,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | House identity, desk sequence and capability labels | `lib/house.ts` |
 | Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
 | Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
-| Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |
+| Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperLedger.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |
 | House mark and desk instrument | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
 | Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |

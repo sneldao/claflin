@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
+import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { DeskInstrument } from './DeskInstrument';
@@ -44,8 +45,8 @@ export function WorkingDesk() {
   const [hettyLive, setHettyLive] = useState(false);
   const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
   const tone = useRoomTone(hettyLive);
-  const hasContinuity = desk.watched.length > 0 || desk.records.length > 0;
-  const hasHistory = desk.records.length > 0 || Boolean(desk.storageError);
+  const hasTray = desk.watched.length > 0;
+  const hasLedger = desk.records.length > 0 || Boolean(desk.storageError);
 
   // Colophon seal: the house mark stroke-draws once when the footer scrolls
   // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
@@ -148,7 +149,7 @@ export function WorkingDesk() {
         <HouseDirectory />
         <a href="#instruction">Your ticket</a>
         <a href="#hetty">The line</a>
-        {hasHistory && <a href="#paper-history">Your record</a>}
+        {hasLedger && <a href="#paper-ledger">Your record</a>}
         <button
           type="button"
           className={styles.toneToggle}
@@ -174,6 +175,7 @@ export function WorkingDesk() {
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
         <TradeTicket desk={desk} />
+        {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} onLiveChange={handleLiveChange} />
           <div className={styles.instrumentShell} data-stage={instrumentStage}>
@@ -193,8 +195,8 @@ export function WorkingDesk() {
         <TapeMachine />
         <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       </div>
-      {hasContinuity && <div id="on-desk"><DeskBoard desk={desk} /></div>}
-      {hasHistory && <PaperHistory desk={desk} />}
+      {hasTray && <div id="on-desk"><DeskBoard desk={desk} /></div>}
+      {hasLedger && <PaperHistory desk={desk} />}
     </main>
     <footer className={styles.footer}>
       <span>YOUR INSTRUCTION. YOUR DECISION.</span>

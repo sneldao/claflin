@@ -97,15 +97,36 @@ Prices belong to the client's work, not to decorative atmosphere. Resolve the ex
 | Layer | Physical analogue | Role | Required distinction |
 |---|---|---|---|
 | Weather: tape | Ticker machine | Indicative Chainlink reference marks for the quote-supported instruments. Click loads the ticket. Not an offer. Not a hero. | Source, as-of / stale / unavailable labels. Never mix with the venue estimate. Never fabricate prices for atmosphere. |
-| Continuity: board | Pigeonholes | Watched instruments, an in-progress draft, or the last paper record — when one exists. | Working context, not a feed. An empty board is not a section that must be filled. Holdings are not invented. |
+| Continuity: working tray | Pigeonholes | Explicitly watched instruments only. | Not a pin count of drafts or filed records. An empty tray is not a section that must be filled. |
 | Work: product dossier | Correspondence / file | Focus on the selected instrument: issuer, network, rights, restrictions, optional price history and research. | Underlying-stock reference versus the tokenized product. A dossier is not a legal ownership certificate. Label delayed, stale, closed-session, and unavailable data. |
 | Work: quotation slip | Incoming telegram | A returned estimate, with source and timestamp. Arrives beside the instruction. | Not a fill. Not executable until review. |
 | Work: quote-bound ticket | Blotter / handwritten instruction | The editable draft, then the reviewed terms. First semantic thing when a review is active. | Executable/indicative/simulated status, spend or quantity, fees, slippage/price impact as applicable, validity, network, and authorizing account. Call charges remain separate. |
-| Continuity: ledger | Leather ledger | Actual saved paper records after explicit approval. | Not invented history. Not a wallet position or call receipt. |
+| Continuity: ledger | Leather ledger | Durable, retrievable paper records after a successful save. Lives in the working composition. Opening an entry shows that same record on the ticket. | Not invented history. Not a wallet position or call receipt. Not a third copy of the receipt. |
 
 Use structured, appropriately licensed market data for prices and a venue adapter for actionable quotes; a web-search summary or language-model answer is not an execution quote. A market's last close is not a current offer, and an underlying stock price does not prove the cost or rights of a tokenized representation. Units must say shares, token units, or underlying-equivalent units accurately.
 
 A changed instrument, side, size, account, network, or material quote term requires a new review. Expired quotes cannot execute; refresh and present the applicable terms before renewed approval. Simulated fills need explicit pricing, fees, and fill assumptions and must never appear as real executions. Detailed adapter contracts live in [Architecture](AGENTIC_ARCHITECTURE.md#target-domain-contracts).
+
+## Document grammar
+
+A document may change state or move between these places. It keeps one identity. Several views of one record must not feel like several records.
+
+| Primitive | Meaning throughout Claflin |
+|---|---|
+| Ticket | Work that can still be changed. |
+| Quotation slip | Time-bound terms awaiting a decision. |
+| Receipt | Evidence of a completed paper-recording action. It stays until the client leaves it. |
+| Ledger | Durable, retrievable history. An entry appears only after save succeeds. |
+| Working tray | Explicitly saved watches. Not inferred drafts. Not filed records. |
+| Direct line | Another way to operate the same instruction. Switching channels must not restart the task. |
+
+Finished means `stage === 'saved'` after a verified write. A ticket that still shows the same instrument and amount is not “in progress.” Do not count a retained draft or latest record as pinned.
+
+After a successful save: the receipt remains; the ledger gains that entry; the acknowledgement is “Filed in your paper record.” Opening the entry shows the same record on the ticket, with a way back. Starting another instruction stays available and secondary. Watch, share, and re-quote are not the definition of success.
+
+A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live. Live execution must not reuse “paper recorded” as a generic success model.
+
+**Paper journey to validate:** review → save succeeds → record appears nearby → client leaves → client returns → retrieves that record. Then the failure branch. For each frame: what are they trying to establish, what owns attention, what changed, where does the work live, and can they stop here?
 
 ## The publishing house
 
@@ -148,7 +169,7 @@ Build credibility through useful reasoning, reproducible sources, honest revisio
 | Context | Useful desk emphasis | Boundary |
 |---|---|---|
 | First visit or no history | Ticket or the line, with coverage visible as weather, and optional supporting research. | The trading entry is primary; no required letter, house explainer, broker-as-heading, invented familiarity, or compulsory questionnaire. |
-| Returning client | Verified orders/positions where connected, a pending intent, or watched instruments; relevant notes/letters support the next decision. | Use permitted, fresh records; a past discussion is not proof of a current position. |
+| Returning client | The ledger and explicit watches in the first working view; an unfinished instruction only if it was persisted. | Do not promise resume that disappears on reload. A past discussion is not a current position. |
 | Arrival from a publication | Keep that exact edition/passage in view with "Discuss this thesis". | Do not substitute a newer edition silently; flag corrections and offer the newer version. |
 | Relevant news or theme | A concise, sourced "Why this is on your desk" note, linked to the relevant letter or watchlist. | Explain relevance and freshness; popularity is not a recommendation or an instruction. |
 | Active conversation or confirmation | Foreground the current subject or ticket and its pending questions. | Background ranking, headlines, and prices must not move focused controls or replace the instruction under review. |

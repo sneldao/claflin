@@ -4,6 +4,7 @@ import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk, intentFromSpeech, parseEstimate } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
+import { compactPaperEntry, isUnfinishedWork, persistableDraft, readPersistedDraft, writePersistedDraft } from '../lib/trading/desk-documents';
 import { createQuoteHandler, quoteBudget } from '../lib/trading/http';
 
 const now = 1788600000000;
@@ -80,6 +81,36 @@ describe('local paper records', () => {
     const failing = { ...storage(), setItem: () => { throw new Error('quota'); } };
     assert.throws(() => savePaperRecord(failing, reviewed(), now + 1));
     assert.equal(reviewed().stage, 'review');
+  });
+});
+
+describe('finished work is not in progress', () => {
+  it('treats a recorded instruction as finished even when the ticket still holds its values', () => {
+    const live = reviewed();
+    assert.equal(isUnfinishedWork(live), true);
+    assert.ok(persistableDraft(live));
+    const saved = deskReducer(live, { type: 'saved', quoteId: quote.id, now: now + 1 });
+    assert.equal(saved.draft.amount, intent.amount);
+    assert.equal(isUnfinishedWork(saved), false);
+    assert.equal(persistableDraft(saved), null);
+    assert.equal(isUnfinishedWork(deskReducer(live, { type: 'cancel' })), false);
+  });
+  it('persists only unfinished drafts and writes a compact ledger line from the filed record', () => {
+    const store = new Map<string, string>();
+    const draftStore = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    };
+    writePersistedDraft(draftStore, reviewed());
+    assert.deepEqual(readPersistedDraft(draftStore), intent);
+    writePersistedDraft(draftStore, deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 }));
+    assert.equal(readPersistedDraft(draftStore), null);
+    const record = savePaperRecord(storage(), reviewed(), now + 1);
+    const entry = compactPaperEntry(record);
+    assert.equal(entry.action, 'Paper buy');
+    assert.match(entry.exchange, /100 USDC/);
+    assert.equal(entry.recordedAt, now + 1);
   });
 });
 

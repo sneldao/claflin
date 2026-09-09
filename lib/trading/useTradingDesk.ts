@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
+import { activeRecordId, readPersistedDraft, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 
 const emptyDraft: TradeIntent = { instrumentId: '', side: 'buy', amount: '', unit: 'USDC' };
@@ -26,6 +27,8 @@ export function useTradingDesk() {
   const [storageError, setStorageError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [watched, setWatched] = useState<string[]>([]);
+  const [viewedRecordId, setViewedRecordId] = useState<string | null>(null);
+  const [deskReady, setDeskReady] = useState(false);
   const request = useRef<AbortController | null>(null);
   const saveLock = useRef(false);
 
@@ -40,14 +43,22 @@ export function useTradingDesk() {
   useEffect(() => {
     loadHistory();
     setWatched(loadWatched(window.localStorage));
+    const restored = readPersistedDraft(window.localStorage);
+    if (restored) dispatch({ type: 'edit', draft: restored });
+    setDeskReady(true);
     window.addEventListener('storage', loadHistory);
     return () => { request.current?.abort(); window.removeEventListener('storage', loadHistory); };
   }, [loadHistory]);
+  useEffect(() => {
+    if (!deskReady) return;
+    try { writePersistedDraft(window.localStorage, state); } catch { /* draft resume is optional */ }
+  }, [deskReady, state]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const edit = useCallback((draft: TradeIntent) => {
     request.current?.abort();
     setError(null);
+    setViewedRecordId(null);
     dispatch({ type: 'edit', draft });
   }, []);
 
@@ -81,25 +92,41 @@ export function useTradingDesk() {
     try {
       const saved = savePaperRecord(window.localStorage, state, Date.now());
       setRecords(previous => [saved, ...previous.filter(record => record.id !== saved.id)]);
+      setViewedRecordId(saved.id);
       dispatch({ type: 'saved', quoteId: saved.id, now: saved.createdAt });
       setError(null);
-    } catch { setError('The paper trade was not marked complete. Your estimate may have expired, or browser storage may be unavailable. Refresh the estimate or check storage and try again.'); }
+    } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
   }, [historyReady, state]);
 
-  const cancel = useCallback(() => { request.current?.abort(); dispatch({ type: 'cancel' }); setError(null); }, []);
+  const cancel = useCallback(() => {
+    request.current?.abort();
+    setViewedRecordId(null);
+    dispatch({ type: 'cancel' });
+    setError(null);
+  }, []);
+
+  const openRecord = useCallback((id: string) => {
+    setViewedRecordId(id);
+    setError(null);
+  }, []);
+
+  const dismissRecord = useCallback(() => {
+    setViewedRecordId(null);
+  }, []);
 
   const removeRecord = useCallback((id: string) => {
     try {
       deletePaperRecord(window.localStorage, id);
+      if (viewedRecordId === id) setViewedRecordId(null);
       if (state.quote?.id === id) {
         request.current?.abort();
         setError(null);
-        dispatch({ type: 'edit', draft: state.draft });
+        dispatch({ type: 'edit', draft: { instrumentId: '', side: 'buy', amount: '', unit: 'USDC' } });
       }
       loadHistory();
     } catch { setStorageError('This paper record could not be deleted. Check browser storage and try again.'); }
-  }, [loadHistory, state.draft, state.quote?.id]);
+  }, [loadHistory, state.quote?.id, viewedRecordId]);
 
   const watch = useCallback((instrumentId: string) => {
     if (!DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
@@ -119,8 +146,14 @@ export function useTradingDesk() {
   }, []);
 
   // The desk object is explicitly memoized so parent re-renders don't create new references for children.
+  const focusedRecordId = activeRecordId(state, viewedRecordId);
+
   return useMemo(
-    () => ({ state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch }),
-    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch],
+    () => ({
+      state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
+      loadHistory, removeRecord, watched, watch, unwatch,
+      viewedRecordId, focusedRecordId, openRecord, dismissRecord,
+    }),
+    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

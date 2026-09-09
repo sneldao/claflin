@@ -64,10 +64,10 @@ export function deskReducer(state: DeskState, action: DeskAction): DeskState {
     case 'failed':
       if (state.requestId !== action.requestId) return state;
       return { ...state, stage: 'draft', requestId: null, message: action.message };
-    case 'cancel': return { ...state, stage: 'cancelled', quote: null, requestId: null, message: 'Instruction cancelled. Nothing recorded.' };
+    case 'cancel': return { ...state, stage: 'cancelled', quote: null, requestId: null, message: 'You decided not to record this instruction. Nothing was filed.' };
     case 'saved':
       if (state.stage !== 'review' || state.quote?.id !== action.quoteId || !estimateUsable(state.quote, action.now)) return state;
-      return { ...state, stage: 'saved', message: 'Simulated outcome saved on this browser. No trade was submitted.' };
+      return { ...state, stage: 'saved', message: 'Filed in your paper record.' };
   }
 }
 

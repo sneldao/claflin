@@ -49,10 +49,11 @@ describe('one canonical house', () => {
   });
   it('shows continuity only when there is work, without hiding storage failures', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
-    assert.match(desk, /const hasContinuity = desk\.watched\.length > 0 \|\| desk\.records\.length > 0/);
-    assert.match(desk, /const hasHistory = desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)/);
-    assert.match(desk, /hasContinuity && <div id="on-desk"/);
-    assert.match(desk, /hasHistory && <PaperHistory/);
+    assert.match(desk, /const hasTray = desk\.watched\.length > 0/);
+    assert.match(desk, /const hasLedger = desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)/);
+    assert.match(desk, /hasLedger && <PaperLedger/);
+    assert.match(desk, /hasTray && <div id="on-desk"/);
+    assert.match(desk, /hasLedger && <PaperHistory/);
   });
   it('parses the desk stylesheet and resolves its component class references', () => {
     const css = postcss.parse(source('components/desk/WorkingDesk.module.css'));
@@ -60,7 +61,7 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'HouseDirectory', 'BrokerageRoom', 'TickerTape']) {
+    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'BrokerageRoom', 'TickerTape']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
@@ -86,6 +87,18 @@ describe('one canonical house', () => {
     const poster = readFileSync(new URL('../public/desk-receiver.webp', import.meta.url));
     assert.equal(poster.toString('ascii', 8, 12), 'WEBP');
     assert.ok(poster.length < 200_000, 'receiver first paint should stay lightweight');
+  });
+  it('keeps finished work out of the working tray and files it in one ledger', () => {
+    const board = source('components/desk/DeskBoard.tsx');
+    assert.doesNotMatch(board, /IN PROGRESS|LAST PAPER|PINNED|hasDraft/);
+    assert.match(board, /WATCHING/);
+    assert.match(source('lib/trading/desk-documents.ts'), /state\.stage === 'saved'/);
+    const ticket = source('components/desk/TradeTicket.tsx');
+    assert.match(ticket, /Filed in your paper record/);
+    assert.doesNotMatch(ticket, />New instruction</);
+    assert.match(ticket, /Start another instruction/);
+    assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
+    assert.match(source('components/desk/PaperHistory.tsx'), /Open this record/);
   });
   it('can present a quotation slip while the voice line remains connected', () => {
     const receiver = source('components/desk/DeskInstrument.tsx');

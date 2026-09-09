@@ -132,15 +132,21 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
     const d = deskRef.current;
     const draft = d.state.draft;
     const parts: string[] = [];
-    parts.push(draft.instrumentId ? `Instrument: ${resolveDeskAlias(draft.instrumentId)?.symbol ?? 'set'}.` : 'No instrument chosen.');
-    parts.push(draft.amount ? `${draft.side} ${draft.amount} ${draft.unit}.` : 'No amount set.');
-    if (d.state.stage === 'review' && d.state.quote) {
+    if (d.state.stage === 'saved' && d.state.quote) {
       const q = d.state.quote;
-      const usable = estimateUsable(q, Date.now());
-      parts.push(`Estimate under review: spend ${q.inputAmount} ${q.inputSymbol}, receive ${q.outputAmount} ${q.outputSymbol}${usable ? '' : ' — expired'}.`);
+      parts.push(`The current instruction is filed: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${q.outputAmount} ${q.outputSymbol}.`);
+    } else {
+      parts.push(draft.instrumentId ? `Instrument: ${resolveDeskAlias(draft.instrumentId)?.symbol ?? 'set'}.` : 'No instrument chosen.');
+      parts.push(draft.amount ? `${draft.side} ${draft.amount} ${draft.unit}.` : 'No amount set.');
+      if (d.state.stage === 'review' && d.state.quote) {
+        const q = d.state.quote;
+        const usable = estimateUsable(q, Date.now());
+        parts.push(`Estimate under review: spend ${q.inputAmount} ${q.inputSymbol}, receive ${q.outputAmount} ${q.outputSymbol}${usable ? '' : ' — expired'}.`);
+      }
+      if (d.state.stage === 'cancelled') parts.push('The client decided not to record. Nothing was filed.');
     }
-    if (d.state.stage === 'saved') parts.push('The last paper trade is recorded.');
-    if (d.records.length) parts.push(`${d.records.length} paper record${d.records.length === 1 ? '' : 's'} in this browser.`);
+    if (d.records.length) parts.push(`${d.records.length} paper record${d.records.length === 1 ? '' : 's'} in the ledger.`);
+    if (d.watched.length) parts.push(`${d.watched.length} watched mark${d.watched.length === 1 ? '' : 's'} in the tray.`);
     return parts.join(' ');
   });
 

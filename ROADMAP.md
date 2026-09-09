@@ -32,8 +32,8 @@ Remaining acceptance work:
 - Keep the consolidated interface. Rebuild the physical context around it: blotter, cropped ledger and correspondence, frosted partitions, ticker strip, receiver to one side. Most objects are not click targets.
 - Replace the receiver's SVG-then-idle-load with a still from the actual model, camera, and lighting; swap only after the matching WebGL frame; reuse that still for reduced motion. Do not eagerly load Three.js as the fix.
 - Make Claflin the display identity. Hetty is a nameplate beside the line, not the principal heading. Leave room for Livermore/Solana and Benham/Robinhood Chain without a four-card grid.
-- Treat paper as the house language: blotter = draft, slip = returned estimate, ledger = saved records, pigeonholes = watched work. A dossier must not pretend to be a legal certificate.
-- Show the board and last paper only when something exists. Do not fill empty continuity.
+- Treat paper as the house language: blotter = draft, slip = returned estimate, receipt = filed evidence, ledger = retrievable history, tray = explicit watches. A dossier must not pretend to be a legal certificate.
+- Keep finished work out of the tray. Do not label a recorded instruction “in progress,” and do not count drafts or records as pinned.
 - Review the normal first visit, return visit, unavailable quote and expired review against the hierarchy in [Product Direction](docs/PRODUCT_DIRECTION.md)—not only component styling. Browser and responsive QA of the seated pass were skipped; do them on this pass.
 - Verify understandable product/unit distinctions, keyboard/mobile/reduced-motion behavior and actionable error recovery.
 - Keep essential state stable; background updates must not replace the instrument, amount or terms under review.

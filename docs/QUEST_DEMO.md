@@ -11,7 +11,7 @@
 | :18–:40 | Spend **25 USDC**, hit **Review estimate**. The ticket is the blotter; do not wait for the receiver to “load in,” and do not treat a raised handset as quote state — pickup is reserved for a live line. |
 | :40–:60 | **Quotation slip** on the ticket — spend / receive / as-of / review window. Open details once; close. |
 | :60–:75 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
-| :75–:90 | Scroll to **On your desk** / paper history → **Use as a new draft**. Close on boundaries + Base Tokenized Stocks. |
+| :75–:90 | Point at **Filed in your paper record** and the ledger entry that just appeared. Open it — same record. Close on boundaries + Base Tokenized Stocks. |
 
 Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still (when it exists) stays readable. Browser QA of the seated pass was skipped — confirm the still does not flash a different SVG before recording.
 

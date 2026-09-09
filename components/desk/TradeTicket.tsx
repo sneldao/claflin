@@ -6,6 +6,7 @@ import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
+import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
@@ -39,14 +40,19 @@ function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[nu
 }
 
 export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch } = desk;
-  const instrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
-  const quote = state.quote;
+  const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, focusedRecordId, dismissRecord } = desk;
+  const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
+  const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
+    ? records.find(record => record.id === state.quote!.id)
+    : undefined);
+  const quote = openedRecord?.quote ?? state.quote;
+  const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? state.draft.instrumentId));
   const review = useRef<HTMLHeadingElement | null>(null);
-  const previousStage = useRef(state.stage);
-  const recorded = state.stage === 'saved' && Boolean(quote);
-  const pending = state.stage === 'loading';
-  const now = useReviewClock(state.stage === 'review');
+  const previousFocus = useRef(`${state.stage}:${viewedRecordId ?? ''}`);
+  const recorded = Boolean(filedRecord) || (state.stage === 'saved' && Boolean(quote));
+  const browsing = Boolean(openedRecord) && !(state.stage === 'saved' && openedRecord?.id === state.quote?.id);
+  const pending = state.stage === 'loading' && !openedRecord;
+  const now = useReviewClock(state.stage === 'review' && !openedRecord);
   const quoteElapsed = useQuoteElapsed(pending);
   const [shareFeedback, setShareFeedback] = useState<{ quoteId: string; text: string } | null>(null);
   const shareNote = shareFeedback?.quoteId === quote?.id ? shareFeedback?.text : null;
@@ -56,21 +62,22 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
   const slipStyle = { '--review-fresh': reviewFresh } as CSSProperties;
   useEffect(() => {
-    if (previousStage.current === state.stage) return;
-    previousStage.current = state.stage;
-    const target = state.stage === 'draft' || state.stage === 'cancelled'
-      ? document.getElementById('amount')
-      : review.current;
+    const focusKey = `${state.stage}:${viewedRecordId ?? ''}`;
+    if (previousFocus.current === focusKey) return;
+    previousFocus.current = focusKey;
+    const target = openedRecord || state.stage === 'review' || state.stage === 'saved' || state.stage === 'loading'
+      ? review.current
+      : document.getElementById('amount');
     target?.focus({ preventScroll: true });
     const bounds = target?.getBoundingClientRect();
     if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) target?.scrollIntoView({ block: 'nearest' });
-  }, [state.stage]);
+  }, [openedRecord, state.stage, viewedRecordId]);
   const date = (ms: number) => new Date(ms).toLocaleString();
   const slipActive = Boolean(quote) && (state.stage === 'review' || recorded);
-  const view = pending ? 'pending' : recorded ? 'receipt' : slipActive ? 'review' : 'draft';
+  const view = openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
   const paperSub = recorded ? 'PAPER RECORD' : view === 'draft' ? 'BASE DESK / PAPER INSTRUCTION' : 'BASE DESK / QUOTATION';
-  const message = error || (!recorded ? state.message : null);
+  const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
 
   const share = () => {
     if (!instrument || !quote) return;
@@ -145,8 +152,12 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
           <div><dt>{recorded ? 'Simulated spend' : 'You would spend'}</dt><dd>{quote.inputAmount} <span>{quote.inputSymbol}</span></dd></div>
           <div><dt>{recorded ? 'Simulated receipt' : 'You would receive'}</dt><dd>{quote.outputAmount} <span>{quote.outputSymbol}</span></dd></div>
         </dl>
-        <p className={styles.quoteMeta}><span>Aerodrome · Base</span><time dateTime={new Date(quote.blockTimestamp * 1000).toISOString()} title={date(quote.blockTimestamp * 1000)}>As of {new Date(quote.blockTimestamp * 1000).toLocaleTimeString()}</time></p>
-        {recorded ? <p className={styles.quoteBoundary} role="status">Saved in this browser. No funds moved.</p> : <>
+        <p className={styles.quoteMeta}>
+          <span>Aerodrome · Base</span>
+          <time dateTime={new Date(quote.quotedAt).toISOString()} title={date(quote.quotedAt)}>Quoted {new Date(quote.quotedAt).toLocaleTimeString()}</time>
+          {filedRecord && <time dateTime={new Date(filedRecord.createdAt).toISOString()}>Recorded {formatRecordedTime(filedRecord.createdAt)}</time>}
+        </p>
+        {recorded ? <p className={styles.quoteBoundary} role="status">Filed in your paper record. No funds moved.</p> : <>
           <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
@@ -165,15 +176,25 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
         </details>
         <div className={styles.slipDecision}>
           {recorded ? <>
-            <button className={styles.primary} type="button" onClick={() => edit({ ...state.draft, amount: '' })}>New instruction<span aria-hidden="true">→</span></button>
+            <p className={styles.filedHome}>
+              {focusedRecordId
+                ? <a href="#paper-ledger">This is the same entry as the ledger on this desk.</a>
+                : 'This record is filed in this browser.'}
+            </p>
             <div className={styles.slipActions}>
-              <a href="#paper-history" className={styles.secondary}>Your record</a>
+              {browsing && isUnfinishedWork(state) && (
+                <button type="button" className={styles.secondary} onClick={dismissRecord}>Back to your instruction</button>
+              )}
+              {browsing && !isUnfinishedWork(state) && (
+                <button type="button" className={styles.secondary} onClick={dismissRecord}>Back to the ticket</button>
+              )}
+              <button type="button" className={styles.secondary} onClick={() => edit({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' })}>Start another instruction</button>
               <details className={styles.receiptTools}>
                 <summary>Keep or share</summary>
                 <div>
                   <button type="button" className={styles.secondary} onClick={share}>Share this paper trade</button>
                   {instrument && <button type="button" className={styles.secondary} onClick={() => watched.includes(instrument.id) ? unwatch(instrument.id) : watch(instrument.id)}>{watched.includes(instrument.id) ? 'Stop watching' : 'Watch'} {instrument.symbol}</button>}
-                  <button type="button" className={styles.secondary} onClick={() => void requestQuote()}>Re-quote {instrument?.symbol ?? 'this mark'}</button>
+                  <button type="button" className={styles.secondary} onClick={() => edit(quote.intent)}>Re-quote {instrument?.symbol ?? 'this mark'}</button>
                   {shareNote && <p role="status" className={styles.shareFeedback}>{shareNote}</p>}
                 </div>
               </details>
