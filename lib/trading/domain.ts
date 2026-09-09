@@ -40,7 +40,8 @@ export function formatAmount(raw: bigint, decimals: number): string {
 
 export type ReferenceObservation = {
   status: 'observed' | 'stale' | 'unavailable';
-  source: 'chainlink';
+  /** Reference source — 'chainlink' today; 'pyth', 'robinhood', … per desk later. */
+  source: string;
   priceUsdPerToken?: string;
   updatedAt?: number;
   session: 'unknown';
@@ -53,8 +54,10 @@ export interface QuoteEstimate {
   mode: 'paper';
   liveExecutionEnabled: false;
   intent: TradeIntent;
-  chainId: 8453;
-  venue: 'aerodrome';
+  /** Settlement chain id — 8453 today; per-venue later. */
+  chainId: number;
+  /** Venue id — 'aerodrome' today; registry keys later. */
+  venue: string;
   poolAddress: string;
   instrumentAddress: string;
   instrumentName: string;

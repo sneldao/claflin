@@ -12,6 +12,10 @@
 
 import type { Address } from 'viem';
 import { validateAddress } from './address';
+import { BASE_CHAIN_ID } from './base-chain';
+
+/** Venue id for Aerodrome Slipstream pools on Base. */
+export const AERODROME_VENUE = 'aerodrome';
 
 export type InstrumentAvailability =
   | 'quote_candidate' // configured route; re-verify for each paper quote
@@ -20,10 +24,13 @@ export type InstrumentAvailability =
   | 'suspended'; // issuer pause/policy event
 
 export interface VenuePair {
-  venue: 'aerodrome';
+  /** Venue id — 'aerodrome' today; registry keys like 'jupiter', 'camelot', 'robinhood' later. */
+  venue: string;
+  /** Chain this venue settles on. Base is 8453; non-EVM venues use their own id space. */
+  chainId: number;
   poolAddress: Address;
   quoteToken: Address;
-  quoteSymbol: 'USDC' | 'WETH';
+  quoteSymbol: string;
   /** CL pool tickSpacing — base of the path filler for quotes */
   tickSpacing: number;
   /**
@@ -70,7 +77,8 @@ const USDC: Address = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const CL2 = 1 << 19;
 const VERIFIED_PAIRS: Record<string, VenuePair> = {
   NVDAc: {
-    venue: 'aerodrome',
+    venue: AERODROME_VENUE,
+    chainId: BASE_CHAIN_ID,
     poolAddress: '0x853F5f1B92b16714Fe6CDA67CAad0856B83C7ab9',
     quoteToken: USDC,
     quoteSymbol: 'USDC',
@@ -80,7 +88,8 @@ const VERIFIED_PAIRS: Record<string, VenuePair> = {
     lastVerifiedAt: '2026-09-05',
   },
   AAPLc: {
-    venue: 'aerodrome',
+    venue: AERODROME_VENUE,
+    chainId: BASE_CHAIN_ID,
     poolAddress: '0xA3b1E3f9747065e2073722Ff4c9027d3eA4994F0',
     quoteToken: USDC,
     quoteSymbol: 'USDC',
@@ -90,7 +99,8 @@ const VERIFIED_PAIRS: Record<string, VenuePair> = {
     lastVerifiedAt: '2026-09-05',
   },
   METAc: {
-    venue: 'aerodrome',
+    venue: AERODROME_VENUE,
+    chainId: BASE_CHAIN_ID,
     poolAddress: '0xEAF57753BC382E0324a1D43F72E7027705a2273E',
     quoteToken: USDC,
     quoteSymbol: 'USDC',
@@ -100,7 +110,8 @@ const VERIFIED_PAIRS: Record<string, VenuePair> = {
     lastVerifiedAt: '2026-09-05',
   },
   GOOGLc: {
-    venue: 'aerodrome',
+    venue: AERODROME_VENUE,
+    chainId: BASE_CHAIN_ID,
     poolAddress: '0xB1987CAD1682841b4b641d50E520777eC5Ab5542',
     quoteToken: USDC,
     quoteSymbol: 'USDC',

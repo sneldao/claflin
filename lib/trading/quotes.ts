@@ -1,5 +1,7 @@
 import { getDeskInstrument, getQuotePair, type DeskInstrument } from './catalog';
 import { formatAmount, PAPER_ASSUMPTIONS, parseAmount, parseIntent, TradingError, type QuoteEstimate, type ReferenceObservation } from './domain';
+import { deskQuoteLimits, type DeskQuoteLimits } from './desk-mandate';
+import { OPEN_DESK_ID } from '../house';
 import type { VenuePair } from '../tokenized-stocks';
 
 export interface QuoteSnapshot {
@@ -34,16 +36,23 @@ export function referenceObservation(feed: QuoteSnapshot['reference'], now: numb
   return { ...base, status: now - feed.updatedAt * 1000 > 86400000 ? 'stale' : 'observed', updatedAt: feed.updatedAt, priceUsdPerToken: formatAmount(feed.answer, feed.decimals) };
 }
 
-export function createQuoteService(reader: QuoteReader, clock = Date.now, id = () => crypto.randomUUID()) {
+export function createQuoteService(
+  reader: QuoteReader,
+  clock = Date.now,
+  id = () => crypto.randomUUID(),
+  limits: DeskQuoteLimits = deskQuoteLimits(OPEN_DESK_ID),
+) {
   return async (input: unknown): Promise<QuoteEstimate> => {
     const intent = parseIntent(input);
     const stock = getDeskInstrument(intent.instrumentId);
     const pair = getQuotePair(stock);
     const decimals = stock.decimals;
     if (decimals === null) throw new TradingError('unverified_units', 'Token units have not been verified.', 422);
-    const raw = parseAmount(intent.amount, intent.side === 'buy' ? 6 : decimals);
-    const limit = intent.side === 'buy' ? 10000n * 10n ** 6n : 1000n * 10n ** BigInt(decimals);
-    if (raw > limit) throw new TradingError('demo_limit', 'Paper quote limit: 10,000 USDC per buy or 1,000 tokens per sell.');
+    const raw = parseAmount(intent.amount, intent.side === 'buy' ? limits.quoteDecimals : decimals);
+    const cap = intent.side === 'buy'
+      ? parseAmount(limits.buyMax, limits.quoteDecimals)
+      : parseAmount(limits.sellMax, decimals);
+    if (raw > cap) throw new TradingError('demo_limit', 'Paper quote limit: 10,000 USDC per buy or 1,000 tokens per sell.');
     const started = clock();
     let snapshot: QuoteSnapshot;
     try {

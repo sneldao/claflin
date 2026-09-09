@@ -12,6 +12,32 @@ export function quoteDeskId(quote: Pick<QuoteEstimate, 'chainId' | 'mode'>): Hou
   return null;
 }
 
+/**
+ * Per-desk paper quote guardrails. The quote service enforces these; the
+ * mandate owns them so a new desk never inherits Base's limits by accident.
+ * Amounts are decimal strings; buy spends are sized in `quoteDecimals`,
+ * sell quantities in the instrument's own decimals.
+ */
+export interface DeskQuoteLimits {
+  /** Max buy spend, e.g. '10000' USDC. */
+  buyMax: string;
+  /** Max sell quantity, e.g. '1000' tokens. */
+  sellMax: string;
+  /** Decimals of the desk's quote currency (USDC: 6). */
+  quoteDecimals: number;
+}
+
+const DESK_QUOTE_LIMITS: Record<HouseDeskId, DeskQuoteLimits> = {
+  hetty: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
+  jesse: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
+  isabel: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
+  arbitrum: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
+};
+
+export function deskQuoteLimits(deskId: HouseDeskId): DeskQuoteLimits {
+  return DESK_QUOTE_LIMITS[deskId];
+}
+
 export function canReviewOnDesk(quote: Pick<QuoteEstimate, 'chainId' | 'mode' | 'liveExecutionEnabled'>, deskId: HouseDeskId): boolean {
   return isOpenDesk(deskId) && quoteDeskId(quote) === deskId && quote.liveExecutionEnabled === false;
 }
