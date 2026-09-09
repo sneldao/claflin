@@ -46,7 +46,9 @@ function render(state: DeskState, options: { time?: number; historyReady?: boole
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }
 }
-const visible = (html: string) => html.replace(/<details\b[^>]*>[\s\S]*?<\/details>/g, '');
+const visible = (html: string) => html
+  .replace(/<details\b[^>]*>[\s\S]*?<\/details>/g, '')
+  .replace(/<dialog\b[^>]*>[\s\S]*?<\/dialog>/g, '');
 
 describe('one working document at a time', () => {
   it('shows editable controls only in the draft', () => {
@@ -72,7 +74,7 @@ describe('one working document at a time', () => {
   });
   it('keeps technical details behind one disclosure, not duplicated in the main slip', () => {
     const html = render(reviewed());
-    assert.equal(html.match(/<details\b/g)?.length, 1);
+    assert.equal(html.match(/<dialog\b/g)?.length, 1);
     assert.doesNotMatch(visible(html), /corporate-action|Base block|Market session|Product dossier/);
     assert.match(html, /corporate-action/);
     assert.match(html, /No additional slippage, gas or Claflin charges/);

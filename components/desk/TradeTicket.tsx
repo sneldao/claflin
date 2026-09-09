@@ -40,9 +40,67 @@ function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[nu
   </>;
 }
 
-function closeParentDetails(event: React.MouseEvent<HTMLElement>) {
-  const details = event.currentTarget.closest('details');
-  if (details) details.open = false;
+function Drawer({ className, trigger, title, testId, children }: {
+  className?: string;
+  trigger: React.ReactNode;
+  title: string;
+  testId: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const focusables = () => {
+    if (!ref.current) return [] as HTMLElement[];
+    return Array.from(ref.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href]:not([aria-disabled="true"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(el => el.tabIndex >= 0);
+  };
+  const trapFocus = (e: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (e.key !== 'Tab' || !ref.current) return;
+    const elements = focusables();
+    if (elements.length === 0) return;
+    const current = document.activeElement as HTMLElement | null;
+    const index = current ? elements.indexOf(current) : -1;
+    if (index === -1) return;
+    e.preventDefault();
+    const next = e.shiftKey
+      ? elements[(index - 1 + elements.length) % elements.length]
+      : elements[(index + 1) % elements.length];
+    next.focus();
+  };
+  return (
+    <div className={className ? `${styles.drawer} ${className}` : styles.drawer} data-open={open ? 'true' : 'false'}>
+      <button
+        type="button"
+        className={styles.drawerToggle}
+        aria-expanded={open}
+        onClick={() => { ref.current?.showModal(); setOpen(true); queueMicrotask(() => closeRef.current?.focus()); }}
+      >
+        {trigger}
+      </button>
+      <dialog
+        ref={ref}
+        className={styles.drawerPanel}
+        aria-label={title}
+        data-testid={testId}
+        onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
+        onClose={() => setOpen(false)}
+        onKeyDown={trapFocus}
+      >
+        <button
+          ref={closeRef}
+          type="button"
+          className={styles.drawerClose}
+          onClick={() => ref.current?.close()}
+          aria-label={`Close ${title.toLowerCase()}`}
+        >
+          ×
+        </button>
+        {children}
+      </dialog>
+    </div>
+  );
 }
 
 /**
@@ -152,14 +210,15 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
           <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
           <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
         </form>
-        <details className={`${styles.productDetails} ${styles.drawer}`}><summary>Product dossier</summary>
-          <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
-          <div className={styles.drawerPanel}>
-            <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close product dossier">×</button>
-            <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
-            <ProductTerms instrument={instrument} />
-          </div>
-        </details>
+        <Drawer
+          className={styles.productDetails}
+          trigger="Product dossier"
+          title="Product dossier"
+          testId="product-dossier-panel"
+        >
+          <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
+          <ProductTerms instrument={instrument} />
+        </Drawer>
         <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
       </> : pending ? <div className={styles.pendingSlip}>
         <p className={styles.quoteInstrument}>{state.draft.side === 'buy' ? 'Buy' : 'Sell'} {instrument?.symbol}<span>{instrument?.name}</span></p>
@@ -188,22 +247,22 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
         </>}
-        <details className={`${styles.quoteDetails} ${styles.drawer}`}>
-          <summary>Quote &amp; product details</summary>
-          <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
-          <div className={styles.drawerPanel}>
-            <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close quote and product details">×</button>
-            <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
-            <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
-            <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
-            <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
-            {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
-            <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
-            <p>{quote.assumptions}</p>
-            <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
-            <ProductTerms instrument={instrument} />
-          </div>
-        </details>
+        <Drawer
+          className={styles.quoteDetails}
+          trigger="Quote &amp; product details"
+          title="Quote and product details"
+          testId="quote-details-panel"
+        >
+          <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
+          <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
+          <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
+          <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
+          {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
+          <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
+          <p>{quote.assumptions}</p>
+          <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
+          <ProductTerms instrument={instrument} />
+        </Drawer>
         <div className={styles.slipDecision}>
           {recorded ? <>
             <div className={styles.slipActions}>

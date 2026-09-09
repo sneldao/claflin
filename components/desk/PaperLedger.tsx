@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { compactPaperEntry, formatRecordedTime, groupRecordsByDay, ledgerPreview } from '@/lib/trading/desk-documents';
 import { downloadLedger, type LedgerFormat } from '@/lib/trading/ledger-export';
@@ -14,8 +14,13 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
     const ok = downloadLedger(records, format);
     setExportNote(ok ? 'A copy is in your downloads.' : 'The copy could not be made here.');
   };
-  if (!storageError && historyReady && records.length === 0) return null;
   const justFiledId = foreground.kind === 'receipt' ? foreground.recordId : null;
+  useEffect(() => {
+    if (!historyReady || !justFiledId) return;
+    const element = document.querySelector('[data-just-filed="true"]') as HTMLElement | null;
+    element?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+  }, [historyReady, justFiledId]);
+  if (!storageError && historyReady && records.length === 0) return null;
   const preview = ledgerPreview(records, focusedRecordId);
   const groups = groupRecordsByDay(preview);
   const older = Math.max(0, records.length - preview.length);
