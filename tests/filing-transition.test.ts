@@ -158,13 +158,13 @@ describe('paper ledger edge cases', () => {
     await new Promise(r => setTimeout(r, 10));
   }
 
-  it('returns nothing for an empty history', async () => {
+  it('shows a ruled waiting slip for an empty history', async () => {
     await renderLedger({
       records: [],
       focusedRecordId: null,
       foreground: { kind: 'draft', quoteId: null, recordId: null, instrumentId: null, actionable: true, readonly: false },
     });
-    assert.equal(getRootElement().innerHTML, '', 'PaperLedger should render nothing when history is empty');
+    assert.match(getRootElement().innerHTML, /No paper on file yet/);
   });
 
   it('scrolls the focused older record into the compact preview', async () => {

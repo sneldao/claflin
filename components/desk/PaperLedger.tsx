@@ -20,18 +20,44 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
     const element = document.querySelector('[data-just-filed="true"]') as HTMLElement | null;
     element?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
   }, [historyReady, justFiledId]);
-  if (!storageError && historyReady && records.length === 0) return null;
+  const ticketNow = foreground.kind === 'quotation'
+    ? 'A quotation is on the ticket — nothing filed yet.'
+    : foreground.kind === 'receipt'
+      ? 'Just filed — see the highlighted line.'
+      : foreground.kind === 'archive'
+        ? 'Reading a filed record — the ticket is read-only.'
+        : foreground.kind === 'pending'
+          ? 'An estimate is on its way — nothing to file yet.'
+          : null;
+  /* An empty ledger is still furniture: a ruled slip waiting for its first
+     line, not a missing section. The shell stays so failure and arrival
+     share one place. */
+  if (!storageError && historyReady && records.length === 0) {
+    return (
+      <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title" data-foreground={foreground.kind}>
+        <div className={styles.ledgerTrayHead}>
+          <p className={styles.eyebrow}>PAPER LEDGER</p>
+          <span className={styles.boardTally}>CLEAR</span>
+        </div>
+        <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
+        <div className={styles.ledgerEmpty}>
+          <p>No paper on file yet. Your first estimate will land here.</p>
+        </div>
+      </section>
+    );
+  }
   const preview = ledgerPreview(records, focusedRecordId);
   const groups = groupRecordsByDay(preview);
   const older = Math.max(0, records.length - preview.length);
 
   return (
-    <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title">
+    <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title" data-foreground={foreground.kind}>
       <div className={styles.ledgerTrayHead}>
         <p className={styles.eyebrow}>PAPER LEDGER</p>
         {historyReady && <span className={styles.boardTally}>{records.length === 1 ? '1 ON FILE' : `${records.length} ON FILE`}</span>}
       </div>
       <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
+      {ticketNow && <p className={styles.ledgerMore} role="status">{ticketNow}</p>}
       {storageError && <div role="alert"><p>{storageError}</p><button type="button" onClick={loadHistory}>Retry reading history</button></div>}
       {historyReady && (
         <div className={styles.ledgerPreview}>

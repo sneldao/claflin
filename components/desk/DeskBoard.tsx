@@ -16,7 +16,7 @@ import styles from './WorkingDesk.module.css';
  * offers, never advice.
  */
 export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: { desk: ReturnType<typeof useTradingDesk>; marks: DeskMark[]; asOf?: number; stale?: boolean }) {
-  const { state, edit, watched, unwatch, deskId } = desk;
+  const { state, edit, watched, watch, unwatch, deskId, foreground } = desk;
   const points = marksToPoints(marks);
 
   // Session continuity: capture the tray's first reading once per mount —
@@ -37,16 +37,48 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
     };
   }, [deskId, points]);
 
-  if (watched.length === 0) return null;
+  if (watched.length === 0) {
+    const suggestion = DESK_INSTRUMENTS.find(s => s.symbol === 'NVDAc' && s.quoteSupported)
+      ?? DESK_INSTRUMENTS.find(s => s.quoteSupported);
+    return (
+      <section className={styles.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
+        <div className={styles.boardHead}>
+          <p className={styles.eyebrow}>WORKING TRAY</p>
+          <span className={styles.boardTally}>CLEAR</span>
+        </div>
+        <h2 id="board-title" className={styles.boardTitle}>Watched marks.</h2>
+        <div className={styles.boardEmpty}>
+          <span className={styles.boardPin} aria-hidden="true" />
+          <p>Nothing pinned. Pin a mark to keep it on the desk for next visit.</p>
+          {suggestion && <button type="button" onClick={() => watch(suggestion.id)}>Pin {suggestion.symbol}</button>}
+        </div>
+      </section>
+    );
+  }
 
   const snapshot = firstSeenRef.current;
   const deltas = trayDeltas(snapshot, points);
   const deltaFor = (id: string) => deltas.find(d => d.instrumentId === id);
   const dayLabel = seenDayLabel(snapshot?.seenAt ?? Date.now());
   const hasStale = stale ?? marks.some(mark => mark.reference.status !== 'observed');
+  /* Deltas from stale data read as advice. When the room is stale, the
+     tray reports position only — no movement lines. */
+  const showDeltas = !hasStale && snapshot !== null && deltas.length > 0;
+
+  const quoteIt = (id: string) => {
+    /* Carry the side forward, clear the amount: a fresh quantity in the
+       right unit beats a stale figure in the wrong one. */
+    if (state.draft.side === 'sell') {
+      edit({ instrumentId: id, side: 'sell', unit: 'token', amount: '' });
+    } else {
+      edit({ instrumentId: id, side: 'buy', unit: 'USDC', amount: '' });
+    }
+    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
+    document.getElementById('amount')?.focus({ preventScroll: true });
+  };
 
   return (
-    <section className={styles.board} aria-labelledby="board-title">
+    <section className={styles.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
       <div className={styles.boardHead}>
         <p className={styles.eyebrow}>WORKING TRAY</p>
         <span className={styles.boardTally}>{watched.length === 1 ? '1 WATCHING' : `${watched.length} WATCHING`}</span>
@@ -55,7 +87,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
       {hasStale && asOf && (
         <p className={styles.boardSince} role="status">Reference marks are stale — last known {formatMarkAge(asOf)} ago.</p>
       )}
-      {snapshot && deltas.length > 0 && (
+      {showDeltas && (
         <p className={styles.boardSince} role="status">Reference movement since you last sat down ({dayLabel}):</p>
       )}
       <ul className={styles.boardList}>
@@ -69,15 +101,11 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
               <span className={styles.boardTag}>WATCHING</span>
               <strong>{stock.symbol} · {stock.name}</strong>
               {mark ? <span className={styles.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span> : <span className={styles.boardRef}>Reference unavailable</span>}
-              {delta && <span className={styles.boardDelta} data-direction={delta.direction}>{deltaLine(delta, dayLabel)}</span>}
+              {showDeltas && delta && <span className={styles.boardDelta} data-direction={delta.direction}>{deltaLine(delta, dayLabel)}</span>}
               <span className={styles.boardActions}>
                 <button
                   type="button"
-                  onClick={() => {
-                    edit({ ...state.draft, instrumentId: stock.id });
-                    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
-                    document.getElementById('amount')?.focus();
-                  }}
+                  onClick={() => quoteIt(id)}
                 >
                   Quote it
                 </button>

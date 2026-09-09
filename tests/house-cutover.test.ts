@@ -49,13 +49,15 @@ describe('one canonical house', () => {
     assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall desk='));
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
   });
-  it('shows continuity only when there is work, without hiding storage failures', () => {
+  it('shows continuity shells with empty states, without hiding storage failures', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
-    assert.match(desk, /const hasTray = open && desk\.watched\.length > 0/);
-    assert.match(desk, /const hasLedger = open && \(desk\.records\.length > 0 \|\| Boolean\(desk\.storageError\)\)/);
+    assert.match(desk, /const hasTray = open/);
+    assert.match(desk, /const hasLedger = open/);
     assert.match(desk, /hasLedger && <PaperLedger/);
     assert.match(desk, /hasTray && <div id="on-desk"/);
     assert.doesNotMatch(desk, /hasLedger && <PaperHistory/);
+    assert.match(source('components/desk/PaperLedger.tsx'), /No paper on file yet/);
+    assert.match(source('components/desk/DeskBoard.tsx'), /Nothing pinned/);
   });
   it('parses the desk stylesheet and resolves its component class references', () => {
     const css = postcss.parse(source('components/desk/WorkingDesk.module.css'));
