@@ -85,12 +85,21 @@ Still open before any live ticket:
 
 Research, reviewed market letters, saved interests and explainable adaptation support trade discovery and understanding. They are not required reading before a direct instruction. Avoid a CMS, infinite news feed or autonomous thematic basket project ahead of reliable trading.
 
+**Multi-desk architecture (in progress, branch `multi-desk-adapters`).** The House/Desk/Market model in `lib/house.ts` is now load-bearing: quotes and marks resolve through per-desk adapter registries (`lib/trading/adapters.ts`) instead of hard-coded Base paths. What landed:
+
+- Instrument identity is a URN grammar — Base ids stay byte-identical (`8453:0x…`) so stored drafts and paper records keep resolving; `base:` folds to the canonical form; `sol:`/`rh:` parse for later. `VenuePair.venue`/`quoteSymbol` are open strings with `chainId` per pair.
+- Paper quote guardrails (10,000 USDC buy / 1,000 token sell, quote decimals) moved from the quote service into `deskQuoteLimits()` in the mandate, so a new desk never inherits Base's limits by accident.
+- `QuoteAdapter` (`venue`, `chainId`, `canQuote`, `quote`) and `MarkAdapter` (`source`, `market`, `read`) registries; Aerodrome and Chainlink are the first entries. An `ExecutionAdapter` stub (`paper` | `live`) reserves the live boundary. Planned desks refuse with `desk_unavailable` rather than borrowing Hetty's venue.
+- Desk-aware routes `GET /api/desk/[deskId]/quote|marks` with per-desk budgets and caches; legacy `/api/stocks/*` delegate to Hetty's adapters. The ticket and tape thread `deskId` through `requestQuote` and `useReferenceMarks`.
+
+Deliberately unchanged: `TradeIntent` units (`USDC`/`token`), the voice tool names, and the paper receipt shape. Generalizing units is its own commit — it ripples through voice tools, ticket labels, and most tests.
+
 | Desk | Sequence and gate |
 |---|---|
-| Hetty / Base | First. Coinbase Tokenized Stocks, verified products, explicit access and execution policy. |
-| Jesse Livermore / Solana | Second. Distinct instruments, signing/execution adapter and accountable handoff. |
-| Isabel Benham / Robinhood Chain | Third. Network choice settled; token rights, eligibility, venue and integration remain to be verified. |
-| Jay Cooke / Arbitrum | Fourth. Named for the financier who built the distribution rails that let ordinary investors reach government bonds — fitting for an infrastructure-first network. The desk's mandate, execution adapter and access model remain to be defined; existing billing infrastructure does not move it forward in the sequence. |
+| Hetty / Base | First. Coinbase Tokenized Stocks, verified products, explicit access and execution policy. Adapter-backed (Aerodrome + Chainlink) on the desk-aware routes. |
+| Jesse Livermore / Solana | Second. Distinct instruments, signing/execution adapter and accountable handoff. Fully on-chain — proves the adapter pattern without broker paperwork. **Needs:** Jupiter quote API shape and a marks source decision (Pyth vs Switchboard). No Solana docs reviewed yet. |
+| Isabel Benham / Robinhood Chain | Third. EVM L2 (Arbitrum Orbit, chain ID 4663) — reuses the EVM adapter pattern, not Arbitrum One. Baseline already reviewed in [Architecture](docs/AGENTIC_ARCHITECTURE.md#robinhood-chain-integration-baseline): 18-decimal stock tokens, Chainlink per-token feeds, `/assets` + `/prices` data APIs, RFQ/AMM secondary venues. **Needs:** verified secondary-market venue with quote/submission interfaces, eligibility policy, account/gas setup. Not an order-placement API today. |
+| Jay Cooke / Arbitrum | Fourth. Named for the financier who built the distribution rails that let ordinary investors reach government bonds — fitting for an infrastructure-first network. Mostly config-level EVM reuse once the registry holds a second EVM entry; mandate, execution adapter and access model remain to be defined; existing billing infrastructure does not move it forward in the sequence. |
 
 Handoffs may carry permitted context, never silent transaction authority or funds. Visiting a planned desk from the house directory is already a closed room: no ticket, no quote, no recording, and no transplanted approval. Further route options require independent product/provider verification and transparent terms. One rejected 0x NVDAc request and an Odos infrastructure error do not establish a universal aggregator prohibition.
 
