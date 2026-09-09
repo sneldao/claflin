@@ -5,7 +5,7 @@ import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
-import { ARCHIVE_READONLY, activeRecordId, browsingArchive, canFileForeground, foregroundDocument, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
+import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 
@@ -65,9 +65,11 @@ export function useTradingDesk() {
   }, [deskReady, deskId, state]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const knownRecords = historyReady ? records : undefined;
+
   const edit = useCallback((draft: TradeIntent) => {
-    if (browsingArchive(state, viewedRecordId)) {
-      setError(ARCHIVE_READONLY);
+    if (instructionLocked(state, viewedRecordId, knownRecords)) {
+      setError(instructionLockMessage(state, viewedRecordId, knownRecords));
       return;
     }
     request.current?.abort();
@@ -75,15 +77,15 @@ export function useTradingDesk() {
     setError(null);
     setViewedRecordId(null);
     dispatch({ type: 'edit', draft });
-  }, [state, viewedRecordId]);
+  }, [knownRecords, state, viewedRecordId]);
 
   const requestQuote = useCallback(async () => {
     if (!isOpenDesk(deskId)) {
       setError('This desk is not open.');
       return;
     }
-    if (browsingArchive(state, viewedRecordId)) {
-      setError(ARCHIVE_READONLY);
+    if (instructionLocked(state, viewedRecordId, knownRecords)) {
+      setError(instructionLockMessage(state, viewedRecordId, knownRecords));
       return;
     }
     setError(null);
@@ -112,12 +114,14 @@ export function useTradingDesk() {
       if (requestGen.current !== gen || deskIdRef.current !== originDesk) return;
       dispatch({ type: 'failed', requestId, message: controller.signal.aborted ? 'The request was cancelled or timed out. You can retry.' : e instanceof Error ? e.message : 'An estimate is unavailable.' });
     } finally { clearTimeout(timeout); }
-  }, [deskId, state, viewedRecordId]);
+  }, [deskId, knownRecords, state, viewedRecordId]);
 
   const save = useCallback(() => {
     if (saveLock.current || !historyReady) return;
-    if (!canFileForeground(state, viewedRecordId) || !state.quote || !canReviewOnDesk(state.quote, deskId)) {
-      setError(browsingArchive(state, viewedRecordId) ? ARCHIVE_READONLY : 'This desk cannot file that quotation.');
+    if (!canFileForeground(state, viewedRecordId, knownRecords) || !state.quote || !canReviewOnDesk(state.quote, deskId)) {
+      setError(instructionLocked(state, viewedRecordId, knownRecords)
+        ? instructionLockMessage(state, viewedRecordId, knownRecords)
+        : 'This desk cannot file that quotation.');
       return;
     }
     saveLock.current = true;
@@ -129,11 +133,11 @@ export function useTradingDesk() {
       setError(null);
     } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
-  }, [deskId, historyReady, state, viewedRecordId]);
+  }, [deskId, historyReady, knownRecords, state, viewedRecordId]);
 
   const cancel = useCallback(() => {
-    if (browsingArchive(state, viewedRecordId)) {
-      setError(ARCHIVE_READONLY);
+    if (instructionLocked(state, viewedRecordId, knownRecords)) {
+      setError(instructionLockMessage(state, viewedRecordId, knownRecords));
       return;
     }
     request.current?.abort();
@@ -141,7 +145,7 @@ export function useTradingDesk() {
     setViewedRecordId(null);
     dispatch({ type: 'cancel' });
     setError(null);
-  }, [state, viewedRecordId]);
+  }, [knownRecords, state, viewedRecordId]);
 
   const openRecord = useCallback((id: string) => {
     setViewedRecordId(id);
@@ -214,7 +218,7 @@ export function useTradingDesk() {
   }, [deskId, error, state, viewedRecordId]);
 
   const focusedRecordId = activeRecordId(state, viewedRecordId);
-  const foreground = foregroundDocument(state, viewedRecordId);
+  const foreground = foregroundDocument(state, viewedRecordId, knownRecords);
   const activeDesk = getHouseDesk(deskId) ?? getHouseDesk(OPEN_DESK_ID)!;
   const open = isOpenDesk(deskId);
 

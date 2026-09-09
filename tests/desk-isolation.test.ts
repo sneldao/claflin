@@ -6,7 +6,7 @@ import { deskReducer, initialDesk } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
 import { canFileOnDesk, canReviewOnDesk, emptyDraft, enterDesk, parkDeskWork, quoteDeskId, switchDeskSession } from '../lib/trading/desk-mandate';
 import { liveEvidence, paperEvidence, paperOutcomeCopy } from '../lib/trading/outcomes';
-import { canFileForeground, foregroundDocument, recordedDayLabel, speakForeground } from '../lib/trading/desk-documents';
+import { canFileForeground, foregroundDocument, groupRecordsByDay, ledgerPreview, recordedDayLabel, speakForeground } from '../lib/trading/desk-documents';
 
 const now = 1788600000000;
 const stock = DESK_INSTRUMENTS[0];
@@ -120,6 +120,43 @@ describe('one foreground document', () => {
     assert.match(spoken, /read-only/);
     assert.match(spoken, /AAPLc/);
     assert.doesNotMatch(spoken, /Estimate under review/);
+  });
+  it('resolves an implicit watch from the visible record, not the parked draft', () => {
+    const aapl = DESK_INSTRUMENTS.find(item => item.symbol === 'AAPLc')!;
+    const filedId = 'filed-aapl';
+    const filed = {
+      version: 1 as const, id: filedId, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1,
+      quote: { ...quote, id: filedId, intent: { ...intent, instrumentId: aapl.id }, outputSymbol: 'AAPLc' },
+    };
+    const foreground = foregroundDocument(reviewed(), filedId, [filed]);
+    assert.equal(foreground.kind, 'archive');
+    assert.equal(foreground.instrumentId, aapl.id);
+    assert.notEqual(foreground.instrumentId, intent.instrumentId);
+  });
+  it('treats a vanished opened record as unavailable, not as a filed success', () => {
+    const foreground = foregroundDocument(reviewed(), 'gone', []);
+    assert.equal(foreground.kind, 'missing');
+    assert.equal(foreground.instrumentId, null);
+    assert.equal(foreground.readonly, true);
+    assert.match(speakForeground(reviewed(), 'gone', []), /no longer in this browser/);
+  });
+  it('keeps the compact ledger to recent records even when history spans many days', () => {
+    const days = Array.from({ length: 10 }, (_, index) => ({
+      version: 1 as const,
+      id: `day-${index}`,
+      mode: 'paper' as const,
+      deskId: 'hetty' as const,
+      createdAt: now - index * 86_400_000,
+      quote: { ...quote, id: `day-${index}` },
+    }));
+    const preview = ledgerPreview(days);
+    assert.equal(preview.length, 5);
+    assert.deepEqual(preview.map(record => record.id), ['day-0', 'day-1', 'day-2', 'day-3', 'day-4']);
+    assert.ok(groupRecordsByDay(preview, now).length >= 2);
+    assert.equal(groupRecordsByDay(days, now).length, 10);
+    const focused = ledgerPreview(days, 'day-9');
+    assert.equal(focused.length, 5);
+    assert.equal(focused.at(-1)?.id, 'day-9');
   });
   it('labels recordings by day so yesterday and today do not collapse', () => {
     const today = now;

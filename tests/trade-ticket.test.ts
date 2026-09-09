@@ -41,7 +41,7 @@ function render(state: DeskState, options: { time?: number; historyReady?: boole
     viewedRecordId: options.viewedRecordId ?? null, focusedRecordId: options.focusedRecordId ?? null,
     openRecord: noop, dismissRecord: noop,
     deskId: 'hetty', activeDesk: { id: 'hetty', name: 'Hetty', market: 'Base', approach: '', status: 'paper' },
-    open: true, switchDesk: noop, foreground: foregroundDocument(state, options.viewedRecordId ?? null),
+    open: true, switchDesk: noop, foreground: foregroundDocument(state, options.viewedRecordId ?? null, options.records),
   };
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }
@@ -149,6 +149,18 @@ describe('one working document at a time', () => {
     assert.doesNotMatch(visible(html), /Record paper trade/);
     assert.match(visible(html), /Back to your instruction/);
     assert.doesNotMatch(visible(html), /Start another instruction/);
+  });
+  it('shows an unavailable recovery when the opened record is gone', () => {
+    const html = render(reviewed(), { records: [], viewedRecordId: 'deleted-elsewhere', focusedRecordId: 'deleted-elsewhere' });
+    assert.match(html, /data-foreground="missing"/);
+    assert.match(html, /data-ticket-view="missing"/);
+    assert.match(visible(html), /That record is no longer here/);
+    assert.match(visible(html), /no longer in this browser/);
+    assert.match(visible(html), /Back to your instruction/);
+    assert.doesNotMatch(visible(html), /Paper recorded/);
+    assert.doesNotMatch(visible(html), /0\.02948502/);
+    assert.doesNotMatch(visible(html), /Record paper trade/);
+    assert.doesNotMatch(html, /data-acknowledged="true"/);
   });
   it('keeps sell inputs and outputs in their actual units', () => {
     const sell: TradeIntent = { ...intent, side: 'sell', unit: 'token', amount: '0.25' };

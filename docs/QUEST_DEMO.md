@@ -13,7 +13,7 @@
 | :60–:75 | **Record paper trade** → acknowledge beat (✓ Paper recorded). Nothing onchain. |
 | :75–:90 | Point at **Filed to your paper ledger** and the ledger line marked just filed. Open it — same record. Close on boundaries + Base Tokenized Stocks. |
 
-Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still (when it exists) stays readable. Browser QA of the seated pass was skipped — confirm the still does not flash a different SVG before recording.
+Optional 15s: narrow viewport or reduced-motion — ticket still works; the receiver still stays readable. After recording, point at the compact ledger without scrolling on desktop; on a phone the just-filed line sits above the receipt.
 
 ## X post draft (tag @buildonbase)
 

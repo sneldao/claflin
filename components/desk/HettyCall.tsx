@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { resolveDeskAlias, DESK_INSTRUMENTS } from '@/lib/trading/catalog';
-import { ARCHIVE_READONLY, canFileForeground, speakForeground } from '@/lib/trading/desk-documents';
+import { ARCHIVE_READONLY, RECORD_UNAVAILABLE, canFileForeground, speakForeground } from '@/lib/trading/desk-documents';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -50,6 +50,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('choose_instrument', async (p) => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     const query = String(p.query ?? '');
     const instrument = resolveDeskAlias(query);
@@ -62,6 +63,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('set_instruction', async (p) => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     const side = String(p.side ?? '');
     if (side === 'buy') {
@@ -77,6 +79,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('set_amount', async (p) => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     const clean = String(p.amount ?? '').trim();
     if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
@@ -89,6 +92,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('request_estimate', async () => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     if (d.state.stage === 'loading') return 'An estimate is already on its way.';
     const before = d.state.quote?.id;
@@ -105,6 +109,7 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('record_paper', async () => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     if (d.foreground.kind === 'receipt') return 'That instruction is already filed.';
     if (!canFileForeground(d.state, d.viewedRecordId) || !d.state.quote) return 'There is no estimate under review. Request one first.';
@@ -120,18 +125,19 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
 
   useConversationClientTool<HettyTools>('watch_mark', async (p) => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     const query = String(p.query ?? '').trim();
     const instrument = query
       ? resolveDeskAlias(query)
-      : DESK_INSTRUMENTS.find(s => s.id === d.state.draft.instrumentId)
-        ?? DESK_INSTRUMENTS.find(s => s.id === d.state.quote?.intent.instrumentId);
-    if (!instrument) return 'No instrument to watch — name one or record a paper trade first.';
+      : DESK_INSTRUMENTS.find(s => s.id === d.foreground.instrumentId);
+    if (!instrument) return 'No instrument to watch — name one, or put a stock on the ticket first.';
     d.watch(instrument.id);
-    return `${instrument.symbol} is pinned to the caller's desk — it will be waiting there next visit.`;
+    return `${instrument.symbol} is watched on this desk — it will be in the tray next visit.`;
   });
 
   useConversationClientTool<HettyTools>('cancel_instruction', async () => {
     const d = deskRef.current;
+    if (d.foreground.kind === 'missing') return RECORD_UNAVAILABLE;
     if (d.foreground.kind === 'archive') return ARCHIVE_READONLY;
     d.cancel();
     return 'The ticket is clear.';
@@ -227,7 +233,9 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
         </span>
       </div>
       <p className={styles.callNote}>
-        {desk.foreground.kind === 'archive'
+        {desk.foreground.kind === 'missing'
+          ? 'That paper record is no longer in this browser. Return to the instruction.'
+          : desk.foreground.kind === 'archive'
           ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
           : 'Speak your instruction. Review it on the same ticket.'}
       </p>

@@ -71,7 +71,7 @@ Return visits should make it easy to review actual orders/positions, resume a pe
 
 Art direction may still specify material, light, and tone. It must not specify this outline. Implementation that follows a composition recipe over this table is wrong even if it matches an older paragraph in this file.
 
-The seated first pass (`WorkingDesk.tsx`) consolidated the ticket and the line onto one writing surface and removed the competing hero, empty continuity, and future-desks grid. That solved organisation. It did not yet make a place: the receiver still loads in behind a visibly different SVG, the composition still leans on Hetty as display identity, and the room is a neat interface rather than a physical brokerage. Those are known gaps, not a contract. [ROADMAP.md](../ROADMAP.md) §1 owns the next pass.
+The seated first pass (`WorkingDesk.tsx`) consolidated the ticket and the line onto one writing surface and rebuilt the physical context around it: blotter, cropped ledger and correspondence, partitions, ticker, receiver to one side. The receiver paints a still from the model immediately and swaps after the matching WebGL frame. Claflin is the display identity; Hetty is a nameplate beside the line. Remaining craft is completion and recovery — returning, missing records, voice referring to the visible document, and a bounded ledger — not more rooms. [ROADMAP.md](../ROADMAP.md) §1 owns sequencing.
 
 ## The specialist brokerage house
 
@@ -124,11 +124,15 @@ Finished means `stage === 'saved'` after a verified write. A ticket that still s
 
 After a successful save: the receipt remains; the ledger beside it gains that entry and marks it just filed; the acknowledgement is “Filed to your paper ledger.” Opening the entry shows the same record on the ticket, with a way back to the instruction. Starting another instruction stays available from a receipt and is not offered while browsing a different record. Watch, share, and re-quote are not the definition of success. The archive is behind that ledger, not a second chapter.
 
-The ticket, the voice tools, and the receiver share one **foreground document**. Browsing a filed record is read-only. A quotation still sitting in background state cannot be filed, described, or recorded as if it were on the ticket. Returning to an actionable instruction is explicit.
+The ticket, the voice tools, and the receiver share one **foreground document**. Implicit references (“watch this”, “record this”) resolve from that document’s instrument, not from a parked draft underneath. Browsing a filed record is read-only. A quotation still sitting in background state cannot be filed, described, or recorded as if it were on the ticket. If the opened record has disappeared, show an unavailable recovery with a way back to the instruction — not a success heading. Returning to an actionable instruction is explicit.
 
 An in-flight estimate is transient. Leaving the desk parks the draft and its inputs, not a resumable network request. On return, review a fresh estimate.
 
+The compact ledger is a bounded recent preview. Complete dated history lives in the archive. After filing, the new line is marked just filed; on a short viewport it sits above the receipt so the result is in the first view.
+
 A failed save leaves the quotation visible and clearly unfiled. Cancel is a decision not to file, not an abandoned conversion. Unfinished drafts persist across reload only as instrument, side, and amount — never as an expired slip presented as live. Ledger lines use Today / Yesterday / date, then the time. Quote time stays secondary.
+
+Paper records are kept in this browser. Optional sign-in copies them to the account; deleting on the desk does not remove the account copy. Do not promise another device or a signed-out session will see local-only work.
 
 **Outcome evidence is not a shared success banner.** A paper file is `{ kind: 'paper-record', status: 'filed' }`. It is not a submission, a fill, or a position. Live execution, when it exists, uses its own statuses — submitted, pending, filled, failed, unknown — and its own evidence. Receipt and ledger copy stay “filed” / “paper.” Do not say filled, submitted, or opened a position for a local simulation. Types for live outcomes may exist before any signing or submission does.
 
@@ -227,11 +231,11 @@ The September 5 review used repository documentation and source, not a live visu
 
 **Art Deco supplies the architecture. Retro-futurism supplies the instruments. Sylva supplies the standard of spatial integration. The house supplies the room. The active broker supplies the relationship.**
 
-The physical brokerage is the stronger immersiveness path: dark wood, frosted glass, brass signs, blotters, ledgers, pigeonholes, a ticker feeding a strip of paper, correspondence that looks handled. Not rows of traders staring at screens. Not a spectacular telephone. Keep the consolidated interface; rebuild the physical context around it.
+The physical brokerage is the stronger immersiveness path: dark wood, frosted glass, brass signs, blotters, ledgers, pigeonholes, a ticker feeding a strip of paper, correspondence that looks handled. Not rows of traders staring at screens. Not a spectacular telephone. Keep the consolidated interface. Do not add another layer of atmosphere until filing, return, and recovery stay coherent.
 
 ### A seated desk, not a layout contract
 
-The seated first pass put the ticket and the line on one writing surface (green felt, walnut, brass). That is the organisation to keep. The next pass must make the space larger than the interface: a substantial blotter in the working foreground; the receiver partly to one side, no longer the centrepiece; a thick ledger and correspondence extending beyond the frame; frosted partitions, brass lettering, shallow pigeonholes, perhaps the edge of a safe; a ticker feeding a narrow strip into a loose accumulation of paper. Objects should be cropped, overlap, cast shadows, and show use. Everything politely fitting inside its allotted rectangle is still a page.
+The seated first pass put the ticket and the line on one writing surface (green felt, walnut, brass). That organisation, and the physical room around it, are in place. Further objects are not the next job. Completion and recovery — what happened, where it lives, that no funds moved — are.
 
 The receiver is furniture: a sculptural enamel/brass object with a recessed display. It is not an off-the-shelf rotary phone, not the brand, and not the primary invitation. Reserve handset pickup for an actual voice connection — not a pending quote. Do not squeeze the application into the object's display.
 
@@ -239,18 +243,11 @@ Working notes and paper instructions are the semantic interface. They share the 
 
 ### Receiver: a complete desk immediately
 
-The first pass lazy-loads Three.js behind a visibly different SVG after intersection and `requestIdleCallback`. That break in the illusion is a defect. Do not fix it by eagerly loading everything.
-
-- Serve an optimised still rendered from the actual model, camera, and lighting as part of the initial composition.
-- Start loading the visible scene promptly, without the idle gate.
-- Replace the still only after the matching WebGL frame has rendered.
-- Keep that same finished still for unsupported devices and reduced motion.
-
-The visitor should see a complete desk immediately. It subsequently becomes interactive — not visibly "loads in."
+The receiver serves an optimised still from the actual model as the first paint, then replaces it only after the matching WebGL frame. Reduced motion and unsupported devices keep that still. Do not return to a visibly different SVG placeholder.
 
 ### Material, type, and motion
 
-The first study explores deep green/ink, dark enamel, brushed brass, warm illuminated glass, and ivory working paper. It retains Fraunces / IBM Plex Sans / JetBrains Mono while testing a more architectural wordmark and a clearer distinction between display, readable prose, and numeric/instrument labels. Final visual tuning is not yet accepted. Browser QA of the seated pass was skipped.
+The first study explores deep green/ink, dark enamel, brushed brass, warm illuminated glass, and ivory working paper. It retains Fraunces / IBM Plex Sans / JetBrains Mono while testing a more architectural wordmark and a clearer distinction between display, readable prose, and numeric/instrument labels. Final visual tuning is not yet accepted. Viewport layout of the seated desk has been checked; user-comprehension of filing, return, and recovery still needs a focused pass.
 
 Use Deco geometry in silhouettes, proportions, framing, and identity rather than repetitive fan ornaments. Material depth must share a light direction. Stronger physical feedback belongs to interactive states, not every surface. Critical terms, controls, and content remain readable and usable independently of the scene.
 
@@ -262,15 +259,15 @@ Sound may include a restrained receiver click, paper movement, or distant office
 
 ### Review artifact and open decisions
 
-The live product is `/`, driven by `useTradingDesk` and the current broker session. Stages are desk states (draft, review, saved, on the line), not landing-page sections. The seated first pass is organisation accepted in source; making it a physical place is the next acceptance work, not a competing art brief.
+The live product is `/`, driven by `useTradingDesk` and the current broker session. Stages are desk states (draft, review, saved, on the line), not landing-page sections. The seated desk and physical room are the organisation to keep. Remaining acceptance is completion, recovery, and whether a person can say what happened, where the record lives, and that no funds moved.
 
 `/desk-study` (`app/desk-study/page.tsx`, `components/desk/DeskStudy.tsx`, `lib/desk-study.ts`) remains a development-only fixture: three manually selectable states, in-memory acknowledgement, no records, no market-data or microphone access, noindex, absent from client navigation and production. Do not treat it as the product or as visual acceptance of `/`.
 
 Geometry, wordmark, and CSS fallback are original; no reference assets or code were transplanted. Three.js and its bundled environment helper are the rendering dependency, not Sylva's implementation.
 
-Browser visual and device validation remain required; they were skipped for the seated pass. Source, type, and build checks do not certify the composition's appearance or frame rate.
+Browser visual and device validation remain required for recovery and short viewports; source, type, and build checks do not certify comprehension.
 
-Open decisions: physical-room still and lighting, receiver still-then-WebGL swap, how far paper analogues go before they become decoration, exact historical vocabulary, identity/portrait treatment, the current broker's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
+Open decisions: how far paper analogues go before they become decoration, exact historical vocabulary, identity/portrait treatment, the current broker's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
 
 ### Explicit exclusions
 
@@ -323,7 +320,7 @@ Evaluate publications and adaptation by their contribution to discovery, compreh
 ## Documentation ownership
 
 - **This document** owns enduring product principles, the client journey, information hierarchy (house identity and attention), exclusions, and reference-dependent decisions. It does not own a component list or a visual stack.
-- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, known implementation gaps (receiver still-then-WebGL, broker-as-heading leftover, physical room around the seated pass), house-desk order, and release evidence.
+- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, remaining completion-and-recovery work, house-desk order, and release evidence. Live trading stays a later milestone.
 - **[AUTH_AND_ACCESS.md](AUTH_AND_ACCESS.md)** owns capability tiers and what the account scaffold actually does.
 - **[README.md](../README.md)** owns orientation, setup, and the documentation map.
 - **Technical documents** own implementation details and dated observations, not independent product strategies. Distinguish historical behavior, current code, and proposed behavior explicitly.

@@ -6,7 +6,7 @@ import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
-import { formatRecordedTime, foregroundDocument, isUnfinishedWork } from '@/lib/trading/desk-documents';
+import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
 import { paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
@@ -41,20 +41,20 @@ function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[nu
 }
 
 export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord } = desk;
-  const foreground = foregroundDocument(state, viewedRecordId);
+  const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
     ? records.find(record => record.id === state.quote!.id)
     : undefined);
-  const quote = openedRecord?.quote ?? (foreground.kind === 'archive' ? undefined : state.quote);
-  const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? (foreground.kind === 'archive' ? undefined : state.draft.instrumentId)));
+  const missing = foreground.kind === 'missing';
+  const quote = openedRecord?.quote ?? (foreground.kind === 'archive' || missing ? undefined : state.quote);
+  const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? foreground.instrumentId ?? undefined));
   const review = useRef<HTMLHeadingElement | null>(null);
   const previousFocus = useRef(`${state.stage}:${viewedRecordId ?? ''}`);
   const recorded = foreground.kind === 'receipt' || foreground.kind === 'archive';
-  const browsing = foreground.kind === 'archive';
+  const browsing = foreground.kind === 'archive' || missing;
   const pending = foreground.kind === 'pending';
-  const now = useReviewClock(state.stage === 'review' && !openedRecord);
+  const now = useReviewClock(state.stage === 'review' && !openedRecord && !missing);
   const quoteElapsed = useQuoteElapsed(pending);
   const [shareFeedback, setShareFeedback] = useState<{ quoteId: string; text: string } | null>(null);
   const shareNote = shareFeedback?.quoteId === quote?.id ? shareFeedback?.text : null;
@@ -64,30 +64,23 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
   const slipStyle = { '--review-fresh': reviewFresh } as CSSProperties;
   useEffect(() => {
-    const focusKey = `${state.stage}:${viewedRecordId ?? ''}`;
+    const focusKey = `${state.stage}:${viewedRecordId ?? ''}:${foreground.kind}`;
     if (previousFocus.current === focusKey) return;
     previousFocus.current = focusKey;
-    const target = openedRecord || state.stage === 'review' || state.stage === 'saved' || state.stage === 'loading'
+    const target = openedRecord || missing || state.stage === 'review' || state.stage === 'saved' || state.stage === 'loading'
       ? review.current
       : document.getElementById('amount');
     target?.focus({ preventScroll: true });
-    const ledger = document.getElementById('paper-ledger');
-    if (state.stage === 'saved' && !openedRecord && ledger) {
-      const box = ledger.getBoundingClientRect();
-      if (box.bottom > window.innerHeight || box.top < 0) ledger.scrollIntoView({ block: 'nearest' });
-      return;
-    }
-    if (openedRecord) return;
-    const bounds = target?.getBoundingClientRect();
-    if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) target?.scrollIntoView({ block: 'nearest' });
-  }, [openedRecord, state.stage, viewedRecordId]);
+  }, [foreground.kind, missing, openedRecord, state.stage, viewedRecordId]);
   const date = (ms: number) => new Date(ms).toLocaleString();
   const slipActive = Boolean(quote) && (state.stage === 'review' || recorded);
-  const view = openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
+  const view = missing ? 'missing' : openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
-  const paperSub = recorded ? 'PAPER RECORD' : view === 'draft' ? 'BASE DESK / PAPER INSTRUCTION' : 'BASE DESK / QUOTATION';
+  const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? 'BASE DESK / PAPER INSTRUCTION' : 'BASE DESK / QUOTATION';
   const filed = recorded ? paperOutcomeCopy() : null;
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
+  const backLabel = isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket';
+  const title = missing ? 'That record is no longer here.' : recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : 'Draft a paper trade.';
 
   const share = () => {
     if (!instrument || !quote) return;
@@ -111,10 +104,17 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
-    <h1 id="instruction-title" ref={review} tabIndex={-1}>{recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : 'Draft a paper trade.'}</h1>
+    <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
+    {browsing && (
+      <div className={styles.slipActions}>
+        <button type="button" className={styles.secondary} onClick={dismissRecord}>{backLabel}</button>
+      </div>
+    )}
     <div key={view} className={styles.ticketSurface}>
-      {view === 'draft' ? <>
+      {missing ? <div className={styles.pendingSlip}>
+        <p className={styles.quoteBoundary} role="status">This paper record is no longer in this browser.<span>It may have been deleted in another tab, or storage could not be read. Nothing else on this desk was changed.</span></p>
+      </div> : view === 'draft' ? <>
         <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
           <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
             <legend>Stock</legend>
@@ -188,11 +188,6 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
         <div className={styles.slipDecision}>
           {recorded ? <>
             <div className={styles.slipActions}>
-              {browsing && (
-                <button type="button" className={styles.secondary} onClick={dismissRecord}>
-                  {isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket'}
-                </button>
-              )}
               {!browsing && (
                 <button type="button" className={styles.secondary} onClick={() => edit({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' })}>Start another instruction</button>
               )}

@@ -112,12 +112,24 @@ export function groupRecordsByDay(records: PaperRecord[], now = Date.now()): { l
   return groups;
 }
 
-export type ForegroundKind = 'draft' | 'pending' | 'quotation' | 'receipt' | 'archive';
+/** Newest records for the compact tray. Older dated history lives in the archive. */
+export const LEDGER_PREVIEW_LIMIT = 5;
+
+export function ledgerPreview(records: PaperRecord[], focusedId: string | null = null, limit = LEDGER_PREVIEW_LIMIT): PaperRecord[] {
+  const head = records.slice(0, limit);
+  if (!focusedId || head.some(record => record.id === focusedId)) return head;
+  const focused = records.find(record => record.id === focusedId);
+  if (!focused) return head;
+  return [...head.slice(0, Math.max(0, limit - 1)), focused];
+}
+
+export type ForegroundKind = 'draft' | 'pending' | 'quotation' | 'receipt' | 'archive' | 'missing';
 
 export type ForegroundDocument = {
   kind: ForegroundKind;
   quoteId: string | null;
   recordId: string | null;
+  instrumentId: string | null;
   actionable: boolean;
   readonly: boolean;
 };
@@ -127,35 +139,57 @@ export function browsingArchive(state: DeskState, viewedRecordId: string | null)
   return Boolean(viewedRecordId) && !(state.stage === 'saved' && state.quote?.id === viewedRecordId);
 }
 
+function documentInstrument(state: DeskState, record: PaperRecord | undefined): string | null {
+  return record?.quote.intent.instrumentId
+    ?? state.quote?.intent.instrumentId
+    ?? (state.draft.instrumentId || null);
+}
+
 /** The one document the ticket, voice tools, and receiver must agree on. */
-export function foregroundDocument(state: DeskState, viewedRecordId: string | null): ForegroundDocument {
+export function foregroundDocument(state: DeskState, viewedRecordId: string | null, records?: PaperRecord[]): ForegroundDocument {
+  const viewed = viewedRecordId ? records?.find(record => record.id === viewedRecordId) : undefined;
+  const missing = Boolean(viewedRecordId) && records !== undefined && !viewed;
+  if (missing) {
+    return { kind: 'missing', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId: null, actionable: false, readonly: true };
+  }
   if (browsingArchive(state, viewedRecordId)) {
-    return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, actionable: false, readonly: true };
+    return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId: documentInstrument(state, viewed), actionable: false, readonly: true };
   }
   if (state.stage === 'loading') {
-    return { kind: 'pending', quoteId: null, recordId: null, actionable: false, readonly: false };
+    return { kind: 'pending', quoteId: null, recordId: null, instrumentId: documentInstrument(state, undefined), actionable: false, readonly: false };
   }
   if (state.stage === 'review' && state.quote) {
-    return { kind: 'quotation', quoteId: state.quote.id, recordId: null, actionable: true, readonly: false };
+    return { kind: 'quotation', quoteId: state.quote.id, recordId: null, instrumentId: state.quote.intent.instrumentId, actionable: true, readonly: false };
   }
   if (state.stage === 'saved' && state.quote) {
-    return { kind: 'receipt', quoteId: state.quote.id, recordId: state.quote.id, actionable: false, readonly: true };
+    return { kind: 'receipt', quoteId: state.quote.id, recordId: state.quote.id, instrumentId: state.quote.intent.instrumentId, actionable: false, readonly: true };
   }
-  return { kind: 'draft', quoteId: null, recordId: null, actionable: true, readonly: false };
+  return { kind: 'draft', quoteId: null, recordId: null, instrumentId: documentInstrument(state, undefined), actionable: true, readonly: false };
+}
+
+export function instructionLocked(state: DeskState, viewedRecordId: string | null, records?: PaperRecord[]): boolean {
+  const kind = foregroundDocument(state, viewedRecordId, records).kind;
+  return kind === 'archive' || kind === 'missing';
+}
+
+export function instructionLockMessage(state: DeskState, viewedRecordId: string | null, records?: PaperRecord[]): string {
+  return foregroundDocument(state, viewedRecordId, records).kind === 'missing' ? RECORD_UNAVAILABLE : ARCHIVE_READONLY;
 }
 
 export const ARCHIVE_READONLY = 'This filed record is for reading. Return to the instruction to quote or record.';
+export const RECORD_UNAVAILABLE = 'That paper record is no longer in this browser. Return to the instruction.';
 
-export function canFileForeground(state: DeskState, viewedRecordId: string | null): boolean {
-  const foreground = foregroundDocument(state, viewedRecordId);
+export function canFileForeground(state: DeskState, viewedRecordId: string | null, records?: PaperRecord[]): boolean {
+  const foreground = foregroundDocument(state, viewedRecordId, records);
   return foreground.kind === 'quotation' && foreground.quoteId === state.quote?.id && state.stage === 'review';
 }
 
 export function speakForeground(state: DeskState, viewedRecordId: string | null, records: PaperRecord[]): string {
-  const foreground = foregroundDocument(state, viewedRecordId);
+  const foreground = foregroundDocument(state, viewedRecordId, records);
+  if (foreground.kind === 'missing') return RECORD_UNAVAILABLE;
   if (foreground.kind === 'archive') {
     const record = records.find(item => item.id === foreground.recordId);
-    if (!record) return 'A filed paper record is on the ticket. It cannot be changed.';
+    if (!record) return RECORD_UNAVAILABLE;
     const quote = record.quote;
     return `The ticket is showing a filed paper record, read-only: ${quote.intent.side} ${quote.inputAmount} ${quote.inputSymbol} for ${quote.outputAmount} ${quote.outputSymbol}. It is not the live instruction. Return to the instruction to quote or record.`;
   }

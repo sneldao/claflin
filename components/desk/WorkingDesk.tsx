@@ -86,9 +86,7 @@ export function WorkingDesk() {
       : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
     document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.kind === 'archive'
-    ? desk.records.find(record => record.id === foreground.recordId)?.quote.intent.instrumentId
-    : desk.state.draft.instrumentId));
+  const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
   const reviewActive = foreground.kind === 'quotation' || foreground.kind === 'receipt' || foreground.kind === 'archive';
   const instrumentStage = hettyLive
     ? 'conversation'
@@ -97,7 +95,9 @@ export function WorkingDesk() {
       : 'arrival';
   const instrumentLabel = hettyLive
     ? 'HETTY — ON THE LINE'
-    : foreground.kind === 'archive'
+    : foreground.kind === 'missing'
+      ? 'RECORD UNAVAILABLE'
+      : foreground.kind === 'archive'
       ? 'FILED RECORD · READ ONLY'
       : selected
         ? `${selected.symbol.toUpperCase()} · ${foreground.kind === 'pending' ? 'REQUESTING ESTIMATE' : foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`

@@ -671,17 +671,26 @@
   .plaques { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fields { grid-template-columns: 86px minmax(0, 1fr); }
   .paperLedger { grid-column: 1; grid-row: 2; padding: 12px 14px 10px 16px; }
-  .ledgerLines { max-height: 168px; }
+  .ledgerPreview { max-height: 220px; }
   .ledgerLines button { min-height: 52px; padding: 8px 4px; }
   .support { grid-column: 1; grid-row: 3; padding: 0 8px; }
   .grid[data-ledger="true"] .ticket { grid-column: 1; grid-row: 1; }
   .grid[data-ledger="true"] .paperLedger { grid-column: 1; grid-row: 2; }
   .grid[data-ledger="true"] .support { grid-column: 1; grid-row: 3; }
   .grid[data-ledger="true"] .instrumentShell { max-width: 460px; margin: -12px auto -24px; }
+  .grid[data-ledger="true"][data-foreground="receipt"] .paperLedger {
+    grid-row: 1;
+    max-height: min(240px, 36svh);
+    overflow: auto;
+  }
+  .grid[data-ledger="true"][data-foreground="receipt"] .ticket { grid-row: 2; }
+  .grid[data-ledger="true"][data-foreground="receipt"] .support { grid-row: 3; }
   .grid[data-ledger="true"][data-foreground="receipt"] .instrumentShell,
   .grid[data-ledger="true"][data-foreground="archive"] .instrumentShell,
+  .grid[data-ledger="true"][data-foreground="missing"] .instrumentShell,
   .grid[data-ledger="true"][data-foreground="receipt"] .deskInscription,
-  .grid[data-ledger="true"][data-foreground="archive"] .deskInscription { display: none; }
+  .grid[data-ledger="true"][data-foreground="archive"] .deskInscription,
+  .grid[data-ledger="true"][data-foreground="missing"] .deskInscription { display: none; }
   .call { padding-right: 0; }
   .call .boardTitle { font-size: 44px; }
   .call .callNote { max-width: 320px; }
@@ -783,13 +792,16 @@
 .ledgerDayGroup { min-width: 0; }
 .ledgerDay { margin: 10px 0 0 !important; font: 9px/1.4 var(--font-mono), monospace; letter-spacing: .12em; color: var(--desk-brass); }
 .ledgerDayGroup:first-of-type .ledgerDay { margin-top: 0 !important; }
+.ledgerPreview { max-height: 280px; overflow: auto; }
+.ledgerMore { margin: 8px 0 0 !important; color: var(--desk-file-paper); font-size: 11px; line-height: 1.5; }
+.ledgerTrust { margin: 8px 0 0 !important; color: var(--desk-file-paper); font-size: 11px; line-height: 1.6; max-width: 42ch; }
 .ledgerArchive { margin-top: 10px; color: var(--desk-file-paper); font-size: 11px; }
 .ledgerArchive summary { min-height: 36px; padding: 8px 0; cursor: pointer; }
 .historyEmbed { margin: 4px 0 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .historyEmbed .record { margin-top: 8px; padding: 12px 0; }
 .ledgerTrayHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .ledgerTrayTitle { font: 22px/1.2 var(--font-display), serif !important; margin: 8px 0 12px !important; color: var(--desk-paper-light); }
-.ledgerLines { list-style: none; padding: 0; margin: 0; max-height: 220px; overflow: auto; }
+.ledgerLines { list-style: none; padding: 0; margin: 0; }
 .ledgerLines li { border-top: 1px solid var(--desk-leather-edge); }
 .ledgerLines button {
   width: 100%;

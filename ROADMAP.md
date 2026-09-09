@@ -8,9 +8,9 @@
 
 - `/` is Claflin's desk. Hetty is the current Base broker, not the house. `/desk` is an alias, not a second product. Former marketplace, demo, profile, dashboard, broker-profile, listing and admin pages redirect to `/`.
 - No onboarding wizard, broker questionnaire, directory, ratings, streaks or free-call funnel is mounted. The paper desk does not require a wallet, an account, or a microphone.
-- The seated first pass put the ticket and the line on one writing surface and removed the competing hero, empty continuity sections, and future-desks grid. Paper-only disclosures, review safeguards, and opt-in microphone/audio are preserved. Browser and responsive QA of that pass were skipped; the visual result is unverified.
+- The seated first pass put the ticket and the line on one writing surface and removed the competing hero, empty continuity sections, and future-desks grid. Paper-only disclosures, review safeguards, and opt-in microphone/audio are preserved. The physical room, Claflin display identity, and receiver still-then-WebGL swap are in place. Remaining work is completion, recovery, and comprehension — not more rooms.
 - The job is paper estimate → review → local record, optionally driven by the line. The ticket, voice tools, and receiver share one foreground document; browsing a filed record is read-only. After filing, the compact ledger sits in the working area; the archive opens from there. Surfaces exist to serve that job: ticket, tape, board (when something exists), shareable `?intent=` drafts. They are not a landing inventory.
-- A live tape (`/api/stocks/marks`) shows indicative Chainlink reference marks for the quote-supported instruments — never offers — with explicit stale/unavailable labels. Tape marks load the instrument into the ticket. The receiver is furniture beside the line. Handset pickup is reserved for an actual voice connection, not a pending quote. The object still lazy-loads behind a visibly different SVG after intersection and idle time; that is a defect.
+- A live tape (`/api/stocks/marks`) shows indicative Chainlink reference marks for the quote-supported instruments — never offers — with explicit stale/unavailable labels. Tape marks load the instrument into the ticket. The receiver is furniture beside the line. Handset pickup is reserved for an actual voice connection, not a pending quote. First paint is a still from the model; WebGL replaces it after a matching frame.
 - A live ElevenLabs voice session (“Ring Hetty”) drives the same draft through client tools executing in the caller's browser: `choose_instrument`, `set_instruction`, `set_amount`, `request_estimate`, `describe_desk`, `record_paper`, `cancel_instruction`, `watch_mark`. Session URLs are minted server-side (`/api/hetty/session`); the agent id and API key never reach the client. Hetty cannot sign, submit or reconcile — paper only. She belongs on a nameplate, not as the principal heading.
 - Read-only Aerodrome estimates use `MixedRouteQuoterV3`, the verified factory selector and canonical USDC pool identities. Buy amounts are USDC spend; sell amounts are token quantity. Amount math uses strings and integers.
 - The workflow supports review, edits, expiry, refresh, cancellation and explicit recording of simulated outcomes in browser-local storage. Optional Sign in (Privy, env-gated) copies paper records to the account and writes call transcripts server-side. Sync is best-effort: local storage stays authoritative; deletes are not propagated; transcripts have no client read surface; ringing Hetty does not send the account token. This is not live access.
@@ -26,21 +26,21 @@ The user supplied Base's September 2 Builder Quest announcement for projects hel
 
 ## 1. Finish the first useful client journey
 
-**Implemented foundation:** canonical root entry; four configured paper-quote candidates; exact-input estimates; explicit review and local paper records; live voice over the same draft; tape and desk board. Seated first pass: ticket and line share one writing surface; hero, empty continuity, and future-desks grid removed. House copy and room tone exist; they are weather, not the product.
+**Implemented foundation:** canonical root entry; four configured paper-quote candidates; exact-input estimates; explicit review and local paper records; live voice over the same draft; tape and desk board. Seated desk: ticket and line share one writing surface; physical room around it; Claflin as display identity; Hetty as a nameplate; receiver still on first paint. House copy and room tone are weather, not the product.
 
 Remaining acceptance work:
 
-- Keep the consolidated interface. Rebuild the physical context around it: blotter, cropped ledger and correspondence, frosted partitions, ticker strip, receiver to one side. Most objects are not click targets.
-- Replace the receiver's SVG-then-idle-load with a still from the actual model, camera, and lighting; swap only after the matching WebGL frame; reuse that still for reduced motion. Do not eagerly load Three.js as the fix.
-- Make Claflin the display identity. Hetty is a nameplate beside the line, not the principal heading. Leave room for Livermore/Solana and Benham/Robinhood Chain without a four-card grid.
+- Keep the consolidated interface. Do not add more rooms, decorative objects, or surface areas until completion and recovery hold.
 - Treat paper as the house language: blotter = draft, slip = returned estimate, receipt = filed evidence, ledger = retrievable history, tray = explicit watches. A dossier must not pretend to be a legal certificate.
 - Keep finished work out of the tray. Do not label a recorded instruction “in progress,” and do not count drafts or records as pinned.
-- Review the normal first visit, return visit, unavailable quote and expired review against the hierarchy in [Product Direction](docs/PRODUCT_DIRECTION.md)—not only component styling. Browser and responsive QA of the seated pass were skipped; do them on this pass.
-- Verify understandable product/unit distinctions, keyboard/mobile/reduced-motion behavior and actionable error recovery.
+- Finish the foreground-document contract: implicit voice references follow the visible document; a missing archive record is an unavailable recovery, not a success heading; the compact ledger stays a recent preview.
+- After filing, a short viewport must still show where the record went without a decorative scroll trick. Desktop: ledger beside the receipt. Mobile: compact ledger above the receipt.
+- Review first visit, return visit, unavailable quote, expired review, failed filing, and missing records against the hierarchy in [Product Direction](docs/PRODUCT_DIRECTION.md). Ask what happened, where it lives tomorrow, whether funds moved, and how to change it.
+- Verify keyboard, mobile, zoom, and reduced-motion on that same journey. Source tests do not substitute.
 - Keep essential state stable; background updates must not replace the instrument, amount or terms under review.
 - Measure user comprehension and intent-to-reviewed-estimate friction. Do not measure success by paid minutes, onboarding completion, sign-ins or trading frequency.
 
-**Exit evidence:** it feels like sitting at a desk, not looking at a page. A client reaches the ticket or the line without a tour or the broker as heading, and can explain the product, amount, paper status, estimate and recorded result. The receiver is complete on first paint. A four-desk footer is not that evidence. Automated checks supplement rather than substitute for product acceptance. A screenshot of the seated pass is useful feedback for the next refinement.
+**Exit evidence:** a client can explain the product, amount, paper status, estimate and recorded result, and find that result on a return visit. Live trading is not that evidence. Automated checks supplement rather than substitute for product acceptance.
 
 ## 2. Connect Hetty to the shared instruction
 
@@ -100,4 +100,4 @@ Do not revive open broker registration, marketplace rankings, personality quizze
 
 ## Verification and evidence
 
-The preceding paper slice passed unit/type/build checks and mocked browser lifecycle checks, with a separate read-only mainnet estimate. The cutover adds source/route/identity regression checks and HTTP verification; no browser automation is required for this pass. Neither set of checks claims a validated live voice or trading release.
+The preceding paper slice passed unit/type/build checks and mocked browser lifecycle checks, with a separate read-only mainnet estimate. Viewport checks of the seated composition exist; they do not certify user comprehension of filing, return, or recovery. Neither set of checks claims a validated live voice or trading release. Live execution remains §4.

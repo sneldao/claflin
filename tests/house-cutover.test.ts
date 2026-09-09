@@ -116,7 +116,9 @@ describe('one canonical house', () => {
     assert.match(ticket, /Start another instruction/);
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
     assert.match(source('components/desk/PaperLedger.tsx'), /The archive/);
-    assert.match(source('components/desk/TradeTicket.tsx'), /paper-ledger[\s\S]*scrollIntoView/);
+    assert.match(source('components/desk/PaperLedger.tsx'), /ledgerPreview/);
+    assert.match(source('components/desk/HettyCall.tsx'), /foreground\.instrumentId/);
+    assert.doesNotMatch(source('components/desk/TradeTicket.tsx'), /scrollIntoView/);
     assert.match(source('components/desk/PaperHistory.tsx'), /Open this record/);
   });
   it('can present a quotation slip while the voice line remains connected', () => {
