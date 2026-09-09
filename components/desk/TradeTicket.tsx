@@ -40,6 +40,11 @@ function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[nu
   </>;
 }
 
+function closeParentDetails(event: React.MouseEvent<HTMLElement>) {
+  const details = event.currentTarget.closest('details');
+  if (details) details.open = false;
+}
+
 /**
  * The ticket: the caller's own surface. A `spokenLine` — the caller's words
  * captured live from the direct line — is captioned on the blotter so the
@@ -147,9 +152,13 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
           <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
           <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
         </form>
-        <details className={`${styles.productDetails} ${styles.productDossier}`}><summary>Product dossier</summary>
-          <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
-          <ProductTerms instrument={instrument} />
+        <details className={`${styles.productDetails} ${styles.drawer}`}><summary>Product dossier</summary>
+          <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
+          <div className={styles.drawerPanel}>
+            <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close product dossier">×</button>
+            <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
+            <ProductTerms instrument={instrument} />
+          </div>
         </details>
         <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
       </> : pending ? <div className={styles.pendingSlip}>
@@ -179,17 +188,21 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
         </>}
-        <details className={styles.quoteDetails}>
+        <details className={`${styles.quoteDetails} ${styles.drawer}`}>
           <summary>Quote &amp; product details</summary>
-          <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
-          <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
-          <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
-          <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
-          {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
-          <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
-          <p>{quote.assumptions}</p>
-          <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
-          <ProductTerms instrument={instrument} />
+          <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
+          <div className={styles.drawerPanel}>
+            <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close quote and product details">×</button>
+            <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
+            <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
+            <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
+            <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
+            {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
+            <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
+            <p>{quote.assumptions}</p>
+            <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
+            <ProductTerms instrument={instrument} />
+          </div>
         </details>
         <div className={styles.slipDecision}>
           {recorded ? <>
