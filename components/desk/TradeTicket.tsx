@@ -5,7 +5,7 @@ import { formatEther } from 'viem';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
-import { LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
+import { LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED, PAPER_ASSUMPTIONS } from '@/lib/trading/domain';
 import type { TradeIntent, QuoteEstimate } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
@@ -273,7 +273,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
   const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? foreground.instrumentId ?? undefined));
   /* Live execution is ticket-level state so the slip can stamp the outcome
      the way a paper receipt is stamped — a fill is furniture, not a toast. */
-  const liveQuote = LIVE_EXECUTION_ENABLED && foreground.kind !== 'receipt' && foreground.kind !== 'archive' && !missing && quote ? quote : null;
+  const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
+  const liveQuote = LIVE_EXECUTION_ENABLED && liveMode && foreground.kind !== 'receipt' && foreground.kind !== 'archive' && !missing && quote ? quote : null;
   const execution = useDeskExecution(liveQuote);
   const liveOutcome = execution.state.stage === 'done' ? execution.state.outcome : null;
   const liveStamp = liveOutcome && liveOutcome.status !== 'failed'
@@ -414,7 +415,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
           {filedRecord && <time dateTime={new Date(filedRecord.createdAt).toISOString()}>Recorded {formatRecordedTime(filedRecord.createdAt)}</time>}
         </p>
         {recorded ? <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p> : <>
-          {LIVE_EXECUTION_ENABLED && quote.assumptions === LIVE_ASSUMPTIONS ? (
+          {liveMode ? (
             <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet.</span></p>
           ) : (
             <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
@@ -434,7 +435,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
           <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
           {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
           <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
-          <p>{quote.assumptions}</p>
+          <p>{liveMode ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS}</p>
           <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
           <ProductTerms instrument={instrument} />
         </Drawer>
@@ -455,8 +456,17 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
               </details>
             </div>
           </> : <>
-            <p className={styles.slipConsent}>{LIVE_EXECUTION_ENABLED ? 'Executing moves real funds on Base. Recording saves a simulation, visible to anyone using this browser profile.' : 'Recording saves a simulation, visible to anyone using this browser profile.'}</p>
-            {LIVE_EXECUTION_ENABLED && quote && <LiveExecution quote={quote} execution={execution} expired={expired} expiringSoon={expiringSoon} onApproved={() => void requestQuote()} />}
+            {LIVE_EXECUTION_ENABLED && view === 'review' && !expired && (
+              <div className={styles.liveBox}>
+                <label className={styles.liveRowLabel}>
+                  <input type="checkbox" checked={liveMode} onChange={() => setLiveMode(v => !v)} aria-label="Toggle live execution on Base" />
+                  Live execution on Base
+                </label>
+                <p className={styles.liveMeta}>{liveMode ? 'Real tokens and USDC will move when you execute.' : 'Paper estimate only — no funds move.'}</p>
+              </div>
+            )}
+            <p className={styles.slipConsent}>{liveMode ? 'Executing moves real funds on Base. Recording saves a simulation, visible to anyone using this browser profile.' : 'Recording saves a simulation, visible to anyone using this browser profile.'}</p>
+            {liveMode && quote && <LiveExecution quote={quote} execution={execution} expired={expired} expiringSoon={expiringSoon} onApproved={() => void requestQuote()} />}
             {expired
               ? <button className={styles.primary} type="button" onClick={() => void requestQuote()}>Refresh estimate<span aria-hidden="true">↻</span></button>
               : expiringSoon
