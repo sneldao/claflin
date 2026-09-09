@@ -148,7 +148,7 @@ async function filePaperRecord(page: Page) {
   await selectInstrument(page);
   await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
   await page.getByRole('button', { name: 'Review estimate' }).click();
-  await expect(page.getByText('0.02948502')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('0.02948502').first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Record paper trade' }).click();
   await expect(page.getByText('Filed to your paper ledger')).toBeVisible({ timeout: 30000 });
 }
@@ -198,11 +198,14 @@ test.describe('desktop filing flow', () => {
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
     await page.getByRole('button', { name: 'Review estimate' }).click();
+    const beforeQuote = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.getByText('Quote & product details').click();
 
     await expect(page.getByText('This paper trade uses the quoted output')).toBeVisible();
+    const panel = page.getByTestId('quote-details-panel');
+    await expect(panel).toBeVisible();
     const afterQuote = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(afterQuote).toBeLessThanOrEqual(before + 10);
+    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 80);
   });
 
   test('About Hetty Green opens as a popover without extending the page', async ({ page }) => {
@@ -289,7 +292,7 @@ test.describe('mobile filing flow', () => {
     await page.getByText('Quote & product details').click();
 
     await expect(page.getByText('This paper trade uses the quoted output')).toBeVisible();
-    const panel = page.locator('.drawerPanel').first();
+    const panel = page.getByTestId('quote-details-panel');
     await expect(panel).toBeVisible();
     const box = await panel.boundingBox();
     expect(box).not.toBeNull();

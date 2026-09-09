@@ -154,7 +154,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
         </form>
         <details className={`${styles.productDetails} ${styles.drawer}`}><summary>Product dossier</summary>
           <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
-          <div className={styles.drawerPanel}>
+          <div className={styles.drawerPanel} data-testid="product-dossier-panel">
             <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close product dossier">×</button>
             <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
             <ProductTerms instrument={instrument} />
@@ -191,7 +191,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
         <details className={`${styles.quoteDetails} ${styles.drawer}`}>
           <summary>Quote &amp; product details</summary>
           <div className={styles.drawerBackdrop} onClick={closeParentDetails} aria-hidden="true" />
-          <div className={styles.drawerPanel}>
+          <div className={styles.drawerPanel} data-testid="quote-details-panel">
             <button type="button" className={styles.drawerClose} onClick={closeParentDetails} aria-label="Close quote and product details">×</button>
             <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
             <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
