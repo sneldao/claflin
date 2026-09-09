@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { formatEther } from 'viem';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
@@ -11,7 +12,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useDeskExecution } from '@/lib/trading/useDeskExecution';
 import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
-import { paperOutcomeCopy } from '@/lib/trading/outcomes';
+import { liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
@@ -137,11 +138,19 @@ function Drawer({ className, trigger, title, testId, children }: {
   );
 }
 
-function LiveExecution({ quote, expired, expiringSoon }: { quote: QuoteEstimate; expired: boolean; expiringSoon: boolean }) {
+const SLIPPAGE_OPTIONS = [50, 100, 200] as const;
+
+function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: {
+  quote: QuoteEstimate;
+  execution: ReturnType<typeof useDeskExecution>;
+  expired: boolean;
+  expiringSoon: boolean;
+  onApproved?: () => void;
+}) {
   const auth = useDeskAuth();
-  const { state, execute, needsApproval } = useDeskExecution(quote);
-  const [slippageBps, setSlippageBps] = useState(50);
-  const busy = state.stage === 'checking' || state.stage === 'swapping' || state.stage === 'confirming';
+  const { state, approve, execute, reset, needsApproval, insufficientBalance } = execution;
+  const [slippageBps, setSlippageBps] = useState<number>(50);
+  const busy = state.stage === 'checking' || state.stage === 'approving' || state.stage === 'swapping' || state.stage === 'confirming';
 
   if (!auth.enabled) {
     return <p className={styles.slipNotice} role="status">Live execution requires an account.</p>;
@@ -152,38 +161,95 @@ function LiveExecution({ quote, expired, expiringSoon }: { quote: QuoteEstimate;
   if (!auth.walletAddress) {
     return <button type="button" className={styles.primary} onClick={auth.linkWallet}>Link a wallet to trade live</button>;
   }
+
   if (state.stage === 'done') {
     const { outcome } = state;
+    const hash = outcome.hash && outcome.hash !== '0x' ? outcome.hash : null;
     return (
-      <div className={styles.slipNotice} role="status">
-        <p>{outcome.message}</p>
-        {outcome.hash && outcome.hash !== '0x' && <p><a href={getBaseExplorerTxUrl(outcome.hash)} target="_blank" rel="noreferrer">View on BaseScan</a></p>}
+      <div className={styles.liveBox} data-outcome={outcome.status}>
+        <p className={styles.liveTitle}>LIVE EXECUTION · BASE<span>{liveEvidence(outcome.status).label}</span></p>
+        <p className={styles.slipNotice} role="status">{outcome.message}</p>
+        {hash && (
+          <p className={styles.liveMeta}>
+            Transaction <code>{hash.slice(0, 10)}…{hash.slice(-6)}</code> · <a href={getBaseExplorerTxUrl(hash)} target="_blank" rel="noreferrer">View on BaseScan</a>
+          </p>
+        )}
+        {outcome.status === 'failed' && (
+          <button type="button" className={styles.secondary} onClick={reset}>Check the wallet and try again</button>
+        )}
       </div>
     );
   }
 
+  /* Approval is quote-independent (it grants the venue a spending allowance),
+     so it stays available on a stale estimate — approval, then a fresh
+     estimate, then the swap. Only the swap itself needs a live estimate. */
+  const showApproveStep = needsApproval || state.stage === 'approving';
+  const approveDisabled = state.stage !== 'ready' || !needsApproval || insufficientBalance;
+  const executeDisabled = busy || state.stage !== 'ready' || needsApproval || insufficientBalance || expired || expiringSoon;
+
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      <label>
-        Slippage
-        <select value={slippageBps} onChange={e => setSlippageBps(Number(e.target.value))} disabled={busy}>
-          <option value={50}>0.5%</option>
-          <option value={100}>1.0%</option>
-          <option value={200}>2.0%</option>
-        </select>
-      </label>
-      <button
-        type="button"
-        className={styles.primary}
-        disabled={expired || expiringSoon || busy || state.stage !== 'ready'}
-        onClick={() => { void execute(slippageBps); }}
-      >
-        {state.stage === 'checking' ? 'Reading wallet...' : needsApproval ? 'Approve and execute on Base' : 'Execute on Base'}
-      </button>
-      {state.stage === 'ready' && (
-        <p className={styles.slipNotice} role="status">
-          {needsApproval ? 'USDC approval is required before the swap.' : 'Allowance sufficient — ready to execute.'}
-        </p>
+    <div className={styles.liveBox} data-live="true">
+      <p className={styles.liveTitle}>LIVE EXECUTION · BASE<span>real funds move from your wallet</span></p>
+      <div className={styles.liveRow}>
+        <span className={styles.liveRowLabel}>Slippage tolerance</span>
+        <div className={styles.amountChips} role="group" aria-label="Slippage tolerance">
+          {SLIPPAGE_OPTIONS.map(bps => (
+            <button
+              key={bps}
+              type="button"
+              className={styles.amountChip}
+              data-active={slippageBps === bps ? 'true' : 'false'}
+              disabled={busy}
+              aria-label={`Set slippage tolerance to ${bps / 100} percent`}
+              onClick={() => setSlippageBps(bps)}
+            >
+              {bps / 100}%
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className={styles.liveMeta}>
+        {state.stage === 'ready' && state.gasCostWei !== null
+          ? `Network gas ≈ ${formatEther(state.gasCostWei)} ETH on Base.`
+          : state.stage === 'ready' && !needsApproval
+            ? 'Gas estimate unavailable — Base network fees apply, typically a few cents.'
+            : 'The gas estimate appears once approval is in place.'}
+      </p>
+      {state.stage === 'idle' && <p className={styles.slipNotice} role="status">Wallet status unavailable. Check your connection, then refresh the estimate.</p>}
+      {insufficientBalance && <p className={styles.slipNotice} role="status">The connected wallet does not hold enough {quote.inputSymbol} for this instruction.</p>}
+      {showApproveStep ? (
+        <>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={approveDisabled}
+            onClick={() => { void approve().then(ok => { if (ok) onApproved?.(); }); }}
+          >
+            {state.stage === 'approving' ? 'Approving — confirm in your wallet…' : `Approve ${quote.inputSymbol} spending`}
+            <span aria-hidden="true">1/2</span>
+          </button>
+          <p className={styles.slipNotice} role="status">Step 1 of 2. This lets the venue spend exactly this amount; the swap itself is a separate signature.</p>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={executeDisabled}
+            onClick={() => { void execute(slippageBps); }}
+          >
+            {state.stage === 'swapping' ? 'Executing — confirm in your wallet…' : state.stage === 'confirming' ? 'Submitted — waiting for Base…' : 'Execute on Base'}
+            <span aria-hidden="true">2/2</span>
+          </button>
+          <p className={styles.slipNotice} role="status">
+            {state.stage === 'checking'
+              ? 'Step 2 of 2. Reading the wallet…'
+              : expired || expiringSoon
+                ? 'Step 2 of 2. Refresh the estimate for fresh terms before executing.'
+                : 'Step 2 of 2. One signature; the quoted minimum protects the fill.'}
+          </p>
+        </>
       )}
     </div>
   );
@@ -205,6 +271,14 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
   const missing = foreground.kind === 'missing';
   const quote = openedRecord?.quote ?? (foreground.kind === 'archive' || missing ? undefined : state.quote);
   const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? foreground.instrumentId ?? undefined));
+  /* Live execution is ticket-level state so the slip can stamp the outcome
+     the way a paper receipt is stamped — a fill is furniture, not a toast. */
+  const liveQuote = LIVE_EXECUTION_ENABLED && foreground.kind !== 'receipt' && foreground.kind !== 'archive' && !missing && quote ? quote : null;
+  const execution = useDeskExecution(liveQuote);
+  const liveOutcome = execution.state.stage === 'done' ? execution.state.outcome : null;
+  const liveStamp = liveOutcome && liveOutcome.status !== 'failed'
+    ? liveOutcome.status === 'filled' ? 'FILLED' : liveOutcome.status === 'submitted' ? 'SUBMITTED' : 'UNCONFIRMED'
+    : null;
   const review = useRef<HTMLHeadingElement | null>(null);
   const previousFocus = useRef(`${state.stage}:${viewedRecordId ?? ''}:${foreground.kind}`);
   const recorded = foreground.kind === 'receipt' || foreground.kind === 'archive';
@@ -261,6 +335,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
     data-acknowledged={recorded ? 'true' : 'false'}
   >
     {recorded && <span className={styles.stamp} aria-hidden="true"><span>RECORDED</span><small>{filed?.stamp ?? 'PAPER · FILED'}</small></span>}
+    {liveStamp && <span className={`${styles.stamp} ${styles.stampLive}`} aria-hidden="true"><span>{liveStamp}</span><small>LIVE · BASE</small></span>}
     <div className={styles.paperTop}>
       <HouseMark small />
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
@@ -380,8 +455,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
               </details>
             </div>
           </> : <>
-            <p className={styles.slipConsent}>Recording saves a simulation, visible to anyone using this browser profile.</p>
-            {LIVE_EXECUTION_ENABLED && quote && <LiveExecution quote={quote} expired={expired} expiringSoon={expiringSoon} />}
+            <p className={styles.slipConsent}>{LIVE_EXECUTION_ENABLED ? 'Executing moves real funds on Base. Recording saves a simulation, visible to anyone using this browser profile.' : 'Recording saves a simulation, visible to anyone using this browser profile.'}</p>
+            {LIVE_EXECUTION_ENABLED && quote && <LiveExecution quote={quote} execution={execution} expired={expired} expiringSoon={expiringSoon} onApproved={() => void requestQuote()} />}
             {expired
               ? <button className={styles.primary} type="button" onClick={() => void requestQuote()}>Refresh estimate<span aria-hidden="true">↻</span></button>
               : expiringSoon

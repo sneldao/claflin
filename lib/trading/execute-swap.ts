@@ -70,6 +70,51 @@ export async function sendApproveForQuote(
   return deps.sendTransaction({ ...tx, value: 0n, chainId: base.id });
 }
 
+/** Approve the router and wait for confirmation. Throws on revert or timeout —
+ *  the caller reports the failure, never assumes the allowance. */
+export async function approveInputForQuote(
+  deps: Pick<LiveExecutionDeps, 'sendTransaction' | 'publicClient'>,
+  quote: QuoteEstimate,
+): Promise<`0x${string}`> {
+  const hash = await sendApproveForQuote(deps, quote);
+  const receipt = await deps.publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
+  if (receipt.status !== 'success') throw new Error('The approval reverted on Base.');
+  return hash;
+}
+
+/** Build and send only the swap — approval must already be in place. */
+export async function swapForQuote(
+  deps: LiveExecutionDeps,
+  quote: QuoteEstimate,
+  slippageBps: number,
+  deadlineSeconds = 120,
+): Promise<`0x${string}`> {
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
+  const swap = buildAerodromeSwapTx(quote, slippageBps, deps.walletAddress, deadline);
+  return deps.sendTransaction({ to: swap.to, data: swap.data, value: swap.value, chainId: base.id });
+}
+
+/** Estimate the swap's network cost. Null when the estimate cannot be read
+ *  (e.g. allowance not yet in place) — the desk shows honest fallback copy
+ *  rather than a fabricated figure. */
+export async function estimateSwapGas(
+  publicClient: PublicClient,
+  quote: QuoteEstimate,
+  walletAddress: `0x${string}`,
+): Promise<{ gas: bigint; gasPrice: bigint } | null> {
+  try {
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 120);
+    const swap = buildAerodromeSwapTx(quote, 50, walletAddress, deadline);
+    const [gas, gasPrice] = await Promise.all([
+      publicClient.estimateGas({ account: walletAddress, to: swap.to, data: swap.data, value: swap.value }),
+      publicClient.getGasPrice(),
+    ]);
+    return { gas, gasPrice };
+  } catch {
+    return null;
+  }
+}
+
 /** Execute a live Aerodrome swap for the given quote. */
 export async function executeAerodromeSwap(
   deps: LiveExecutionDeps,
@@ -91,22 +136,14 @@ export async function executeAerodromeSwap(
   }
 
   if (allowance < amount) {
-    const approveHash = await sendTransaction({
-      to: token,
-      data: buildErc20ApproveTx(token, AERODROME_SWAP_ROUTER, amount).data,
-      value: 0n,
-      chainId: base.id,
-    });
-    const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
-    if (approveReceipt.status !== 'success') {
-      return { status: 'failed', hash: approveHash, message: 'Approval failed.' };
+    try {
+      await approveInputForQuote({ sendTransaction, publicClient }, quote);
+    } catch (e) {
+      return { status: 'failed', hash: '0x', message: `Approval failed: ${e instanceof Error ? e.message : 'unknown'}` };
     }
   }
 
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
-  const swap = buildAerodromeSwapTx(quote, slippageBps, walletAddress, deadline);
-  const hash = await sendTransaction({ to: swap.to, data: swap.data, value: swap.value, chainId: base.id });
-
+  const hash = await swapForQuote(deps, quote, slippageBps, deadlineSeconds);
   return { status: 'submitted', hash, message: 'Swap submitted. Reconciliation pending.' };
 }
 

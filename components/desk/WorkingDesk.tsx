@@ -22,6 +22,7 @@ import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
 import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
+import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from './WorkingDesk.module.css';
 
@@ -220,7 +221,9 @@ export function WorkingDesk() {
     <main id="main-content" className={styles.main}>
       <div className={styles.mode}>
         {open
-          ? <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+          ? LIVE_EXECUTION_ENABLED
+            ? <><strong data-live="true">LIVE EXECUTION</strong><span>Real tokens and real USDC will move.{auth.walletAddress ? ` Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : ' Sign in and link a wallet to trade.'}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+            : <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
