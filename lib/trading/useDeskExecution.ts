@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { createBasePublicClient, executeAerodromeSwap, readTokenAllowance, readTokenBalance, waitForLiveOutcome, type LiveOutcome } from './execute-swap';
-import { AERODROME_SWAP_ROUTER } from '../base-chain';
+import { AERODROME_SWAP_ROUTER, BASE_USDC } from '../base-chain';
 import type { QuoteEstimate } from './domain';
 
 export type DeskExecutionState =
@@ -20,7 +20,7 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
   const publicClient = useMemo(() => createBasePublicClient(), []);
   const [state, setState] = useState<DeskExecutionState>({ stage: 'idle' });
 
-  const inputToken = useMemo(() => (quote?.intent.side === 'buy' ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}` : (quote?.instrumentAddress as `0x${string}` | undefined)), [quote]);
+  const inputToken = useMemo(() => (quote?.intent.side === 'buy' ? BASE_USDC as `0x${string}` : (quote?.instrumentAddress as `0x${string}` | undefined)), [quote]);
   const inputAmount = quote ? BigInt(quote.amountInRaw) : 0n;
 
   useEffect(() => {
@@ -43,20 +43,39 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
     }
     setState({ stage: 'swapping' });
     const wallet = auth.walletAddress as `0x${string}`;
-    const initial = await executeAerodromeSwap(
-      { walletAddress: wallet, sendTransaction: (tx) => auth.sendTransaction(tx), publicClient },
-      quote,
-      slippageBps,
-      deadlineSeconds,
-    );
-    if (initial.status === 'failed') {
-      setState({ stage: 'done', outcome: initial });
-      return initial;
+    try {
+      const initial = await executeAerodromeSwap(
+        { walletAddress: wallet, sendTransaction: (tx) => auth.sendTransaction(tx), publicClient },
+        quote,
+        slippageBps,
+        deadlineSeconds,
+      );
+      if (initial.status === 'failed') {
+        setState({ stage: 'done', outcome: initial });
+        return initial;
+      }
+      setState({ stage: 'confirming', hash: initial.hash });
+      const outcome = await waitForLiveOutcome(publicClient, initial.hash);
+      setState({ stage: 'done', outcome });
+      return outcome;
+    } catch (e) {
+      /* Rejected signatures, expired estimates, reverted approvals and RPC
+         drops all land here — the desk reports failure honestly instead of
+         hanging in a pending stage. */
+      const raw = e instanceof Error ? e.message : 'unknown';
+      const rejected = /reject|denied|cancelled|user denied/i.test(raw);
+      const outcome: LiveOutcome = {
+        status: 'failed',
+        hash: '0x',
+        message: rejected
+          ? 'The wallet request was declined. Nothing was submitted.'
+          : raw.length > 140
+            ? 'The swap could not be submitted. Refresh the estimate and try again.'
+            : `The swap could not be submitted: ${raw}`,
+      };
+      setState({ stage: 'done', outcome });
+      return outcome;
     }
-    setState({ stage: 'confirming', hash: initial.hash });
-    const outcome = await waitForLiveOutcome(publicClient, initial.hash);
-    setState({ stage: 'done', outcome });
-    return outcome;
   }, [quote, auth.walletAddress, auth.sendTransaction, inputToken, publicClient]);
 
   return { state, execute, needsApproval: state.stage === 'ready' && state.allowance < inputAmount };
