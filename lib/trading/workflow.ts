@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getDeskInstrument, resolveDeskAlias } from './catalog';
-import { formatAmount, intentSchema, PAPER_ASSUMPTIONS, parseAmount, parseIntent, type QuoteEstimate, type TradeIntent } from './domain';
+import { formatAmount, intentSchema, LIVE_ASSUMPTIONS, PAPER_ASSUMPTIONS, parseAmount, parseIntent, type QuoteEstimate, type TradeIntent } from './domain';
 
 const positiveRaw = z.string().max(78).regex(/^[1-9]\d*$/);
 const decimal = z.string().max(180).regex(/^\d+(\.\d+)?$/);
@@ -10,7 +10,7 @@ const estimateSchema = z.object({
   inputSymbol: z.string().max(20), outputSymbol: z.string().max(20), amountInRaw: positiveRaw, amountOutRaw: positiveRaw,
   inputAmount: decimal, outputAmount: decimal, tokenDecimals: z.number().int().min(0).max(18), multiplierRaw: positiveRaw, shareEquivalent: decimal,
   reference: z.object({ status: z.enum(['observed', 'stale', 'unavailable']), source: z.string().min(1).max(40), priceUsdPerToken: decimal.optional(), updatedAt: z.number().int().positive().optional(), session: z.literal('unknown'), pauseStatus: z.literal('unchecked') }).strict(),
-  blockNumber: z.number().int().positive(), blockTimestamp: z.number().int().positive(), quotedAt: z.number().int().positive(), expiresAt: z.number().int().positive(), assumptions: z.literal(PAPER_ASSUMPTIONS),
+  blockNumber: z.number().int().positive(), blockTimestamp: z.number().int().positive(), quotedAt: z.number().int().positive(), expiresAt: z.number().int().positive(), assumptions: z.literal(PAPER_ASSUMPTIONS).or(z.literal(LIVE_ASSUMPTIONS)),
 }).strict();
 
 export function parseEstimate(input: unknown): QuoteEstimate {

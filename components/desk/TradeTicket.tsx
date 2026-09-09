@@ -4,8 +4,12 @@ import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
-import type { TradeIntent } from '@/lib/trading/domain';
+import { LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
+import type { TradeIntent, QuoteEstimate } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
+import { useDeskAuth } from '@/components/auth/AuthProvider';
+import { useDeskExecution } from '@/lib/trading/useDeskExecution';
+import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
 import { paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
@@ -129,6 +133,58 @@ function Drawer({ className, trigger, title, testId, children }: {
         </button>
         {children}
       </dialog>
+    </div>
+  );
+}
+
+function LiveExecution({ quote, expired, expiringSoon }: { quote: QuoteEstimate; expired: boolean; expiringSoon: boolean }) {
+  const auth = useDeskAuth();
+  const { state, execute, needsApproval } = useDeskExecution(quote);
+  const [slippageBps, setSlippageBps] = useState(50);
+  const busy = state.stage === 'checking' || state.stage === 'swapping' || state.stage === 'confirming';
+
+  if (!auth.enabled) {
+    return <p className={styles.slipNotice} role="status">Live execution requires an account.</p>;
+  }
+  if (!auth.authenticated) {
+    return <button type="button" className={styles.primary} onClick={auth.login}>Sign in to trade live</button>;
+  }
+  if (!auth.walletAddress) {
+    return <button type="button" className={styles.primary} onClick={auth.linkWallet}>Link a wallet to trade live</button>;
+  }
+  if (state.stage === 'done') {
+    const { outcome } = state;
+    return (
+      <div className={styles.slipNotice} role="status">
+        <p>{outcome.message}</p>
+        {outcome.hash && outcome.hash !== '0x' && <p><a href={getBaseExplorerTxUrl(outcome.hash)} target="_blank" rel="noreferrer">View on BaseScan</a></p>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: '1rem' }}>
+      <label>
+        Slippage
+        <select value={slippageBps} onChange={e => setSlippageBps(Number(e.target.value))} disabled={busy}>
+          <option value={50}>0.5%</option>
+          <option value={100}>1.0%</option>
+          <option value={200}>2.0%</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        className={styles.primary}
+        disabled={expired || expiringSoon || busy || state.stage !== 'ready'}
+        onClick={() => { void execute(slippageBps); }}
+      >
+        {state.stage === 'checking' ? 'Reading wallet...' : needsApproval ? 'Approve and execute on Base' : 'Execute on Base'}
+      </button>
+      {state.stage === 'ready' && (
+        <p className={styles.slipNotice} role="status">
+          {needsApproval ? 'USDC approval is required before the swap.' : 'Allowance sufficient — ready to execute.'}
+        </p>
+      )}
     </div>
   );
 }
@@ -283,7 +339,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
           {filedRecord && <time dateTime={new Date(filedRecord.createdAt).toISOString()}>Recorded {formatRecordedTime(filedRecord.createdAt)}</time>}
         </p>
         {recorded ? <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p> : <>
-          <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
+          {LIVE_EXECUTION_ENABLED && quote.assumptions === LIVE_ASSUMPTIONS ? (
+            <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet.</span></p>
+          ) : (
+            <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
+          )}
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
         </>}
@@ -321,6 +381,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
             </div>
           </> : <>
             <p className={styles.slipConsent}>Recording saves a simulation, visible to anyone using this browser profile.</p>
+            {LIVE_EXECUTION_ENABLED && quote && <LiveExecution quote={quote} expired={expired} expiringSoon={expiringSoon} />}
             {expired
               ? <button className={styles.primary} type="button" onClick={() => void requestQuote()}>Refresh estimate<span aria-hidden="true">↻</span></button>
               : expiringSoon

@@ -4,13 +4,28 @@ import { isRetiredMarketplaceApi } from './lib/house';
 
 const ALLOWED_HEADERS = 'Content-Type, Authorization, X-API-Key, X-Requested-With, X-Wallet-Address, X-Signature, X-Timestamp';
 
+/* Browser origins that may make credentialed cross-origin API calls.
+   Reflecting an arbitrary Origin alongside Allow-Credentials lets any
+   website ride a visitor's bearer token — only configured origins qualify. */
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL,
+  process.env.NEXT_PUBLIC_WEB_URL,
+  'http://localhost:3000',
+].filter((value): value is string => Boolean(value));
+
 function applyCorsHeaders(request: NextRequest, response: NextResponse): NextResponse {
-  const origin = request.headers.get('origin') || '*';
-  response.headers.set('Access-Control-Allow-Origin', origin);
+  const origin = request.headers.get('origin');
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Vary', 'Origin');
+  } else if (!origin) {
+    /* Server-to-server callers (webhooks, scripts) send no Origin and
+       do not need credentials; '*' is honest for them. */
+    response.headers.set('Access-Control-Allow-Origin', '*');
+  }
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', ALLOWED_HEADERS);
-  response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set('Vary', 'Origin');
   return response;
 }
 
@@ -38,6 +53,7 @@ export function proxy(request: NextRequest) {
   const hasRouteHandler = [
     '/api/stocks/quote',
     '/api/stocks/marks',
+    '/api/desk',
     '/api/hetty/session',
     '/api/hetty/transcript',
     '/api/paper',

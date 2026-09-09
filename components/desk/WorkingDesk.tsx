@@ -22,7 +22,12 @@ import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
 import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
+import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from './WorkingDesk.module.css';
+
+/* Stable empty reference: `marks.result?.marks ?? []` inline would mint a new
+   array every render and defeat the memo on TickerTape/DeskBoard. */
+const NO_MARKS: DeskMark[] = [];
 
 // Three.js (~600KB) and the ElevenLabs SDK are decorative/session-only —
 // lazy-loaded so the desk's first paint stays light.
@@ -243,9 +248,9 @@ export function WorkingDesk() {
       </div>
       {open && <div className={styles.tickerStation}>
         <TapeMachine />
-        <TickerTape marks={marks.result?.marks ?? []} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+        <TickerTape marks={marks.result?.marks ?? NO_MARKS} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       </div>}
-      {hasTray && <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? []} stale={marks.stale} asOf={marks.result?.asOf} /></div>}
+      {hasTray && <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} /></div>}
     </main>
     <footer className={styles.footer}>
       <span>YOUR INSTRUCTION. YOUR DECISION.</span>

@@ -73,9 +73,17 @@ export function getQuotePair(stock: DeskInstrument): Readonly<VenuePair> {
   return pair;
 }
 
-export function getQuotePairByPoolAddress(poolAddress: string): Readonly<VenuePair> | undefined {
+export function getInstrumentAndPairByPoolAddress(poolAddress: string): { instrument: DeskInstrument; pair: Readonly<VenuePair> } | undefined {
   const lower = poolAddress.toLowerCase();
-  return DESK_INSTRUMENTS.flatMap(s => s.venuePairs).find(p => p.poolAddress.toLowerCase() === lower);
+  for (const instrument of DESK_INSTRUMENTS) {
+    const pair = instrument.venuePairs.find(p => p.poolAddress.toLowerCase() === lower);
+    if (pair) return { instrument, pair };
+  }
+  return undefined;
+}
+
+export function getQuotePairByPoolAddress(poolAddress: string): Readonly<VenuePair> | undefined {
+  return getInstrumentAndPairByPoolAddress(poolAddress)?.pair;
 }
 
 export function resolveDeskAlias(query: string): DeskInstrument | undefined {

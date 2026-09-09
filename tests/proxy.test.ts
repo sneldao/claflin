@@ -38,4 +38,29 @@ describe('proxy routing', () => {
       assert.equal(response.status, 200, `${path} should be allowed`);
     }
   });
+
+  it('lets the desk-aware quote and marks routes pass through', async () => {
+    for (const path of ['/api/desk/hetty/quote', '/api/desk/hetty/marks']) {
+      const response = proxy(new NextRequest(`http://localhost:3000${path}?instrumentId=foo`));
+      assert.equal(response.status, 200, `${path} should be allowed`);
+      assert.equal(await bodyJson(response), null, 'no JSON body is written for a real route');
+    }
+  });
+
+  it('reflects CORS origin only for allowlisted origins, with credentials only for those', async () => {
+    const request = (origin?: string) =>
+      new NextRequest('http://localhost:3000/api/stocks/marks', origin ? { headers: { origin } } : undefined);
+
+    const noOrigin = proxy(request());
+    assert.equal(noOrigin.headers.get('Access-Control-Allow-Origin'), '*');
+    assert.equal(noOrigin.headers.get('Access-Control-Allow-Credentials'), null);
+
+    const allowed = proxy(request('http://localhost:3000'));
+    assert.equal(allowed.headers.get('Access-Control-Allow-Origin'), 'http://localhost:3000');
+    assert.equal(allowed.headers.get('Access-Control-Allow-Credentials'), 'true');
+
+    const hostile = proxy(request('https://evil.example'));
+    assert.equal(hostile.headers.get('Access-Control-Allow-Origin'), null, 'an unknown origin must not be reflected');
+    assert.equal(hostile.headers.get('Access-Control-Allow-Credentials'), null);
+  });
 });

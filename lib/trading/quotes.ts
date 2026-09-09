@@ -1,5 +1,5 @@
 import { getDeskInstrument, getQuotePair, type DeskInstrument } from './catalog';
-import { formatAmount, PAPER_ASSUMPTIONS, parseAmount, parseIntent, TradingError, type QuoteEstimate, type ReferenceObservation } from './domain';
+import { formatAmount, LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED, PAPER_ASSUMPTIONS, parseAmount, parseIntent, TradingError, type QuoteEstimate, type ReferenceObservation } from './domain';
 import { deskQuoteLimits, type DeskQuoteLimits } from './desk-mandate';
 import { OPEN_DESK_ID } from '../house';
 import type { VenuePair } from '../tokenized-stocks';
@@ -87,7 +87,7 @@ export function createQuoteService(
       shareEquivalent: formatAmount(stockRaw * s.multiplier, decimals + 18),
       reference: referenceObservation(s.reference, completed),
       blockNumber: s.blockNumber, blockTimestamp: s.blockTimestamp, quotedAt: started, expiresAt: started + 30000,
-      assumptions: PAPER_ASSUMPTIONS,
+      assumptions: LIVE_EXECUTION_ENABLED ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS,
     };
   };
 }

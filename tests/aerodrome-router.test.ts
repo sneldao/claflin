@@ -32,11 +32,12 @@ const approveAbi = parseAbi(['function approve(address spender, uint256 amount) 
 
 describe('aerodrome router call builder', () => {
   const now = Date.now();
+  const deadline = BigInt(Math.floor(now / 1000) + 120); // Unix seconds
 
   it('builds a buy swap with the known exactInputSingle selector', () => {
     const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };
     const quote = makeQuote(intent, now);
-    const tx = buildAerodromeSwapTx(quote, 50, recipient, BigInt(now + 120));
+    const tx = buildAerodromeSwapTx(quote, 50, recipient, deadline);
 
     assert.equal(tx.to, AERODROME_SWAP_ROUTER);
     assert.equal(tx.value, 0n);
@@ -50,7 +51,7 @@ describe('aerodrome router call builder', () => {
     assert.equal(params.tickSpacing, stock.venuePairs[0].tickSpacing);
     assert.equal(params.recipient, recipient);
     assert.equal(params.amountIn, 10000000n);
-    assert.equal(params.deadline, BigInt(now + 120));
+    assert.equal(params.deadline, deadline);
     assert.equal(params.amountOutMinimum, 2933759n); // 0.5% slippage of 2,948,502 (floor)
     assert.equal(params.sqrtPriceLimitX96, 0n);
   });
@@ -60,7 +61,7 @@ describe('aerodrome router call builder', () => {
     const quote = makeQuote(intent, now);
     quote.inputSymbol = stock.symbol;
     quote.outputSymbol = 'USDC';
-    const tx = buildAerodromeSwapTx(quote, 100, recipient, BigInt(now + 120));
+    const tx = buildAerodromeSwapTx(quote, 100, recipient, deadline);
 
     const decoded = decodeFunctionData({ abi: swapRouterAbi, data: tx.data });
     const [params] = decoded.args as [{ tokenIn: Address; tokenOut: Address }];
@@ -83,5 +84,42 @@ describe('aerodrome router call builder', () => {
     assert.equal(minimumOut(100n, 50), 99n); // 0.5% of 100 is 99 (floor), non-zero
     assert.equal(minimumOut(10000n, 0), 10000n);
     assert.equal(minimumOut(10000n, 100), 9900n); // 1% slippage
+    assert.equal(minimumOut(10000n, 10000), 1n); // clamped to the 1-unit floor
+  });
+
+  it('refuses to build an approve call with an out-of-range amount', () => {
+    assert.throws(() => buildErc20ApproveTx(BASE_USDC, AERODROME_SWAP_ROUTER, 0n), /Invalid approval amount/);
+    assert.throws(() => buildErc20ApproveTx(BASE_USDC, AERODROME_SWAP_ROUTER, -1n), /Invalid approval amount/);
+    assert.throws(() => buildErc20ApproveTx(BASE_USDC, AERODROME_SWAP_ROUTER, 2n ** 256n), /Invalid approval amount/);
+  });
+
+  it('refuses a quote that has expired at build time', () => {
+    const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };
+    const quote = makeQuote(intent, now);
+    assert.throws(
+      () => buildAerodromeSwapTx(quote, 50, recipient, deadline, undefined, now + 31000),
+      /expired/,
+    );
+    assert.throws(
+      () => buildAerodromeSwapTx(quote, 50, recipient, BigInt(Math.floor(now / 1000) - 1), undefined, now),
+      /Deadline must be a future/,
+    );
+  });
+
+  it('refuses a quote whose instrument does not own the pool', () => {
+    const other = DESK_INSTRUMENTS.find(s => s.symbol !== stock.symbol && s.quoteSupported)!;
+    const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };
+    const quote = { ...makeQuote(intent, now), poolAddress: other.venuePairs[0].poolAddress };
+    assert.throws(() => buildAerodromeSwapTx(quote, 50, recipient, deadline), /does not match the catalog pool/);
+  });
+
+  it('refuses quotes from the wrong chain, venue, or an unknown pool', () => {
+    const intent: TradeIntent = { instrumentId: stock.id, side: 'buy', unit: 'USDC', amount: '10' };
+    const wrongChain = { ...makeQuote(intent, now), chainId: 1 };
+    assert.throws(() => buildAerodromeSwapTx(wrongChain, 50, recipient, deadline), /not a verified Base Aerodrome estimate/);
+    const wrongVenue = { ...makeQuote(intent, now), venue: 'jupiter' };
+    assert.throws(() => buildAerodromeSwapTx(wrongVenue, 50, recipient, deadline), /not a verified Base Aerodrome estimate/);
+    const unknownPool = { ...makeQuote(intent, now), poolAddress: '0x0000000000000000000000000000000000000001' };
+    assert.throws(() => buildAerodromeSwapTx(unknownPool, 50, recipient, deadline), /not in the verified catalog/);
   });
 });

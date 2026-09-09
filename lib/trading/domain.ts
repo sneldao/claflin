@@ -79,3 +79,7 @@ export interface QuoteEstimate {
 }
 
 export const PAPER_ASSUMPTIONS = 'Simulated fill at the quoted output, including pool swap fees. No additional slippage, gas, platform or call charges are applied. No wallet, holdings, eligibility or transaction authorization is verified. This is a local paper record, not a live order or position.';
+
+export const LIVE_ASSUMPTIONS = 'Live execution on Base using the connected wallet. Pool swap fees are included in the quoted output; actual received tokens may differ due to slippage and gas. The wallet must hold sufficient input tokens and ETH for gas. This is a real onchain swap, not a guarantee of fill price or settlement.';
+
+export const LIVE_EXECUTION_ENABLED = process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true';

@@ -118,6 +118,13 @@ describe('merging pulled account records into the browser', () => {
     assert.equal(mergePulledRecords(store, [undefined, null], 'hetty'), 0);
     assert.deepEqual(storedIds(store), ['kept']);
   });
+  it('never merges records that belong to another desk', () => {
+    const store = storage();
+    const jesseRecord = { ...record('jesse-1'), deskId: 'jesse' as const };
+    const added = mergePulledRecords(store, [jesseRecord, record('hetty-1')], 'hetty');
+    assert.equal(added, 1, 'only the same-desk record lands');
+    assert.deepEqual(storedIds(store), ['hetty-1']);
+  });
 });
 
 describe('usePaperSync behavior', () => {

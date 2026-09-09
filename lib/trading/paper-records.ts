@@ -84,6 +84,9 @@ export function mergePulledRecords(storage: PaperStorage, records: readonly unkn
     if (added >= room) break;
     try {
       const record = parseRecord(candidate);
+      /* Desk isolation: the account may hold records from other desks;
+         merging them here would leak them into this desk's history. */
+      if (record.deskId !== deskId) continue;
       if (existingIds.has(record.id)) continue;
       const serialized = JSON.stringify(record);
       storage.setItem(PREFIX + record.id, serialized);

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useState } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
@@ -19,14 +19,17 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
   const { state, edit, watched, watch, unwatch, deskId, foreground } = desk;
   const points = marksToPoints(marks);
 
-  // Session continuity: capture the tray's first reading once per mount —
-  // before it can be overwritten by an in-session refresh — and record what
-  // the caller saw on the way out. Reduced to a ref so a snapshot write never
-  // re-renders the tray.
-  const firstSeenRef = useRef<ReturnType<typeof readSeenSnapshot>>(null);
-  if (firstSeenRef.current === null && typeof window !== 'undefined') {
-    firstSeenRef.current = readSeenSnapshot(window.localStorage, deskId);
-  }
+  // Session continuity: the "last sat down" snapshot lives in localStorage.
+  // Reading it during render would mismatch the server HTML, so it arrives
+  // one paint after mount — until then the tray shows position only, no
+  // movement lines. What the caller saw is recorded again on the way out.
+  const [firstSeen, setFirstSeen] = useState<ReturnType<typeof readSeenSnapshot>>(null);
+  /* The snapshot is intentionally synchronized from localStorage in an effect. */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    setFirstSeen(readSeenSnapshot(window.localStorage, deskId));
+  }, [deskId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (points.length === 0) return;
     const onLeave = () => writeSeenSnapshot(window.localStorage, deskId, points);
@@ -56,7 +59,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
     );
   }
 
-  const snapshot = firstSeenRef.current;
+  const snapshot = firstSeen;
   const deltas = trayDeltas(snapshot, points);
   const deltaFor = (id: string) => deltas.find(d => d.instrumentId === id);
   const dayLabel = seenDayLabel(snapshot?.seenAt ?? Date.now());
