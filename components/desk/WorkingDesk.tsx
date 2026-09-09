@@ -67,7 +67,7 @@ export function WorkingDesk() {
   const tone = useRoomTone(hettyLive);
   // One reference-marks fetch for the whole desk: the tape displays it, the
   // working tray compares against it — a single honest reading of the room.
-  const marks = useReferenceMarks();
+  const marks = useReferenceMarks(desk.deskId);
   const open = desk.open;
   const foreground = desk.foreground;
   /* Shells stay: an empty ledger is a ruled slip, an empty tray is a pinboard

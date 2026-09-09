@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { OPEN_DESK_ID, type HouseDeskId } from '../house';
 import type { MarksResult } from './marks-shared';
 import { fetchJson } from '../api-client';
 
@@ -23,7 +24,7 @@ function degradeMarks(result: MarksResult): MarksResult {
  * failures keep the last good result on screen, but degrade it to stale so
  * the caller is not shown a healthy-looking mark from an old refresh.
  */
-export function useReferenceMarks(): { result: MarksResult | null; failed: boolean; stale: boolean } {
+export function useReferenceMarks(deskId: HouseDeskId = OPEN_DESK_ID): { result: MarksResult | null; failed: boolean; stale: boolean } {
   const [result, setResult] = useState<MarksResult | null>(null);
   const [failed, setFailed] = useState(false);
   const resultRef = useRef(result);
@@ -35,7 +36,7 @@ export function useReferenceMarks(): { result: MarksResult | null; failed: boole
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const response = await fetchJson<MarksResult>('/api/stocks/marks');
+      const response = await fetchJson<MarksResult>(`/api/desk/${deskId}/marks`);
       if (cancelled) return;
       if (response.ok) {
         setResult(response.data);
@@ -56,7 +57,7 @@ export function useReferenceMarks(): { result: MarksResult | null; failed: boole
     const onVisible = () => { if (!document.hidden && !cancelled) void load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { cancelled = true; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
-  }, []);
+  }, [deskId]);
 
   const stale = Boolean(result) && (failed || result!.marks.some(mark => mark.reference.status !== 'observed'));
   return { result, failed, stale };

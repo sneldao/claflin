@@ -150,14 +150,14 @@ describe('one canonical house', () => {
     assert.match(call, /fetchJson<\{ signedUrl\?: string \}>\('\/api\/hetty\/session'/);
     assert.doesNotMatch(call, /await response\.json\(\)/);
     const marksHook = source('lib/trading/useReferenceMarks.ts');
-    assert.match(marksHook, /fetchJson<MarksResult>\('\/api\/stocks\/marks'\)/);
+    assert.match(marksHook, /fetchJson<MarksResult>\(`\/api\/desk\/\$\{deskId\}\/marks`\)/);
     const tape = source('components/desk/TickerTape.tsx');
     assert.doesNotMatch(tape, /fetchJson|fetch\(/, 'the tape consumes the shared marks fetch rather than fetching its own');
     const desk = source('lib/trading/useTradingDesk.ts');
-    assert.match(desk, /fetchJson<unknown>\(`\/api\/stocks\/quote/);
+    assert.match(desk, /fetchJson<unknown>\(`\/api\/desk\/\$\{deskId\}\/quote/);
     const proxy = source('proxy.ts');
     assert.match(proxy, /not_found/);
-    assert.match(source('app/api/stocks/marks/route.ts'), /X-Marks-Stale/);
+    assert.match(source('lib/trading/marks-cache.ts'), /X-Marks-Stale/);
   });
   it('keeps the receiver down until a real voice connection exists', () => {
     const call = source('components/desk/HettyCall.tsx');

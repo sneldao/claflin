@@ -121,12 +121,12 @@ function buildStorageState(records: PaperRecord[]) {
 async function mockApi(page: Page, { now, staleMarkId }: { now?: number; staleMarkId?: string } = {}) {
   const time = now ?? Date.now();
   const quoteId = `quote-${time}`;
-  await page.route('**/api/stocks/marks', async route => {
+  await page.route('**/api/desk/hetty/marks', async route => {
     const body = makeMarks(time, staleMarkId);
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
 
-  await page.route('**/api/stocks/quote*', async route => {
+  await page.route('**/api/desk/hetty/quote*', async route => {
     const url = new URL(route.request().url());
     const instrumentId = url.searchParams.get('instrumentId');
     const side = (url.searchParams.get('side') as 'buy' | 'sell') ?? 'buy';

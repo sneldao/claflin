@@ -102,7 +102,7 @@ export function useTradingDesk() {
     dispatch({ type: 'request', requestId });
     const timeout = setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetchJson<unknown>(`/api/stocks/quote?${new URLSearchParams(intent)}`, { signal: controller.signal, cache: 'no-store' });
+      const response = await fetchJson<unknown>(`/api/desk/${deskId}/quote?${new URLSearchParams(intent)}`, { signal: controller.signal, cache: 'no-store' });
       if (requestGen.current !== gen || deskIdRef.current !== originDesk) return;
       if (!response.ok) throw new Error(response.error.message);
       let result;

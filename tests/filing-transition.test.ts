@@ -94,7 +94,7 @@ describe('mobile filing integration through actual buttons', () => {
 
     (globalThis as any).fetch = async (input: RequestInfo) => {
       const url = String(input);
-      if (url.includes('/api/stocks/quote')) return Response.json(makeQuote(intent, now), { status: 200 });
+      if (url.includes('/api/desk/') && url.includes('/quote')) return Response.json(makeQuote(intent, now), { status: 200 });
       return new Response('not found', { status: 404 });
     };
 
