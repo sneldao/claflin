@@ -44,13 +44,14 @@ export const AERODROME_MIXED_QUOTER: Address =
   '0xCd2A7D98e82D6107eac1828ce8DeAA6acB65b555';
 
 /**
- * Aerodrome: SlipStream Swap Router.
- * Verified 2026-09-09 on BaseScan as the active CL router
- * (exactInputSingle/exactOutput). The router derives the pool
- * from tokenIn, tokenOut, and tickSpacing using the default CL factory.
+ * Aerodrome: SlipStream Swap Router (Gauges V3).
+ * Verified 2026-09-09 on BaseScan as the active CL2 / newest-factory
+ * router (exactInputSingle/exactOutput). The 0xBE6D… router is the
+ * legacy Initial Slipstream router and routes through the legacy factory,
+ * so it cannot execute against the CL2 pools in the verified catalog.
  */
 export const AERODROME_SWAP_ROUTER: Address =
-  '0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5';
+  '0x698Cb2b6dd822994581fEa6eA4Fc755d1363A92F';
 
 /**
  * CL factory bitmasks OR'd into the path's int24 filler

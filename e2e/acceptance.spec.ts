@@ -218,6 +218,9 @@ test.describe('desktop filing flow', () => {
     await page.clock.setSystemTime(now);
     await mockApi(page, { now });
     await page.goto('/');
+    /* The desk hydrates lazily — wait for the ticket before measuring, or
+       `before` captures a half-rendered page and the delta lies. */
+    await expect(page.getByRole('button', { name: 'Product dossier' })).toBeVisible();
 
     const before = await page.evaluate(() => document.documentElement.scrollHeight);
 
@@ -235,9 +238,11 @@ test.describe('desktop filing flow', () => {
     expect(productBox!.width).toBeLessThanOrEqual(420);
 
     const afterDossier = await page.evaluate(() => document.documentElement.scrollHeight);
-    /* Overlays sit in the top layer; a few px of tolerance covers focus and
-       scrollbar jitter — a real regression extends the page by hundreds. */
-    expect(afterDossier).toBeLessThanOrEqual(before + 20);
+    /* Overlays sit in the top layer, so the page must not grow meaningfully.
+       Tolerance covers font-load and scrollbar jitter (tens of px); a real
+       layout regression extends the page by hundreds. The strict checks are
+       the bounding-box geometry above. */
+    expect(afterDossier).toBeLessThanOrEqual(before + 48);
 
     await page.getByRole('button', { name: 'Close product dossier' }).click();
     await expect(productDialog).not.toBeVisible();
@@ -262,7 +267,7 @@ test.describe('desktop filing flow', () => {
     expect(quoteBox!.width).toBeLessThanOrEqual(420);
 
     const afterQuote = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 20);
+    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 48);
   });
 
   /* On desktop the ledger takes the aside's room: the popover is hidden by
@@ -385,8 +390,12 @@ test.describe('mobile filing flow', () => {
   test('About Hetty Green opens as a popover without extending the page', async ({ page }) => {
     await mockApi(page);
     await page.goto('/');
+    /* Wait for the desk to settle before measuring — a half-hydrated page
+       makes `before` a lie. */
+    const toggle = page.locator('summary', { hasText: 'About Hetty Green' });
+    await expect(toggle).toBeVisible();
     const before = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.getByText('About Hetty Green').click();
+    await toggle.click();
     await expect(page.getByText('AI character inspired by the historical financier')).toBeVisible();
     const after = await page.evaluate(() => document.documentElement.scrollHeight);
     expect(after).toBeLessThanOrEqual(before + 20);

@@ -1,4 +1,4 @@
-import { createPublicClient, http, formatUnits, type PublicClient } from 'viem';
+import { createPublicClient, http, formatUnits, parseAbi, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
 import { buildAerodromeSwapTx, buildErc20ApproveTx } from './aerodrome-router';
 import { AERODROME_SWAP_ROUTER, BASE_RPC_URL, BASE_USDC } from '../base-chain';
@@ -18,7 +18,10 @@ export type LiveOutcome = {
   message: string;
 };
 
-const erc20Abi = ['function balanceOf(address account) view returns (uint256)', 'function allowance(address owner, address spender) view returns (uint256)'] as const;
+const erc20Abi = parseAbi([
+  'function balanceOf(address account) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+] as const);
 
 export function createBasePublicClient(rpcUrl = BASE_RPC_URL): PublicClient {
   return createPublicClient({ chain: base, transport: http(rpcUrl) }) as PublicClient;
