@@ -40,7 +40,12 @@ function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[nu
   </>;
 }
 
-export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+/**
+ * The ticket: the caller's own surface. A `spokenLine` — the caller's words
+ * captured live from the direct line — is captioned on the blotter so the
+ * instruction exists in writing too, not only in the room's air.
+ */
+export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -50,7 +55,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
   const quote = openedRecord?.quote ?? (foreground.kind === 'archive' || missing ? undefined : state.quote);
   const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? foreground.instrumentId ?? undefined));
   const review = useRef<HTMLHeadingElement | null>(null);
-  const previousFocus = useRef(`${state.stage}:${viewedRecordId ?? ''}`);
+  const previousFocus = useRef(`${state.stage}:${viewedRecordId ?? ''}:${foreground.kind}`);
   const recorded = foreground.kind === 'receipt' || foreground.kind === 'archive';
   const browsing = foreground.kind === 'archive' || missing;
   const pending = foreground.kind === 'pending';
@@ -105,6 +110,7 @@ export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnTyp
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
+    {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
     {browsing && (
       <div className={styles.slipActions}>

@@ -17,6 +17,7 @@ import { HouseDirectory } from './HouseDirectory';
 import { ClosedDesk } from './ClosedDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
+import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
@@ -56,9 +57,16 @@ export function WorkingDesk() {
   const auth = useDeskAuth();
   usePaperSync(desk);
   const [hettyLive, setHettyLive] = useState(false);
-  const handleLiveChange = useCallback((live: boolean) => setHettyLive(live), []);
+  // The caller's spoken words, captioned live on the blotter. Cleared when
+  // the line drops — the ticket returns to being the caller's own surface.
+  const [spoken, setSpoken] = useState<string | null>(null);
+  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) setSpoken(null); }, []);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
+  const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
   const tone = useRoomTone(hettyLive);
+  // One reference-marks fetch for the whole desk: the tape displays it, the
+  // working tray compares against it — a single honest reading of the room.
+  const marks = useReferenceMarks();
   const open = desk.open;
   const foreground = desk.foreground;
   const hasTray = open && desk.watched.length > 0;
@@ -198,10 +206,10 @@ export function WorkingDesk() {
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {open ? <TradeTicket desk={desk} spokenLine={spoken} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
-          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} />}
+          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
             <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
           </div>
@@ -218,9 +226,9 @@ export function WorkingDesk() {
       </div>
       {open && <div className={styles.tickerStation}>
         <TapeMachine />
-        <TickerTape onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+        <TickerTape marks={marks.result?.marks ?? []} failed={marks.failed} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       </div>}
-      {hasTray && <div id="on-desk"><DeskBoard desk={desk} /></div>}
+      {hasTray && <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? []} /></div>}
     </main>
     <footer className={styles.footer}>
       <span>YOUR INSTRUCTION. YOUR DECISION.</span>

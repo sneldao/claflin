@@ -1,13 +1,19 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { compactPaperEntry, formatRecordedTime, groupRecordsByDay, ledgerPreview } from '@/lib/trading/desk-documents';
+import { downloadLedger, type LedgerFormat } from '@/lib/trading/ledger-export';
 import { PaperHistory } from './PaperHistory';
 import styles from './WorkingDesk.module.css';
 
 export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { records, historyReady, storageError, loadHistory, focusedRecordId, openRecord, foreground } = desk;
+  const [exportNote, setExportNote] = useState<string | null>(null);
+  const takeCopy = (format: LedgerFormat) => {
+    const ok = downloadLedger(records, format);
+    setExportNote(ok ? 'A copy is in your downloads.' : 'The copy could not be made here.');
+  };
   if (!storageError && historyReady && records.length === 0) return null;
   const justFiledId = foreground.kind === 'receipt' ? foreground.recordId : null;
   const preview = ledgerPreview(records, focusedRecordId);
@@ -52,6 +58,11 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
         <details className={styles.ledgerArchive}>
           <summary>The archive</summary>
           <p className={styles.ledgerTrust}>Kept in this browser. Sign in copies records to your account; deleting here does not remove that copy.</p>
+          <div className={styles.ledgerExport} role="group" aria-label="Take a copy of the ledger">
+            <button type="button" onClick={() => takeCopy('csv')}>Take a copy (CSV)</button>
+            <button type="button" onClick={() => takeCopy('json')}>Take a copy (JSON)</button>
+          </div>
+          {exportNote && <p role="status" className={styles.ledgerMore}>{exportNote}</p>}
           <PaperHistory desk={desk} embedded />
         </details>
       )}

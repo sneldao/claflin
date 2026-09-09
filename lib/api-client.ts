@@ -75,8 +75,38 @@ export function computeBackoffDelay(attempt: number, baseMs = 400, maxMs = 8_000
   return Math.floor(rand() * ceiling);
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+function withSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new ApiError('timeout', friendlyMessageFor('timeout', 0)));
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => reject(new ApiError('timeout', friendlyMessageFor('timeout', 0)));
+    signal.addEventListener('abort', onAbort!, { once: true });
+  });
+  return Promise.race([promise, aborted]).finally(() => {
+    if (onAbort) signal.removeEventListener('abort', onAbort!);
+  });
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let onAbort: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort!);
+      resolve();
+    }, ms);
+    onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort!);
+      reject(new ApiError('timeout', friendlyMessageFor('timeout', 0)));
+    };
+    if (signal?.aborted) { onAbort!(); return; }
+    signal?.addEventListener('abort', onAbort!, { once: true });
+  });
+}
 
 export type ApiFetchOptions = {
   method?: string;
@@ -84,7 +114,7 @@ export type ApiFetchOptions = {
   body?: string;
   /** Abort signal from the caller (e.g. the desk's request controller). */
   signal?: AbortSignal;
-  /** Per-attempt timeout. Hung requests reject as `timeout` instead of spinning. */
+  /** Request deadline in milliseconds. Hung requests reject as `timeout` instead of spinning. */
   timeoutMs?: number;
   /** Extra attempts after the first. Defaults to 2 for idempotent methods, 0 for mutations. */
   retries?: number;
@@ -98,6 +128,12 @@ function readRetryAfter(response: Response): number | null {
   return header && /^\d+$/.test(header) ? Number(header) : null;
 }
 
+function abortControllerDeadline(ms: number): { controller: AbortController; signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { controller, signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
 /**
  * JSON fetch that resolves with parsed data on success and throws a typed
  * `ApiError` on every failure mode. GET/HEAD retry transient failures;
@@ -109,66 +145,82 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const retryBaseMs = options.retryBaseMs ?? 400;
   const retryMaxMs = options.retryMaxMs ?? 8_000;
   const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const timeoutController = options.timeoutMs ? new AbortController() : null;
-    const timer = timeoutController ? setTimeout(() => timeoutController.abort(), options.timeoutMs) : null;
-    if (options.signal && timeoutController) {
-      options.signal.addEventListener('abort', () => timeoutController.abort(), { once: true });
-    }
-    let response: Response;
-    try {
-      response = await fetchImpl(path, {
-        method,
-        headers: options.headers,
-        body: options.body,
-        signal: timeoutController?.signal ?? options.signal,
-        cache: 'no-store',
-      });
-    } catch (error) {
-      const typed = classifyFetchFailure(error);
-      const callerCancelled = Boolean(options.signal?.aborted);
-      if (typed.retryable && !callerCancelled && attempt < maxAttempts - 1) {
-        await sleep(computeBackoffDelay(attempt, retryBaseMs, retryMaxMs));
-        continue;
-      }
-      throw typed;
-    } finally {
-      if (timer) clearTimeout(timer);
-    }
-
-    if (!response.ok) {
-      const retryAfterSeconds = readRetryAfter(response);
-      let payload: { message?: unknown; error?: unknown } = {};
-      try { payload = (await response.json()) as { message?: unknown; error?: unknown }; } catch { /* HTML error page — generic copy below */ }
-      const serverMessage = typeof payload.message === 'string' && payload.message.length > 0 && payload.message.length <= 240
-        ? payload.message
-        : null;
-      const typed = new ApiError('http', serverMessage ?? friendlyMessageFor('http', response.status), {
-        status: response.status,
-        code: typeof payload.error === 'string' ? payload.error : null,
-        retryAfterSeconds,
-      });
-      if (typed.retryable && attempt < maxAttempts - 1) {
-        /* A rate-limited response names its own wait; never retry sooner. */
-        const delay = Math.max(computeBackoffDelay(attempt, retryBaseMs, retryMaxMs), (retryAfterSeconds ?? 0) * 1000);
-        await sleep(delay);
-        continue;
-      }
-      throw typed;
-    }
-
-    let body: unknown;
-    try {
-      body = await response.json();
-    } catch {
-      // A 2xx carrying HTML or empty text is a broken proxy, not data.
-      throw new ApiError('parse', friendlyMessageFor('parse', 0), { status: response.status });
-    }
-    return body as T;
+  if (options.signal?.aborted) {
+    throw new ApiError('timeout', friendlyMessageFor('timeout', 0));
   }
-  /* Unreachable: the loop either returns or throws on its last attempt. */
-  throw new ApiError('network', friendlyMessageFor('network', 0));
+
+  let deadline = timeoutMs > 0 ? abortControllerDeadline(timeoutMs) : null;
+  let cleanup = deadline ? () => { deadline!.clear(); } : () => {};
+  if (deadline && options.signal) {
+    const forward = () => deadline!.controller.abort();
+    options.signal.addEventListener('abort', forward, { once: true });
+    const baseClear = cleanup;
+    cleanup = () => { baseClear(); options.signal?.removeEventListener('abort', forward); };
+  }
+  const signal = deadline?.signal ?? options.signal ?? undefined;
+
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let response: Response;
+      try {
+        response = await fetchImpl(path, {
+          method,
+          headers: options.headers,
+          body: options.body,
+          signal,
+          cache: 'no-store',
+        });
+      } catch (error) {
+        const typed = classifyFetchFailure(error);
+        if (typed.retryable && signal && !signal.aborted && attempt < maxAttempts - 1) {
+          await sleep(computeBackoffDelay(attempt, retryBaseMs, retryMaxMs), signal);
+          continue;
+        }
+        throw typed;
+      }
+
+      if (!response.ok) {
+        const retryAfterSeconds = readRetryAfter(response);
+        let payload: { message?: unknown; error?: unknown } = {};
+        try {
+          payload = (await withSignal(response.json(), signal)) as { message?: unknown; error?: unknown };
+        } catch (error) {
+          if (error instanceof ApiError) throw error;
+          /* HTML error page — generic copy below */
+        }
+        const serverMessage = typeof payload.message === 'string' && payload.message.length > 0 && payload.message.length <= 240
+          ? payload.message
+          : null;
+        const typed = new ApiError('http', serverMessage ?? friendlyMessageFor('http', response.status), {
+          status: response.status,
+          code: typeof payload.error === 'string' ? payload.error : null,
+          retryAfterSeconds,
+        });
+        if (typed.retryable && signal && !signal.aborted && attempt < maxAttempts - 1) {
+          /* A rate-limited response names its own wait; never retry sooner. */
+          const delay = Math.max(computeBackoffDelay(attempt, retryBaseMs, retryMaxMs), (retryAfterSeconds ?? 0) * 1000);
+          await sleep(delay, signal);
+          continue;
+        }
+        throw typed;
+      }
+
+      try {
+        const body = await withSignal(response.json(), signal);
+        return body as T;
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        // A 2xx carrying HTML or empty text is a broken proxy, not data.
+        throw new ApiError('parse', friendlyMessageFor('parse', 0), { status: response.status });
+      }
+    }
+    /* Unreachable: the loop either returns or throws on its last attempt. */
+    throw new ApiError('network', friendlyMessageFor('network', 0));
+  } finally {
+    cleanup();
+  }
 }
 
 export type JsonResponse<T> = { ok: true; data: T } | { ok: false; error: ApiError };

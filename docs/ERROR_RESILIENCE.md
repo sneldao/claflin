@@ -43,10 +43,10 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
 
 ### 3. Resilient client (`lib/api-client.ts`)
 
-- `apiFetch()` — per-attempt timeout, jittered exponential backoff honoring
-  `Retry-After` on 429s, retries **only** idempotent GET/HEAD (never replay a
-  POST/payment), and a `fetchJson()` wrapper that resolves instead of throwing
-  for desk call sites.
+- `apiFetch()` — bounded request deadline covering fetch, body parsing and retry
+  waits, jittered exponential backoff honoring `Retry-After` on 429s, retries
+  **only** idempotent GET/HEAD (never replay a POST/payment), and a `fetchJson()`
+  wrapper that resolves instead of throwing for desk call sites.
 - `ApiError` — typed `kind` (`offline | network | timeout | http | parse`) +
   `friendlyMessage` in the Claflin broker-desk voice. Raw
   "Failed to fetch" and JSON-parse errors (`Unexpected token '<'`) never reach

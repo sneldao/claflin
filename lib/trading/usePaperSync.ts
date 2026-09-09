@@ -15,23 +15,31 @@ import type { useTradingDesk } from './useTradingDesk';
  * writes would otherwise trigger.
  */
 export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
-  const auth = useDeskAuth();
+  const { authenticated, getAccessToken, userId } = useDeskAuth();
+  const { deskId, historyReady, records } = desk;
   const pulled = useRef(false);
   const suppressNextPush = useRef(false);
   const lastPushedIds = useRef<string | null>(null);
+  const lastUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!auth.authenticated || pulled.current) return;
+    if (lastUserId.current !== userId) {
+      pulled.current = false;
+      lastPushedIds.current = null;
+      suppressNextPush.current = false;
+      lastUserId.current = userId;
+    }
+    if (!authenticated || pulled.current) return;
     pulled.current = true;
     (async () => {
       try {
-        const token = await auth.getAccessToken();
+        const token = await getAccessToken();
         if (!token) return;
         const res = await fetch('/api/paper', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
         if (!res.ok) return;
-        const { records } = (await res.json()) as { records: unknown[] };
+        const { records: pulledRecords } = (await res.json()) as { records: unknown[] };
         let added = 0;
-        try { added = mergePulledRecords(window.localStorage, records ?? [], desk.deskId); }
+        try { added = mergePulledRecords(window.localStorage, pulledRecords ?? [], deskId); }
         catch { /* storage unavailable — local history stands */ }
         if (added > 0) {
           suppressNextPush.current = true; // the next push would only echo the merge
@@ -39,31 +47,35 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
         }
       } catch { /* offline or unavailable — local history stands */ }
     })();
-  }, [auth.authenticated, auth.getAccessToken, desk.deskId]);
+  }, [authenticated, getAccessToken, userId, deskId]);
 
   useEffect(() => {
-    if (!auth.authenticated || !desk.historyReady || desk.records.length === 0) return;
+    if (lastUserId.current !== userId) {
+      lastUserId.current = userId;
+      lastPushedIds.current = null;
+    }
+    if (!authenticated || !historyReady || records.length === 0) return;
     if (suppressNextPush.current) {
       suppressNextPush.current = false;
-      lastPushedIds.current = recordsSignature(desk.records);
+      lastPushedIds.current = recordsSignature(records);
       return;
     }
-    const signature = recordsSignature(desk.records);
+    const signature = recordsSignature(records);
     if (signature === lastPushedIds.current) return; // same record set, nothing new to mirror
-    const records = desk.records;
     (async () => {
       try {
-        const token = await auth.getAccessToken();
+        const token = await getAccessToken();
         if (!token) return;
-        await fetch('/api/paper', {
+        const res = await fetch('/api/paper', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ records }),
         });
+        if (!res.ok) return; // failed backup will be retried on the next change
         lastPushedIds.current = signature;
       } catch { /* sync is best-effort; the next change retries */ }
     })();
-  }, [auth.authenticated, auth.getAccessToken, desk.historyReady, desk.records]);
+  }, [authenticated, getAccessToken, userId, historyReady, records]);
 }
 
 /** Cheap echo detector: a record's content is immutable per id in this desk, so the ordered id list identifies the set. */

@@ -1,42 +1,18 @@
 'use client';
 
-import { memo, useEffect, useState } from 'react';
-import type { DeskMark, MarksResult } from '@/lib/trading/marks-shared';
+import { memo } from 'react';
+import type { DeskMark } from '@/lib/trading/marks-shared';
 import { markPrice } from '@/lib/trading/marks-shared';
-import { fetchJson } from '@/lib/api-client';
 import styles from './WorkingDesk.module.css';
-
-const REFRESH_MS = 120_000;
 
 /**
  * The house tape — indicative Chainlink reference marks for the
  * quote-supported instruments. Clicking a mark loads that stock into the
- * ticket; the tape never displays executable prices.
+ * ticket; the tape never displays executable prices. Marks arrive from the
+ * desk's single shared fetch (WorkingDesk) so the tape and the tray always
+ * show the same reading.
  */
-export const TickerTape = memo(function TickerTape({ onSelect, disabled }: { onSelect: (instrumentId: string) => void; disabled?: boolean }) {
-  const [result, setResult] = useState<MarksResult | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const result = await fetchJson<MarksResult>('/api/stocks/marks');
-      if (cancelled) return;
-      if (result.ok) {
-        setResult(result.data);
-        setFailed(false);
-      } else {
-        // Keep the last good tape on screen through transient failures;
-        // only a cold failure (never had marks) shows the note.
-        setFailed(result.error.status === 0 || result.error.status >= 500 || result.error.status === 404);
-      }
-    };
-    void load();
-    const interval = setInterval(() => { if (!document.hidden) void load(); }, REFRESH_MS);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
-
-  const marks = result?.marks ?? [];
+export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, disabled }: { marks: DeskMark[]; failed: boolean; onSelect: (instrumentId: string) => void; disabled?: boolean }) {
 
   return (
     <div className={styles.tape} role="region" aria-label="Indicative reference marks">

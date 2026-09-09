@@ -35,7 +35,7 @@ type HettyTools = {
   share_desk_note: () => ToolResult;
 };
 
-function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (live: boolean) => void }) {
+function HettyCallInner({ desk, onLiveChange, onUserSpoken }: { desk: Desk; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void }) {
   const deskRef = useRef(desk);
   useEffect(() => { deskRef.current = desk; });
 
@@ -188,7 +188,11 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
     onMessage: (m: { message: string; role?: string; source?: string }) => {
       const text = typeof m.message === 'string' ? m.message.trim() : '';
       if (!text) return;
-      turnsRef.current.push({ role: (m.role === 'user' || m.source === 'user') ? 'user' : 'agent', text: text.slice(0, 4000), at: Date.now() });
+      const user = m.role === 'user' || m.source === 'user';
+      turnsRef.current.push({ role: user ? 'user' : 'agent', text: text.slice(0, 4000), at: Date.now() });
+      // Live caption of the caller's own words — the direct line made visible
+      // on the ticket for noisy rooms and for clients who cannot hear.
+      if (user && text.length <= 300) onUserSpoken?.(text);
     },
     onConversationMetadata: (m: { conversation_id?: string }) => { convIdRef.current = m?.conversation_id ?? null; },
     onConnect: () => {
@@ -276,10 +280,10 @@ function HettyCallInner({ desk, onLiveChange }: { desk: Desk; onLiveChange: (liv
   );
 }
 
-export const HettyCall = memo(function HettyCall({ desk, onLiveChange }: { desk: Desk; onLiveChange: (live: boolean) => void }) {
+export const HettyCall = memo(function HettyCall({ desk, onLiveChange, onUserSpoken }: { desk: Desk; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void }) {
   return (
     <ConversationProvider>
-      <HettyCallInner desk={desk} onLiveChange={onLiveChange} />
+      <HettyCallInner desk={desk} onLiveChange={onLiveChange} onUserSpoken={onUserSpoken} />
     </ConversationProvider>
   );
 });

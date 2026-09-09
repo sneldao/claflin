@@ -988,6 +988,24 @@
 .receiptTools > div { display: flex; flex-direction: column; align-items: flex-start; padding: 8px 0; }
 .receiptTools .secondary { min-height: 36px; padding-block: 8px; }
 .shareFeedback { color: var(--desk-paper-muted); font-size: 11px; line-height: 1.6; }
+
+/* ————— Spoken line — the caller's words on the blotter ————— */
+.spokenLine { margin: 10px 0 0 !important; padding: 10px 12px; border-left: 2px solid var(--desk-brass-dim); color: var(--desk-paper-muted); font-size: 12px; line-height: 1.6; }
+.spokenLine em { color: var(--desk-ink); font-style: italic; }
+
+/* ————— Working tray: since-you-last-sat-down deltas ————— */
+.boardSince { margin: 10px 0 0 !important; color: var(--desk-muted); font-size: 11px; line-height: 1.6; }
+.boardRef { color: var(--desk-paper-muted); font-size: 11px; line-height: 1.5; }
+.boardDelta { font: 11px/1.4 var(--font-mono), monospace; letter-spacing: .04em; }
+.boardDelta[data-direction="up"] { color: #8fae8a; }
+.boardDelta[data-direction="down"] { color: #c98f7a; }
+.boardFoot { margin: 12px 0 0 !important; color: var(--desk-file-paper); font-size: 11px; line-height: 1.6; max-width: 48ch; }
+
+/* ————— Ledger export ————— */
+.ledgerExport { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 0; }
+.ledgerExport button { border: 1px solid var(--desk-brass-dim); color: var(--desk-brass); background: transparent; padding: 10px 12px; min-height: 44px; font-size: 12px; }
+.ledgerExport button:hover { border-color: var(--desk-brass); }
+
 @media (max-width: 1050px) {
   .quoteExchange > div { grid-template-columns: minmax(0, 1fr); gap: 4px; padding-block: 8px; }
   .quoteExchange dd { text-align: left; font-size: 24px; }

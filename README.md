@@ -50,8 +50,9 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
 | Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
 | Thin HTTP boundary | `lib/trading/http.ts`, `lib/api-client.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
-| Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts` |
+| Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
+| Delight: spoken-line caption, since-last-visit tray deltas, ledger export | `lib/trading/tray-deltas.ts`, `lib/trading/ledger-export.ts` (wired in `WorkingDesk.tsx`, `DeskBoard.tsx`, `TradeTicket.tsx`, `PaperLedger.tsx`) |
 | Optional account, paper backup, transcript write | `components/auth/AuthProvider.tsx`, `lib/auth.ts`, `lib/trading/usePaperSync.ts`, `app/api/paper/route.ts`, `app/api/hetty/transcript/route.ts` |
 | Voice session | `components/desk/HettyCall.tsx`, `lib/trading/voice-tools.ts`, `lib/desk-notes.ts`, `app/api/hetty/session/route.ts` |
 | Eligibility check (source only; not a paper-desk surface) | `lib/eligibility.ts`, `app/api/eligibility/route.ts` |

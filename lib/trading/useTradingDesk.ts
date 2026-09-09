@@ -153,8 +153,15 @@ export function useTradingDesk() {
   }, []);
 
   const dismissRecord = useCallback(() => {
+    const gone = viewedRecordId && !records.find(record => record.id === viewedRecordId);
+    if (gone && state.quote?.id === viewedRecordId) {
+      request.current?.abort();
+      requestGen.current += 1;
+      setError(null);
+      dispatch({ type: 'edit', draft: emptyDraft() });
+    }
     setViewedRecordId(null);
-  }, []);
+  }, [records, state.quote?.id, viewedRecordId]);
 
   const removeRecord = useCallback((id: string) => {
     try {

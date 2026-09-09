@@ -39,7 +39,14 @@ export async function GET(): Promise<Response> {
     // Refresh failed. Serve the last known tape with degraded headers,
     // or an honest JSON 503 when there has never been one.
     if (cached && Date.now() - cached.at < STALE_LIMIT_MS) {
-      return Response.json(cached.body, {
+      const staleBody: MarksResult = {
+        ...cached.body,
+        marks: cached.body.marks.map(mark => ({
+          ...mark,
+          reference: { ...mark.reference, status: mark.reference.status === 'observed' ? 'stale' : mark.reference.status },
+        })),
+      };
+      return Response.json(staleBody, {
         status: 200,
         headers: { ...headers, 'X-Marks-Stale': 'true', Age: String(Math.floor((Date.now() - cached.at) / 1000)) },
       });

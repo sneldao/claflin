@@ -42,6 +42,7 @@ export function proxy(request: NextRequest) {
     '/api/hetty/transcript',
     '/api/paper',
     '/api/eligibility',
+    '/api/webhooks/elevenlabs',
   ].some(path => route === path || route.startsWith(`${path}/`));
   if (!hasRouteHandler) {
     return applyCorsHeaders(
