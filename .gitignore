@@ -55,6 +55,10 @@ dump.rdb
 # Backups
 /backups/
 
+# Playwright
+/test-results/
+/playwright-report/
+
 .junie
 .kilocode
 .blackboxcli/
