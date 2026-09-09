@@ -147,8 +147,10 @@ describe('one canonical house', () => {
     const call = source('components/desk/HettyCall.tsx');
     assert.match(call, /fetchJson<\{ signedUrl\?: string \}>\('\/api\/hetty\/session'/);
     assert.doesNotMatch(call, /await response\.json\(\)/);
+    const marksHook = source('lib/trading/useReferenceMarks.ts');
+    assert.match(marksHook, /fetchJson<MarksResult>\('\/api\/stocks\/marks'\)/);
     const tape = source('components/desk/TickerTape.tsx');
-    assert.match(tape, /fetchJson<MarksResult>\('\/api\/stocks\/marks'\)/);
+    assert.doesNotMatch(tape, /fetchJson|fetch\(/, 'the tape consumes the shared marks fetch rather than fetching its own');
     const desk = source('lib/trading/useTradingDesk.ts');
     assert.match(desk, /fetchJson<unknown>\(`\/api\/stocks\/quote/);
     const proxy = source('proxy.ts');
@@ -167,6 +169,7 @@ describe('one canonical house', () => {
     for (const path of ['/api/agents', '/api/agents/', '/api/agents/general_helper', '/api/sdk/register', '/api/ratings']) assert.equal(isRetiredMarketplaceApi(path), true);
     for (const path of ['/api/stocks/quote', '/api/webhooks/elevenlabs', '/api/payments/settle', '/api/agentship']) assert.equal(isRetiredMarketplaceApi(path), false);
     assert.match(source('proxy.ts'), /isRetiredMarketplaceApi/);
+    assert.match(source('proxy.ts'), /'\/api\/webhooks\/elevenlabs'/);
   });
   it('aligns metadata, manifest, and error copy without fabricated call state', () => {
     assert.match(source('app/layout.tsx'), /HOUSE.title/);

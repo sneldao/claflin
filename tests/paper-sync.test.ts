@@ -1,9 +1,14 @@
-import { describe, it } from 'node:test';
+import './jsdom-setup';
+import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { mergePulledRecords, type PaperRecord, type PaperStorage } from '../lib/trading/paper-records';
+import { createElement, useState, act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { usePaperSync } from '../lib/trading/usePaperSync';
+import { DeskAuthContext } from '../components/auth/AuthProvider';
+import { resetContainer, getRootElement } from './jsdom-setup';
 
 const now = 1788600000000;
 const stock = DESK_INSTRUMENTS[0];
@@ -115,35 +120,99 @@ describe('merging pulled account records into the browser', () => {
   });
 });
 
-describe('usePaperSync echo contract', () => {
-  const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-  const hook = source('lib/trading/usePaperSync.ts');
+describe('usePaperSync behavior', () => {
+  type FetchRequest = { url: string; method?: string };
+  let requests: FetchRequest[] = [];
+  let root: Root | null = null;
 
-  it('merges through the validated record layer, not raw localStorage writes', () => {
-    assert.match(hook, /mergePulledRecords\(window\.localStorage/);
-    assert.doesNotMatch(hook, /localStorage\.setItem/);
+  function mockFetch() {
+    requests = [];
+    (globalThis as any).fetch = async (input: RequestInfo, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      requests.push({ url, method });
+      if (url.includes('/api/paper') && method === 'POST') {
+        const postCount = requests.filter(r => r.url.includes('/api/paper') && r.method === 'POST').length;
+        if (postCount === 1) return new Response('Service Unavailable', { status: 503 });
+        return new Response(null, { status: 200 });
+      }
+      if (url.includes('/api/paper')) return new Response(JSON.stringify({ records: [] }), { status: 200 });
+      return new Response(null, { status: 404 });
+    };
+  }
+
+  beforeEach(() => {
+    resetContainer();
+    mockFetch();
+    window.localStorage.clear();
   });
-  it('reloads the desk only when the merge actually changed storage', () => {
-    assert.match(hook, /if \(added > 0\) \{[\s\S]*?window\.dispatchEvent\(new Event\('storage'\)\);/);
-    assert.ok(hook.indexOf('if (added > 0) {') < hook.indexOf("dispatchEvent(new Event('storage'))"), 'the dispatch must be gated on the merge count');
+
+  afterEach(async () => {
+    if (root) { await act(async () => root!.unmount()); root = null; }
   });
-  it('suppresses exactly the one push the merge would echo, then re-arms', () => {
-    assert.equal(hook.match(/suppressNextPush\.current = true;/g)?.length, 1, 'set only after a real merge');
-    assert.equal(hook.match(/suppressNextPush\.current = false;/g)?.length, 1, 'consumed once by the next push run');
+
+  function Harness({ initialRecords }: { initialRecords: PaperRecord[] }) {
+    const [records, setRecords] = useState(initialRecords);
+    const desk = { deskId: 'hetty', historyReady: true, records };
+    usePaperSync(desk as any);
+    return createElement('div', null,
+      createElement('button', { type: 'button', id: 'add', onClick: () => setRecords(prev => [...prev, record(String.fromCharCode(97 + prev.length))]) }, 'Add'),
+      createElement('button', { type: 'button', id: 'same', onClick: () => setRecords(prev => [...prev]) }, 'Same'),
+    );
+  }
+
+  const authValue = {
+    enabled: false, ready: true, authenticated: true, userId: 'u1', label: null, walletAddress: null,
+    linkWallet: () => {}, login: () => {}, logout: () => {}, getAccessToken: async () => 'token',
+  };
+
+  async function renderHarness(initialRecords: PaperRecord[]) {
+    root = createRoot(getRootElement());
+    await act(async () => root.render(
+      createElement(DeskAuthContext.Provider, { value: authValue },
+        createElement(Harness, { initialRecords }),
+      ),
+    ));
+  }
+
+  async function flush() {
+    await act(async () => {});
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+
+  async function click(id: string) {
+    await act(async () => { document.getElementById(id)!.click(); });
+    await flush();
+  }
+
+  it('pushes nothing while signed out', async () => {
+    const signedOutValue = { ...authValue, authenticated: false, getAccessToken: async () => null };
+    root = createRoot(getRootElement());
+    await act(async () => root.render(
+      createElement(DeskAuthContext.Provider, { value: signedOutValue },
+        createElement(Harness, { initialRecords: [record('a')] }),
+      ),
+    ));
+    await flush();
+    assert.equal(requests.filter(r => r.url.includes('/api/paper') && r.method === 'POST').length, 0);
   });
-  it('skips pushes whose record set is unchanged, by content not identity', () => {
-    assert.match(hook, /function recordsSignature/);
-    assert.match(hook, /signature === lastPushedIds\.current\)\s*\n?\s*return;/);
-  });
-  it('respects Retry-After when auto-retrying a rate-limited request', () => {
-    const client = source('lib/api-client.ts');
-    assert.match(client, /Math\.max\(computeBackoffDelay\([^)]*\), \(retryAfterSeconds \?\? 0\) \* 1000\)/);
-  });
-  it('marks the pushed set only after the server accepts it', () => {
-    const pushBody = hook.slice(hook.indexOf("method: 'POST'"));
-    assert.ok(pushBody.indexOf('lastPushedIds.current = signature') > pushBody.indexOf("await fetch('/api/paper'"));
-  });
-  it('still pushes nothing when signed out', () => {
-    assert.match(hook, /if \(!auth\.authenticated[^)]*\) return;/);
+
+  it('marks the pushed set only after the server accepts it and retries on the next change', async () => {
+    await renderHarness([]);
+    await flush();
+    const postRequests = () => requests.filter(r => r.url.includes('/api/paper') && r.method === 'POST');
+    assert.equal(postRequests().length, 0, 'no records to push yet');
+
+    await click('add');
+    assert.equal(postRequests().length, 1, 'first push attempt');
+    assert.equal(postRequests()[0].url, '/api/paper');
+    assert.equal(postRequests()[0].method, 'POST');
+
+    await click('add');
+    assert.equal(postRequests().length, 2, 'failed backup is retried on the next change');
+    assert.equal(postRequests()[1].method, 'POST');
+
+    await click('same');
+    assert.equal(postRequests().length, 2, 'same record set is not pushed again after success');
   });
 });

@@ -175,4 +175,38 @@ describe('apiFetch', () => {
     assert.ok(err instanceof ApiError);
     assert.equal((err as ApiError).kind, 'parse');
   });
+
+  it('times out a slow body read, not just slow headers', async () => {
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: () => new Promise(resolve => setTimeout(() => resolve({ ok: true }), 50)),
+    } as unknown as Response);
+    const start = Date.now();
+    const err = await apiFetch('/api/agents', { fetchImpl, timeoutMs: 10, retries: 0 })
+      .then(() => null, (e: unknown) => e);
+    const elapsed = Date.now() - start;
+    assert.ok(err instanceof ApiError);
+    assert.equal((err as ApiError).kind, 'timeout');
+    assert.ok(elapsed < 30, 'timeout should fire before the body finishes');
+  });
+
+  it('aborts a Retry-After wait when the caller cancels', async () => {
+    const fetchImpl = async () => ({
+      ok: false,
+      status: 429,
+      headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '1' : null) },
+      json: async () => ({ error: 'rate_limited' }),
+    } as unknown as Response);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10);
+    const start = Date.now();
+    const err = await apiFetch('/api/agents', { fetchImpl, signal: controller.signal, retryBaseMs: 1, timeoutMs: 60_000 })
+      .then(() => null, (e: unknown) => e);
+    const elapsed = Date.now() - start;
+    assert.ok(err instanceof ApiError);
+    assert.equal((err as ApiError).kind, 'timeout');
+    assert.ok(elapsed < 100, 'cancellation must break the Retry-After wait');
+  });
 });
