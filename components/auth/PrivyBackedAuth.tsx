@@ -37,7 +37,7 @@ export default function PrivyBackedAuth({ children }: { children: React.ReactNod
   return (
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
-      clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID!}
+      clientId={process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID}
       config={{
         loginMethods: ['email', 'google', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#c9a961' },

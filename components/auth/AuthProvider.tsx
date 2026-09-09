@@ -48,7 +48,7 @@ export const DeskAuthContext = createContext<DeskAuth>(ANON);
 const PrivyBackedAuth = dynamic(() => import('./PrivyBackedAuth'), { ssr: false });
 
 export function DeskAuthProvider({ children }: { children: React.ReactNode }) {
-  const enabled = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID && process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID);
+  const enabled = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
   if (!enabled) {
     return <DeskAuthContext.Provider value={ANON}>{children}</DeskAuthContext.Provider>;
   }

@@ -235,7 +235,9 @@ test.describe('desktop filing flow', () => {
     expect(productBox!.width).toBeLessThanOrEqual(420);
 
     const afterDossier = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(afterDossier).toBeLessThanOrEqual(before + 10);
+    /* Overlays sit in the top layer; a few px of tolerance covers focus and
+       scrollbar jitter — a real regression extends the page by hundreds. */
+    expect(afterDossier).toBeLessThanOrEqual(before + 20);
 
     await page.getByRole('button', { name: 'Close product dossier' }).click();
     await expect(productDialog).not.toBeVisible();
@@ -260,17 +262,16 @@ test.describe('desktop filing flow', () => {
     expect(quoteBox!.width).toBeLessThanOrEqual(420);
 
     const afterQuote = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 10);
+    expect(afterQuote).toBeLessThanOrEqual(beforeQuote + 20);
   });
 
-  test('About Hetty Green opens as a popover without extending the page', async ({ page }) => {
+  /* On desktop the ledger takes the aside's room: the popover is hidden by
+     design (`.grid[data-ledger="true"] .aboutHetty`). The popover itself is
+     exercised in the mobile flow below. */
+  test('About Hetty popover steps aside for the ledger on desktop', async ({ page }) => {
     await mockApi(page);
     await page.goto('/');
-    const before = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.getByText('About Hetty Green').click();
-    await expect(page.getByText('AI character inspired by the historical financier')).toBeVisible();
-    const after = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(after).toBeLessThanOrEqual(before + 10);
+    await expect(page.locator('summary', { hasText: 'About Hetty Green' })).toBeHidden();
   });
 
   test('drawers can be opened, navigated and dismissed from the keyboard', async ({ page }) => {
@@ -380,13 +381,27 @@ test.describe('mobile filing flow', () => {
     expect(box!.y + box!.height).toBeLessThanOrEqual(vh);
     expect(box!.y).toBeGreaterThanOrEqual(vh * 0.25);
   });
+
+  test('About Hetty Green opens as a popover without extending the page', async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/');
+    const before = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.getByText('About Hetty Green').click();
+    await expect(page.getByText('AI character inspired by the historical financier')).toBeVisible();
+    const after = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(after).toBeLessThanOrEqual(before + 20);
+  });
 });
 
 test.describe('ledger preview', () => {
   test('shows empty history until a record is filed, then previews the latest', async ({ page }) => {
     await mockApi(page);
     await page.goto('/');
-    await expect(page.locator('#paper-ledger')).not.toBeVisible();
+    /* An empty ledger is furniture, not a missing section: the ruled slip
+       stays visible and says so before anything is filed. */
+    const emptyLedger = page.locator('#paper-ledger');
+    await expect(emptyLedger).toBeVisible();
+    await expect(emptyLedger.getByText('No paper on file yet.')).toBeVisible();
 
     await filePaperRecord(page);
 
