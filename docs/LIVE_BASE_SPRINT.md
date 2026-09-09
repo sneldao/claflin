@@ -7,19 +7,23 @@
 ## Current status (2026-09-09)
 
 - **Track A — verified router + call builder: DONE.**
-  - `AERODROME_SWAP_ROUTER` confirmed as `0xBE6D8f0d05cC4be24d5167a3eF062215bE6D18a5`.
+  - `AERODROME_SWAP_ROUTER` is `0x698Cb2b6dd822994581fEa6eA4Fc755d1363A92F` (Gauges V3 / newest CL2 factory).
+  - The legacy `0xBE6D…` initial Slipstream router was verified to only route the legacy factory; it reverted on `exactInputSingle` for the CL2 stock pools.
   - `lib/trading/aerodrome-router.ts` builds `exactInputSingle` and ERC-20 `approve` calldata.
-  - Unit tests pass (known selector + round-trip decode).
+  - Unit tests pass.
 - **Track B — client signer + execution: DONE.**
   - `useDeskAuth` exposes `sendTransaction` via Privy's `useSendTransaction`.
   - `lib/trading/execute-swap.ts` reads allowance/balance, sends approval if needed, executes swap, and waits for receipt.
   - `lib/trading/useDeskExecution.ts` React hook for the ticket.
 - **Track C — UI / mode gate: DONE.**
-  - `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED` env gate in `lib/trading/domain.ts`.
-  - `TradeTicket` shows slippage selector and `Execute on Base` / `Approve and execute on Base` button.
-  - Live copy and assumptions shown when the gate is on.
-  - Outcome status + BaseScan link rendered after broadcast.
-- **Remaining:** real mainnet smoke test, then the Loom.
+  - `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED` env gate.
+  - `TradeTicket` shows slippage selector and two-step `Approve` / `Execute on Base`.
+  - Live copy, wallet banner, outcome stamp, and BaseScan link.
+- **Mainnet smoke test: PASSED.**
+  - Tx `0x4877…3bf8775`
+  - Wallet `0x7c57…d64b` bought `0.00030199 GOOGLc` for `0.10 USDC` on Base.
+  - Status: `filled`.
+- **Remaining:** record the Loom demo.
 
 ## How to enable live mode locally
 
@@ -44,19 +48,38 @@ npx tsx scripts/test-aerodrome-swap.ts
 
 This fetches a real quote, approves if needed, and executes the swap. Watch the BaseScan link it prints.
 
+## Mainnet smoke-test result
+
+| Field | Value |
+|-------|-------|
+| Instrument | GOOGLc |
+| Side | buy |
+| Input | 0.10 USDC |
+| Output | 0.00030199 GOOGLc |
+| Tx hash | `0x4877…3bf8775` |
+| Wallet | `0x7c57…d64b` |
+| Router | `0x698C…3A92F` |
+| Outcome | `filled` |
+
+## Known gotchas fixed during the sprint
+
+1. **ERC-20 ABI shape.** `viem` `readContract` requires a parsed `Abi`, not a `string[]`. `lib/trading/execute-swap.ts` now uses `parseAbi([...])`.
+2. **Wrong router for the verified pools.** The legacy `0xBE6D…` SlipStream router defaults to the initial CL factory. The four verified stock pools live on the newest CL2 factory, so swaps through the legacy router revert. The active router is `0x698C…`.
+3. **Privy app secret exposure.** `NEXT_PUBLIC_PRIVY_CLIENT_ID` must not be the app secret. The app secret is server-only and should never be `NEXT_PUBLIC_`. The client only needs `NEXT_PUBLIC_PRIVY_APP_ID` (and an optional real client ID if you have one).
+
 ## Files that changed
 
-- `lib/base-chain.ts` — verified router comment.
-- `lib/trading/catalog.ts` — `getQuotePairByPoolAddress` helper.
+- `lib/base-chain.ts` — active `AERODROME_SWAP_ROUTER` set to the CL2 Gauges V3 router.
+- `lib/trading/catalog.ts` — `getInstrumentAndPairByPoolAddress` helper.
 - `lib/trading/aerodrome-router.ts` — new swap/approve call builder.
 - `tests/aerodrome-router.test.ts` — new unit tests.
-- `lib/trading/execute-swap.ts` — new live execution flow.
+- `lib/trading/execute-swap.ts` — live execution flow, gas estimation, parsed ERC-20 ABI.
 - `lib/trading/useDeskExecution.ts` — new React hook.
 - `components/auth/AuthProvider.tsx` / `PrivyBackedAuth.tsx` — `sendTransaction` exposure.
 - `lib/trading/domain.ts` — `LIVE_ASSUMPTIONS` and `LIVE_EXECUTION_ENABLED` gate.
 - `lib/trading/quotes.ts` — live assumptions when gate is on.
 - `lib/trading/workflow.ts` — accepts both paper and live assumptions in the schema.
-- `components/desk/TradeTicket.tsx` — `LiveExecution` component and live boundary copy.
+- `components/desk/TradeTicket.tsx` / `WorkingDesk.tsx` / `WorkingDesk.module.css` — live execution UI, banner, stamp, gas display.
 - `scripts/test-aerodrome-swap.ts` — manual mainnet test.
 
 ## Original state of the foundation
@@ -71,9 +94,9 @@ This fetches a real quote, approves if needed, and executes the swap. Watch the 
 
 - [x] Real quote from Base mainnet.
 - [x] Wallet connects and shows address.
-- [ ] Eligibility check passes for the test wallet (run `/api/eligibility?address=0x...`).
+- [ ] Eligibility check passes for the test wallet (run `/api/eligibility?address=0x...`) — not yet verified.
 - [x] USDC approval is client-signed and confirmed.
-- [x] Swap is client-signed and confirmed on Base mainnet (verify with `scripts/test-aerodrome-swap.ts`).
+- [x] Swap is client-signed and confirmed on Base mainnet.
 - [x] Tx hash is shown and verifiable on basescan.org.
 - [x] UI clearly says “live” vs “paper.”
 - [ ] Loom demo records the entire flow end-to-end.
