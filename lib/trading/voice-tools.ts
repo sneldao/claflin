@@ -99,8 +99,7 @@ export function deskNoteSpokenLine(deskId: HouseDeskId, date = new Date()): stri
   return `The desk's note for today: ${note.text}${source}. An observation from the house, not advice.`;
 }
 
-function speakForegroundLine(state: DeskState, foreground: ForegroundDocument, records: PaperRecord[]): string {
-  if (foreground.kind === 'missing') return RECORD_UNAVAILABLE;
+function speakForegroundLine(state: DeskState, foreground: ForegroundDocument, records: PaperRecord[]): string {  if (foreground.kind === 'missing') return RECORD_UNAVAILABLE;
   if (foreground.kind === 'archive') {
     const record = records.find(item => item.id === foreground.recordId);
     if (!record) return RECORD_UNAVAILABLE;
@@ -126,4 +125,101 @@ function speakDeskDocument(state: DeskState, foreground: ForegroundDocument): st
   if (state.stage === 'cancelled') parts.push('The client decided not to record. Nothing was filed.');
   if (foreground.kind === 'pending') parts.push('A venue estimate is on its way.');
   return parts.join(' ');
+}
+
+/**
+ * Context-aware opening: recognition before interrogation. The line arrives
+ * already aware of the foreground document — never a generic "what do you
+ * want to trade" when a draft, quotation or filed record is on the desk.
+ * No invented familiarity; only what the desk actually holds.
+ */
+function shortCompany(name: string): string {
+  const head = name.split(',')[0].trim();
+  return head.replace(/\s+(Inc\.?|Corporation|Incorporated|Company|Global|Group|Internet).*$/i, '').trim() || head;
+}
+
+export function hettyOpeningLine(state: DeskState, foreground: ForegroundDocument): string {
+  if (foreground.kind === 'missing') {
+    return 'Claflin, Hetty speaking. That record is no longer here. Shall we return to the instruction?';
+  }
+  if (foreground.kind === 'archive' || foreground.kind === 'receipt') {
+    return 'Claflin, Hetty speaking. You are looking at a filed paper record. Shall we go through it?';
+  }
+  if (foreground.kind === 'pending') {
+    return 'Claflin, Hetty speaking. An estimate is on its way. Shall we wait for it together?';
+  }
+  if (foreground.kind === 'quotation') {
+    return 'Claflin, Hetty speaking. Your quotation is on the slip. What would you like to clarify?';
+  }
+  const draft = state.draft;
+  const instrument = draft.instrumentId
+    ? DESK_INSTRUMENTS.find(item => item.id === draft.instrumentId)
+    : undefined;
+  const company = instrument ? shortCompany(instrument.name) : null;
+  const article = company && /^[aeiou]/i.test(company) ? 'an' : 'a';
+  if (instrument && draft.amount) {
+    return `Claflin, Hetty speaking. You have ${article} ${company} instruction here — ${draft.side} ${draft.amount} ${draft.unit}. Shall we check the estimate?`;
+  }
+  if (instrument) {
+    return `Claflin, Hetty speaking. You have ${company} on the ticket. What amount shall we put down?`;
+  }
+  if (draft.amount) {
+    return `Claflin, Hetty speaking. You have ${draft.side} ${draft.amount} ${draft.unit} on the ticket. Which mark shall we put it on?`;
+  }
+  return 'Claflin, Hetty speaking. Paper desk — nothing moves onchain. What would you like to put on the ticket?';
+}
+
+/** One written line for what the voice just applied to the ticket. Distinct
+ *  from what was heard and what was said: a recognised utterance is not proof
+ *  an instruction was resolved. */
+export function appliedTicketLine(state: DeskState, foreground: ForegroundDocument): string | null {
+  if (foreground.kind === 'archive' || foreground.kind === 'missing') return null;
+  if (foreground.kind === 'quotation' && state.quote) {
+    const quote = state.quote;
+    return `On the ticket: ${quote.intent.side} ${quote.inputAmount} ${quote.inputSymbol} → ${quote.outputAmount} ${quote.outputSymbol} under review.`;
+  }
+  const draft = state.draft;
+  if (!draft.instrumentId && !draft.amount) return null;
+  const symbol = DESK_INSTRUMENTS.find(item => item.id === draft.instrumentId)?.symbol ?? '—';
+  const detail = draft.amount ? `${draft.side} ${draft.amount} ${draft.unit}` : `${draft.side} — amount missing`;
+  return `On the ticket: ${symbol} · ${detail}.`;
+}
+
+/**
+ * How the call finished, according to the work — not the connection.
+ * Filed, unfinished, declined, or dropped with the document state kept clear.
+ */
+export function hettyClosingLine(
+  state: DeskState,
+  foreground: ForegroundDocument,
+  reason: 'ended' | 'dropped',
+): string {
+  if (reason === 'dropped') {
+    if (foreground.kind === 'quotation') {
+      return 'The line dropped. Your quotation is still on the slip — nothing was filed.';
+    }
+    if (state.stage === 'saved' || foreground.kind === 'receipt') {
+      return 'The line dropped. Your trade is filed in the paper ledger — no funds moved.';
+    }
+    if (foreground.kind === 'archive') {
+      return 'The line dropped. The filed record is unchanged.';
+    }
+    if (state.draft.instrumentId || state.draft.amount) {
+      return 'The line dropped. Your draft is still on the desk.';
+    }
+    return 'The line dropped. Nothing was changed on the desk.';
+  }
+  if (state.stage === 'saved' || foreground.kind === 'receipt') {
+    return 'It is in your paper ledger. No funds moved.';
+  }
+  if (foreground.kind === 'archive') {
+    return 'The filed record is unchanged. Nothing was filed today.';
+  }
+  if (state.stage === 'cancelled') {
+    return 'Nothing was filed.';
+  }
+  if (state.draft.instrumentId || state.draft.amount || foreground.kind === 'quotation' || foreground.kind === 'pending') {
+    return 'The draft is still on your desk.';
+  }
+  return 'Nothing was filed. The desk is as you left it.';
 }

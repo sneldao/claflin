@@ -607,6 +607,23 @@
 .callButton:disabled { opacity: .55; }
 .callButton:disabled::after { content: none; }
 .callFoot { max-width: 340px; margin-top: 12px !important; font-size: 10px; line-height: 1.6; color: var(--desk-muted); }
+/* The line as a way to work at the desk: once connected the strip stays
+   within reach while the ticket or ledger is inspected — compact, sticky,
+   never a scroll away. */
+.call[data-live="true"] { position: sticky; top: 12px; z-index: 6; }
+.call[data-state="review"] .callActions { border-left: 2px solid var(--desk-brass); padding-left: 12px; }
+/* Two-sided captions: what was heard, what was said, what was applied.
+   A recognised utterance is not proof an instruction was resolved. */
+.callCaptions { margin-top: 14px; max-width: 360px; display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--desk-line); background: #0c181466; }
+.captionLine { margin: 0 !important; font-size: 12px; line-height: 1.65; color: var(--desk-muted); }
+.captionLine > span { display: block; font: 8px/1.6 var(--font-mono), monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--desk-brass-dim); }
+.captionLine[data-voice="hetty"] { color: var(--desk-ink); }
+.captionApplied { margin: 0 !important; font: 11px/1.6 var(--font-mono), monospace; color: var(--desk-brass); border-top: 1px dashed var(--desk-line); padding-top: 8px; }
+.captionHistory { font-size: 11px; color: var(--desk-muted); }
+.captionHistory summary { min-height: 32px; padding: 6px 0; cursor: pointer; color: var(--desk-brass); }
+.captionHistory ol { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; max-height: 220px; overflow: auto; }
+.captionHistory li > span { color: var(--desk-brass-dim); font-family: var(--font-mono), monospace; font-size: 10px; }
+.callEnded { margin-top: 14px !important; max-width: 360px; padding: 10px 12px; border-left: 2px solid var(--desk-brass); background: #0c181466; color: var(--desk-ink); font-size: 13px; line-height: 1.65; }
 .instrumentShell { margin: -16px -28px -28px; perspective: none; position: relative; z-index: 1; }
 .instrument { display: block; position: relative; height: 260px; pointer-events: auto; transform: none; transition: none; }
 .instrument > div { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; margin: 0 !important; }
