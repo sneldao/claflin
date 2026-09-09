@@ -226,9 +226,9 @@ export function WorkingDesk() {
       </div>
       {open && <div className={styles.tickerStation}>
         <TapeMachine />
-        <TickerTape marks={marks.result?.marks ?? []} failed={marks.failed} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+        <TickerTape marks={marks.result?.marks ?? []} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
       </div>}
-      {hasTray && <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? []} /></div>}
+      {hasTray && <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? []} stale={marks.stale} asOf={marks.result?.asOf} /></div>}
     </main>
     <footer className={styles.footer}>
       <span>YOUR INSTRUCTION. YOUR DECISION.</span>

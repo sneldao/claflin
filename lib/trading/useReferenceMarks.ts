@@ -1,19 +1,36 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MarksResult } from './marks-shared';
 import { fetchJson } from '../api-client';
 
 const REFRESH_MS = 120_000;
 
+function degradeMarks(result: MarksResult): MarksResult {
+  return {
+    ...result,
+    marks: result.marks.map(mark =>
+      mark.reference.status === 'observed'
+        ? { ...mark, reference: { ...mark.reference, status: 'stale' } }
+        : mark,
+    ),
+  };
+}
+
 /**
  * One reference-marks fetch for the whole desk: the tape displays it and the
  * working tray compares against it. Refreshes only while the tab is visible;
- * failures keep the last good result on screen.
+ * failures keep the last good result on screen, but degrade it to stale so
+ * the caller is not shown a healthy-looking mark from an old refresh.
  */
-export function useReferenceMarks(): { result: MarksResult | null; failed: boolean } {
+export function useReferenceMarks(): { result: MarksResult | null; failed: boolean; stale: boolean } {
   const [result, setResult] = useState<MarksResult | null>(null);
   const [failed, setFailed] = useState(false);
+  const resultRef = useRef(result);
+
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,13 +41,23 @@ export function useReferenceMarks(): { result: MarksResult | null; failed: boole
         setResult(response.data);
         setFailed(false);
       } else {
-        setFailed(response.error.status === 0 || response.error.status >= 500 || response.error.status === 404);
+        const previous = resultRef.current;
+        if (previous) {
+          // Keep the last-known prices visible, but label them honestly.
+          setResult(degradeMarks(previous));
+          setFailed(false);
+        } else {
+          setFailed(true);
+        }
       }
     };
     void load();
     const interval = setInterval(() => { if (!document.hidden) void load(); }, REFRESH_MS);
-    return () => { cancelled = true; clearInterval(interval); };
+    const onVisible = () => { if (!document.hidden && !cancelled) void load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
-  return { result, failed };
+  const stale = Boolean(result) && (failed || result!.marks.some(mark => mark.reference.status !== 'observed'));
+  return { result, failed, stale };
 }

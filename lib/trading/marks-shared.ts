@@ -25,3 +25,15 @@ export function markPrice(mark: DeskMark): string | null {
   if (!Number.isFinite(value) || value <= 0) return null;
   return value >= 100 ? value.toFixed(2) : value >= 1 ? value.toFixed(3) : value.toPrecision(3);
 }
+
+/** Human-readable age for a stale mark result, e.g. "2 min" or "45 s". */
+export function formatMarkAge(asOf: number, now = Date.now()): string {
+  const seconds = Math.max(0, Math.floor((now - asOf) / 1000));
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `${days} d`;
+}

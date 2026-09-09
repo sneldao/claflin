@@ -991,7 +991,7 @@
 
 /* ————— Spoken line — the caller's words on the blotter ————— */
 .spokenLine { margin: 10px 0 0 !important; padding: 10px 12px; border-left: 2px solid var(--desk-brass-dim); color: var(--desk-paper-muted); font-size: 12px; line-height: 1.6; }
-.spokenLine em { color: var(--desk-ink); font-style: italic; }
+.spokenLine em { color: var(--desk-paper-ink); font-style: italic; }
 
 /* ————— Working tray: since-you-last-sat-down deltas ————— */
 .boardSince { margin: 10px 0 0 !important; color: var(--desk-muted); font-size: 11px; line-height: 1.6; }

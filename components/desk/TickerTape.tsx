@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import type { DeskMark } from '@/lib/trading/marks-shared';
-import { markPrice } from '@/lib/trading/marks-shared';
+import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
 import styles from './WorkingDesk.module.css';
 
 /**
@@ -12,7 +12,8 @@ import styles from './WorkingDesk.module.css';
  * desk's single shared fetch (WorkingDesk) so the tape and the tray always
  * show the same reading.
  */
-export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, disabled }: { marks: DeskMark[]; failed: boolean; onSelect: (instrumentId: string) => void; disabled?: boolean }) {
+export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, disabled, asOf, stale }: { marks: DeskMark[]; failed: boolean; onSelect: (instrumentId: string) => void; disabled?: boolean; asOf?: number; stale?: boolean }) {
+  const hasStale = stale ?? marks.some(mark => mark.reference.status !== 'observed');
 
   return (
     <div className={styles.tape} role="region" aria-label="Indicative reference marks">
@@ -27,17 +28,24 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
           {failed ? 'Reference marks are unavailable — estimates are unaffected.' : 'Reading the tape…'}
         </p>
       ) : (
-        <div className={styles.tapeWindow}>
-          <div className={styles.tapeTrack}>
-            {[0, 1].map(copy => (
-              <div key={copy} className={styles.tapeCopy} aria-hidden={copy === 1}>
-                {marks.map(mark => (
-                  <TapeItem key={mark.instrumentId} mark={mark} onSelect={onSelect} disabled={disabled || copy === 1} />
-                ))}
-              </div>
-            ))}
+        <>
+          {hasStale && asOf && (
+            <p className={styles.tapeNote} role="status">
+              Reference marks are stale — last known {formatMarkAge(asOf)} ago.
+            </p>
+          )}
+          <div className={styles.tapeWindow}>
+            <div className={styles.tapeTrack}>
+              {[0, 1].map(copy => (
+                <div key={copy} className={styles.tapeCopy} aria-hidden={copy === 1}>
+                  {marks.map(mark => (
+                    <TapeItem key={mark.instrumentId} mark={mark} onSelect={onSelect} disabled={disabled || copy === 1} />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

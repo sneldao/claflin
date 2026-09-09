@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import type { DeskMark } from '@/lib/trading/marks-shared';
-import { markPrice } from '@/lib/trading/marks-shared';
+import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { readSeenSnapshot, writeSeenSnapshot, trayDeltas, deltaLine, seenDayLabel, marksToPoints } from '@/lib/trading/tray-deltas';
 import styles from './WorkingDesk.module.css';
@@ -15,7 +15,7 @@ import styles from './WorkingDesk.module.css';
  * lands fresh on the next visit. Reference marks only — labelled, never
  * offers, never advice.
  */
-export const DeskBoard = memo(function DeskBoard({ desk, marks }: { desk: ReturnType<typeof useTradingDesk>; marks: DeskMark[] }) {
+export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: { desk: ReturnType<typeof useTradingDesk>; marks: DeskMark[]; asOf?: number; stale?: boolean }) {
   const { state, edit, watched, unwatch, deskId } = desk;
   const points = marksToPoints(marks);
 
@@ -43,6 +43,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks }: { desk: Return
   const deltas = trayDeltas(snapshot, points);
   const deltaFor = (id: string) => deltas.find(d => d.instrumentId === id);
   const dayLabel = seenDayLabel(snapshot?.seenAt ?? Date.now());
+  const hasStale = stale ?? marks.some(mark => mark.reference.status !== 'observed');
 
   return (
     <section className={styles.board} aria-labelledby="board-title">
@@ -51,6 +52,9 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks }: { desk: Return
         <span className={styles.boardTally}>{watched.length === 1 ? '1 WATCHING' : `${watched.length} WATCHING`}</span>
       </div>
       <h2 id="board-title" className={styles.boardTitle}>Watched marks.</h2>
+      {hasStale && asOf && (
+        <p className={styles.boardSince} role="status">Reference marks are stale — last known {formatMarkAge(asOf)} ago.</p>
+      )}
       {snapshot && deltas.length > 0 && (
         <p className={styles.boardSince} role="status">Reference movement since you last sat down ({dayLabel}):</p>
       )}
@@ -64,7 +68,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks }: { desk: Return
             <li key={id}>
               <span className={styles.boardTag}>WATCHING</span>
               <strong>{stock.symbol} · {stock.name}</strong>
-              {mark && <span className={styles.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span>}
+              {mark ? <span className={styles.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span> : <span className={styles.boardRef}>Reference unavailable</span>}
               {delta && <span className={styles.boardDelta} data-direction={delta.direction}>{deltaLine(delta, dayLabel)}</span>}
               <span className={styles.boardActions}>
                 <button
