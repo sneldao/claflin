@@ -20,6 +20,7 @@ import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
+import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
@@ -69,8 +70,11 @@ export function WorkingDesk() {
   const marks = useReferenceMarks();
   const open = desk.open;
   const foreground = desk.foreground;
-  const hasTray = open && desk.watched.length > 0;
-  const hasLedger = open && (desk.records.length > 0 || Boolean(desk.storageError));
+  /* Shells stay: an empty ledger is a ruled slip, an empty tray is a pinboard
+     suggestion — failure and arrival share one place each. */
+  const hasTray = open;
+  const hasLedger = open;
+  const [sharedLoaded, setSharedLoaded] = useState(false);
 
   // Colophon seal: the house mark stroke-draws once when the footer scrolls
   // into view — a deliberate closer, not a loop. Reduced-motion draws it static.
@@ -92,6 +96,9 @@ export function WorkingDesk() {
 
   // Shared-instruction deep link: ?intent=nvda&side=buy&amount=25 prefills
   // the ticket. Strictly validated — bad params are dropped, never applied.
+  // Announced once, so a shared arrival never reads as silence.
+  /* The shared arrival flag is intentionally synchronized in this mount effect. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get('intent');
@@ -105,8 +112,10 @@ export function WorkingDesk() {
     desk.edit(side === 'sell'
       ? { instrumentId: instrument.id, side: 'sell', unit: 'token', amount: cleanAmount }
       : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
+    setSharedLoaded(true);
     document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
   const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
   const reviewActive = foreground.kind === 'quotation' || foreground.kind === 'receipt' || foreground.kind === 'archive';
   const instrumentStage = hettyLive
@@ -125,7 +134,13 @@ export function WorkingDesk() {
         : 'PAPER TRADING / NO LIVE ORDERS';
 
   const loadInstrument = (instrumentId: string) => {
-    desk.edit({ ...desk.state.draft, instrumentId });
+    /* Tape loads the mark, not a stale figure: keep the side, clear the
+       amount so the next quantity lands in the right unit. */
+    if (desk.state.draft.side === 'sell') {
+      desk.edit({ instrumentId, side: 'sell', unit: 'token', amount: '' });
+    } else {
+      desk.edit({ instrumentId, side: 'buy', unit: 'USDC', amount: '' });
+    }
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
     document.getElementById('amount')?.focus({ preventScroll: true });
@@ -200,13 +215,13 @@ export function WorkingDesk() {
     <main id="main-content" className={styles.main}>
       <div className={styles.mode}>
         {open
-          ? <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span><span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+          ? <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
-      <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined}>
+      <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} spokenLine={spoken} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {open ? <TradeTicket desk={desk} spokenLine={spoken} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
           {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} />}
@@ -216,7 +231,7 @@ export function WorkingDesk() {
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>
             <p>This desk is for deciding.</p>
-            <DeskNoteLine deskId={desk.deskId} muted={!open} />
+            <DeskNoteLine deskId={desk.deskId} muted={!open || hettyLive} />
           </div>
           {open && <details className={styles.aboutHetty}>
             <summary>About Hetty Green</summary>

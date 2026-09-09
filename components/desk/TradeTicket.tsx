@@ -48,8 +48,37 @@ function Drawer({ className, trigger, title, testId, children }: {
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
+  /* Open modally where supported; fall back to a non-modal open panel so
+     older browsers still get the disclosure, without crashing on a missing
+     showModal. Focus always lands on Close, and always returns to the
+     trigger — including Escape and backdrop dismiss. */
+  const openDrawer = () => {
+    const panel = ref.current;
+    if (!panel) return;
+    try {
+      if (typeof panel.showModal === 'function') panel.showModal();
+      else panel.setAttribute('open', '');
+    } catch {
+      try { panel.setAttribute('open', ''); } catch { /* panel stays shut */ }
+    }
+    setOpen(true);
+    queueMicrotask(() => closeRef.current?.focus());
+  };
+  const closeDrawer = () => {
+    const panel = ref.current;
+    if (!panel) return;
+    try {
+      if (panel.hasAttribute('open') && typeof panel.close !== 'function') panel.removeAttribute('open');
+      else panel.close();
+    } catch {
+      try { panel.removeAttribute('open'); } catch { /* already shut */ }
+    }
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
   const focusables = () => {
     if (!ref.current) return [] as HTMLElement[];
     return Array.from(ref.current.querySelectorAll<HTMLElement>(
@@ -72,10 +101,11 @@ function Drawer({ className, trigger, title, testId, children }: {
   return (
     <div className={className ? `${styles.drawer} ${className}` : styles.drawer} data-open={open ? 'true' : 'false'}>
       <button
+        ref={triggerRef}
         type="button"
         className={styles.drawerToggle}
         aria-expanded={open}
-        onClick={() => { ref.current?.showModal(); setOpen(true); queueMicrotask(() => closeRef.current?.focus()); }}
+        onClick={openDrawer}
       >
         {trigger}
       </button>
@@ -84,15 +114,15 @@ function Drawer({ className, trigger, title, testId, children }: {
         className={styles.drawerPanel}
         aria-label={title}
         data-testid={testId}
-        onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
-        onClose={() => setOpen(false)}
+        onClick={(e) => { if (e.target === ref.current) closeDrawer(); }}
+        onClose={() => { setOpen(false); triggerRef.current?.focus(); }}
         onKeyDown={trapFocus}
       >
         <button
           ref={closeRef}
           type="button"
           className={styles.drawerClose}
-          onClick={() => ref.current?.close()}
+          onClick={closeDrawer}
           aria-label={`Close ${title.toLowerCase()}`}
         >
           ×
@@ -106,9 +136,11 @@ function Drawer({ className, trigger, title, testId, children }: {
 /**
  * The ticket: the caller's own surface. A `spokenLine` — the caller's words
  * captured live from the direct line — is captioned on the blotter so the
- * instruction exists in writing too, not only in the room's air.
+ * instruction exists in writing too, not only in the room's air. When the
+ * line is live, `applied` carries what the voice actually resolved onto the
+ * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null }) {
+export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null; live?: boolean; applied?: string | null }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -127,6 +159,12 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
   const [shareFeedback, setShareFeedback] = useState<{ quoteId: string; text: string } | null>(null);
   const shareNote = shareFeedback?.quoteId === quote?.id ? shareFeedback?.text : null;
   const expired = quote ? !estimateUsable(quote, now) : false;
+  const secondsLeft = quote && !recorded ? Math.max(0, Math.ceil((quote.expiresAt - now) / 1000)) : null;
+  /* The last seconds are not for deciding: freeze recording so a click
+     cannot race expiry. Five seconds of quiet beats an ambiguous file. */
+  const expiringSoon = !recorded && !expired && secondsLeft !== null && secondsLeft <= 5;
+  /* Typing while the line is live: Hetty holds, the ticket listens to keys. */
+  const [typing, setTyping] = useState(false);
   /* Freshness of the review window, 1 → just quoted, 0 → expired. Drives the
      draining brass rule on the slip header. Hidden once the trade is recorded. */
   const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
@@ -174,6 +212,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
     </div>
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
+    {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
+    {live && typing && view === 'draft' && <p className={styles.slipNotice} role="status">Typing — Hetty holds the line.</p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
     {browsing && (
       <div className={styles.slipActions}>
@@ -198,7 +238,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
           <div className={styles.fields}>
             <div><label htmlFor="side">Instruction</label><select id="side" value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
-            <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
+            <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
           </div>
           <div className={styles.amountChips} role="group" aria-label="Quick amounts">
             {AMOUNT_CHIPS[state.draft.side].map(value => (
@@ -280,14 +320,20 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine }: { des
               </details>
             </div>
           </> : <>
-            {!expired && <p className={styles.slipConsent}>Recording saves a simulation, visible to anyone using this browser profile.</p>}
+            <p className={styles.slipConsent}>Recording saves a simulation, visible to anyone using this browser profile.</p>
             {expired
               ? <button className={styles.primary} type="button" onClick={() => void requestQuote()}>Refresh estimate<span aria-hidden="true">↻</span></button>
-              : <button className={styles.primary} type="button" disabled={!historyReady} onClick={save}>Record paper trade<span aria-hidden="true">→</span></button>}
+              : expiringSoon
+                ? <button className={styles.primary} type="button" disabled title="The estimate is expiring — refresh for fresh terms">Refresh needed — estimate expiring<span aria-hidden="true">↻</span></button>
+                : <button className={styles.primary} type="button" disabled={!historyReady} onClick={save}>Record paper trade<span aria-hidden="true">→</span></button>}
+            {expiringSoon && !expired && <p role="status" className={styles.slipNotice}>The estimate is expiring. Refresh for fresh terms — recording is held.</p>}
             <div className={styles.slipActions}>
-              <button className={styles.secondary} type="button" onClick={() => edit(state.draft)}>Edit instruction</button>
+              {expired
+                ? <button className={styles.secondary} type="button" onClick={() => { edit(state.draft); document.getElementById('amount')?.focus({ preventScroll: true }); }}>Adjust amount</button>
+                : <button className={styles.secondary} type="button" title="Editing clears this estimate" onClick={() => edit(state.draft)}>Edit instruction</button>}
               <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>
             </div>
+            {!expired && !expiringSoon && <p className={styles.slipNotice}>Editing clears this estimate.</p>}
           </>}
         </div>
       </>}
