@@ -36,7 +36,7 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // unsafe-inline for styles (CSS-in-JS/runtime styles); unsafe-eval only in dev for HMR.
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://*.elevenlabs.io https://*.walletconnect.com`,
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} blob: data: https://*.elevenlabs.io https://*.walletconnect.com`,
       "style-src 'self' 'unsafe-inline'",
       // ElevenLabs voice session (wss + https) and same-origin API. Dev adds
       // same-origin ws for HMR — 'self' already covers wss on modern engines.
