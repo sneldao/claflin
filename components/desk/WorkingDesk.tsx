@@ -266,7 +266,7 @@ export function WorkingDesk() {
           {open && <details className={styles.aboutHetty}>
             <summary>About Hetty Green</summary>
             <div className={styles.popoverPanel}>
-              <p>Hetty Green is an AI character inspired by the historical financier, not the person herself or a licensed human broker. She helps make a decision clear. She does not make it for you. This release is paper-only; she cannot place a real order.</p>
+              <p>Hetty Green is an AI character inspired by the historical financier, not the person herself or a licensed human broker. She helps make a decision clear. She does not make it for you. {LIVE_EXECUTION_ENABLED ? 'She cannot sign or execute — the Execute button on your slip is yours alone.' : 'This release is paper-only; she cannot place a real order.'}</p>
             </div>
           </details>}
         </aside>

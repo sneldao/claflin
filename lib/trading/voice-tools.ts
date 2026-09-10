@@ -4,6 +4,7 @@ import { estimateUsable } from './workflow';
 import { deskNoteOfTheDay } from '../desk-notes';
 import type { HouseDeskId } from '../house';
 import type { DeskState } from './workflow';
+import type { TradeIntent } from './domain';
 import type { PaperRecord } from './paper-records';
 import type { ForegroundDocument } from './desk-documents';
 import type { useTradingDesk } from './useTradingDesk';
@@ -34,10 +35,27 @@ export function chooseInstrumentResult(query: string): string {
   return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
 }
 
-export function setInstructionResult(side: string): string {
-  if (side === 'buy') return 'Buy set — the amount is a USDC spend.';
-  if (side === 'sell') return 'Sell set — the amount is a token quantity.';
+export function setInstructionResult(side: string, amountCleared = false): string {
+  if (side === 'buy') return amountCleared
+    ? 'Buy set — the old token quantity was cleared. Ask for a USDC spend before quoting.'
+    : 'Buy set — the amount is a USDC spend.';
+  if (side === 'sell') return amountCleared
+    ? 'Sell set — the old USDC spend was cleared. Ask for a token quantity before quoting.'
+    : 'Sell set — the amount is a token quantity.';
   return 'The instruction must be buy or sell.';
+}
+
+/** Unit-safe side change: the same side keeps its amount; a side flip clears
+ *  it because 25 USDC is never 25 tokens. Returns the next draft and whether
+ *  an amount was cleared. */
+export function nextInstructionDraft(draft: TradeIntent, side: 'buy' | 'sell'): { draft: TradeIntent; amountCleared: boolean } {
+  if (draft.side === side) return { draft, amountCleared: false };
+  if (side === 'buy') {
+    if (!draft.amount) return { draft: { instrumentId: draft.instrumentId, side: 'buy', unit: 'USDC', amount: '' }, amountCleared: false };
+    return { draft: { instrumentId: draft.instrumentId, side: 'buy', unit: 'USDC', amount: '' }, amountCleared: true };
+  }
+  if (!draft.amount) return { draft: { instrumentId: draft.instrumentId, side: 'sell', unit: 'token', amount: '' }, amountCleared: false };
+  return { draft: { instrumentId: draft.instrumentId, side: 'sell', unit: 'token', amount: '' }, amountCleared: true };
 }
 
 export function setAmountResult(side: 'buy' | 'sell', amount: string): string {
@@ -142,7 +160,7 @@ function shortCompany(name: string): string {
   return head.replace(/\s+(Inc\.?|Corporation|Incorporated|Company|Global|Group|Internet).*$/i, '').trim() || head;
 }
 
-export function hettyOpeningLine(state: DeskState, foreground: ForegroundDocument): string {
+export function hettyOpeningLine(state: DeskState, foreground: ForegroundDocument, live = false): string {
   if (foreground.kind === 'missing') {
     return 'Claflin, Hetty speaking. That record is no longer here. Shall we return to the instruction?';
   }
@@ -170,7 +188,10 @@ export function hettyOpeningLine(state: DeskState, foreground: ForegroundDocumen
   if (draft.amount) {
     return `Claflin, Hetty speaking. You have ${draft.side} ${draft.amount} ${draft.unit} on the ticket. Which mark shall we put it on?`;
   }
-  return 'Claflin, Hetty speaking. Paper desk — nothing moves onchain. What would you like to put on the ticket?';
+  const emptyLine = live
+    ? 'Claflin, Hetty speaking. Live desk — real funds move only when you press Execute on the slip. What would you like to put on the ticket?'
+    : 'Claflin, Hetty speaking. Paper desk — nothing moves onchain. What would you like to put on the ticket?';
+  return emptyLine;
 }
 
 /** One written line for what the voice just applied to the ticket. Distinct

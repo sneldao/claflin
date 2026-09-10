@@ -15,22 +15,47 @@ export type DeskExecutionState =
   | { stage: 'confirming'; hash: `0x${string}` }
   | { stage: 'done'; outcome: LiveOutcome };
 
+export type DeskExecutionFailure =
+  | 'disconnected'
+  | 'wrong_network'
+  | 'insufficient_funds'
+  | 'rejected'
+  | 'gas_unavailable'
+  | 'rpc_failed'
+  | 'submit_failed';
+
 /** Rejected signatures, expired estimates, reverted approvals and RPC drops
- *  all become honest failure copy — the desk never hangs in a pending stage. */
-function failureOutcome(e: unknown): LiveOutcome {
+ *  all become honest failure copy — the desk never hangs in a pending stage.
+ *  Each reason stays distinct so the slip can name the fix (reconnect, switch
+ *  to Base, fund the wallet, retry the estimate) instead of one generic miss. */
+export function classifyExecutionError(e: unknown): DeskExecutionFailure {
   const raw = e instanceof Error ? e.message : 'unknown';
-  const rejected = /reject|denied|cancelled|user denied/i.test(raw);
-  const wrongChain = /chainid|wrong network|not on base/i.test(raw);
+  if (/wallet not connected|no wallet|not connected|account/i.test(raw)) return 'disconnected';
+  if (/chainid|wrong network|not on base/i.test(raw)) return 'wrong_network';
+  if (/insufficient|balance/i.test(raw)) return 'insufficient_funds';
+  if (/reject|denied|cancelled|user denied/i.test(raw)) return 'rejected';
+  if (/gas/i.test(raw)) return 'gas_unavailable';
+  if (/rpc|network|timeout|fetch|limit|rate/i.test(raw)) return 'rpc_failed';
+  return 'submit_failed';
+}
+
+const FAILURE_COPY: Record<DeskExecutionFailure, string> = {
+  disconnected: 'The wallet is not connected. Reconnect it and try again — nothing was submitted.',
+  wrong_network: 'The wallet is not on Base. Switch networks in the wallet and try again.',
+  insufficient_funds: 'The wallet does not hold enough to cover this instruction plus gas. Nothing was submitted.',
+  rejected: 'The wallet request was declined. Nothing was submitted.',
+  gas_unavailable: 'The network cost could not be estimated. Refresh the estimate and try again.',
+  rpc_failed: 'The Base connection dropped before anything was submitted. Refresh the estimate and try again.',
+  submit_failed: 'The transaction could not be submitted. Refresh the estimate and try again.',
+};
+
+function failureOutcome(e: unknown): LiveOutcome {
+  const reason = classifyExecutionError(e);
   return {
     status: 'failed',
     hash: '0x',
-    message: rejected
-      ? 'The wallet request was declined. Nothing was submitted.'
-      : wrongChain
-        ? 'The wallet is not on Base. Switch networks in the wallet and try again.'
-        : raw.length > 140
-          ? 'The transaction could not be submitted. Refresh the estimate and try again.'
-          : `The transaction could not be submitted: ${raw}`,
+    message: FAILURE_COPY[reason],
+    reason,
   };
 }
 
@@ -42,6 +67,8 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
   const inputToken = useMemo(() => (quote?.intent.side === 'buy' ? BASE_USDC as `0x${string}` : (quote?.instrumentAddress as `0x${string}` | undefined)), [quote]);
   const inputAmount = quote ? BigInt(quote.amountInRaw) : 0n;
   const genRef = useRef(0);
+  const inflightRef = useRef<Promise<LiveOutcome> | null>(null);
+  const inflightKeyRef = useRef<string | null>(null);
 
   /* Read allowance, balance and — once approval is in place — the gas
      estimate. Re-runs for every fresh quote, so a re-quoted estimate always
@@ -87,29 +114,52 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
     }
   }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient, refresh]);
 
-  /** Step 2 of 2: sign and broadcast the swap, then wait for the receipt. */
+  /** Step 2 of 2: sign and broadcast the swap, then wait for the receipt.
+   *  The quote and the reviewed wallet are captured up front: an account
+   *  change or a duplicate click cannot silently reuse the authorization. */
   const execute = useCallback(async (slippageBps: number, deadlineSeconds = 120): Promise<LiveOutcome> => {
-    if (!quote || !auth.walletAddress || !auth.authenticated || !inputToken) {
-      return { status: 'failed', hash: '0x', message: 'Wallet not connected.' };
+    const boundQuote = quote;
+    const boundWallet = auth.walletAddress;
+    const boundAuthenticated = auth.authenticated;
+    const boundToken = inputToken;
+    const boundSend = auth.sendTransaction;
+    if (!boundQuote || !boundWallet || !boundAuthenticated || !boundToken) {
+      return { status: 'failed', hash: '0x', message: FAILURE_COPY.disconnected, reason: 'disconnected' };
     }
-    const wallet = auth.walletAddress as `0x${string}`;
+    const wallet = boundWallet as `0x${string}`;
+    const expectedWallet = wallet.toLowerCase();
+    const executionKey = `${boundQuote.id}:${expectedWallet}:${boundQuote.amountInRaw}:${slippageBps}`;
+    if (inflightRef.current) return inflightRef.current;
     setState({ stage: 'swapping' });
-    try {
-      const hash = await swapForQuote(
-        { walletAddress: wallet, sendTransaction: (tx) => auth.sendTransaction(tx), publicClient },
-        quote,
-        slippageBps,
-        deadlineSeconds,
-      );
-      setState({ stage: 'confirming', hash });
-      const outcome = await waitForLiveOutcome(publicClient, hash);
-      setState({ stage: 'done', outcome });
-      return outcome;
-    } catch (e) {
-      const outcome = failureOutcome(e);
-      setState({ stage: 'done', outcome });
-      return outcome;
-    }
+    const run = (async (): Promise<LiveOutcome> => {
+      try {
+        if ((boundWallet as string).toLowerCase() !== expectedWallet) {
+          throw new Error('Wallet account changed during execution.');
+        }
+        const hash = await swapForQuote(
+          { walletAddress: wallet, sendTransaction: (tx) => boundSend(tx), publicClient },
+          boundQuote,
+          slippageBps,
+          deadlineSeconds,
+        );
+        setState({ stage: 'confirming', hash });
+        const outcome = await waitForLiveOutcome(publicClient, hash);
+        setState({ stage: 'done', outcome });
+        return outcome;
+      } catch (e) {
+        const outcome = failureOutcome(e);
+        setState({ stage: 'done', outcome });
+        return outcome;
+      } finally {
+        if (inflightRef.current && inflightKeyRef.current === executionKey) {
+          inflightRef.current = null;
+          inflightKeyRef.current = null;
+        }
+      }
+    })();
+    inflightRef.current = run;
+    inflightKeyRef.current = executionKey;
+    return run;
   }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient]);
 
   /** Clear a finished or failed outcome and re-read the wallet. */

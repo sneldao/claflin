@@ -38,10 +38,12 @@ function useQuoteElapsed(active: boolean): number {
 
 const AMOUNT_CHIPS = { buy: ['10', '25', '100'], sell: ['1', '5', '10'] } as const;
 
-function ProductTerms({ instrument }: { instrument: (typeof DESK_INSTRUMENTS)[number] | undefined }) {
+function ProductTerms({ instrument, live }: { instrument: (typeof DESK_INSTRUMENTS)[number] | undefined; live: boolean }) {
   return <>
-    <p>These are Coinbase-issued tokenized products on Base, not an order on a traditional stock exchange. Live access is restricted to eligible users in permitted jurisdictions outside the US.</p>
-    <p>This release is paper-only. Account eligibility, funding and holdings are not checked. Paper requests are capped at 10,000 USDC per buy or 1,000 tokens per sell; these caps are not a measure of safe liquidity.</p>
+    <p>These are Coinbase-issued tokenized products on Base, not an order on a traditional stock exchange. Live execution is restricted to eligible users in permitted jurisdictions outside the US.</p>
+    {live
+      ? <p>You are executing for real on Base: the connected wallet pays pool fees, slippage and gas, and must hold the input tokens plus ETH.</p>
+      : <p>Paper instruction: no funds move and no authorization is checked. Paper requests are capped at 10,000 USDC per buy or 1,000 tokens per sell; these caps are not a measure of safe liquidity.</p>}
     {instrument && <p>{instrument.name} · {instrument.decimals} decimal places<br /><code>{instrument.contractAddress}</code></p>}
   </>;
 }
@@ -418,7 +420,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           testId="product-dossier-panel"
         >
           <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
-          <ProductTerms instrument={instrument} />
+          <ProductTerms instrument={instrument} live={liveMode} />
         </Drawer>
         <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
       </> : pending ? <div className={styles.pendingSlip}>
@@ -466,7 +468,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
           <p>{liveMode ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS}</p>
           <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
-          <ProductTerms instrument={instrument} />
+          <ProductTerms instrument={instrument} live={liveMode} />
         </Drawer>
         <div className={styles.slipDecision}>
           {recorded ? <>

@@ -5,7 +5,7 @@ import { ConversationProvider, useConversation, useConversationClientTool } from
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { fetchJson } from '@/lib/api-client';
 import { resolveDeskAlias } from '@/lib/trading/catalog';
-import { foregroundGuard, chooseInstrumentResult, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
+import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -127,10 +127,9 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
     if (refusal) return refusal;
     const side = String(p.side ?? '');
     if (side !== 'buy' && side !== 'sell') return setInstructionResult(side);
-    d.edit(side === 'buy'
-      ? { ...d.state.draft, side: 'buy', unit: 'USDC' }
-      : { ...d.state.draft, side: 'sell', unit: 'token' });
-    return setInstructionResult(side);
+    const next = nextInstructionDraft(d.state.draft, side);
+    d.edit(next.draft);
+    return setInstructionResult(side, next.amountCleared);
   });
 
   useConversationClientTool<HettyTools>('set_amount', async (p) => {
@@ -456,7 +455,7 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
     // interrogation. Recomputed here — the ticket stayed usable while the
     // line connected, so the desk may have moved since the ring.
     const d = deskRef.current;
-    const opening = hettyOpeningLine(d.state, d.foreground);
+    const opening = hettyOpeningLine(d.state, d.foreground, liveModeRef.current);
     try {
       await (conversation.startSession as unknown as (opts: Record<string, unknown>) => unknown)({
         signedUrl: result.data.signedUrl,

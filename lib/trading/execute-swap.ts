@@ -16,6 +16,8 @@ export type LiveOutcome = {
   status: 'submitted' | 'pending' | 'filled' | 'failed' | 'unknown';
   hash: `0x${string}`;
   message: string;
+  /** Machine-readable failure reason (distinct wallet/network/RPC causes). */
+  reason?: 'disconnected' | 'wrong_network' | 'insufficient_funds' | 'rejected' | 'gas_unavailable' | 'rpc_failed' | 'submit_failed';
 };
 
 const erc20Abi = parseAbi([
