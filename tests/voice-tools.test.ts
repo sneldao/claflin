@@ -107,6 +107,13 @@ describe('request_estimate confirmation', () => {
   it('never reports a negative window', () => {
     assert.match(estimateSpokenResult(quote, quote.expiresAt + 60_000), /0 seconds to review/);
   });
+  it('names the live boundary when the desk is live', () => {
+    const spoken = estimateSpokenResult(quote, now + 5000, true);
+    assert.match(spoken, /execute it on Base from the slip/);
+    assert.match(spoken, /record it as a paper trade/);
+    assert.match(spoken, /not an offer/);
+    assert.doesNotMatch(spoken, /It is a paper estimate/);
+  });
 });
 
 describe('record_paper', () => {

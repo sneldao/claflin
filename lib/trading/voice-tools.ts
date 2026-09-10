@@ -45,9 +45,12 @@ export function setAmountResult(side: 'buy' | 'sell', amount: string): string {
 }
 
 /** Spoken confirmation after a successful estimate, with the live review window. */
-export function estimateSpokenResult(quote: { inputAmount: string; inputSymbol: string; outputAmount: string; outputSymbol: string; expiresAt: number }, now: number): string {
+export function estimateSpokenResult(quote: { inputAmount: string; inputSymbol: string; outputAmount: string; outputSymbol: string; expiresAt: number }, now: number, live = false): string {
   const window_ = Math.max(0, Math.ceil((quote.expiresAt - now) / 1000));
-  return `Estimate on the slip: the caller would spend ${quote.inputAmount} ${quote.inputSymbol} and receive ${quote.outputAmount} ${quote.outputSymbol}, via Aerodrome on Base. ${window_} seconds to review before it expires. It is a paper estimate — not an offer.`;
+  const terms = live
+    ? 'This desk is live: the caller may execute it on Base from the slip, or record it as a paper trade. An estimate, not an offer.'
+    : 'It is a paper estimate — not an offer.';
+  return `Estimate on the slip: the caller would spend ${quote.inputAmount} ${quote.inputSymbol} and receive ${quote.outputAmount} ${quote.outputSymbol}, via Aerodrome on Base. ${window_} seconds to review before it expires. ${terms}`;
 }
 
 /** Voice recording policy for the current foreground. Returns the refusal line, or null when `save` may run. */

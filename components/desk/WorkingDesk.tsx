@@ -75,6 +75,10 @@ export function WorkingDesk() {
      The desk only mirrors whether a call is live, and clears the captions
      when it ends — the ticket returns to being the caller's own surface. */
   const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); } }, []);
+  /* Paper or live: one desk-level mode so the banner, the ticket and the
+     voice line all speak the same boundary. Live exists only behind the
+     release gate; the caller switches it on the slip. */
+  const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
   const handleAgentSpoken = useCallback((text: string) => setHettySaid(text), []);
@@ -239,18 +243,18 @@ export function WorkingDesk() {
     <main id="main-content" className={styles.main}>
       <div className={styles.mode}>
         {open
-          ? LIVE_EXECUTION_ENABLED
+          ? liveMode
             ? <><strong data-live="true">LIVE EXECUTION</strong><span>Real tokens and real USDC will move.{auth.walletAddress ? ` Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : ' Sign in and link a wallet to trade.'}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
-            : <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+            : <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.{LIVE_EXECUTION_ENABLED ? ' Live execution can be switched on at the slip.' : ''}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {open ? <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
-          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
+          {open && <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
             <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
           </div>

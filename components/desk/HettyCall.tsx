@@ -80,8 +80,10 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
+  /** The desk's paper/live boundary — Hetty must speak the same one. */
+  liveMode: boolean;
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -94,6 +96,8 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNo
 }) {
   const deskRef = useRef(desk);
   useEffect(() => { deskRef.current = desk; });
+  const liveModeRef = useRef(liveMode);
+  useEffect(() => { liveModeRef.current = liveMode; });
 
   const waitFor = useCallback((predicate: (d: Desk) => boolean, ms: number) =>
     new Promise<boolean>(resolve => {
@@ -151,7 +155,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNo
     await waitFor(x => x.state.stage === 'review' || x.state.stage === 'draft', 4000);
     const now = deskRef.current;
     const quote = now.state.quote;
-    if (now.state.stage === 'review' && quote && quote.id !== before) return estimateSpokenResult(quote, Date.now());
+    if (now.state.stage === 'review' && quote && quote.id !== before) return estimateSpokenResult(quote, Date.now(), liveModeRef.current);
     return `The estimate did not come through${now.error ? ` — ${now.error}` : ''}. Offer to adjust or retry.`;
   });
 
@@ -163,7 +167,9 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNo
     await waitFor(x => x.state.stage === 'saved' || x.error !== null, 3000);
     const now = deskRef.current;
     return now.state.stage === 'saved'
-      ? 'Recorded — a paper trade, filed to the ledger. Nothing moved onchain.'
+      ? liveModeRef.current
+        ? 'Recorded as a paper trade, filed to the ledger — nothing moved onchain. For the real trade, the Execute button on the slip is the caller’s alone.'
+        : 'Recorded — a paper trade, filed to the ledger. Nothing moved onchain.'
       : `The record did not save${now.error ? ` — ${now.error}` : ''}.`;
   });
 
@@ -459,6 +465,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNo
           desk_foreground: d.foreground.kind,
           desk_instrument: d.foreground.instrumentId ?? '',
           desk_stage: d.state.stage,
+          desk_mode: liveModeRef.current ? 'live' : 'paper',
         },
       });
     } catch {
@@ -572,7 +579,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNo
 /* The outer shell owns the session lifecycle: every terminal event remounts
    the ConversationProvider (fresh socket, fresh locks), while the closing
    note and any error persist across the remount as props. */
-export const HettyCall = memo(function HettyCall({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { desk: Desk; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void }) {
+export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpoken }: { desk: Desk; liveMode: boolean; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void }) {
   const [sessionKey, setSessionKey] = useState(0);
   const [endNote, setEndNote] = useState<string | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
@@ -591,6 +598,7 @@ export const HettyCall = memo(function HettyCall({ desk, onLiveChange, onUserSpo
     <ConversationProvider key={sessionKey}>
       <HettyCallInner
         desk={desk}
+        liveMode={liveMode}
         onLiveChange={onLiveChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}

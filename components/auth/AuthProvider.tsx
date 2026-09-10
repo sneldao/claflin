@@ -28,6 +28,10 @@ export interface DeskAuth {
   label: string | null;
   /** Wallet bound to the account (embedded or linked external). Null until linked. */
   walletAddress: string | null;
+  /** The connected wallet's active chain (eip155 id), when known. */
+  walletChainId: number | null;
+  /** Ask the connected wallet to switch to Base. Resolves true once it is on Base. */
+  ensureBaseChain: () => Promise<boolean>;
   linkWallet: () => void;
   login: () => void;
   logout: () => void;
@@ -38,7 +42,8 @@ export interface DeskAuth {
 
 const ANON: DeskAuth = {
   enabled: false, ready: true, authenticated: false, userId: null, label: null,
-  walletAddress: null, linkWallet: () => {},
+  walletAddress: null, walletChainId: null, ensureBaseChain: async () => false,
+  linkWallet: () => {},
   login: () => {}, logout: () => {}, getAccessToken: async () => null,
   sendTransaction: async () => { throw new Error('Wallet not connected.'); },
 };

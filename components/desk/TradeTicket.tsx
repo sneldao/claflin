@@ -10,7 +10,7 @@ import type { TradeIntent, QuoteEstimate } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useDeskExecution } from '@/lib/trading/useDeskExecution';
-import { getBaseExplorerTxUrl } from '@/lib/base-chain';
+import { BASE_CHAIN_ID, getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
 import { liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
@@ -185,13 +185,20 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
   /* Approval is quote-independent (it grants the venue a spending allowance),
      so it stays available on a stale estimate — approval, then a fresh
      estimate, then the swap. Only the swap itself needs a live estimate. */
+  const wrongChain = auth.walletChainId != null && auth.walletChainId !== BASE_CHAIN_ID;
   const showApproveStep = needsApproval || state.stage === 'approving';
-  const approveDisabled = state.stage !== 'ready' || !needsApproval || insufficientBalance;
-  const executeDisabled = busy || state.stage !== 'ready' || needsApproval || insufficientBalance || expired || expiringSoon;
+  const approveDisabled = state.stage !== 'ready' || !needsApproval || insufficientBalance || wrongChain;
+  const executeDisabled = busy || state.stage !== 'ready' || needsApproval || insufficientBalance || expired || expiringSoon || wrongChain;
 
   return (
     <div className={styles.liveBox} data-live="true">
       <p className={styles.liveTitle}>LIVE EXECUTION · BASE<span>real funds move from your wallet</span></p>
+      {wrongChain && (
+        <>
+          <p className={styles.slipNotice} role="status">The wallet is not on Base — this desk trades on Base only.</p>
+          <button type="button" className={styles.secondary} onClick={() => void auth.ensureBaseChain()}>Switch wallet to Base</button>
+        </>
+      )}
       <div className={styles.liveRow}>
         <span className={styles.liveRowLabel}>Slippage tolerance</span>
         <div className={styles.amountChips} role="group" aria-label="Slippage tolerance">
@@ -263,7 +270,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null }) {
+export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -272,9 +279,9 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLi
   const missing = foreground.kind === 'missing';
   const quote = openedRecord?.quote ?? (foreground.kind === 'archive' || missing ? undefined : state.quote);
   const instrument = DESK_INSTRUMENTS.find(s => s.id === (quote?.intent.instrumentId ?? foreground.instrumentId ?? undefined));
-  /* Live execution is ticket-level state so the slip can stamp the outcome
-     the way a paper receipt is stamped — a fill is furniture, not a toast. */
-  const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
+  /* The paper/live boundary is desk-level state (WorkingDesk owns it, the
+     banner and Hetty read it) so the slip can stamp the outcome the way a
+     paper receipt is stamped — a fill is furniture, not a toast. */
   const liveQuote = LIVE_EXECUTION_ENABLED && liveMode && foreground.kind !== 'receipt' && foreground.kind !== 'archive' && !missing && quote ? quote : null;
   const execution = useDeskExecution(liveQuote);
   const liveOutcome = execution.state.stage === 'done' ? execution.state.outcome : null;
@@ -334,11 +341,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLi
   const slipActive = Boolean(quote) && (state.stage === 'review' || recorded);
   const view = missing ? 'missing' : openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
-  const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? 'BASE DESK / PAPER INSTRUCTION' : 'BASE DESK / QUOTATION';
+  const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? (liveMode ? 'BASE DESK / LIVE INSTRUCTION' : 'BASE DESK / PAPER INSTRUCTION') : 'BASE DESK / QUOTATION';
   const filed = recorded ? paperOutcomeCopy() : null;
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
   const backLabel = isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket';
-  const title = missing ? 'That record is no longer here.' : recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : 'Draft a paper trade.';
+  const title = missing ? 'That record is no longer here.' : recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : liveMode ? 'Draft an instruction.' : 'Draft a paper trade.';
 
   const share = () => {
     if (!instrument || !quote) return;
@@ -481,7 +488,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLi
             {LIVE_EXECUTION_ENABLED && view === 'review' && !expired && (
               <div className={styles.liveBox}>
                 <label className={styles.liveRowLabel}>
-                  <input type="checkbox" checked={liveMode} onChange={() => setLiveMode(v => !v)} aria-label="Toggle live execution on Base" />
+                  <input type="checkbox" checked={liveMode} onChange={() => onLiveModeChange(!liveMode)} aria-label="Toggle live execution on Base" />
                   Live execution on Base
                 </label>
                 <p className={styles.liveMeta}>{liveMode ? 'Real tokens and USDC will move when you execute.' : 'Paper estimate only — no funds move.'}</p>

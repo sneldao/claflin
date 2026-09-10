@@ -20,14 +20,17 @@ export type DeskExecutionState =
 function failureOutcome(e: unknown): LiveOutcome {
   const raw = e instanceof Error ? e.message : 'unknown';
   const rejected = /reject|denied|cancelled|user denied/i.test(raw);
+  const wrongChain = /chainid|wrong network|not on base/i.test(raw);
   return {
     status: 'failed',
     hash: '0x',
     message: rejected
       ? 'The wallet request was declined. Nothing was submitted.'
-      : raw.length > 140
-        ? 'The transaction could not be submitted. Refresh the estimate and try again.'
-        : `The transaction could not be submitted: ${raw}`,
+      : wrongChain
+        ? 'The wallet is not on Base. Switch networks in the wallet and try again.'
+        : raw.length > 140
+          ? 'The transaction could not be submitted. Refresh the estimate and try again.'
+          : `The transaction could not be submitted: ${raw}`,
   };
 }
 
