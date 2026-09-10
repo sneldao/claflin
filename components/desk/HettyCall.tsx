@@ -97,7 +97,9 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
     if (refusal) return refusal;
     const side = String(p.side ?? '');
     if (side !== 'buy' && side !== 'sell') return setInstructionResult(side);
-    d.edit({ ...d.state.draft, side, unit: side === 'buy' ? 'USDC' : 'token' });
+    d.edit(side === 'buy'
+      ? { ...d.state.draft, side: 'buy', unit: 'USDC' }
+      : { ...d.state.draft, side: 'sell', unit: 'token' });
     return setInstructionResult(side);
   });
 
