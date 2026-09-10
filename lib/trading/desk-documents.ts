@@ -6,6 +6,7 @@ import type { PaperRecord } from './paper-records';
 import type { DeskState } from './workflow';
 
 export const DRAFT_STORAGE_KEY = 'claflin.draft.v1';
+export const DRAFT_META_KEY = 'claflin.draft-meta.v1';
 export const WATCH_STORAGE_KEY = 'claflin.watched.v1';
 
 export function draftStorageKey(deskId: HouseDeskId = OPEN_DESK_ID): string {
@@ -16,12 +17,35 @@ export function watchStorageKey(deskId: HouseDeskId = OPEN_DESK_ID): string {
   return deskId === OPEN_DESK_ID ? WATCH_STORAGE_KEY : `${WATCH_STORAGE_KEY}.${deskId}`;
 }
 
-const persistedDraftSchema = z.object({
-  instrumentId: z.string().min(1),
-  side: z.enum(['buy', 'sell']),
-  amount: z.string().min(1),
-  unit: z.enum(['USDC', 'token']),
+/** Partial-draft checkpoint: revision counts every persisted edit so the desk
+ *  can tell a newer checkpoint from a stale echo; updatedAt names the last
+ *  change. Expired terms stay expired — a checkpoint never revives a quote. */
+export type DraftCheckpoint = {
+  revision: number;
+  updatedAt: number;
+  complete: boolean;
+};
+
+const draftMetaSchema = z.object({
+  revision: z.number().int().nonnegative(),
+  updatedAt: z.number().int().positive(),
+  complete: z.boolean(),
 }).strict();
+
+/** A draft worth persisting — complete, or a partial with something to resume.
+ *  Incomplete drafts are retained now: returning keeps the instrument, the
+ *  side, or the amount — whichever the caller had actually set. */
+export function persistableDraft(state: DeskState): TradeIntent | { instrumentId: string; side: 'buy' | 'sell'; unit: 'USDC' | 'token'; amount: string } | null {
+  if (state.stage === 'saved' || state.stage === 'cancelled') return null;
+  if (isUnfinishedWork(state)) {
+    try { return parseIntent(state.draft); } catch { return null; }
+  }
+  const partial = state.draft;
+  if (!partial.instrumentId && !partial.amount) return null;
+  if (partial.side !== 'buy' && partial.side !== 'sell') return null;
+  if (partial.unit !== 'USDC' && partial.unit !== 'token') return null;
+  return { instrumentId: partial.instrumentId, side: partial.side, unit: partial.unit, amount: partial.amount };
+}
 
 /** Work that can still change. A recorded instruction is finished, even if the ticket still holds its values. */
 export function isUnfinishedWork(state: DeskState): boolean {
@@ -38,27 +62,78 @@ export function activeRecordId(state: DeskState, viewedRecordId: string | null):
   return isFiledReceipt(state) ? state.quote!.id : null;
 }
 
-export function persistableDraft(state: DeskState): TradeIntent | null {
-  if (!isUnfinishedWork(state)) return null;
-  try { return parseIntent(state.draft); } catch { return null; }
-}
+const partialDraftSchema = z.object({
+  instrumentId: z.string().max(80),
+  side: z.enum(['buy', 'sell']),
+  amount: z.string().max(40),
+  unit: z.enum(['USDC', 'token']),
+}).strict();
 
-export function readPersistedDraft(storage: Pick<Storage, 'getItem'>, deskId: HouseDeskId = OPEN_DESK_ID): TradeIntent | null {
+/** Read any retained draft — complete or partial. Returns the draft plus its
+ *  checkpoint (revision, last update, completeness) when one was stored. */
+export function readDraftCheckpoint(
+  storage: Pick<Storage, 'getItem'>,
+  deskId: HouseDeskId = OPEN_DESK_ID,
+): { draft: TradeIntent | { instrumentId: string; side: 'buy' | 'sell'; unit: 'USDC' | 'token'; amount: string }; meta: DraftCheckpoint } | null {
   try {
     const raw = storage.getItem(draftStorageKey(deskId));
     if (!raw) return null;
-    return parseIntent(persistedDraftSchema.parse(JSON.parse(raw)));
+    const draft = partialDraftSchema.parse(JSON.parse(raw));
+    if (!draft.instrumentId && !draft.amount) return null;
+    const metaRaw = storage.getItem(`${DRAFT_META_KEY}.${deskId}`);
+    let meta: DraftCheckpoint = { revision: 0, updatedAt: 0, complete: false };
+    try {
+      if (metaRaw) meta = draftMetaSchema.parse(JSON.parse(metaRaw));
+    } catch { /* meta is advisory — the draft stands without it */ }
+    if (meta.updatedAt === 0) {
+      let complete = false;
+      try { parseIntent(draft); complete = true; } catch { /* partial stays partial */ }
+      meta = { ...meta, complete };
+    }
+    return { draft, meta };
   } catch { return null; }
 }
 
-export function writePersistedDraft(storage: Pick<Storage, 'setItem' | 'removeItem'>, state: DeskState, deskId: HouseDeskId = OPEN_DESK_ID): void {
+export function readPersistedDraft(storage: Pick<Storage, 'getItem'>, deskId: HouseDeskId = OPEN_DESK_ID): TradeIntent | null {
+  const checkpoint = readDraftCheckpoint(storage, deskId);
+  if (!checkpoint) return null;
+  try { return parseIntent(checkpoint.draft); } catch { return null; }
+}
+
+/** Persist a checkpoint: the draft (complete or partial) plus revision and
+ *  last-updated metadata. Finished work clears both keys. */
+export function writeDraftCheckpoint(
+  storage: Pick<Storage, 'setItem' | 'removeItem' | 'getItem'>,
+  state: DeskState,
+  deskId: HouseDeskId = OPEN_DESK_ID,
+  now: number = Date.now(),
+): void {
   const key = draftStorageKey(deskId);
+  const metaKey = `${DRAFT_META_KEY}.${deskId}`;
   const draft = persistableDraft(state);
   if (!draft) {
     storage.removeItem(key);
+    storage.removeItem(metaKey);
     return;
   }
+  let revision = 0;
+  try {
+    const existing = storage.getItem(metaKey);
+    if (existing) revision = draftMetaSchema.parse(JSON.parse(existing)).revision;
+  } catch { /* start a fresh revision count */ }
+  let complete = false;
+  try { parseIntent(draft); complete = true; } catch { /* partial stays partial */ }
   storage.setItem(key, JSON.stringify(draft));
+  storage.setItem(metaKey, JSON.stringify({ revision: revision + 1, updatedAt: now, complete } satisfies DraftCheckpoint));
+}
+
+export function writePersistedDraft(
+  storage: Pick<Storage, 'setItem' | 'removeItem' | 'getItem'>,
+  state: DeskState,
+  deskId: HouseDeskId = OPEN_DESK_ID,
+  now: number = Date.now(),
+): void {
+  writeDraftCheckpoint(storage, state, deskId, now);
 }
 
 export function compactPaperEntry(record: PaperRecord) {

@@ -4,7 +4,7 @@ import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk, intentFromSpeech, parseEstimate } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
-import { compactPaperEntry, isUnfinishedWork, persistableDraft, readPersistedDraft, writePersistedDraft } from '../lib/trading/desk-documents';
+import { compactPaperEntry, isUnfinishedWork, persistableDraft, readDraftCheckpoint, readPersistedDraft, writeDraftCheckpoint, writePersistedDraft } from '../lib/trading/desk-documents';
 import { createQuoteHandler, quoteBudget } from '../lib/trading/http';
 
 const now = 1788600000000;
@@ -111,6 +111,38 @@ describe('finished work is not in progress', () => {
     assert.equal(entry.action, 'Paper buy');
     assert.match(entry.exchange, /100 USDC/);
     assert.equal(entry.recordedAt, now + 1);
+  });
+  it('retains a partial draft with revision metadata and resumes the unfinished work', () => {
+    const store = new Map<string, string>();
+    const draftStore = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    };
+    const partial = { ...initialDesk(intent), draft: { instrumentId: intent.instrumentId, side: 'buy' as const, amount: '', unit: 'USDC' as const } };
+    writeDraftCheckpoint(draftStore, partial, 'hetty', 1000);
+    const checkpoint = readDraftCheckpoint(draftStore, 'hetty');
+    assert.ok(checkpoint, 'a partial draft is not lost');
+    assert.equal(checkpoint!.draft.instrumentId, intent.instrumentId);
+    assert.equal(checkpoint!.meta.revision, 1);
+    assert.equal(checkpoint!.meta.complete, false);
+    assert.equal(checkpoint!.meta.updatedAt, 1000);
+  });
+  it('increments the revision and honours the newest checkpoint on the desk', () => {
+    const store = new Map<string, string>();
+    const draftStore = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    };
+    writeDraftCheckpoint(draftStore, reviewed(), 'hetty', 1000);
+    writeDraftCheckpoint(draftStore, reviewed(), 'hetty', 2000);
+    const checkpoint = readDraftCheckpoint(draftStore, 'hetty');
+    assert.equal(checkpoint!.meta.revision, 2);
+    assert.equal(checkpoint!.meta.updatedAt, 2000);
+    // Finished work clears both the draft and its metadata.
+    writeDraftCheckpoint(draftStore, deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 }), 'hetty', 3000);
+    assert.equal(readDraftCheckpoint(draftStore, 'hetty'), null);
   });
 });
 

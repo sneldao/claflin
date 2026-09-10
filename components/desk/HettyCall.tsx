@@ -113,13 +113,21 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+export type TranscriptSaveState = {
+  status: 'idle' | 'saving' | 'saved' | 'failed';
+  attempts: number;
+};
+
+function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSaveState, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
   /** Discussion owned above the resettable provider — survives remounts. */
   captions: Caption[];
   onCaption: (caption: Caption) => void;
+  /** Visible transcript save status — owned by the shell, survives remounts. */
+  saveState: TranscriptSaveState;
+  onSaveState: (state: TranscriptSaveState) => void;
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -141,6 +149,13 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
   useEffect(() => { captionsRef.current = captions; });
   const onCaptionRef = useRef(onCaption);
   useEffect(() => { onCaptionRef.current = onCaption; });
+  const onSaveStateRef = useRef(onSaveState);
+  useEffect(() => { onSaveStateRef.current = onSaveState; });
+
+  /* Idempotent transcript checkpointing: bounded saves during the call plus
+     one terminal flush. The server is the record of what was stored — the
+     saved flag moves only on an ok response with { stored: true }, never
+     before the attempt. Retention cleanup never deletes a live call. */
 
   const waitFor = useCallback((predicate: (d: Desk) => boolean, ms: number) =>
     new Promise<boolean>(resolve => {
@@ -272,28 +287,69 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
   const turnsRef = useRef<Array<{ role: 'user' | 'agent'; text: string; at: number }>>([]);
   const convIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
-  const flushedRef = useRef(false);
+  const savedRef = useRef(false);
+  const checkpointTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const saveStateRef = useRef<{ status: 'idle' | 'saving' | 'saved' | 'failed'; attempts: number }>({ status: 'idle', attempts: 0 });
 
-  const flushTranscript = useCallback(async () => {
-    if (flushedRef.current || !convIdRef.current || turnsRef.current.length === 0) return;
-    flushedRef.current = true;
+  /** POST the current turns. Retried checkpoints carry the same
+   *  conversationId — the server upserts by key, so retries are idempotent.
+   *  Returns true only when the server confirms { stored: true }. */
+  const postTranscript = useCallback(async (endedAt: number): Promise<boolean> => {
+    const conversationId = convIdRef.current;
+    const turns = turnsRef.current;
+    if (!conversationId || turns.length === 0) return false;
     const a = authRef.current;
-    if (!a.authenticated) return;
+    if (!a.authenticated) return false;
+    let token: string | null = null;
+    try { token = await a.getAccessToken(); } catch { return false; }
+    if (!token) return false;
     try {
-      const token = await a.getAccessToken();
-      if (!token) return;
-      await fetch('/api/hetty/transcript', {
+      const res = await fetch('/api/hetty/transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          conversationId: convIdRef.current,
-          turns: turnsRef.current.slice(0, 500),
+          conversationId,
+          turns: turns.slice(0, 500),
           startedAt: startedAtRef.current || Date.now(),
-          endedAt: Date.now(),
+          endedAt,
         }),
       });
-    } catch { /* transcript loss is not a desk error */ }
+      if (!res.ok) return false;
+      const body = (await res.json().catch(() => null)) as { stored?: unknown } | null;
+      return body?.stored === true;
+    } catch { return false; }
   }, []);
+
+  /* Bounded checkpoint during the call: every 20s, only when there is
+     something new since the last confirmed save. Never a desk error — a
+     failed checkpoint retries on the next tick, and the terminal flush. */
+  const checkpointTranscript = useCallback(async () => {
+    if (savedRef.current || saveStateRef.current.status === 'saving') return;
+    if (!convIdRef.current || turnsRef.current.length === 0) return;
+    saveStateRef.current = { status: 'saving', attempts: saveStateRef.current.attempts + 1 };
+    onSaveStateRef.current({ ...saveStateRef.current });
+    const ok = await postTranscript(Date.now());
+    if (ok) {
+      savedRef.current = true;
+      saveStateRef.current = { status: 'saved', attempts: saveStateRef.current.attempts };
+    } else {
+      saveStateRef.current = { status: 'failed', attempts: saveStateRef.current.attempts };
+    }
+    onSaveStateRef.current({ ...saveStateRef.current });
+  }, [postTranscript]);
+
+  const flushTranscript = useCallback(async () => {
+    if (savedRef.current || !convIdRef.current || turnsRef.current.length === 0) return;
+    const ok = await postTranscript(Date.now());
+    if (ok) {
+      savedRef.current = true;
+      saveStateRef.current = { status: 'saved', attempts: saveStateRef.current.attempts };
+      onSaveStateRef.current({ ...saveStateRef.current });
+    } else if (saveStateRef.current.status !== 'saved') {
+      saveStateRef.current = { status: 'failed', attempts: saveStateRef.current.attempts };
+      onSaveStateRef.current({ ...saveStateRef.current });
+    }
+  }, [postTranscript]);
 
   /* The two terminal paths. Each fires at most once per mount, flushes the
      transcript, and hands the outer shell what it needs to remount the
@@ -354,7 +410,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
       startedAtRef.current = Date.now();
       turnsRef.current = [];
       convIdRef.current = null;
-      flushedRef.current = false;
+      savedRef.current = false;
+      saveStateRef.current = { status: 'idle', attempts: 0 };
+      onSaveStateRef.current({ status: 'idle', attempts: 0 });
       deskNoteShared.current = false;
       endedByUserRef.current = false;
       onActivity();
@@ -393,6 +451,27 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
 
   useEffect(() => { onLiveChange(live); }, [live, onLiveChange]);
 
+  /* Bounded checkpoint loop: while the call is live, save every 20s when
+     there is something unsaved. The terminal flush covers the rest; the
+     loop is promptness for long calls, not correctness. */
+  useEffect(() => {
+    if (!live) {
+      if (checkpointTimerRef.current) { clearInterval(checkpointTimerRef.current); checkpointTimerRef.current = null; }
+      return;
+    }
+    if (checkpointTimerRef.current) return;
+    checkpointTimerRef.current = setInterval(() => { void checkpointTranscript(); }, 20_000);
+    return () => {
+      if (checkpointTimerRef.current) { clearInterval(checkpointTimerRef.current); checkpointTimerRef.current = null; }
+    };
+  }, [live, checkpointTranscript]);
+
+  /* Flush on the way out — but a wallet handoff is not finishing the
+     discussion. When the page is merely hidden (the caller switched to
+     their wallet app), checkpoint what exists and keep the captions;
+     the line remounts and the work resumes. True departure (pagehide,
+     bfcache restore) still ends the call deliberately. */
+
   /* Unmount: cancel any in-flight ring and bring the line down through the
      same guarded path. The provider's own unmount cleanup also ends the
      session, so this is promptness, not correctness. */
@@ -419,7 +498,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
 
   /* A hidden or frozen tab kills the socket silently, and the SDK can keep
      believing it is connected — the next ring then dies on the stale line.
-     End the call deliberately on the way out, and after a bfcache restore:
+     A wallet handoff (visibility hidden) checkpoints and keeps the
+     discussion; the remount returns a fresh line and the work resumes.
+     True departure (pagehide, bfcache restore) ends the call deliberately:
      the remount guarantees the next ring is a fresh conversation. */
   useEffect(() => {
     const endForLeave = () => {
@@ -428,7 +509,18 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
       const d = deskRef.current;
       fireEnded(hettyClosingLine(d.state, d.foreground, 'ended'));
     };
-    const onVisibility = () => { if (document.visibilityState === 'hidden') endForLeave(); };
+    const onHidden = () => {
+      // Wallet handoff, not a goodbye: save progress, keep the captions,
+      // bring the line down through the guarded path without a closing note.
+      // Reconnection never reactivates the microphone — the next ring starts muted.
+      void checkpointTranscript();
+      hangUp();
+      if (!sessionActiveRef.current && statusRef.current === 'disconnected') return;
+      sessionActiveRef.current = false;
+      try { conversation.setMuted(true); } catch { /* no input to mute */ }
+      onSessionEnded(null);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onHidden(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) endForLeave(); };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', endForLeave);
@@ -438,7 +530,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
       window.removeEventListener('pagehide', endForLeave);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [hangUp, fireEnded]);
+  }, [hangUp, fireEnded, checkpointTranscript, conversation, onSessionEnded]);
 
   const cancelRing = useCallback(() => {
     dialCancelledRef.current = true;
@@ -611,6 +703,13 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onU
       )}
       {!live && !ringing && endNote && <p role="status" className={styles.callEnded}>{endNote}</p>}
       {callError && <p role="alert" className={styles.callError}>{callError}</p>}
+      {auth.enabled && saveState.status !== 'idle' && (
+        <p role="status" className={styles.captionApplied} data-save-state={saveState.status}>
+          {saveState.status === 'saving' ? 'Saving the conversation…'
+            : saveState.status === 'saved' ? 'Conversation saved to your account (30 days).'
+            : 'The conversation could not be saved to your account. The ticket keeps the instruction.'}
+        </p>
+      )}
       <p className={styles.callFoot}>
         Your browser will ask for the microphone when you ring.{auth.enabled ? ' Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : ''}
       </p>
@@ -627,12 +726,14 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange,
   const [endNote, setEndNote] = useState<string | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
+  const [saveState, setSaveState] = useState<TranscriptSaveState>({ status: 'idle', attempts: 0 });
   const handleCaption = useCallback((caption: Caption) => {
     setCaptions(previous => appendCaption(previous, caption));
   }, []);
+  const handleSaveState = useCallback((state: TranscriptSaveState) => { setSaveState(state); }, []);
   /* A fresh connection starts a fresh turn of the discussion; a remount after
      a terminal event keeps what was already said. New rings begin clean. */
-  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setCaptions([]); }, []);
+  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setCaptions([]); setSaveState({ status: 'idle', attempts: 0 }); }, []);
   const handleEnded = useCallback((note: string | null) => {
     setCallError(null);
     setEndNote(note);
@@ -650,6 +751,8 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange,
         liveMode={liveMode}
         captions={captions}
         onCaption={handleCaption}
+        saveState={saveState}
+        onSaveState={handleSaveState}
         onLiveChange={onLiveChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}
