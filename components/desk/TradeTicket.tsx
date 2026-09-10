@@ -15,6 +15,7 @@ import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documen
 import { liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
+import { DeskTerm } from './DeskTerm';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -439,7 +440,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLi
           {liveMode ? (
             <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet.</span></p>
           ) : (
-            <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional slippage excluded.</span></p>
+            <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional <DeskTerm term="slippage" definition="The gap between the price quoted and the price a real order fills at. On paper it is excluded; on a live desk it is the cost of the market moving while your instruction travels." /> excluded.</span></p>
           )}
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}

@@ -45,8 +45,8 @@ describe('one canonical house', () => {
   it('puts the ticket before the room and introduces the line only once', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
     assert.doesNotMatch(desk, /styles\.introduction|<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
-    assert.equal(desk.match(/<HettyCall desk=/g)?.length, 1);
-    assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall desk='));
+    assert.equal(desk.match(/<HettyCall\s/g)?.length, 1);
+    assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall '));
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
   });
   it('shows continuity shells with empty states, without hiding storage failures', () => {

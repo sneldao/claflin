@@ -66,6 +66,33 @@ describe('desk notes of the day', () => {
     const note = deskNoteOfTheDay('unknown' as never, new Date('2026-09-09T12:00:00'));
     assert.ok(note.text.length > 0);
   });
+  it('teaches a word of the trade on one day in three, stable within the day', () => {
+    const base = new Date('2026-09-09T12:00:00');
+    for (let start = 0; start < 7; start++) {
+      const kinds = [0, 1, 2].map(i => Boolean(deskNoteOfTheDay('hetty', new Date(base.getTime() + (start + i) * 86_400_000)).term));
+      assert.equal(kinds.filter(Boolean).length, 1, 'exactly one word day in every three');
+    }
+  });
+  it('varies the word by desk on a word day', () => {
+    const base = new Date('2026-09-09T12:00:00');
+    const wordDay = [0, 1, 2].map(i => new Date(base.getTime() + i * 86_400_000)).find(d => deskNoteOfTheDay('hetty', d).term)!;
+    const desks = ['hetty', 'jesse', 'isabel', 'arbitrum'] as const;
+    const words = desks.map(id => deskNoteOfTheDay(id, wordDay).text);
+    assert.equal(new Set(words).size, words.length);
+    for (const desk of desks) assert.ok(deskNoteOfTheDay(desk, wordDay).term, `${desk} teaches a word on a word day`);
+  });
+  it('keeps words descriptive, never prescriptive, and unattributed', () => {
+    const base = new Date('2026-09-09T12:00:00');
+    for (const desk of HOUSE_DESKS) {
+      for (let offset = 0; offset < 40; offset++) {
+        const note = deskNoteOfTheDay(desk.id, new Date(base.getTime() + offset * 86_400_000));
+        if (!note.term) continue;
+        assert.equal(note.attribution, null, `word "${note.term}" should carry no attribution`);
+        assert.ok(!/^[“"]/.test(note.text), `word "${note.term}" should not read as a quote`);
+        assert.doesNotMatch(note.text, /\b(you should|you must|buy now|sell now|guaranteed|risk-free)\b/i);
+      }
+    }
+  });
 });
 
 describe('json-safe client responses', () => {

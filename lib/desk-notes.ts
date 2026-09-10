@@ -8,12 +8,20 @@ import { HOUSE_DESKS, type HouseDeskId } from './house';
  * - no fabricated quotes — attributed aphorisms are historically common;
  * - generic notes are clearly not attributed to a person;
  * - the selection is stable for the day (no scroll-of-the-minute churn).
+ *
+ * Every third day the desk teaches instead of muses: a word of the trade
+ * (tape, fill, pit, corner — the vocabulary the desk itself speaks). Word
+ * entries define the term descriptively, never prescriptively — what a fill
+ * is, never what a good fill is. They carry a `term` label, no attribution,
+ * and obey the same rules above.
  */
 
 export type DeskNote = {
   text: string;
   /** Set only when the line carries a historical speaker's words. */
   attribution: string | null;
+  /** Set when the note teaches a term of the trade instead of offering an observation. */
+  term?: string;
 };
 
 const GENERAL_NOTES: readonly string[] = [
@@ -54,13 +62,52 @@ const DESK_NOTES: Readonly<Record<HouseDeskId, readonly (DeskNote | string)[]>> 
   ],
 };
 
+const GENERAL_WORDS: readonly DeskNote[] = [
+  { text: 'The tape: the running print of prices as they happen. To read the tape is to watch what is done, not what is said.', attribution: null, term: 'tape' },
+  { text: 'A fill: an order actually executed. Until it fills, an order is only an intention.', attribution: null, term: 'fill' },
+  { text: 'The pit: the floor where orders once met by open outcry. The desk sat upstairs; the pit was downstairs.', attribution: null, term: 'pit' },
+  { text: 'A quotation: the price a market names in answer to a question. It is an answer, not a promise.', attribution: null, term: 'quotation' },
+  { text: 'The blotter: the day’s raw record of every order written, before the ledger makes it official.', attribution: null, term: 'blotter' },
+  { text: 'Margin: borrowed money behind an instruction. It enlarges every outcome, including the one not planned for.', attribution: null, term: 'margin' },
+];
+
+const DESK_WORDS: Readonly<Record<HouseDeskId, readonly DeskNote[]>> = {
+  hetty: [
+    ...GENERAL_WORDS,
+    { text: 'To corner a market: to hold enough of a thing that everyone who needs it must come to you. Hetty Green cornered the shorts more than once.', attribution: null, term: 'corner' },
+    { text: 'Cash: the position that needs no one else’s permission. Hetty Green kept hers where she could reach it.', attribution: null, term: 'cash' },
+  ],
+  jesse: [
+    ...GENERAL_WORDS,
+    { text: 'A bucket shop: a parlor that took your wager on prices without ever buying the stock. Livermore learned the tape there before he learned the market.', attribution: null, term: 'bucket shop' },
+    { text: 'A line: the list of what you hold at any moment. Livermore kept his in a pocket notebook before he trusted it to memory.', attribution: null, term: 'line' },
+  ],
+  isabel: [
+    ...GENERAL_WORDS,
+    { text: 'A seat: membership on an exchange — the right to trade on its floor. Isabel Benham was the first woman to hold one on the New York Stock Exchange.', attribution: null, term: 'seat' },
+    { text: 'The annual letter: a company’s own account of itself, once a year. Benham read them more closely than most competitors read anything.', attribution: null, term: 'annual letter' },
+  ],
+  arbitrum: [
+    ...GENERAL_WORDS,
+    { text: 'Clearing: the settling of promises between houses after the trading is done. Trust in the rails is built there first.', attribution: null, term: 'clearing' },
+    { text: 'A bond drive: selling a nation’s debt one small buyer at a time. Cooke built the network before the market.', attribution: null, term: 'bond drive' },
+  ],
+};
+
+/** Every third day the desk teaches a word instead of offering a note. */
+const WORD_DAY = 2;
+
 /** Stable within a local day and per desk, varied across days and between desks. */
 export function deskNoteOfTheDay(deskId: HouseDeskId, date = new Date()): DeskNote {
-  const pool = DESK_NOTES[deskId] ?? DESK_NOTES.hetty;
   const dayIndex = Math.floor(date.getTime() / 86_400_000);
   const deskIndex = Math.max(0, HOUSE_DESKS.findIndex(desk => desk.id === deskId));
   // Mixed so the general pool does not repeat verbatim across desks on one day.
-  const index = (dayIndex * 31 + deskIndex * 17) % pool.length;
-  const note = pool[index] as DeskNote | string;
+  const index = (dayIndex * 31 + deskIndex * 17);
+  if (dayIndex % 3 === WORD_DAY) {
+    const words = DESK_WORDS[deskId] ?? DESK_WORDS.hetty;
+    return words[index % words.length];
+  }
+  const pool = DESK_NOTES[deskId] ?? DESK_NOTES.hetty;
+  const note = pool[index % pool.length] as DeskNote | string;
   return typeof note === 'string' ? { text: note, attribution: null } : note;
 }

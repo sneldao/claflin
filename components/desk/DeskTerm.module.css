@@ -1,0 +1,13 @@
+.deskTerm button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.deskTerm button:hover { opacity: .85; }
+.deskTerm button:focus-visible { outline: 1px dashed currentColor; outline-offset: 2px; }
+.deskTermNote { display: block; margin-top: 4px; font-style: italic; opacity: .8; }

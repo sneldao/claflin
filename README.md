@@ -42,7 +42,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Responsibility | Source |
 |---|---|
 | House identity, desk sequence and capability labels | `lib/house.ts` |
-| Period desk notes (one attributed note of the day, never advice) | `lib/desk-notes.ts` |
+| Period desk notes and words of the house (one note or term of the day, never advice) | `lib/desk-notes.ts` |
 | Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
 | Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
 | Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperLedger.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |

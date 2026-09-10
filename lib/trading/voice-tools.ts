@@ -96,6 +96,7 @@ export const DESK_NOTE_ALREADY_SHARED = 'The desk note is already on the line th
 export function deskNoteSpokenLine(deskId: HouseDeskId, date = new Date()): string {
   const note = deskNoteOfTheDay(deskId, date);
   const source = note.attribution ? ` — ${note.attribution}` : '';
+  if (note.term) return `The desk's word for today: ${note.text} A term of the trade from the house, not advice.`;
   return `The desk's note for today: ${note.text}${source}. An observation from the house, not advice.`;
 }
 

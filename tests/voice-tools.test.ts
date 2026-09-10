@@ -176,9 +176,19 @@ describe('share_desk_note', () => {
   });
   it('is available on every foreground, including a read-only filed record', () => {
     // The note is furniture, not document state — no foreground refusal applies.
-    const note = deskNoteOfTheDay('arbitrum', new Date('2026-09-09T12:00:00'));
+    const day = new Date('2026-09-09T12:00:00');
+    const note = deskNoteOfTheDay('arbitrum', day);
     assert.ok(note.text.length > 0);
-    assert.match(deskNoteSpokenLine('arbitrum', new Date('2026-09-09T12:00:00')), /note for today/);
+    assert.match(deskNoteSpokenLine('arbitrum', day), note.term ? /word for today/ : /note for today/);
+  });
+  it('frames a word day as a term of the trade, still verbatim and never advice', () => {
+    const base = new Date('2026-09-09T12:00:00');
+    const wordDay = [0, 1, 2].map(i => new Date(base.getTime() + i * 86_400_000)).find(d => deskNoteOfTheDay('hetty', d).term)!;
+    const note = deskNoteOfTheDay('hetty', wordDay);
+    const spoken = deskNoteSpokenLine('hetty', wordDay);
+    assert.match(spoken, /word for today/);
+    assert.ok(spoken.includes(note.text), 'the spoken line carries the word verbatim');
+    assert.match(spoken, /not advice/);
   });
   it('keeps the once-per-call refusal honest and distinct', () => {
     assert.match(DESK_NOTE_ALREADY_SHARED, /already/);
