@@ -69,7 +69,8 @@ export function WorkingDesk() {
   // being the caller's own surface.
   const [spoken, setSpoken] = useState<string | null>(null);
   const [hettySaid, setHettySaid] = useState<string | null>(null);
-  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); } }, []);
+  const [hettyKey, setHettyKey] = useState(0);
+  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); setHettyKey(k => k + 1); } }, []);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
   const handleAgentSpoken = useCallback((text: string) => setHettySaid(text), []);
@@ -245,7 +246,7 @@ export function WorkingDesk() {
         {open ? <TradeTicket desk={desk} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
-          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
+          {open && <HettyCall key={hettyKey} desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
             <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
           </div>
