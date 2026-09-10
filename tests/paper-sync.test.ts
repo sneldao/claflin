@@ -3,7 +3,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
-import { mergePulledRecords, type PaperRecord, type PaperStorage } from '../lib/trading/paper-records';
+import { mergePulledRecords, paperOwnerOf, recordVisibleToAccount, type PaperRecord, type PaperStorage } from '../lib/trading/paper-records';
 import { createElement, useState, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { usePaperSync } from '../lib/trading/usePaperSync';
@@ -24,7 +24,7 @@ const quote: QuoteEstimate = {
 };
 
 function record(id: string, createdAt = now + 1, quoteOverride: Partial<QuoteEstimate> = {}): PaperRecord {
-  return { version: 1, mode: 'paper', deskId: 'hetty', id, createdAt, quote: { ...quote, id, ...quoteOverride } };
+  return { version: 1, mode: 'paper', deskId: 'hetty', owner: 'anonymous', id, createdAt, quote: { ...quote, id, ...quoteOverride } };
 }
 
 function storage(seed: Record<string, string> = {}): PaperStorage & { removeItem(key: string): void; failNextSet(): void } {
@@ -51,6 +51,27 @@ function storedIds(store: PaperStorage): string[] {
   }
   return ids.sort();
 }
+
+describe('paper record ownership tags', () => {
+  it('treats missing owner as anonymous and hides other accounts when signed in', () => {
+    const anon = record('a');
+    assert.equal(paperOwnerOf(anon), 'anonymous');
+    assert.equal(recordVisibleToAccount(anon, null), true);
+    assert.equal(recordVisibleToAccount(anon, 'u1'), true);
+    const theirs = { ...record('b'), owner: 'u2' };
+    assert.equal(recordVisibleToAccount(theirs, 'u1'), false);
+    assert.equal(recordVisibleToAccount(theirs, 'u2'), true);
+    assert.equal(recordVisibleToAccount(theirs, null), false);
+  });
+
+  it('stamps pulled merges with the signed-in account owner', () => {
+    const store = storage();
+    const added = mergePulledRecords(store, [record('pulled')], 'hetty', 'u1');
+    assert.equal(added, 1);
+    const raw = JSON.parse(store.getItem('claflin.paper.v1.pulled')!);
+    assert.equal(raw.owner, 'u1');
+  });
+});
 
 describe('merging pulled account records into the browser', () => {
   it('adds records the browser does not have and reports the count', () => {
@@ -166,7 +187,7 @@ describe('usePaperSync behavior', () => {
     globalThis.__anonymousCount = () => anonymousCount;
     globalThis.__importStatus = () => importStatus;
     return createElement('div', null,
-      createElement('button', { type: 'button', id: 'add', onClick: () => setRecords(prev => [...prev, record(String.fromCharCode(97 + prev.length))]) }, 'Add'),
+      createElement('button', { type: 'button', id: 'add', onClick: () => setRecords(prev => [...prev, { ...record(String.fromCharCode(97 + prev.length)), owner: 'u1' }]) }, 'Add'),
       createElement('button', { type: 'button', id: 'same', onClick: () => setRecords(prev => [...prev]) }, 'Same'),
     );
   }

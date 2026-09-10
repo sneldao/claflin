@@ -9,9 +9,13 @@ export interface PaperRecord {
   id: string;
   mode: 'paper';
   deskId: HouseDeskId;
+  /** Who this browser attributes the record to. Missing on legacy rows → anonymous. */
+  owner: string;
   createdAt: number;
   quote: QuoteEstimate;
 }
+export type PaperOwner = string; // userId or 'anonymous'
+export const PAPER_OWNER_ANONYMOUS = 'anonymous' as const;
 export interface PaperStorage {
   length: number;
   key(index: number): string | null;
@@ -26,9 +30,22 @@ const schema = z.object({
   id: z.string().min(1).max(100),
   mode: z.literal('paper'),
   deskId: z.enum(['hetty', 'jesse', 'isabel', 'arbitrum']).optional(),
+  owner: z.union([z.literal('anonymous'), z.string().min(1).max(128)]).optional(),
   createdAt: z.number().int().positive(),
   quote: z.unknown(),
 }).strict();
+
+export function paperOwnerOf(record: Pick<PaperRecord, 'owner'> | { owner?: string }): string {
+  return record.owner && record.owner.length > 0 ? record.owner : PAPER_OWNER_ANONYMOUS;
+}
+
+/** Records visible for the signed-in account (or all anonymous when signed out). */
+export function recordVisibleToAccount(record: PaperRecord, userId: string | null): boolean {
+  const owner = paperOwnerOf(record);
+  if (owner === PAPER_OWNER_ANONYMOUS) return true;
+  if (!userId) return false;
+  return owner === userId;
+}
 
 function parseRecord(raw: unknown): PaperRecord {
   /* Accepts an unknown payload (account sync, storage read) and applies the
@@ -38,7 +55,15 @@ function parseRecord(raw: unknown): PaperRecord {
   const parsed = schema.parse(JSON.parse(text));
   const quote = parseEstimate(parsed.quote);
   if (parsed.id !== quote.id || !estimateUsable(quote, parsed.createdAt)) throw new Error('Invalid paper record.');
-  return { version: parsed.version, id: parsed.id, mode: parsed.mode, deskId: parsed.deskId ?? OPEN_DESK_ID, createdAt: parsed.createdAt, quote };
+  return {
+    version: parsed.version,
+    id: parsed.id,
+    mode: parsed.mode,
+    deskId: parsed.deskId ?? OPEN_DESK_ID,
+    owner: paperOwnerOf({ owner: parsed.owner }),
+    createdAt: parsed.createdAt,
+    quote,
+  };
 }
 
 export function loadPaperRecords(storage: PaperStorage, deskId?: HouseDeskId): PaperRecord[] {
@@ -71,7 +96,12 @@ export function deletePaperRecord(storage: PaperStorage & { removeItem(key: stri
  * cannot make the desk's history unreadable. Returns how many records were
  * actually added; 0 means storage is already up to date.
  */
-export function mergePulledRecords(storage: PaperStorage, records: readonly unknown[], deskId: HouseDeskId): number {
+export function mergePulledRecords(
+  storage: PaperStorage,
+  records: readonly unknown[],
+  deskId: HouseDeskId,
+  owner: string = PAPER_OWNER_ANONYMOUS,
+): number {
   const existingIds = new Set<string>();
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
@@ -88,7 +118,11 @@ export function mergePulledRecords(storage: PaperStorage, records: readonly unkn
          merging them here would leak them into this desk's history. */
       if (record.deskId !== deskId) continue;
       if (existingIds.has(record.id)) continue;
-      const serialized = JSON.stringify(record);
+      const stamped: PaperRecord = {
+        ...record,
+        owner: record.owner !== PAPER_OWNER_ANONYMOUS ? record.owner : owner,
+      };
+      const serialized = JSON.stringify(stamped);
       storage.setItem(PREFIX + record.id, serialized);
       if (storage.getItem(PREFIX + record.id) !== serialized) throw new Error('Paper record could not be verified after saving.');
       existingIds.add(record.id);
@@ -98,7 +132,35 @@ export function mergePulledRecords(storage: PaperStorage, records: readonly unkn
   return added;
 }
 
-export function savePaperRecord(storage: PaperStorage, state: DeskState, now: number, deskId: HouseDeskId = OPEN_DESK_ID): PaperRecord {
+/** Rewrite a local record's owner tag. Returns false when missing or unwritable. */
+export function retagPaperOwner(
+  storage: PaperStorage,
+  id: string,
+  owner: string,
+): boolean {
+  if (!/^[\w-]{1,100}$/.test(id)) return false;
+  const key = PREFIX + id;
+  const raw = storage.getItem(key);
+  if (!raw) return false;
+  try {
+    const record = parseRecord(raw);
+    if (paperOwnerOf(record) === owner) return true;
+    const next: PaperRecord = { ...record, owner };
+    const serialized = JSON.stringify(next);
+    storage.setItem(key, serialized);
+    return storage.getItem(key) === serialized;
+  } catch {
+    return false;
+  }
+}
+
+export function savePaperRecord(
+  storage: PaperStorage,
+  state: DeskState,
+  now: number,
+  deskId: HouseDeskId = OPEN_DESK_ID,
+  owner: string = PAPER_OWNER_ANONYMOUS,
+): PaperRecord {
   if (state.stage !== 'review' || !state.quote || !sameIntent(state.draft, state.quote.intent) || !estimateUsable(state.quote, now) || !canFileOnDesk(state, deskId)) {
     throw new Error('Request and review a fresh estimate before recording.');
   }
@@ -112,7 +174,15 @@ export function savePaperRecord(storage: PaperStorage, state: DeskState, now: nu
     return record;
   }
   if (loadPaperRecords(storage, deskId).length >= MAX_HISTORY) throw new Error('Paper history is full. Export or clear records before adding more.');
-  const record: PaperRecord = { version: 1, mode: 'paper', deskId, id: quote.id, createdAt: now, quote };
+  const record: PaperRecord = {
+    version: 1,
+    mode: 'paper',
+    deskId,
+    owner: owner || PAPER_OWNER_ANONYMOUS,
+    id: quote.id,
+    createdAt: now,
+    quote,
+  };
   const serialized = JSON.stringify(record);
   storage.setItem(key, serialized);
   if (storage.getItem(key) !== serialized) throw new Error('Paper record could not be verified after saving.');

@@ -133,7 +133,13 @@ export function EducationTopicBody({
       <p className={styles.meta}>
         <span>{topic.era}</span>
         <span>{topic.type.replace(/_/g, ' ')}</span>
-        <span>Reviewed {topic.revisedAt}</span>
+        <span>
+          {topic.reviewStatus === 'reviewed'
+            ? `Reviewed ${topic.revisedAt}`
+            : topic.reviewStatus === 'needs_revision'
+              ? `Needs revision · ${topic.revisedAt}`
+              : `Draft · ${topic.revisedAt}`}
+        </span>
       </p>
       <h2 id={titleId}>{topic.title}</h2>
       <p className={styles.short}>{topic.shortExplanation}</p>

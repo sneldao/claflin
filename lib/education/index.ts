@@ -5,6 +5,7 @@ export {
   resolveEducationTopic,
   educationTopicSpokenLine,
   topicIdForHouseTerm,
+  isPublishedTopic,
   type EducationTopic,
   type EducationTopicId,
   type EducationContentType,

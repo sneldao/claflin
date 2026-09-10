@@ -4,6 +4,15 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { fetchJson } from '@/lib/api-client';
+import {
+  appendCaption,
+  boundedDiscussionContext,
+  lastCaption,
+  openingWithResume,
+  summarizeDiscussion,
+  type DiscussionCaption,
+} from '@/lib/hetty/discussion';
+import type { TranscriptListItem } from '@/lib/hetty/transcript-list';
 import { resolveDeskAlias } from '@/lib/trading/catalog';
 import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, explainConceptResult, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
@@ -13,6 +22,10 @@ import styles from './WorkingDesk.module.css';
 type Desk = ReturnType<typeof useTradingDesk>;
 type ToolParams = Record<string, unknown>;
 type ToolResult = Promise<string>;
+
+export type Caption = DiscussionCaption;
+
+export { appendCaption, lastCaption, summarizeDiscussion, boundedDiscussionContext, openingWithResume };
 
 /**
  * Hetty's line — a live ElevenLabs voice session. Her tool calls are
@@ -56,37 +69,6 @@ type HettyTools = {
 
 /** One side of the spoken line. Captions are furniture beside the ticket —
  *  faced across a remount they survive, because the caller's work does. */
-export type Caption = { role: 'user' | 'agent'; text: string; at: number };
-
-const CAPTION_LIMIT = 50;
-
-/** Append-only caption store owned above the resettable voice provider, so a
- *  dropped socket never wipes the conversation. Bounded and newest-last;
- *  callers pass the previous array back in. */
-export function appendCaption(previous: readonly Caption[], caption: Caption): Caption[] {
-  const next = [...previous, caption];
-  return next.length > CAPTION_LIMIT ? next.slice(next.length - CAPTION_LIMIT) : next;
-}
-
-/** Latest caption for a side, or null when that side has not spoken yet. */
-export function lastCaption(captions: readonly Caption[], role: Caption['role']): Caption | null {
-  for (let i = captions.length - 1; i >= 0; i--) {
-    if (captions[i].role === role) return captions[i];
-  }
-  return null;
-}
-
-/** A short inspectable summary of the discussion so far — the last exchange,
- *  never authority. The ticket stays the instruction of record. */
-export function summarizeDiscussion(captions: readonly Caption[]): string | null {
-  const user = lastCaption(captions, 'user');
-  const agent = lastCaption(captions, 'agent');
-  if (!user && !agent) return null;
-  const parts: string[] = [];
-  if (user) parts.push(`You said: ${user.text}`);
-  if (agent) parts.push(`Hetty replied: ${agent.text}`);
-  return `Last exchange — ${parts.join(' ')} (${captions.length} ${captions.length === 1 ? 'line' : 'lines'} this session). The ticket holds the instruction.`;
-}
 
 /** A ring that has not connected within this window is treated as failed. */
 const DIAL_TIMEOUT_MS = 20_000;
@@ -112,6 +94,100 @@ function receiverClick(): void {
     osc.stop(t + 0.06);
     osc.onended = () => { void ctx.close().catch(() => undefined); };
   } catch { /* silence is an acceptable receiver */ }
+}
+
+/** Minimal retrieve/delete for account-bound call records — not a chat archive. */
+function SavedCallsPanel() {
+  const auth = useDeskAuth();
+  const [items, setItems] = useState<TranscriptListItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const token = await auth.getAccessToken();
+      if (!token) { setItems([]); return; }
+      const res = await fetch('/api/hetty/transcript', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        setError('Saved calls could not be loaded.');
+        setItems([]);
+        return;
+      }
+      const body = (await res.json()) as { transcripts?: TranscriptListItem[] };
+      setItems(Array.isArray(body.transcripts) ? body.transcripts : []);
+    } catch {
+      setError('Saved calls could not be loaded.');
+      setItems([]);
+    }
+  }, [auth]);
+
+  useEffect(() => {
+    if (!open || items !== null) return;
+    void load();
+  }, [open, items, load]);
+
+  const remove = async (conversationId: string) => {
+    setBusyId(conversationId);
+    setError(null);
+    try {
+      const token = await auth.getAccessToken();
+      if (!token) return;
+      const res = await fetch(`/api/hetty/transcript?conversationId=${encodeURIComponent(conversationId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setError('That call could not be deleted.');
+        return;
+      }
+      setItems(prev => (prev ?? []).filter(item => item.conversationId !== conversationId));
+    } catch {
+      setError('That call could not be deleted.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <details
+      className={styles.captionHistory}
+      open={open}
+      onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}
+    >
+      <summary>Saved calls</summary>
+      <p className={styles.captionApplied}>Account transcripts · 30 days · retrieve or delete. Not agent memory.</p>
+      {error && <p role="alert" className={styles.callError}>{error}</p>}
+      {items === null && open && <p className={styles.captionApplied}>Loading…</p>}
+      {items && items.length === 0 && <p className={styles.captionApplied}>No saved calls.</p>}
+      {items && items.length > 0 && (
+        <ol>
+          {items.map(item => (
+            <li key={item.conversationId}>
+              <span>{new Date(item.endedAt).toLocaleString()}</span>
+              {' · '}
+              {item.turnCount} {item.turnCount === 1 ? 'turn' : 'turns'}
+              {' — '}
+              {item.preview}
+              {' '}
+              <button
+                type="button"
+                className={styles.callButtonSecondary}
+                disabled={busyId === item.conversationId}
+                onClick={() => { void remove(item.conversationId); }}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </details>
+  );
 }
 
 export type TranscriptSaveState = {
@@ -583,7 +659,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     }, 2000);
   }, [hangUp, fireEnded]);
 
-  const ring = async () => {
+  const ring = async (mode: 'fresh' | 'resume' = 'fresh') => {
     if (dialing || sdkConnecting || live) return;
     dialCancelledRef.current = false;
     endedByUserRef.current = false;
@@ -612,10 +688,12 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
       return;
     }
     // The opening already knows the foreground: recognition before
-    // interrogation. Recomputed here — the ticket stayed usable while the
-    // line connected, so the desk may have moved since the ring.
+    // interrogation. Resume optionally carries a bounded prior discussion.
     const d = deskRef.current;
-    const opening = hettyOpeningLine(d.state, d.foreground, liveModeRef.current);
+    const ticketOpening = hettyOpeningLine(d.state, d.foreground, liveModeRef.current);
+    const resume = mode === 'resume' && captionsRef.current.length > 0;
+    const prior = resume ? boundedDiscussionContext(captionsRef.current) : null;
+    const opening = resume ? openingWithResume(ticketOpening, captionsRef.current) : ticketOpening;
     try {
       await (conversation.startSession as unknown as (opts: Record<string, unknown>) => unknown)({
         signedUrl: result.data.signedUrl,
@@ -625,6 +703,8 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
           desk_instrument: d.foreground.instrumentId ?? '',
           desk_stage: d.state.stage,
           desk_mode: liveModeRef.current ? 'live' : 'paper',
+          prior_discussion: prior ?? '',
+          discussion_resume: resume ? 'yes' : 'no',
         },
       });
     } catch {
@@ -677,8 +757,21 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
       </div>
       <p className={styles.callNote}>{callNote}</p>
       <div className={styles.callActions}>
-        {!live && !ringing && (
-          <button type="button" className={styles.callButton} onClick={() => void ring()}>
+        {!live && !ringing && captions.length > 0 && (
+          <>
+            <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>
+              Resume with Hetty
+            </button>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); }}>
+              Start fresh
+            </button>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); void ring('fresh'); }}>
+              Ring fresh
+            </button>
+          </>
+        )}
+        {!live && !ringing && captions.length === 0 && (
+          <button type="button" className={styles.callButton} onClick={() => void ring('fresh')}>
             {desk.state.draft.instrumentId ? 'Ring Hetty with this instruction' : 'Ring Hetty'}
           </button>
         )}
@@ -726,13 +819,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
               </ol>
             </details>
           )}
-          {!live && !ringing && captions.length > 0 && (
-            <button type="button" className={styles.callButtonSecondary} onClick={onClearDiscussion}>
-              Start fresh
-            </button>
-          )}
         </div>
       )}
+      {!live && !ringing && auth.authenticated && <SavedCallsPanel />}
       {!live && !ringing && endNote && <p role="status" className={styles.callEnded}>{endNote}</p>}
       {callError && <p role="alert" className={styles.callError}>{callError}</p>}
       {auth.enabled && saveState.status !== 'idle' && (

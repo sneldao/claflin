@@ -195,7 +195,7 @@ describe('watch_mark', () => {
   it('never resolves a watch from a read-only archive document', () => {
     const filedId = 'filed-aapl';
     const filed = {
-      version: 1 as const, id: filedId, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1,
+      version: 1 as const, id: filedId, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1,
       quote: { ...quote, id: filedId, intent: { ...intent, instrumentId: aapl.id }, outputSymbol: 'AAPLc' },
     };
     const foreground = foregroundOf(reviewed(), filedId, [filed]);
@@ -280,7 +280,7 @@ describe('describe_desk', () => {
 
 function filedRecord(id: string) {
   return {
-    version: 1 as const, id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1,
+    version: 1 as const, id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1,
     quote: { ...quote, id },
   };
 }

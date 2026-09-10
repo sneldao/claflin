@@ -98,6 +98,7 @@ function makeRecord(index: number, createdAt: number): PaperRecord {
     id,
     mode: 'paper',
     deskId: 'hetty',
+    owner: 'anonymous',
     createdAt,
     quote: makeEstimate(stock, 'buy', '10', id, createdAt),
   };

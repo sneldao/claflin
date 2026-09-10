@@ -7,6 +7,7 @@ import {
   resolveEducationTopic,
   educationTopicSpokenLine,
   topicIdForHouseTerm,
+  isPublishedTopic,
   getBrokerMethod,
   listBrokerMethods,
   resolveBrokerMethod,
@@ -40,6 +41,15 @@ describe('education catalog', () => {
       assert.ok(topic.deeperReading.length > topic.shortExplanation.length, topic.id);
       assert.doesNotMatch(topic.shortExplanation, /\b(you should buy|guaranteed|risk-free)\b/i);
       assert.doesNotMatch(topic.deeperReading, /\b(you should buy|guaranteed|risk-free)\b/i);
+    }
+  });
+
+  it('publishes only reviewed topics by default', () => {
+    assert.equal(isPublishedTopic({ reviewStatus: 'reviewed' }), true);
+    assert.equal(isPublishedTopic({ reviewStatus: 'draft' }), false);
+    assert.equal(isPublishedTopic({ reviewStatus: 'needs_revision' }), false);
+    for (const topic of listEducationTopics({ includeOptionalHouse: true })) {
+      assert.equal(topic.reviewStatus, 'reviewed');
     }
   });
 
@@ -141,22 +151,23 @@ describe('delayed tape practice', () => {
     let progress = initialDelayedTapeProgress();
     assert.equal(progress.complete, false);
     for (let i = 0; i < DELAYED_TAPE_STEPS.length; i++) {
-      progress = applyDelayedTapeChoice(progress, i === 1 ? 'buy' : 'stand_aside');
+      progress = applyDelayedTapeChoice(progress, i === 1 ? 'request_quote' : 'wait');
     }
     assert.equal(progress.complete, true);
     assert.equal(progress.choices.length, DELAYED_TAPE_STEPS.length);
     assert.match(DELAYED_TAPE_REVEAL.lesson, /Paper mode/);
-    assert.match(delayedTapeDebrief(progress.choices), /stood aside at least once/i);
-    assert.match(delayedTapeDebrief(['stand_aside', 'stand_aside', 'stand_aside']), /information, not permission/);
+    assert.match(delayedTapeDebrief(progress.choices), /no score/i);
+    assert.match(DELAYED_TAPE_STEPS[0].choices[0].label, /Request a current quote/);
+    assert.match(DELAYED_TAPE_STEPS[0].choices[2].label, /^Wait$/);
   });
 
   it('ignores further choices after completion', () => {
     let progress = initialDelayedTapeProgress();
     for (const step of DELAYED_TAPE_STEPS) {
       void step;
-      progress = applyDelayedTapeChoice(progress, 'stand_aside');
+      progress = applyDelayedTapeChoice(progress, 'wait');
     }
-    const frozen = applyDelayedTapeChoice(progress, 'buy');
+    const frozen = applyDelayedTapeChoice(progress, 'request_quote');
     assert.deepEqual(frozen, progress);
   });
 });

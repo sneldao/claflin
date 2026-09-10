@@ -179,13 +179,31 @@ const BY_ID = Object.fromEntries(TOPICS.map(topic => [topic.id, topic])) as Reco
   EducationTopic
 >;
 
-export function listEducationTopics(options?: { includeOptionalHouse?: boolean }): readonly EducationTopic[] {
-  const includeOptional = options?.includeOptionalHouse ?? false;
-  return TOPICS.filter(topic => includeOptional || !topic.optionalHouseDocument);
+export function isPublishedTopic(topic: { reviewStatus: EducationReviewStatus }): boolean {
+  return topic.reviewStatus === 'reviewed';
 }
 
-export function getEducationTopic(id: string): EducationTopic | undefined {
-  return BY_ID[id as EducationTopicId];
+export function listEducationTopics(options?: {
+  includeOptionalHouse?: boolean;
+  includeUnreviewed?: boolean;
+}): readonly EducationTopic[] {
+  const includeOptional = options?.includeOptionalHouse ?? false;
+  const includeUnreviewed = options?.includeUnreviewed ?? false;
+  return TOPICS.filter(topic => {
+    if (!includeOptional && topic.optionalHouseDocument) return false;
+    if (!includeUnreviewed && !isPublishedTopic(topic)) return false;
+    return true;
+  });
+}
+
+export function getEducationTopic(
+  id: string,
+  options?: { includeUnreviewed?: boolean },
+): EducationTopic | undefined {
+  const topic = BY_ID[id as EducationTopicId];
+  if (!topic) return undefined;
+  if (!(options?.includeUnreviewed ?? false) && !isPublishedTopic(topic)) return undefined;
+  return topic;
 }
 
 /** Resolve a caller phrase or term to a reviewed topic. */
@@ -219,9 +237,9 @@ export function resolveEducationTopic(query: string): EducationTopic | undefined
     seat: 'participation',
   };
   for (const [alias, id] of Object.entries(aliases)) {
-    if (q === alias || q.includes(alias)) return BY_ID[id];
+    if (q === alias || q.includes(alias)) return getEducationTopic(id);
   }
-  return TOPICS.find(topic =>
+  return listEducationTopics({ includeOptionalHouse: true }).find(topic =>
     topic.term.toLowerCase() === q ||
     topic.title.toLowerCase() === q ||
     topic.id === q

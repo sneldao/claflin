@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
-import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
+import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
 import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
@@ -22,11 +23,13 @@ function loadWatched(storage: Storage, deskId: HouseDeskId): string[] {
   } catch { return []; }
 }
 
-function readHistory(deskId: HouseDeskId): PaperRecord[] {
-  return isOpenDesk(deskId) ? loadPaperRecords(window.localStorage, deskId) : [];
+function readHistory(deskId: HouseDeskId, userId: string | null): PaperRecord[] {
+  const all = isOpenDesk(deskId) ? loadPaperRecords(window.localStorage, deskId) : [];
+  return all.filter(record => recordVisibleToAccount(record, userId));
 }
 
 export function useTradingDesk() {
+  const auth = useDeskAuth();
   const [deskId, setDeskId] = useState<HouseDeskId>(OPEN_DESK_ID);
   const [state, dispatch] = useReducer(deskReducer, emptyDraft(), initialDesk);
   const [records, setRecords] = useState<PaperRecord[]>([]);
@@ -42,9 +45,15 @@ export function useTradingDesk() {
   const sessions = useRef<Partial<Record<HouseDeskId, ParkedDesk>>>({});
   const deskIdRef = useRef(deskId);
   deskIdRef.current = deskId;
+  const userIdRef = useRef(auth.userId);
+  userIdRef.current = auth.userId;
 
   const loadHistory = useCallback(() => {
-    try { setRecords(readHistory(deskIdRef.current)); setHistoryReady(true); setStorageError(null); }
+    try {
+      setRecords(readHistory(deskIdRef.current, userIdRef.current));
+      setHistoryReady(true);
+      setStorageError(null);
+    }
     catch { setHistoryReady(false); setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.'); }
   }, []);
 
@@ -60,6 +69,9 @@ export function useTradingDesk() {
     window.addEventListener('storage', loadHistory);
     return () => { request.current?.abort(); window.removeEventListener('storage', loadHistory); };
   }, [loadHistory]);
+  useEffect(() => {
+    loadHistory();
+  }, [auth.userId, loadHistory]);
   useEffect(() => {
     if (!deskReady || !isOpenDesk(deskId)) return;
     try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
@@ -126,14 +138,15 @@ export function useTradingDesk() {
     }
     saveLock.current = true;
     try {
-      const saved = savePaperRecord(window.localStorage, state, Date.now(), deskId);
+      const owner = auth.authenticated && auth.userId ? auth.userId : PAPER_OWNER_ANONYMOUS;
+      const saved = savePaperRecord(window.localStorage, state, Date.now(), deskId, owner);
       setRecords(previous => [saved, ...previous.filter(record => record.id !== saved.id)]);
       setViewedRecordId(saved.id);
       dispatch({ type: 'saved', quoteId: saved.id, now: saved.createdAt });
       setError(null);
     } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
-  }, [deskId, historyReady, knownRecords, state, viewedRecordId]);
+  }, [auth.authenticated, auth.userId, deskId, historyReady, knownRecords, state, viewedRecordId]);
 
   const cancel = useCallback(() => {
     if (instructionLocked(state, viewedRecordId, knownRecords)) {
@@ -218,7 +231,7 @@ export function useTradingDesk() {
     setViewedRecordId(entered.viewedRecordId);
     setError(entered.error);
     try {
-      setRecords(readHistory(entered.deskId));
+      setRecords(readHistory(entered.deskId, userIdRef.current));
       setWatched(loadWatched(window.localStorage, entered.deskId));
       setHistoryReady(true);
       setStorageError(null);

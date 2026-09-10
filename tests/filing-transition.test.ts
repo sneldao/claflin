@@ -31,7 +31,7 @@ function makeQuote(intent: TradeIntent, now: number, id = 'filing-quote'): Quote
 }
 
 function makeRecord(id: string, createdAt: number, quote: QuoteEstimate): PaperRecord {
-  return { version: 1, mode: 'paper', deskId: 'hetty', id, createdAt, quote: { ...quote, id } };
+  return { version: 1, mode: 'paper', deskId: 'hetty', owner: 'anonymous', id, createdAt, quote: { ...quote, id } };
 }
 
 function injectWorkingDeskCss() {
@@ -164,7 +164,7 @@ describe('paper ledger edge cases', () => {
       focusedRecordId: null,
       foreground: { kind: 'draft', quoteId: null, recordId: null, instrumentId: null, actionable: true, readonly: false },
     });
-    assert.match(getRootElement().innerHTML, /No paper on file yet/);
+    assert.match(getRootElement().innerHTML, /No paper or live evidence on file yet/);
   });
 
   it('scrolls the focused older record into the compact preview', async () => {
@@ -186,6 +186,6 @@ describe('paper ledger edge cases', () => {
     const last = lines[lines.length - 1];
     assert.equal(last.getAttribute('data-current'), 'true', 'the focused record should be the last visible line');
     assert.equal(last.getAttribute('data-just-filed'), 'false', 'an older focused record should not be marked just-filed');
-    assert.ok(container.textContent?.includes('3 older in the archive'), 'older count should be surfaced');
+    assert.ok(container.textContent?.includes('3 older paper in the archive'), 'older count should be surfaced');
   });
 });

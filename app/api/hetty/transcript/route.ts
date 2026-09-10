@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { accountFromRequest } from '@/lib/auth';
 import { getRedis } from '@/lib/redis';
 import { keptTranscriptRevision } from '@/lib/hetty/transcript-revision';
+import { sortTranscriptList, toTranscriptListItem } from '@/lib/hetty/transcript-list';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +26,7 @@ const bodySchema = transcriptSchema;
 
 const TTL_SECONDS = 30 * 24 * 3600;
 
-/** GET /api/hetty/transcript?conversationId=… — retrieve one saved call.
- *  DELETE /api/hetty/transcript?conversationId=… — remove it. Both require
- *  the caller's token and only touch that caller's own rows. */
-async function requireOwnership(req: NextRequest): Promise<{ userId: string; conversationId: string } | Response> {
+async function requireUser(req: NextRequest): Promise<{ userId: string } | Response> {
   let userId: string | null;
   try {
     userId = await accountFromRequest(req);
@@ -36,18 +34,36 @@ async function requireOwnership(req: NextRequest): Promise<{ userId: string; con
     return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
   if (!userId) return Response.json({ error: 'sign_in_required' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
-  const conversationId = req.nextUrl.searchParams.get('conversationId') ?? '';
-  if (!/^[\w-]{6,120}$/.test(conversationId)) {
-    return Response.json({ error: 'invalid_transcript' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
-  }
-  return { userId, conversationId };
+  return { userId };
 }
 
+/** GET /api/hetty/transcript — list saved calls (compact).
+ *  GET /api/hetty/transcript?conversationId=… — retrieve one.
+ *  DELETE /api/hetty/transcript?conversationId=… — remove one. */
 export async function GET(req: NextRequest): Promise<Response> {
-  const owned = await requireOwnership(req);
-  if (owned instanceof Response) return owned;
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+  const conversationId = req.nextUrl.searchParams.get('conversationId') ?? '';
   try {
-    const raw = await getRedis().get(`transcript:${owned.userId}:${owned.conversationId}`);
+    const redis = getRedis();
+    if (!conversationId) {
+      const ids = await redis.smembers(`transcripts:${auth.userId}`);
+      const items = [];
+      for (const id of ids.slice(0, 40)) {
+        if (!/^[\w-]{6,120}$/.test(id)) continue;
+        try {
+          const raw = await redis.get(`transcript:${auth.userId}:${id}`);
+          if (!raw) continue;
+          const parsed = transcriptSchema.parse(raw);
+          items.push(toTranscriptListItem(id, parsed));
+        } catch { /* skip corrupt rows */ }
+      }
+      return Response.json({ transcripts: sortTranscriptList(items) }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (!/^[\w-]{6,120}$/.test(conversationId)) {
+      return Response.json({ error: 'invalid_transcript' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+    }
+    const raw = await redis.get(`transcript:${auth.userId}:${conversationId}`);
     if (!raw) return Response.json({ error: 'not_found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
     return Response.json({ transcript: transcriptSchema.parse(raw) }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
@@ -56,12 +72,16 @@ export async function GET(req: NextRequest): Promise<Response> {
 }
 
 export async function DELETE(req: NextRequest): Promise<Response> {
-  const owned = await requireOwnership(req);
-  if (owned instanceof Response) return owned;
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+  const conversationId = req.nextUrl.searchParams.get('conversationId') ?? '';
+  if (!/^[\w-]{6,120}$/.test(conversationId)) {
+    return Response.json({ error: 'invalid_transcript' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+  }
   try {
     const redis = getRedis();
-    await redis.del(`transcript:${owned.userId}:${owned.conversationId}`);
-    await redis.srem(`transcripts:${owned.userId}`, owned.conversationId);
+    await redis.del(`transcript:${auth.userId}:${conversationId}`);
+    await redis.srem(`transcripts:${auth.userId}`, conversationId);
     return Response.json({ deleted: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return Response.json({ error: 'unavailable', message: 'Transcript deletion is unavailable on this deployment.' }, { status: 503 });
@@ -69,13 +89,9 @@ export async function DELETE(req: NextRequest): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  let userId: string | null;
-  try {
-    userId = await accountFromRequest(req);
-  } catch {
-    return Response.json({ error: 'unauthorized' }, { status: 401 });
-  }
-  if (!userId) return Response.json({ error: 'sign_in_required' }, { status: 401 });
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+  const userId = auth.userId;
 
   let parsed: z.infer<typeof bodySchema>;
   try {

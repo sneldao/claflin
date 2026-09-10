@@ -141,7 +141,7 @@ describe('one foreground document', () => {
     assert.equal(canFileForeground(review, filedId), false);
     assert.equal(canFileForeground(review, null), true);
     const spoken = speakForeground(review, filedId, [{
-      version: 1, id: filedId, mode: 'paper', deskId: 'hetty', createdAt: now + 1,
+      version: 1, id: filedId, mode: 'paper', deskId: 'hetty', owner: 'anonymous', createdAt: now + 1,
       quote: { ...quote, id: filedId, outputSymbol: 'AAPLc' },
     }]);
     assert.match(spoken, /read-only/);
@@ -152,7 +152,7 @@ describe('one foreground document', () => {
     const aapl = DESK_INSTRUMENTS.find(item => item.symbol === 'AAPLc')!;
     const filedId = 'filed-aapl';
     const filed = {
-      version: 1 as const, id: filedId, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1,
+      version: 1 as const, id: filedId, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1,
       quote: { ...quote, id: filedId, intent: { ...intent, instrumentId: aapl.id }, outputSymbol: 'AAPLc' },
     };
     const foreground = foregroundDocument(reviewed(), filedId, [filed]);

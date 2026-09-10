@@ -16,6 +16,7 @@ const recordSchema = z.object({
   id: z.string().regex(/^[\w-]{1,100}$/),
   mode: z.literal('paper'),
   deskId: z.enum(['hetty', 'jesse', 'isabel', 'arbitrum']).optional(),
+  owner: z.union([z.literal('anonymous'), z.string().min(1).max(128)]).optional(),
   createdAt: z.number().int().positive(),
   quote: z.unknown(),
 }).strict();

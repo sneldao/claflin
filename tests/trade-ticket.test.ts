@@ -119,7 +119,7 @@ describe('one working document at a time', () => {
   });
   it('shows a compact receipt without reopening the form or asking for approval again', () => {
     const saved = deskReducer(reviewed(), { type: 'saved', quoteId: quote.id, now: now + 1 });
-    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote };
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1, quote };
     const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
     assert.doesNotMatch(html, /<form|<input|Record paper trade|Refresh estimate/);
@@ -133,7 +133,7 @@ describe('one working document at a time', () => {
     assert.match(html, /Recorded/);
   });
   it('opens a filed record on the ticket without turning it into a new draft', () => {
-    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote };
+    const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1, quote };
     const html = render(initialDesk({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' }), {
       records: [record], viewedRecordId: quote.id, focusedRecordId: quote.id,
     });
@@ -145,7 +145,7 @@ describe('one working document at a time', () => {
   });
   it('does not offer to record a hidden quotation while a filed record is on the ticket', () => {
     const filed = { ...quote, id: 'filed-nvda' };
-    const record = { version: 1 as const, id: filed.id, mode: 'paper' as const, deskId: 'hetty' as const, createdAt: now + 1, quote: filed };
+    const record = { version: 1 as const, id: filed.id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1, quote: filed };
     const html = render(reviewed(), { records: [record], viewedRecordId: filed.id, focusedRecordId: filed.id });
     assert.match(html, /data-foreground="archive"/);
     assert.doesNotMatch(visible(html), /Record paper trade/);
