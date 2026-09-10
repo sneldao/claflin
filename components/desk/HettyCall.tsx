@@ -34,9 +34,10 @@ type ToolResult = Promise<string>;
  * every terminal event (disconnect, error, the dial watchdog, page hide,
  * bfcache restore) funnels through exactly one of onSessionEnded /
  * onSessionFailed, and the outer shell answers each by remounting the
- * ConversationProvider — every ring gets a fresh socket. The closing note
- * and any error survive the remount as props. Continuity between calls is
- * carried by the ticket, not by audio memory: the next opening line is
+ * ConversationProvider — every ring gets a fresh socket. The closing note,
+ * any error, and the discussion itself survive the remount as props and
+ * shell state. Continuity between calls is carried by the ticket and the
+ * surviving discussion — never by audio memory: the next opening line is
  * built from the draft on the paper.
  */
 
@@ -52,7 +53,39 @@ type HettyTools = {
   share_desk_note: () => ToolResult;
 };
 
-type Caption = { role: 'user' | 'agent'; text: string; at: number };
+/** One side of the spoken line. Captions are furniture beside the ticket —
+ *  faced across a remount they survive, because the caller's work does. */
+export type Caption = { role: 'user' | 'agent'; text: string; at: number };
+
+const CAPTION_LIMIT = 50;
+
+/** Append-only caption store owned above the resettable voice provider, so a
+ *  dropped socket never wipes the conversation. Bounded and newest-last;
+ *  callers pass the previous array back in. */
+export function appendCaption(previous: readonly Caption[], caption: Caption): Caption[] {
+  const next = [...previous, caption];
+  return next.length > CAPTION_LIMIT ? next.slice(next.length - CAPTION_LIMIT) : next;
+}
+
+/** Latest caption for a side, or null when that side has not spoken yet. */
+export function lastCaption(captions: readonly Caption[], role: Caption['role']): Caption | null {
+  for (let i = captions.length - 1; i >= 0; i--) {
+    if (captions[i].role === role) return captions[i];
+  }
+  return null;
+}
+
+/** A short inspectable summary of the discussion so far — the last exchange,
+ *  never authority. The ticket stays the instruction of record. */
+export function summarizeDiscussion(captions: readonly Caption[]): string | null {
+  const user = lastCaption(captions, 'user');
+  const agent = lastCaption(captions, 'agent');
+  if (!user && !agent) return null;
+  const parts: string[] = [];
+  if (user) parts.push(`You said: ${user.text}`);
+  if (agent) parts.push(`Hetty replied: ${agent.text}`);
+  return `Last exchange — ${parts.join(' ')} (${captions.length} ${captions.length === 1 ? 'line' : 'lines'} this session). The ticket holds the instruction.`;
+}
 
 /** A ring that has not connected within this window is treated as failed. */
 const DIAL_TIMEOUT_MS = 20_000;
@@ -80,10 +113,13 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+function HettyCallInner({ desk, liveMode, captions, onCaption, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
+  /** Discussion owned above the resettable provider — survives remounts. */
+  captions: Caption[];
+  onCaption: (caption: Caption) => void;
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -98,6 +134,13 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
   useEffect(() => { deskRef.current = desk; });
   const liveModeRef = useRef(liveMode);
   useEffect(() => { liveModeRef.current = liveMode; });
+  /* Captions live above the resettable provider — the inner callback only
+     forwards; the shell owns the append so a dropped socket never wipes the
+     conversation. */
+  const captionsRef = useRef(captions);
+  useEffect(() => { captionsRef.current = captions; });
+  const onCaptionRef = useRef(onCaption);
+  useEffect(() => { onCaptionRef.current = onCaption; });
 
   const waitFor = useCallback((predicate: (d: Desk) => boolean, ms: number) =>
     new Promise<boolean>(resolve => {
@@ -209,7 +252,6 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
      pressed, stays cancellable through the session-URL fetch, and guards
      against a late connection opening after the client has left. */
   const [dialing, setDialing] = useState(false);
-  const [captions, setCaptions] = useState<Caption[]>([]);
   const dialCancelledRef = useRef(false);
   const ringGenRef = useRef(0);
   const endedByUserRef = useRef(false);
@@ -291,7 +333,7 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
       const user = m.role === 'user' || m.source === 'user';
       const turn = { role: user ? 'user' as const : 'agent' as const, text: text.slice(0, 4000), at: Date.now() };
       turnsRef.current.push(turn);
-      setCaptions(prev => [...prev.slice(-19), { role: turn.role, text: text.slice(0, 600), at: turn.at }]);
+      onCaptionRef.current({ role: turn.role, text: text.slice(0, 600), at: turn.at });
       // Two sides of the same exchange: what the caller said, what Hetty
       // actually replied. The ticket carries the caller's words for noisy
       // rooms; the line carries both, because a recognised utterance is not
@@ -311,7 +353,6 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
       }
       startedAtRef.current = Date.now();
       turnsRef.current = [];
-      setCaptions([]);
       convIdRef.current = null;
       flushedRef.current = false;
       deskNoteShared.current = false;
@@ -493,8 +534,9 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
               ? 'Microphone muted'
               : 'Microphone on';
 
-  const lastUser = [...captions].reverse().find(c => c.role === 'user') ?? null;
-  const lastAgent = [...captions].reverse().find(c => c.role === 'agent') ?? null;
+  const lastUser = lastCaption(captions, 'user');
+  const lastAgent = lastCaption(captions, 'agent');
+  const discussion = summarizeDiscussion(captions);
   const applied = live || captions.length > 0 ? appliedTicketLine(desk.state, desk.foreground) : null;
 
   const callNote = desk.foreground.kind === 'missing'
@@ -552,6 +594,7 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
           {lastUser && <p className={styles.captionLine}><span>You said.</span> {lastUser.text}</p>}
           {lastAgent && <p className={styles.captionLine} data-voice="hetty"><span>Hetty replied.</span> {lastAgent.text}</p>}
           {applied && <p className={styles.captionApplied}>{applied}</p>}
+          {discussion && live && <p className={styles.captionApplied}>{discussion}</p>}
           {captions.length > 2 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>
@@ -577,12 +620,19 @@ function HettyCallInner({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpo
 
 /* The outer shell owns the session lifecycle: every terminal event remounts
    the ConversationProvider (fresh socket, fresh locks), while the closing
-   note and any error persist across the remount as props. */
+   note, any error, and the discussion itself persist across the remount —
+   the line can break; the caller's work does not. */
 export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange, onUserSpoken, onAgentSpoken }: { desk: Desk; liveMode: boolean; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void }) {
   const [sessionKey, setSessionKey] = useState(0);
   const [endNote, setEndNote] = useState<string | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
-  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); }, []);
+  const [captions, setCaptions] = useState<Caption[]>([]);
+  const handleCaption = useCallback((caption: Caption) => {
+    setCaptions(previous => appendCaption(previous, caption));
+  }, []);
+  /* A fresh connection starts a fresh turn of the discussion; a remount after
+     a terminal event keeps what was already said. New rings begin clean. */
+  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setCaptions([]); }, []);
   const handleEnded = useCallback((note: string | null) => {
     setCallError(null);
     setEndNote(note);
@@ -598,6 +648,8 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange,
       <HettyCallInner
         desk={desk}
         liveMode={liveMode}
+        captions={captions}
+        onCaption={handleCaption}
         onLiveChange={onLiveChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}
