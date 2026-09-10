@@ -20,6 +20,7 @@ import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
+import { getBrokerMethod } from '@/lib/education';
 import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
@@ -63,7 +64,7 @@ function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean 
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
-  usePaperSync(desk);
+  const { importAnonymousRecords, anonymousCount } = usePaperSync(desk);
   const [hettyLive, setHettyLive] = useState(false);
   // Both sides of the line, captioned on the blotter: the caller's words and
   // Hetty's replies. Cleared when the line drops — the ticket returns to
@@ -87,6 +88,7 @@ export function WorkingDesk() {
   // working tray compares against it — a single honest reading of the room.
   const marks = useReferenceMarks(desk.deskId);
   const open = desk.open;
+  const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
   /* Shells stay: an empty ledger is a ruled slip, an empty tray is a pinboard
      suggestion — failure and arrival share one place each. */
@@ -233,6 +235,11 @@ export function WorkingDesk() {
         {auth.enabled && (auth.authenticated ? (
           <span className={styles.authChip}>
             <span className={styles.authLabel} title={auth.label ?? 'Signed in'}>{auth.label ?? 'Signed in'}</span>
+            {anonymousCount > 0 && (
+              <button type="button" className={styles.authLink} onClick={importAnonymousRecords} title={`Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'} left on this browser before you signed in`}>
+                Import {anonymousCount} paper {anonymousCount === 1 ? 'record' : 'records'}
+              </button>
+            )}
             <button type="button" onClick={auth.logout}>Sign out</button>
           </span>
         ) : (
@@ -267,6 +274,11 @@ export function WorkingDesk() {
             <summary>About Hetty Green</summary>
             <div className={styles.popoverPanel}>
               <p>Hetty Green is an AI character inspired by the historical financier, not the person herself or a licensed human broker. She helps make a decision clear. She does not make it for you. {LIVE_EXECUTION_ENABLED ? 'She cannot sign or execute — the Execute button on your slip is yours alone.' : 'This release is paper-only; she cannot place a real order.'}</p>
+              <p><strong>How she examines a question — {hettyMethod.lens}.</strong> Educational perspective only.</p>
+              <ul>
+                {hettyMethod.questions.map(question => <li key={question}>{question}</li>)}
+              </ul>
+              <p>{hettyMethod.boundary}</p>
             </div>
           </details>}
         </aside>

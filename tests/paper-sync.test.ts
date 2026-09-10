@@ -161,8 +161,9 @@ describe('usePaperSync behavior', () => {
   function Harness({ initialRecords }: { initialRecords: PaperRecord[] }) {
     const [records, setRecords] = useState(initialRecords);
     const desk = { deskId: 'hetty', historyReady: true, records };
-    const { importAnonymousRecords } = usePaperSync(desk as any);
+    const { importAnonymousRecords, anonymousCount } = usePaperSync(desk as any);
     globalThis.__importAnonymous = importAnonymousRecords;
+    globalThis.__anonymousCount = () => anonymousCount;
     return createElement('div', null,
       createElement('button', { type: 'button', id: 'add', onClick: () => setRecords(prev => [...prev, record(String.fromCharCode(97 + prev.length))]) }, 'Add'),
       createElement('button', { type: 'button', id: 'same', onClick: () => setRecords(prev => [...prev]) }, 'Same'),
@@ -229,9 +230,11 @@ describe('usePaperSync behavior', () => {
     await flush();
     const postRequests = () => requests.filter(r => r.url.includes('/api/paper') && r.method === 'POST');
     assert.equal(postRequests().length, 0, 'anonymous work stays local on sign-in');
+    assert.equal(globalThis.__anonymousCount(), 1, 'the importable anonymous count is visible after sign-in');
 
     // Import is explicit; signing the claim and a records change uploads it.
     await act(async () => { globalThis.__importAnonymous(); });
+    assert.equal(globalThis.__anonymousCount(), 0, 'explicit import clears the importable set');
     await click('same');
     await click('same'); // first attempt 503s; this retry is accepted and claims the record
     assert.equal(postRequests().length, 2, 'explicit import attributes the anonymous record (with one failed retry)');

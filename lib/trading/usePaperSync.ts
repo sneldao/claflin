@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { mergePulledRecords } from './paper-records';
 import type { useTradingDesk } from './useTradingDesk';
@@ -41,6 +41,9 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
   const lastUserId = useRef<string | null>(null);
   const claimsRef = useRef<Set<string>>(new Set());
   const anonymousIdsRef = useRef<Set<string>>(new Set());
+  /** Records still awaiting an explicit import — shown so the caller can
+   *  decide, never imported silently. */
+  const [anonymousCount, setAnonymousCount] = useState(0);
 
   useEffect(() => {
     if (lastUserId.current !== userId) {
@@ -82,6 +85,11 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
       } catch { /* offline or unavailable — local history stands */ }
     })();
   }, [authenticated, getAccessToken, userId, deskId, records]);
+
+  useEffect(() => {
+    if (!userId || !authenticated) { setAnonymousCount(0); return; }
+    setAnonymousCount(records.filter(r => anonymousIdsRef.current.has(r.id) && !claimsRef.current.has(r.id)).length);
+  }, [authenticated, userId, records]);
 
   useEffect(() => {
     if (lastUserId.current !== userId) {
@@ -126,7 +134,8 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
     }
     writeClaims(userId, window.localStorage, claimsRef.current);
     lastPushedIds.current = null;
+    setAnonymousCount(0);
   };
 
-  return { importAnonymousRecords };
+  return { importAnonymousRecords, anonymousCount };
 }

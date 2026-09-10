@@ -5,7 +5,7 @@ import { ConversationProvider, useConversation, useConversationClientTool } from
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { fetchJson } from '@/lib/api-client';
 import { resolveDeskAlias } from '@/lib/trading/catalog';
-import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
+import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, explainConceptResult, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
@@ -51,6 +51,7 @@ type HettyTools = {
   describe_desk: () => ToolResult;
   watch_mark: (p: ToolParams) => ToolResult;
   share_desk_note: () => ToolResult;
+  explain_concept: (p: ToolParams) => ToolResult;
 };
 
 /** One side of the spoken line. Captions are furniture beside the ticket —
@@ -118,7 +119,7 @@ export type TranscriptSaveState = {
   attempts: number;
 };
 
-function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSaveState, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
@@ -128,6 +129,8 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
   /** Visible transcript save status — owned by the shell, survives remounts. */
   saveState: TranscriptSaveState;
   onSaveState: (state: TranscriptSaveState) => void;
+  /** Deliberate reset of the surviving discussion ("Start fresh"). */
+  onClearDiscussion: () => void;
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -260,6 +263,15 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     if (deskNoteShared.current) return DESK_NOTE_ALREADY_SHARED;
     deskNoteShared.current = true;
     return deskNoteSpokenLine(deskRef.current.deskId);
+  });
+
+  /* Reviewed catalog only — same material as the screen. Never during an
+     active estimate review; never invent beyond the topic. */
+  useConversationClientTool<HettyTools>('explain_concept', async (p) => {
+    if (deskRef.current.state.stage === 'review' || deskRef.current.state.stage === 'loading') {
+      return 'Hold the explanation — an estimate is on the slip. Clarify the terms first, then ask again.';
+    }
+    return explainConceptResult(String(p.topic ?? ''));
   });
 
   /* Immediate, cancellable dialling. The SDK only reports `connecting`
@@ -686,7 +698,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
           {lastUser && <p className={styles.captionLine}><span>You said.</span> {lastUser.text}</p>}
           {lastAgent && <p className={styles.captionLine} data-voice="hetty"><span>Hetty replied.</span> {lastAgent.text}</p>}
           {applied && <p className={styles.captionApplied}>{applied}</p>}
-          {discussion && live && <p className={styles.captionApplied}>{discussion}</p>}
+          {discussion && <p className={styles.captionApplied}>{discussion}</p>}
           {captions.length > 2 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>
@@ -698,6 +710,11 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
                 ))}
               </ol>
             </details>
+          )}
+          {!live && !ringing && captions.length > 0 && (
+            <button type="button" className={styles.callButtonSecondary} onClick={onClearDiscussion}>
+              Start fresh
+            </button>
           )}
         </div>
       )}
@@ -731,9 +748,12 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange,
     setCaptions(previous => appendCaption(previous, caption));
   }, []);
   const handleSaveState = useCallback((state: TranscriptSaveState) => { setSaveState(state); }, []);
-  /* A fresh connection starts a fresh turn of the discussion; a remount after
-     a terminal event keeps what was already said. New rings begin clean. */
-  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setCaptions([]); setSaveState({ status: 'idle', attempts: 0 }); }, []);
+  /* The discussion is the caller's work: it survives across rings and
+     remounts. A fresh call begins a fresh save/attempt counter, but keeps
+     what was already said so the caller can resume the thread. "Start fresh"
+     is the deliberate way to clear it. */
+  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setSaveState({ status: 'idle', attempts: 0 }); }, []);
+  const clearDiscussion = useCallback(() => setCaptions([]), []);
   const handleEnded = useCallback((note: string | null) => {
     setCallError(null);
     setEndNote(note);
@@ -753,6 +773,7 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, onLiveChange,
         onCaption={handleCaption}
         saveState={saveState}
         onSaveState={handleSaveState}
+        onClearDiscussion={clearDiscussion}
         onLiveChange={onLiveChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}
