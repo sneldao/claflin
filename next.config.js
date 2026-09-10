@@ -40,7 +40,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'",
       // ElevenLabs voice session (wss + https) and same-origin API. Dev adds
       // same-origin ws for HMR — 'self' already covers wss on modern engines.
-      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io https://*.walletconnect.com wss://*.walletconnect.com${isDev ? ' ws://localhost:*' : ''}`,
+      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io https://*.walletconnect.com wss://*.walletconnect.com https://*.base.org wss://*.base.org${isDev ? ' ws://localhost:*' : ''}`,
       "media-src 'self' blob:", // ConvAI audio + worklet buffers
       "worker-src 'self' blob:", // AudioWorklet / Three.js workers
       "img-src 'self' data: blob: https://*.walletconnect.com",
