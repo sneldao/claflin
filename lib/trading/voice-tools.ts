@@ -2,6 +2,15 @@ import { DESK_INSTRUMENTS, resolveDeskAlias } from './catalog';
 import { ARCHIVE_READONLY, RECORD_UNAVAILABLE } from './desk-documents';
 import { estimateUsable } from './workflow';
 import { deskNoteOfTheDay } from '../desk-notes';
+import {
+  educationTopicSpokenLine,
+  listEducationTopics,
+  resolveBrokerMethod,
+  brokerMethodSpokenLine,
+  resolveEducationTopic,
+  topicIdForHouseTerm,
+  getEducationTopic,
+} from '../education';
 import type { HouseDeskId } from '../house';
 import type { DeskState } from './workflow';
 import type { TradeIntent } from './domain';
@@ -117,8 +126,41 @@ export const DESK_NOTE_ALREADY_SHARED = 'The desk note is already on the line th
 export function deskNoteSpokenLine(deskId: HouseDeskId, date = new Date()): string {
   const note = deskNoteOfTheDay(deskId, date);
   const source = note.attribution ? ` — ${note.attribution}` : '';
-  if (note.term) return `The desk's word for today: ${note.text} A term of the trade from the house, not advice.`;
+  if (note.term) {
+    const topicId = topicIdForHouseTerm(note.term);
+    const deeper = topicId
+      ? ' If they ask what that means, call explain_concept with that term.'
+      : '';
+    return `The desk's word for today: ${note.text} A term of the trade from the house, not advice.${deeper}`;
+  }
   return `The desk's note for today: ${note.text}${source}. An observation from the house, not advice.`;
+}
+
+/**
+ * Reviewed education from the shared catalog — or a broker examination lens.
+ * Same material as DeskTerm / further reading on screen. Never advice.
+ */
+export function explainConceptResult(query: string): string {
+  const method = resolveBrokerMethod(query);
+  /* Prefer an explicit catalog topic when the ask is about a term, not a person. */
+  const topic = resolveEducationTopic(query);
+  const asksForMethod = /\b(how|lens|method|examine|thinks?|perspective)\b/i.test(query)
+    || /\b(hetty|jesse|isabel|jay|livermore|benham|cooke)\b/i.test(query);
+  if (method && (asksForMethod || !topic)) return brokerMethodSpokenLine(method);
+  if (!topic) {
+    const topics = listEducationTopics({ includeOptionalHouse: true })
+      .map(item => item.term)
+      .join(', ');
+    return `I do not have a reviewed explanation for "${query || 'that'}". I can explain: ${topics}. Or how Hetty, Jesse, Isabel, or Jay examine a question. Or ask about the ticket with describe_desk.`;
+  }
+  return educationTopicSpokenLine(topic);
+}
+
+/** Catalog topic linked from today's house word, if any — for UI, not voice. */
+export function deskNoteEducationTopic(deskId: HouseDeskId, date = new Date()) {
+  const note = deskNoteOfTheDay(deskId, date);
+  const topicId = topicIdForHouseTerm(note.term);
+  return topicId ? getEducationTopic(topicId) : undefined;
 }
 
 function speakForegroundLine(state: DeskState, foreground: ForegroundDocument, records: PaperRecord[]): string {  if (foreground.kind === 'missing') return RECORD_UNAVAILABLE;

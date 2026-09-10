@@ -85,6 +85,8 @@ Still open before any live ticket:
 
 Research, reviewed market letters, saved interests and explainable adaptation support trade discovery and understanding. They are not required reading before a direct instruction. Avoid a CMS, infinite news feed or autonomous thematic basket project ahead of reliable trading.
 
+**Sourced education (Phases 4–6 slice).** A versioned catalog in `lib/education/` covers the tape, certificate, bucket shop, and travelling instruction at decision points (`DeskTerm`, dossier, quote details), with `explain_concept` sharing the same copy with Hetty. Optional house history (participation) lives in the directory, not as an intro. `/practice/delayed-tape` is a labelled simulation reached from the tape topic only. Closed desks expose educational examination methods without quote or file access.
+
 **Multi-desk architecture (in progress, branch `multi-desk-adapters`).** The House/Desk/Market model in `lib/house.ts` is now load-bearing: quotes and marks resolve through per-desk adapter registries (`lib/trading/adapters.ts`) instead of hard-coded Base paths. What landed:
 
 - Instrument identity is a URN grammar — Base ids stay byte-identical (`8453:0x…`) so stored drafts and paper records keep resolving; `base:` folds to the canonical form; `sol:`/`rh:` parse for later. `VenuePair.venue`/`quoteSymbol` are open strings with `chainId` per pair.
