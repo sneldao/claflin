@@ -22,6 +22,7 @@ describe('desk execution failures stay distinct', () => {
     assert.equal(classifyExecutionError(new Error('RPC timeout')), 'rpc_failed');
   });
   it('falls back to a submit failure only when nothing else matches', () => {
+    assert.equal(classifyExecutionError(new Error('Wallet account changed during execution.')), 'disconnected');
     assert.equal(classifyExecutionError(new Error('something unexpected')), 'submit_failed');
   });
 });

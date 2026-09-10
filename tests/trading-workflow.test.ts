@@ -4,7 +4,7 @@ import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk, intentFromSpeech, parseEstimate } from '../lib/trading/workflow';
 import { loadPaperRecords, savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
-import { compactPaperEntry, isUnfinishedWork, persistableDraft, readDraftCheckpoint, readPersistedDraft, writeDraftCheckpoint, writePersistedDraft } from '../lib/trading/desk-documents';
+import { compactPaperEntry, isUnfinishedWork, persistableDraft, readDraftCheckpoint, readPersistedDraft, readRestorableDraft, writeDraftCheckpoint, writePersistedDraft } from '../lib/trading/desk-documents';
 import { createQuoteHandler, quoteBudget } from '../lib/trading/http';
 
 const now = 1788600000000;
@@ -127,6 +127,11 @@ describe('finished work is not in progress', () => {
     assert.equal(checkpoint!.meta.revision, 1);
     assert.equal(checkpoint!.meta.complete, false);
     assert.equal(checkpoint!.meta.updatedAt, 1000);
+    assert.equal(readPersistedDraft(draftStore, 'hetty'), null, 'complete-only reader skips partials');
+    const restored = readRestorableDraft(draftStore, 'hetty');
+    assert.ok(restored, 'restorable reader returns the partial');
+    assert.equal(restored!.instrumentId, intent.instrumentId);
+    assert.equal(restored!.amount, '');
   });
   it('increments the revision and honours the newest checkpoint on the desk', () => {
     const store = new Map<string, string>();

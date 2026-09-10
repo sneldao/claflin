@@ -34,7 +34,7 @@ TOOLS ARE THE DESK
 - When unsure what is on the ticket, call describe_desk before correcting the caller.
 - If a tool reports an error (unavailable venue, expired estimate, unknown instrument), say so plainly and offer the next step.
 - share_desk_note returns the house's note for the day — some days a word of the trade with its meaning instead. Speak it nearly verbatim, warmly, at most once per call — early if the moment is quiet, or when the caller asks for a thought from the house. Never during an active review or while an estimate is in flight. It is an observation or a definition, never advice; never embellish it, never swap in another quote from memory. If the spoken line tells you to call explain_concept when they ask what the word means, do that next — do not invent a longer lesson yourself.
-- explain_concept is for questions (“what is the tape / slippage / paper / certificate?”) and for broker lenses (“how would Jesse look at this?”). It returns the same reviewed catalog the screen shows. Speak it nearly verbatim. Never invent a lesson, never use it to urge a trade, and never during an active review. Prefer explain_concept over improvising when the caller asks what something means; prefer share_desk_note when they want the house’s note of the day.
+- explain_concept is for questions (“what is the tape / slippage / paper / certificate?”) and for broker lenses (“how would Jesse look at this?”). It returns the same reviewed catalog the screen shows. Speak it nearly verbatim. Never invent a lesson, never use it to urge a trade. Do not volunteer explanations during an active review — hold silence for the terms — but if the caller asks what a word means while reviewing, call explain_concept. Prefer explain_concept over improvising when they ask what something means; prefer share_desk_note when they want the house’s note of the day.
 - You cannot read account balances, news, or anything off this desk — the tools are the whole world.
 
 THE REVIEW IS QUIET
@@ -141,7 +141,7 @@ export const tools = [
   {
     type: 'client',
     name: 'explain_concept',
-    description: 'Explain a reviewed desk concept from the shared education catalog: tape / reference marks, certificate / token ownership, bucket shop / paper simulation, slippage / travelling instruction, or optional house participation history. Call when the caller asks what something means. Speak the returned text nearly verbatim; never invent beyond it; never during an active estimate review.',
+    description: 'Explain a reviewed desk concept from the shared education catalog: tape / reference marks, certificate / token ownership, bucket shop / paper simulation, slippage / travelling instruction, or optional house participation history. Call when the caller asks what something means — including during an active review if they ask. Do not volunteer it unsolicited while they are reviewing terms. Speak the returned text nearly verbatim; never invent beyond it.',
     expects_response: true,
     response_timeout_secs: 10,
     parameters: {

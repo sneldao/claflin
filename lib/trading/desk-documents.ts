@@ -100,6 +100,19 @@ export function readPersistedDraft(storage: Pick<Storage, 'getItem'>, deskId: Ho
   try { return parseIntent(checkpoint.draft); } catch { return null; }
 }
 
+/** Resume any retained draft — complete or partial — onto the ticket.
+ *  Unlike readPersistedDraft, incomplete work is restored as-is. */
+export function readRestorableDraft(storage: Pick<Storage, 'getItem'>, deskId: HouseDeskId = OPEN_DESK_ID): TradeIntent | null {
+  const checkpoint = readDraftCheckpoint(storage, deskId);
+  if (!checkpoint) return null;
+  return {
+    instrumentId: checkpoint.draft.instrumentId,
+    side: checkpoint.draft.side,
+    amount: checkpoint.draft.amount,
+    unit: checkpoint.draft.unit,
+  } as TradeIntent;
+}
+
 /** Persist a checkpoint: the draft (complete or partial) plus revision and
  *  last-updated metadata. Finished work clears both keys. */
 export function writeDraftCheckpoint(

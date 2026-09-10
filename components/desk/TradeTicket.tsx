@@ -482,7 +482,9 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           testId="quote-details-panel"
         >
           <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
-          <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
+          <p>{liveMode
+            ? 'This live estimate includes pool swap fees. Slippage, gas and wallet authorization apply when you execute — funds move from the connected wallet on Base.'
+            : 'This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.'}</p>
           <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
           <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}. {tapeTopic && <EducationTopicTrigger topic={tapeTopic} label="Tape vs estimate" onDismiss={remindAfterEducation} />}</p>
           {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}

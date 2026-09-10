@@ -5,7 +5,7 @@ import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
-import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readPersistedDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
+import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 import { fetchJson } from '../api-client';
@@ -54,7 +54,7 @@ export function useTradingDesk() {
   useEffect(() => {
     loadHistory();
     setWatched(loadWatched(window.localStorage, OPEN_DESK_ID));
-    const restored = readPersistedDraft(window.localStorage, OPEN_DESK_ID);
+    const restored = readRestorableDraft(window.localStorage, OPEN_DESK_ID);
     if (restored) dispatch({ type: 'edit', draft: restored });
     setDeskReady(true);
     window.addEventListener('storage', loadHistory);
@@ -202,13 +202,13 @@ export function useTradingDesk() {
     if (isOpenDesk(deskId)) {
       try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
     }
-    let entered: ParkedDesk = { deskId: id, state: initialDesk(isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
+    let entered: ParkedDesk = { deskId: id, state: initialDesk(isOpenDesk(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
     try {
       const result = switchDeskSession(
         { deskId, state, viewedRecordId, error },
         id,
         sessions.current,
-        isOpenDesk(id) ? readPersistedDraft(window.localStorage, id) : null,
+        isOpenDesk(id) ? readRestorableDraft(window.localStorage, id) : null,
       );
       sessions.current = result.parked;
       entered = result.entered;

@@ -75,7 +75,7 @@ function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean 
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
-  const { importAnonymousRecords, anonymousCount } = usePaperSync(desk);
+  const { importAnonymousRecords, anonymousCount, importStatus } = usePaperSync(desk);
   const liveJournal = useLiveJournal(desk.deskId);
   const [hettyLive, setHettyLive] = useState(false);
   // Both sides of the line, captioned on the blotter: the caller's words and
@@ -259,9 +259,25 @@ export function WorkingDesk() {
           <span className={styles.authChip}>
             <span className={styles.authLabel} title={auth.label ?? 'Signed in'}>{auth.label ?? 'Signed in'}</span>
             {anonymousCount > 0 && (
-              <button type="button" className={styles.authLink} onClick={importAnonymousRecords} title={`Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'} left on this browser before you signed in`}>
-                Import {anonymousCount} paper {anonymousCount === 1 ? 'record' : 'records'}
+              <button
+                type="button"
+                className={styles.authLink}
+                disabled={importStatus === 'pending'}
+                onClick={() => { void importAnonymousRecords(); }}
+                title={`Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'} left on this browser before you signed in`}
+              >
+                {importStatus === 'pending'
+                  ? 'Importing…'
+                  : `Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'}`}
               </button>
+            )}
+            {anonymousCount === 0 && importStatus === 'failed' && (
+              <button type="button" className={styles.authLink} onClick={() => { void importAnonymousRecords(); }}>
+                Retry import
+              </button>
+            )}
+            {anonymousCount === 0 && importStatus === 'done' && (
+              <span className={styles.authLabel} role="status">Imported</span>
             )}
             <button type="button" onClick={auth.logout}>Sign out</button>
           </span>

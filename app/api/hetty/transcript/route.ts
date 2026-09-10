@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { accountFromRequest } from '@/lib/auth';
 import { getRedis } from '@/lib/redis';
+import { keptTranscriptRevision } from '@/lib/hetty/transcript-revision';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,8 @@ const transcriptSchema = z.object({
   turns: z.array(z.object({ role: z.enum(['user', 'agent']), text: z.string().min(1).max(4000), at: z.number().int().positive() }).strict()).min(1).max(500),
   startedAt: z.number().int().positive(),
   endedAt: z.number().int().positive(),
+  /** Monotonic checkpoint revision — older writes must not overwrite newer ones. */
+  revision: z.number().int().positive().optional(),
 }).strict();
 
 /**
@@ -87,9 +90,19 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     const redis = getRedis();
     const key = `transcript:${userId}:${parsed.conversationId}`;
-    await redis.set(key, parsed, { ex: TTL_SECONDS });
+    const revision = parsed.revision ?? parsed.turns.length;
+    try {
+      const existing = await redis.get(key);
+      if (existing && typeof existing === 'object' && existing !== null && 'revision' in existing) {
+        const kept = keptTranscriptRevision((existing as { revision?: unknown }).revision, revision);
+        if (kept !== null) {
+          return Response.json({ stored: true, kept: 'newer', revision: kept }, { headers: { 'Cache-Control': 'no-store' } });
+        }
+      }
+    } catch { /* compare is best-effort; a fresh write still proceeds */ }
+    await redis.set(key, { ...parsed, revision }, { ex: TTL_SECONDS });
     await redis.sadd(`transcripts:${userId}`, parsed.conversationId);
-    return Response.json({ stored: true }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ stored: true, revision }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return Response.json({ error: 'unavailable', message: 'Transcript storage is unavailable on this deployment.' }, { status: 503 });
   }

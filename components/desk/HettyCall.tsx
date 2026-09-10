@@ -265,11 +265,11 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     return deskNoteSpokenLine(deskRef.current.deskId);
   });
 
-  /* Reviewed catalog only — same material as the screen. Never during an
-     active estimate review; never invent beyond the topic. */
+  /* Reviewed catalog only — same material as the screen. Hold while an
+     estimate is in flight; during review, answer if the caller asks. */
   useConversationClientTool<HettyTools>('explain_concept', async (p) => {
-    if (deskRef.current.state.stage === 'review' || deskRef.current.state.stage === 'loading') {
-      return 'Hold the explanation — an estimate is on the slip. Clarify the terms first, then ask again.';
+    if (deskRef.current.state.stage === 'loading') {
+      return 'Hold the explanation — an estimate is coming in. Ask again in a moment.';
     }
     return explainConceptResult(String(p.topic ?? ''));
   });
@@ -299,19 +299,24 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
   const turnsRef = useRef<Array<{ role: 'user' | 'agent'; text: string; at: number }>>([]);
   const convIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
-  const savedRef = useRef(false);
+  /** Turns acknowledged by a successful server write — not a latch. */
+  const ackTurnsRef = useRef(0);
+  /** Owner at call start — mid-call account switches must not reattribute the transcript. */
+  const transcriptOwnerRef = useRef<string | null>(null);
   const checkpointTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveStateRef = useRef<{ status: 'idle' | 'saving' | 'saved' | 'failed'; attempts: number }>({ status: 'idle', attempts: 0 });
+  const savingRef = useRef(false);
 
-  /** POST the current turns. Retried checkpoints carry the same
-   *  conversationId — the server upserts by key, so retries are idempotent.
-   *  Returns true only when the server confirms { stored: true }. */
-  const postTranscript = useCallback(async (endedAt: number): Promise<boolean> => {
+  /** POST a snapshot of turns. Each successful save acknowledges only the
+   *  turn count it sent; newer turns remain unsaved. Server revision ordering
+   *  rejects older checkpoints that arrive late. */
+  const postTranscript = useCallback(async (endedAt: number, turnCount: number): Promise<boolean> => {
     const conversationId = convIdRef.current;
-    const turns = turnsRef.current;
+    const turns = turnsRef.current.slice(0, turnCount);
     if (!conversationId || turns.length === 0) return false;
     const a = authRef.current;
-    if (!a.authenticated) return false;
+    if (!a.authenticated || !a.userId) return false;
+    if (transcriptOwnerRef.current && a.userId !== transcriptOwnerRef.current) return false;
     let token: string | null = null;
     try { token = await a.getAccessToken(); } catch { return false; }
     if (!token) return false;
@@ -324,6 +329,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
           turns: turns.slice(0, 500),
           startedAt: startedAtRef.current || Date.now(),
           endedAt,
+          revision: turnCount,
         }),
       });
       if (!res.ok) return false;
@@ -332,35 +338,42 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     } catch { return false; }
   }, []);
 
-  /* Bounded checkpoint during the call: every 20s, only when there is
-     something new since the last confirmed save. Never a desk error — a
-     failed checkpoint retries on the next tick, and the terminal flush. */
+  /* Bounded checkpoint during the call: every 20s when there are turns newer
+     than the last acknowledged snapshot. A failed checkpoint retries later. */
   const checkpointTranscript = useCallback(async () => {
-    if (savedRef.current || saveStateRef.current.status === 'saving') return;
-    if (!convIdRef.current || turnsRef.current.length === 0) return;
+    if (savingRef.current) return;
+    const turnCount = turnsRef.current.length;
+    if (!convIdRef.current || turnCount === 0 || turnCount <= ackTurnsRef.current) return;
+    savingRef.current = true;
     saveStateRef.current = { status: 'saving', attempts: saveStateRef.current.attempts + 1 };
     onSaveStateRef.current({ ...saveStateRef.current });
-    const ok = await postTranscript(Date.now());
+    const ok = await postTranscript(Date.now(), turnCount);
     if (ok) {
-      savedRef.current = true;
-      saveStateRef.current = { status: 'saved', attempts: saveStateRef.current.attempts };
+      ackTurnsRef.current = Math.max(ackTurnsRef.current, turnCount);
+      const caughtUp = turnsRef.current.length <= ackTurnsRef.current;
+      saveStateRef.current = { status: caughtUp ? 'saved' : 'idle', attempts: saveStateRef.current.attempts };
     } else {
       saveStateRef.current = { status: 'failed', attempts: saveStateRef.current.attempts };
     }
+    savingRef.current = false;
     onSaveStateRef.current({ ...saveStateRef.current });
   }, [postTranscript]);
 
   const flushTranscript = useCallback(async () => {
-    if (savedRef.current || !convIdRef.current || turnsRef.current.length === 0) return;
-    const ok = await postTranscript(Date.now());
+    const turnCount = turnsRef.current.length;
+    if (!convIdRef.current || turnCount === 0) return;
+    if (turnCount <= ackTurnsRef.current && saveStateRef.current.status === 'saved') return;
+    savingRef.current = true;
+    const ok = await postTranscript(Date.now(), turnCount);
     if (ok) {
-      savedRef.current = true;
+      ackTurnsRef.current = Math.max(ackTurnsRef.current, turnCount);
       saveStateRef.current = { status: 'saved', attempts: saveStateRef.current.attempts };
       onSaveStateRef.current({ ...saveStateRef.current });
     } else if (saveStateRef.current.status !== 'saved') {
       saveStateRef.current = { status: 'failed', attempts: saveStateRef.current.attempts };
       onSaveStateRef.current({ ...saveStateRef.current });
     }
+    savingRef.current = false;
   }, [postTranscript]);
 
   /* The two terminal paths. Each fires at most once per mount, flushes the
@@ -422,7 +435,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
       startedAtRef.current = Date.now();
       turnsRef.current = [];
       convIdRef.current = null;
-      savedRef.current = false;
+      ackTurnsRef.current = 0;
+      transcriptOwnerRef.current = authRef.current.userId;
+      savingRef.current = false;
       saveStateRef.current = { status: 'idle', attempts: 0 };
       onSaveStateRef.current({ status: 'idle', attempts: 0 });
       deskNoteShared.current = false;

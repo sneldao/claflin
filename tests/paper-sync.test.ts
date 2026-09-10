@@ -161,9 +161,10 @@ describe('usePaperSync behavior', () => {
   function Harness({ initialRecords }: { initialRecords: PaperRecord[] }) {
     const [records, setRecords] = useState(initialRecords);
     const desk = { deskId: 'hetty', historyReady: true, records };
-    const { importAnonymousRecords, anonymousCount } = usePaperSync(desk as any);
+    const { importAnonymousRecords, anonymousCount, importStatus } = usePaperSync(desk as any);
     globalThis.__importAnonymous = importAnonymousRecords;
     globalThis.__anonymousCount = () => anonymousCount;
+    globalThis.__importStatus = () => importStatus;
     return createElement('div', null,
       createElement('button', { type: 'button', id: 'add', onClick: () => setRecords(prev => [...prev, record(String.fromCharCode(97 + prev.length))]) }, 'Add'),
       createElement('button', { type: 'button', id: 'same', onClick: () => setRecords(prev => [...prev]) }, 'Same'),
@@ -225,6 +226,29 @@ describe('usePaperSync behavior', () => {
     assert.equal(postRequests().length, 2, 'same record set is not pushed again after success');
   });
 
+  it('waits for historyReady before classifying anonymous records', async () => {
+    function SlowHarness() {
+      const [ready, setReady] = useState(false);
+      const [records] = useState([record('late-anon')]);
+      const desk = { deskId: 'hetty', historyReady: ready, records };
+      const { anonymousCount } = usePaperSync(desk as any);
+      globalThis.__anonymousCount = () => anonymousCount;
+      globalThis.__markReady = () => setReady(true);
+      return createElement('button', { type: 'button', id: 'ready', onClick: () => setReady(true) }, 'Ready');
+    }
+    root = createRoot(getRootElement());
+    await act(async () => root.render(
+      createElement(DeskAuthContext.Provider, { value: authValue },
+        createElement(SlowHarness),
+      ),
+    ));
+    await flush();
+    assert.equal(globalThis.__anonymousCount(), 0, 'no anonymous classification before history is ready');
+    await click('ready');
+    assert.equal(globalThis.__anonymousCount(), 1, 'anonymous count appears once history is ready');
+    assert.equal(requests.filter(r => r.url.includes('/api/paper') && r.method === 'POST').length, 0);
+  });
+
   it('does not upload anonymous browser records on sign-in; imports them only explicitly', async () => {
     await renderHarness([record('anon-1')]);
     await flush();
@@ -232,13 +256,12 @@ describe('usePaperSync behavior', () => {
     assert.equal(postRequests().length, 0, 'anonymous work stays local on sign-in');
     assert.equal(globalThis.__anonymousCount(), 1, 'the importable anonymous count is visible after sign-in');
 
-    // Import is explicit; signing the claim and a records change uploads it.
-    await act(async () => { globalThis.__importAnonymous(); });
+    await act(async () => { await globalThis.__importAnonymous(); });
+    await flush();
     assert.equal(globalThis.__anonymousCount(), 0, 'explicit import clears the importable set');
-    await click('same');
-    await click('same'); // first attempt 503s; this retry is accepted and claims the record
-    assert.equal(postRequests().length, 2, 'explicit import attributes the anonymous record (with one failed retry)');
-    assert.equal(postRequests().some(r => r.method === 'POST'), true);
+    assert.equal(globalThis.__importStatus(), 'done', 'import uploads and reports success');
+    // First POST 503s; import retries once and succeeds — two attempts, no extra click needed.
+    assert.equal(postRequests().length, 2, 'explicit import uploads (with one failed retry inside import)');
 
     await click('same');
     assert.equal(postRequests().length, 2, 'no repeat upload after it is claimed');

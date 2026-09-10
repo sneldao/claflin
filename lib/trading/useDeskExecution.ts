@@ -68,6 +68,8 @@ function journalStorage(): Storage | null {
 
 export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskId = OPEN_DESK_ID, onJournalChange?: () => void) {
   const auth = useDeskAuth();
+  const authRef = useRef(auth);
+  authRef.current = auth;
   const publicClient = useMemo(() => createBasePublicClient(), []);
   const [state, setState] = useState<DeskExecutionState>({ stage: 'idle' });
 
@@ -152,7 +154,8 @@ export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskI
     setState({ stage: 'swapping' });
     const run = (async (): Promise<LiveOutcome> => {
       try {
-        if ((boundWallet as string).toLowerCase() !== expectedWallet) {
+        const liveWallet = authRef.current.walletAddress;
+        if (!liveWallet || liveWallet.toLowerCase() !== expectedWallet) {
           throw new Error('Wallet account changed during execution.');
         }
         const hash = await swapForQuote(
