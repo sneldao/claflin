@@ -404,7 +404,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
       <div className={styles.callActions}>
         {!live && !ringing && (
           <button type="button" className={styles.callButton} onClick={() => void ring()}>
-            Ring Hetty
+            {desk.state.draft.instrumentId ? 'Ring Hetty with this instruction' : 'Ring Hetty'}
           </button>
         )}
         {ringing && !live && (

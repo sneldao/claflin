@@ -64,12 +64,15 @@ export function WorkingDesk() {
   const auth = useDeskAuth();
   usePaperSync(desk);
   const [hettyLive, setHettyLive] = useState(false);
-  // The caller's spoken words, captioned live on the blotter. Cleared when
-  // the line drops — the ticket returns to being the caller's own surface.
+  // Both sides of the line, captioned on the blotter: the caller's words and
+  // Hetty's replies. Cleared when the line drops — the ticket returns to
+  // being the caller's own surface.
   const [spoken, setSpoken] = useState<string | null>(null);
-  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) setSpoken(null); }, []);
+  const [hettySaid, setHettySaid] = useState<string | null>(null);
+  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); } }, []);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
+  const handleAgentSpoken = useCallback((text: string) => setHettySaid(text), []);
   const tone = useRoomTone(hettyLive);
   // One reference-marks fetch for the whole desk: the tape displays it, the
   // working tray compares against it — a single honest reading of the room.
@@ -122,6 +125,16 @@ export function WorkingDesk() {
     document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
+  /* When Hetty's estimate lands mid-call, the slip comes to the caller — the
+     room watches the receiver, but the decision happens on the paper. */
+  const prevForegroundRef = useRef(foreground.kind);
+  useEffect(() => {
+    const prev = prevForegroundRef.current;
+    prevForegroundRef.current = foreground.kind;
+    if (!hettyLive || foreground.kind !== 'quotation' || prev === 'quotation') return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, [hettyLive, foreground.kind]);
   const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
   const reviewActive = foreground.kind === 'quotation' || foreground.kind === 'receipt' || foreground.kind === 'archive';
   const instrumentStage = hettyLive
@@ -229,10 +242,10 @@ export function WorkingDesk() {
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} spokenLine={spoken} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {open ? <TradeTicket desk={desk} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
-          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} />}
+          {open && <HettyCall desk={desk} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
             <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
           </div>

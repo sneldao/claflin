@@ -1031,6 +1031,15 @@
 /* ————— Spoken line — the caller's words on the blotter ————— */
 .spokenLine { margin: 10px 0 0 !important; padding: 10px 12px; border-left: 2px solid var(--desk-brass-dim); color: var(--desk-paper-muted); font-size: 12px; line-height: 1.6; }
 .spokenLine em { color: var(--desk-paper-ink); font-style: italic; }
+.spokenLine[data-voice="hetty"] { border-left-color: var(--desk-brass); }
+
+/* Hetty's hand on the paper: while the line is live, the control she just
+   changed pulses once — cause and effect in the same frame. */
+@keyframes fieldFlash { 0% { box-shadow: 0 0 0 3px var(--desk-brass); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.plaque[data-flash="true"], #side[data-flash="true"], #amount[data-flash="true"] { animation: fieldFlash 1.2s var(--ease-swift, ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .plaque[data-flash="true"], #side[data-flash="true"], #amount[data-flash="true"] { animation: none; outline: 2px solid var(--desk-brass-dim); }
+}
 
 /* ————— Working tray: since-you-last-sat-down deltas ————— */
 .boardSince { margin: 10px 0 0 !important; color: var(--desk-muted); font-size: 11px; line-height: 1.6; }

@@ -262,7 +262,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null; live?: boolean; applied?: string | null }) {
+export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, hettyLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -296,6 +296,26 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
   const expiringSoon = !recorded && !expired && secondsLeft !== null && secondsLeft <= 5;
   /* Typing while the line is live: Hetty holds, the ticket listens to keys. */
   const [typing, setTyping] = useState(false);
+  /* While the line is live, a changed control pulses once — the caller sees
+     Hetty's words land on the paper, not just hears them in the room. */
+  const [flash, setFlash] = useState<'instrument' | 'side' | 'amount' | null>(null);
+  const prevDraftRef = useRef(state.draft);
+  /* The flash flag is intentionally synchronized to draft changes in an effect. */
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const prev = prevDraftRef.current;
+    prevDraftRef.current = state.draft;
+    if (!live) return;
+    const changed = state.draft.instrumentId !== prev.instrumentId ? 'instrument'
+      : state.draft.side !== prev.side ? 'side'
+      : state.draft.amount !== prev.amount ? 'amount'
+      : null;
+    if (!changed) return;
+    setFlash(changed);
+    const timer = setTimeout(() => setFlash(null), 1200);
+    return () => clearTimeout(timer);
+  }, [live, state.draft]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   /* Freshness of the review window, 1 → just quoted, 0 → expired. Drives the
      draining brass rule on the slip header. Hidden once the trade is recorded. */
   const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
@@ -344,6 +364,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
     </div>
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
+    {live && hettyLine && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{hettyLine}</em></p>}
     {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
     {live && typing && view === 'draft' && <p className={styles.slipNotice} role="status">Typing — Hetty holds the line.</p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
@@ -360,7 +381,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
           <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
             <legend>Stock</legend>
             {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
-              <label key={stock.id} className={styles.plaque}>
+              <label key={stock.id} className={styles.plaque} data-flash={flash === 'instrument' && state.draft.instrumentId === stock.id ? 'true' : undefined}>
                 <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} onChange={() => edit({ ...state.draft, instrumentId: stock.id })} />
                 <span className={styles.plaqueSymbol}>{stock.symbol}</span>
                 <span className={styles.plaqueName}>{stock.name}</span>
@@ -369,8 +390,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, spokenLine, live, a
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
           <div className={styles.fields}>
-            <div><label htmlFor="side">Instruction</label><select id="side" value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
-            <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
+            <div><label htmlFor="side">Instruction</label><select id="side" data-flash={flash === 'side' ? 'true' : undefined} value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+            <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" data-flash={flash === 'amount' ? 'true' : undefined} inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
           </div>
           <div className={styles.amountChips} role="group" aria-label="Quick amounts">
             {AMOUNT_CHIPS[state.draft.side].map(value => (
