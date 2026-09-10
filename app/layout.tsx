@@ -91,6 +91,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/*
+          Base Builder Quest ownership claim for claflin.vercel.app. The
+          app_id is a public, non-secret identifier — the Base dashboard
+          verifies the tag, not a secret — so it lives in the source.
+        */}
+        <meta name="base:app_id" content="6aa21455fa92e96bd08c5ae1" />
+      </head>
       <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}>
         {/* Skip Navigation Link for Accessibility */}
         <a 
