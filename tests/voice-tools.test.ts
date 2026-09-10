@@ -11,6 +11,8 @@ import {
   DESK_NOTE_ALREADY_SHARED,
   estimateSpokenResult,
   foregroundGuard,
+  hettyOpeningLine,
+  nextInstructionDraft,
   recordPaperGuard,
   setAmountResult,
   setInstructionResult,
@@ -85,6 +87,36 @@ describe('set_instruction', () => {
   it('rejects anything that is not buy or sell', () => {
     assert.match(setInstructionResult('short'), /buy or sell/);
     assert.match(setInstructionResult(''), /buy or sell/);
+  });
+  it('keeps the amount when the side is unchanged', () => {
+    const next = nextInstructionDraft(intent, 'buy');
+    assert.equal(next.draft.amount, '100');
+    assert.equal(next.amountCleared, false);
+    assert.match(setInstructionResult('buy', next.amountCleared), /USDC spend/);
+  });
+  it('clears the amount when the units change, never 25 USDC into 25 tokens', () => {
+    const next = nextInstructionDraft(intent, 'sell');
+    assert.equal(next.draft.side, 'sell');
+    assert.equal(next.draft.unit, 'token');
+    assert.equal(next.draft.amount, '');
+    assert.equal(next.amountCleared, true);
+    assert.match(setInstructionResult('sell', next.amountCleared), /cleared/);
+    assert.match(setInstructionResult('sell', next.amountCleared), /token quantity/);
+  });
+});
+
+describe('hettyOpeningLine', () => {
+  it('names the paper boundary on an empty ticket', () => {
+    const empty = initialDesk({ instrumentId: '', side: 'buy', unit: 'USDC', amount: '' });
+    assert.match(hettyOpeningLine(empty, foregroundOf(empty), false), /Paper desk/);
+    assert.match(hettyOpeningLine(empty, foregroundOf(empty), false), /nothing moves onchain/);
+  });
+  it('names the live boundary when the desk is live, never paper-only', () => {
+    const empty = initialDesk({ instrumentId: '', side: 'buy', unit: 'USDC', amount: '' });
+    const spoken = hettyOpeningLine(empty, foregroundOf(empty), true);
+    assert.match(spoken, /Live desk/);
+    assert.match(spoken, /Execute on the slip/);
+    assert.doesNotMatch(spoken, /Paper desk/);
   });
 });
 

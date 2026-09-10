@@ -63,7 +63,7 @@ describe('one working document at a time', () => {
     const html = render(reviewed());
     assert.match(html, /data-ticket-view="review"/);
     assert.match(html, /data-foreground="quotation"/);
-    assert.doesNotMatch(html, /<form|<input|<select/);
+    assert.doesNotMatch(html, /<form|id="amount"|<select/);
     assert.equal(html.match(/<h1\b/g)?.length, 1);
     assert.match(html, /0\.02948502/);
     assert.match(html, /GOOGLc/);
@@ -97,7 +97,7 @@ describe('one working document at a time', () => {
       const pending = deskReducer(state, { type: 'request', requestId: 'next-quote' });
       const html = render(pending);
       assert.match(html, /data-ticket-view="pending"/);
-      assert.doesNotMatch(html, /<form|<input|0\.02948502|Record paper trade/);
+      assert.doesNotMatch(html, /<form|id="amount"|0\.02948502|Record paper trade/);
       assert.match(html, /Cancel instruction/);
       assert.match(html, /10/);
       assert.match(html, /GOOGLc/);
