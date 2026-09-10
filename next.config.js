@@ -36,20 +36,20 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // unsafe-inline for styles (CSS-in-JS/runtime styles); unsafe-eval only in dev for HMR.
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://*.elevenlabs.io`,
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://*.elevenlabs.io https://*.walletconnect.com`,
       "style-src 'self' 'unsafe-inline'",
       // ElevenLabs voice session (wss + https) and same-origin API. Dev adds
       // same-origin ws for HMR — 'self' already covers wss on modern engines.
-      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io${isDev ? ' ws://localhost:*' : ''}`,
+      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io https://*.walletconnect.com wss://*.walletconnect.com${isDev ? ' ws://localhost:*' : ''}`,
       "media-src 'self' blob:", // ConvAI audio + worklet buffers
       "worker-src 'self' blob:", // AudioWorklet / Three.js workers
-      "img-src 'self' data: blob:",
+      "img-src 'self' data: blob: https://*.walletconnect.com",
       "font-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "frame-src https://auth.privy.io https://*.privy.io", // Privy login modal iframe
+      "frame-src https://auth.privy.io https://*.privy.io https://*.walletconnect.com", // Privy login modal iframe
     ].join('; ');
     return [
       {
