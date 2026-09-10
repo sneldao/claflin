@@ -141,6 +141,19 @@ export const tools = [
 
 export const body = {
   name: 'Hetty — Claflin Desk',
+  /* The desk overrides the first message per call (hettyOpeningLine) so she
+     arrives already aware of the work. That requires the first_message
+     override permission — without it the server accepts the socket and then
+     closes it with 1008 "Override for field 'first_message' is not allowed
+     by config." update-hetty-agent.mjs merges this into the live agent's
+     platform_settings; keep it here so creation carries it too. */
+  platform_settings: {
+    overrides: {
+      conversation_config_override: {
+        agent: { first_message: true },
+      },
+    },
+  },
   conversation_config: {
     agent: {
       // Empty-desk fallback. The browser overrides first_message per call with
