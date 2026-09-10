@@ -1,8 +1,10 @@
 import type { HouseDesk } from '@/lib/house';
+import { getBrokerMethod } from '@/lib/education';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
 export function ClosedDesk({ desk, onReturn }: { desk: HouseDesk; onReturn: () => void }) {
+  const method = getBrokerMethod(desk.id);
   return <section
     id="instruction"
     className={styles.ticket}
@@ -20,6 +22,16 @@ export function ClosedDesk({ desk, onReturn }: { desk: HouseDesk; onReturn: () =
     <div className={styles.ticketSurface}>
       <p className={styles.closedBoundary}>No quote, no paper file, no live order.</p>
       <p className={styles.product}>{desk.approach}</p>
+      <details className={styles.aboutHetty}>
+        <summary>How {method.name} examines a question</summary>
+        <div className={styles.popoverPanel}>
+          <p><strong>{method.lens}</strong> — educational perspective only.</p>
+          <ul>
+            {method.questions.map(question => <li key={question}>{question}</li>)}
+          </ul>
+          <p>{method.boundary}</p>
+        </div>
+      </details>
       <button className={styles.primary} type="button" onClick={onReturn}>Return to the Base desk<span aria-hidden="true">→</span></button>
       <p className={styles.paperFoot}>YOUR INSTRUCTION STAYS WHERE YOU LEFT IT.</p>
     </div>

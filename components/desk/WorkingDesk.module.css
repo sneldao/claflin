@@ -170,6 +170,21 @@
 .tape::before { top: 1px; }
 .tape::after { bottom: 1px; }
 .tapeLabel { align-self: center; flex-shrink: 0; margin-right: 18px; padding: 6px 9px; border: 1px solid var(--desk-brass-dim); font: 9px/1 var(--font-mono), monospace; letter-spacing: .18em; color: var(--desk-brass); cursor: help; }
+.tapeExplain {
+  align-self: center;
+  flex-shrink: 0;
+  margin-right: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 9px/1.2 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  color: var(--desk-brass-dim);
+  cursor: pointer;
+}
 .tapeNote { align-self: center; margin: 0; color: var(--desk-muted); font: 11px/1.6 var(--font-mono), monospace; }
 .tapeWindow { flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: stretch; mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
 .tapeTrack { display: flex; width: max-content; animation: tapeRun 44s linear infinite; }
@@ -634,6 +649,21 @@
 .deskNote[data-muted="true"] { opacity: .55; }
 .deskNoteSource { font-style: normal; letter-spacing: .02em; }
 .deskNoteTerm { font-style: normal; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--desk-brass); }
+.deskNoteExplain {
+  display: inline;
+  margin-left: .35em;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  color: var(--desk-brass);
+  cursor: pointer;
+}
 .aboutHetty { position: relative; z-index: 2; max-width: 360px; color: var(--desk-brass); font-size: 11px; line-height: 1.8; }
 .aboutHetty summary { min-height: 36px; padding: 10px 0; width: fit-content; cursor: pointer; list-style: none; }
 .aboutHetty summary::-webkit-details-marker { display: none; }
@@ -895,6 +925,7 @@
 .spilledTape i:nth-child(3) { left: -28px; top: 35px; width: 145px; height: 42px; transform: rotate(-4deg) skewX(30deg); }
 .tickerStation .tape { color: var(--desk-paper-ink); background: var(--desk-paper); min-height: 48px; border-block: 1px solid var(--desk-paper-edge); box-shadow: 0 3px 0 var(--desk-file-shadow), 0 10px 15px var(--desk-shadow); }
 .tickerStation .tapeLabel { color: var(--desk-paper-muted); font-size: 8px; padding-left: 14px; margin-right: 12px; }
+.tickerStation .tapeExplain { color: var(--desk-paper-muted); font-size: 8px; margin-right: 10px; }
 .tickerStation .tapeNote { color: var(--desk-paper-muted); font-size: 10px; padding: 10px 12px 10px 0; }
 .tickerStation .tapeSymbol, .tickerStation .tapePrice { color: var(--desk-paper-ink); }
 .tickerStation .tapeStale { color: var(--desk-paper-muted); }
