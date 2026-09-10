@@ -53,6 +53,7 @@ function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean 
   const note = deskNoteOfTheDay(deskId);
   return (
     <p className={styles.deskNote} data-muted={muted ? 'true' : 'false'}>
+      {note.term && <span className={styles.deskNoteTerm}>A word of the house — </span>}
       {note.text}
       {note.attribution && <span className={styles.deskNoteSource}> — {note.attribution}</span>}
     </p>
@@ -70,7 +71,13 @@ export function WorkingDesk() {
   const [spoken, setSpoken] = useState<string | null>(null);
   const [hettySaid, setHettySaid] = useState<string | null>(null);
   const [hettyKey, setHettyKey] = useState(0);
-  const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); setHettyKey(k => k + 1); } }, []);
+  const wasLiveRef = useRef(false);
+  const handleLiveChange = useCallback((live: boolean) => {
+    const wasLive = wasLiveRef.current;
+    wasLiveRef.current = live;
+    setHettyLive(live);
+    if (wasLive && !live) { setSpoken(null); setHettySaid(null); setHettyKey(k => k + 1); }
+  }, []);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
   const handleAgentSpoken = useCallback((text: string) => setHettySaid(text), []);
