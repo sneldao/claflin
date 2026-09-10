@@ -59,6 +59,15 @@ dump.rdb
 /test-results/
 /playwright-report/
 
+# Local media — launch cuts, screen recordings, drafts. Not germane to the app.
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+public/audio/*.mp3
+public/audio/*.wav
+
 .junie
 .kilocode
 .blackboxcli/
