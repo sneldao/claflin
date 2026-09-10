@@ -15,7 +15,8 @@ import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documen
 import { liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
-import { DeskTerm } from './DeskTerm';
+import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
+import { getEducationTopic } from '@/lib/education';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -38,12 +39,16 @@ function useQuoteElapsed(active: boolean): number {
 
 const AMOUNT_CHIPS = { buy: ['10', '25', '100'], sell: ['1', '5', '10'] } as const;
 
-function ProductTerms({ instrument, live }: { instrument: (typeof DESK_INSTRUMENTS)[number] | undefined; live: boolean }) {
+function ProductTerms({ instrument, live, onEducationDismiss }: { instrument: (typeof DESK_INSTRUMENTS)[number] | undefined; live: boolean; onEducationDismiss?: () => void }) {
+  const bucketShop = getEducationTopic('the-bucket-shop');
   return <>
     <p>These are Coinbase-issued tokenized products on Base, not an order on a traditional stock exchange. Live execution is restricted to eligible users in permitted jurisdictions outside the US.</p>
+    <p>
+      A <DeskTerm term="certificate" topicId="the-certificate" onDismiss={onEducationDismiss} /> in the old sense named the holder of shares. This dossier is product information, not proof of ownership of the underlying company.
+    </p>
     {live
       ? <p>You are executing for real on Base: the connected wallet pays pool fees, slippage and gas, and must hold the input tokens plus ETH.</p>
-      : <p>Paper instruction: no funds move and no authorization is checked. Paper requests are capped at 10,000 USDC per buy or 1,000 tokens per sell; these caps are not a measure of safe liquidity.</p>}
+      : <p>Paper instruction: no funds move and no authorization is checked. Paper requests are capped at 10,000 USDC per buy or 1,000 tokens per sell; these caps are not a measure of safe liquidity.{bucketShop && <>{' '}<EducationTopicTrigger topic={bucketShop} label="How this differs from a bucket shop" onDismiss={onEducationDismiss} /></>}</p>}
     {instrument && <p>{instrument.name} · {instrument.decimals} decimal places<br /><code>{instrument.contractAddress}</code></p>}
   </>;
 }
@@ -272,7 +277,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null }) {
+export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -309,6 +314,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   /* While the line is live, a changed control pulses once — the caller sees
      Hetty's words land on the paper, not just hears them in the room. */
   const [flash, setFlash] = useState<'instrument' | 'side' | 'amount' | null>(null);
+  /* After closing a house explanation during review, remind that reading is not a refresh. */
+  const [termsReminder, setTermsReminder] = useState(false);
+  const remindAfterEducation = () => {
+    if (state.stage === 'review') setTermsReminder(true);
+  };
   const prevDraftRef = useRef(state.draft);
   /* The flash flag is intentionally synchronized to draft changes in an effect. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -325,6 +335,9 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     const timer = setTimeout(() => setFlash(null), 1200);
     return () => clearTimeout(timer);
   }, [live, state.draft]);
+  useEffect(() => {
+    setTermsReminder(false);
+  }, [quote?.id, state.stage]);
   /* eslint-enable react-hooks/set-state-in-effect */
   /* Freshness of the review window, 1 → just quoted, 0 → expired. Drives the
      draining brass rule on the slip header. Hidden once the trade is recorded. */
@@ -345,6 +358,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
   const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? (liveMode ? 'BASE DESK / LIVE INSTRUCTION' : 'BASE DESK / PAPER INSTRUCTION') : 'BASE DESK / QUOTATION';
   const filed = recorded ? paperOutcomeCopy() : null;
+  const tapeTopic = getEducationTopic('the-tape');
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
   const backLabel = isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket';
   const title = missing ? 'That record is no longer here.' : recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : liveMode ? 'Draft an instruction.' : 'Draft a paper trade.';
@@ -420,7 +434,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           testId="product-dossier-panel"
         >
           <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
-          <ProductTerms instrument={instrument} live={liveMode} />
+          <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
         </Drawer>
         <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
       </> : pending ? <div className={styles.pendingSlip}>
@@ -447,11 +461,13 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
         </p>
         {recorded ? <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p> : <>
           {liveMode ? (
-            <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet.</span></p>
+            <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet. Pool fees, gas and <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> apply.</span></p>
           ) : (
-            <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional <DeskTerm term="slippage" definition="The gap between the price quoted and the price a real order fills at. On paper it is excluded; on a live desk it is the cost of the market moving while your instruction travels." /> excluded.</span></p>
+            <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> excluded.</span></p>
           )}
           {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
+          {termsReminder && !expired && <p role="status" className={styles.slipNotice}>Explanation closed. Reading does not refresh terms — use Refresh estimate if the window is short or unclear.</p>}
+          {educationHandoff && <p role="status" className={styles.slipNotice}>Back from practice. This instruction was not changed. Refresh an estimate before deciding.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
         </>}
         <Drawer
@@ -463,12 +479,12 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
           <p>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
           <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
-          <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}.</p>
+          <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}. {tapeTopic && <EducationTopicTrigger topic={tapeTopic} label="Tape vs estimate" onDismiss={remindAfterEducation} />}</p>
           {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
           <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
           <p>{liveMode ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS}</p>
           <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
-          <ProductTerms instrument={instrument} live={liveMode} />
+          <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
         </Drawer>
         <div className={styles.slipDecision}>
           {recorded ? <>

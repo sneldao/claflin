@@ -20,6 +20,9 @@ import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
+import { getBrokerMethod, PRACTICE_RETURN_PARAM, PRACTICE_RETURN_VALUE } from '@/lib/education';
+import { EducationTopicTrigger } from './EducationTopic';
+import { deskNoteEducationTopic } from '@/lib/trading/voice-tools';
 import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
@@ -48,14 +51,22 @@ function HettyDoorShell() {
 
 const HettyCall = dynamic(() => import('./HettyCall').then(m => m.HettyCall), { ssr: false, loading: HettyDoorShell });
 
-/** A quiet line from the era — one note of the day, never an instruction to trade. */
+/** A quiet line from the era — one note of the day, never an instruction to trade.
+ *  When the word maps to a sourced catalog topic, further reading uses that same material. */
 function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean }) {
   const note = deskNoteOfTheDay(deskId);
+  const topic = deskNoteEducationTopic(deskId);
   return (
     <p className={styles.deskNote} data-muted={muted ? 'true' : 'false'}>
       {note.term && <span className={styles.deskNoteTerm}>A word of the house — </span>}
       {note.text}
       {note.attribution && <span className={styles.deskNoteSource}> — {note.attribution}</span>}
+      {topic && !muted && (
+        <>
+          {' '}
+          <EducationTopicTrigger topic={topic} label="Read the house explanation" className={styles.deskNoteExplain} />
+        </>
+      )}
     </p>
   );
 }
@@ -63,13 +74,24 @@ function DeskNoteLine({ deskId, muted }: { deskId: HouseDeskId; muted?: boolean 
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
-  usePaperSync(desk);
+  const { importAnonymousRecords, anonymousCount } = usePaperSync(desk);
   const [hettyLive, setHettyLive] = useState(false);
   // Both sides of the line, captioned on the blotter: the caller's words and
   // Hetty's replies. Cleared when the line drops — the ticket returns to
   // being the caller's own surface.
   const [spoken, setSpoken] = useState<string | null>(null);
   const [hettySaid, setHettySaid] = useState<string | null>(null);
+  /* One-time cue after returning from labelled practice — never executes. */
+  const [practiceReturn, setPracticeReturn] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(PRACTICE_RETURN_PARAM) !== PRACTICE_RETURN_VALUE) return;
+    setPracticeReturn(true);
+    params.delete(PRACTICE_RETURN_PARAM);
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash || '#instruction'}`;
+    window.history.replaceState({}, '', next);
+  }, []);
   /* The line owns its own lifecycle: HettyCall remounts its conversation
      after every terminal event and keeps its notes through the remount.
      The desk only mirrors whether a call is live, and clears the captions
@@ -87,6 +109,7 @@ export function WorkingDesk() {
   // working tray compares against it — a single honest reading of the room.
   const marks = useReferenceMarks(desk.deskId);
   const open = desk.open;
+  const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
   /* Shells stay: an empty ledger is a ruled slip, an empty tray is a pinboard
      suggestion — failure and arrival share one place each. */
@@ -233,6 +256,11 @@ export function WorkingDesk() {
         {auth.enabled && (auth.authenticated ? (
           <span className={styles.authChip}>
             <span className={styles.authLabel} title={auth.label ?? 'Signed in'}>{auth.label ?? 'Signed in'}</span>
+            {anonymousCount > 0 && (
+              <button type="button" className={styles.authLink} onClick={importAnonymousRecords} title={`Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'} left on this browser before you signed in`}>
+                Import {anonymousCount} paper {anonymousCount === 1 ? 'record' : 'records'}
+              </button>
+            )}
             <button type="button" onClick={auth.logout}>Sign out</button>
           </span>
         ) : (
@@ -244,14 +272,14 @@ export function WorkingDesk() {
       <div className={styles.mode}>
         {open
           ? liveMode
-            ? <><strong data-live="true">LIVE EXECUTION</strong><span>Real tokens and real USDC will move.{auth.walletAddress ? ` Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : ' Sign in and link a wallet to trade.'}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
-            : <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.{LIVE_EXECUTION_ENABLED ? ' Live execution can be switched on at the slip.' : ''}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+            ? <><strong data-live="true">LIVE EXECUTION</strong><span>Real tokens and real USDC will move.{auth.walletAddress ? ` Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : ' Sign in and link a wallet to trade.'}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — your instruction is unchanged. Refresh an estimate before deciding.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
+            : <><strong>PAPER TRADING</strong><span>Real estimates. No real funds move.{LIVE_EXECUTION_ENABLED ? ' Live execution can be switched on at the slip.' : ''}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — your instruction is unchanged. Refresh an estimate before deciding.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {open ? <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
         {hasLedger && <PaperLedger desk={desk} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
           {open && <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
@@ -267,6 +295,11 @@ export function WorkingDesk() {
             <summary>About Hetty Green</summary>
             <div className={styles.popoverPanel}>
               <p>Hetty Green is an AI character inspired by the historical financier, not the person herself or a licensed human broker. She helps make a decision clear. She does not make it for you. {LIVE_EXECUTION_ENABLED ? 'She cannot sign or execute — the Execute button on your slip is yours alone.' : 'This release is paper-only; she cannot place a real order.'}</p>
+              <p><strong>How she examines a question — {hettyMethod.lens}.</strong> Educational perspective only.</p>
+              <ul>
+                {hettyMethod.questions.map(question => <li key={question}>{question}</li>)}
+              </ul>
+              <p>{hettyMethod.boundary}</p>
             </div>
           </details>}
         </aside>

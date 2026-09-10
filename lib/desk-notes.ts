@@ -84,7 +84,7 @@ const DESK_WORDS: Readonly<Record<HouseDeskId, readonly DeskNote[]>> = {
   ],
   isabel: [
     ...GENERAL_WORDS,
-    { text: 'A seat: membership on an exchange — the right to trade on its floor. Isabel Benham was the first woman to hold one on the New York Stock Exchange.', attribution: null, term: 'seat' },
+    { text: 'A seat: membership on an exchange — the right to trade on its floor. Muriel Siebert bought the first seat held by a woman on the New York Stock Exchange in 1967; Isabel Benham’s craft was reading the rails, not owning the floor.', attribution: null, term: 'seat' },
     { text: 'The annual letter: a company’s own account of itself, once a year. Benham read them more closely than most competitors read anything.', attribution: null, term: 'annual letter' },
   ],
   arbitrum: [

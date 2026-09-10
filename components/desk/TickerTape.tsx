@@ -11,6 +11,9 @@ import styles from './WorkingDesk.module.css';
  * ticket; the tape never displays executable prices. Marks arrive from the
  * desk's single shared fetch (WorkingDesk) so the tape and the tray always
  * show the same reading.
+ *
+ * What the tape *means* is explained at decision points (quote details,
+ * DeskTerm, Hetty’s explain_concept) — not as chrome on this row.
  */
 export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, disabled, asOf, stale }: { marks: DeskMark[]; failed: boolean; onSelect: (instrumentId: string) => void; disabled?: boolean; asOf?: number; stale?: boolean }) {
   const hasStale = stale ?? marks.some(mark => mark.reference.status !== 'observed');

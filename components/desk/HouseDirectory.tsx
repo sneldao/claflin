@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { HOUSE_DESKS, type HouseDeskId } from '@/lib/house';
+import { getEducationTopic } from '@/lib/education';
+import { EducationTopicTrigger } from './EducationTopic';
 import styles from './WorkingDesk.module.css';
 
 export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void }) {
   const [open, setOpen] = useState(false);
+  const participation = getEducationTopic('participation');
   return <details className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>The house</summary>
     <div className={styles.directoryPaper}>
@@ -31,6 +34,12 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
           </button>
         </li>)}
       </ul>
+      {participation && (
+        <p className={styles.directoryFoot}>
+          Optional house note — not an introduction required to trade.{' '}
+          <EducationTopicTrigger topic={participation} label="Participation and access" />
+        </p>
+      )}
       <p className={styles.directoryFoot}>Only the Base desk can quote or file paper. Visiting another room cannot carry an approval with you.</p>
     </div>
   </details>;
