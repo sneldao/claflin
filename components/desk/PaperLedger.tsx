@@ -3,16 +3,32 @@
 import { memo, useEffect, useState } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { compactPaperEntry, formatRecordedTime, groupRecordsByDay, ledgerPreview } from '@/lib/trading/desk-documents';
-import { downloadLedger, type LedgerFormat } from '@/lib/trading/ledger-export';
+import { downloadLedger, downloadLiveJournal, type LedgerFormat } from '@/lib/trading/ledger-export';
+import { compactLiveEntry, type LiveJournalEntry } from '@/lib/trading/live-journal';
+import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { PaperHistory } from './PaperHistory';
 import styles from './WorkingDesk.module.css';
 
-export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+export const PaperLedger = memo(function PaperLedger({
+  desk,
+  liveEntries = [],
+  liveReady = true,
+  liveReconciling = false,
+}: {
+  desk: ReturnType<typeof useTradingDesk>;
+  liveEntries?: readonly LiveJournalEntry[];
+  liveReady?: boolean;
+  liveReconciling?: boolean;
+}) {
   const { records, historyReady, storageError, loadHistory, focusedRecordId, openRecord, foreground } = desk;
   const [exportNote, setExportNote] = useState<string | null>(null);
   const takeCopy = (format: LedgerFormat) => {
     const ok = downloadLedger(records, format);
-    setExportNote(ok ? 'A copy is in your downloads.' : 'The copy could not be made here.');
+    setExportNote(ok ? 'A paper copy is in your downloads.' : 'The copy could not be made here.');
+  };
+  const takeLiveCopy = (format: LedgerFormat) => {
+    const ok = downloadLiveJournal(liveEntries, format);
+    setExportNote(ok ? 'A live journal copy is in your downloads.' : 'The live copy could not be made here.');
   };
   const justFiledId = foreground.kind === 'receipt' ? foreground.recordId : null;
   useEffect(() => {
@@ -29,23 +45,26 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
         : foreground.kind === 'pending'
           ? 'An estimate is on its way — nothing to file yet.'
           : null;
-  /* An empty ledger is still furniture: a ruled slip waiting for its first
-     line, not a missing section. The shell stays so failure and arrival
-     share one place. */
-  if (!storageError && historyReady && records.length === 0) {
+
+  const emptyPaper = !storageError && historyReady && records.length === 0;
+  const emptyLive = liveReady && liveEntries.length === 0;
+  const livePreview = liveEntries.slice(0, 5);
+
+  if (emptyPaper && emptyLive) {
     return (
       <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title" data-foreground={foreground.kind}>
         <div className={styles.ledgerTrayHead}>
-          <p className={styles.eyebrow}>PAPER LEDGER</p>
+          <p className={styles.eyebrow}>YOUR RECORD</p>
           <span className={styles.boardTally}>CLEAR</span>
         </div>
         <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
         <div className={styles.ledgerEmpty}>
-          <p>No paper on file yet. Your first estimate will land here.</p>
+          <p>No paper or live evidence on file yet. Simulations land as paper; Base transactions land in the live journal.</p>
         </div>
       </section>
     );
   }
+
   const preview = ledgerPreview(records, focusedRecordId);
   const groups = groupRecordsByDay(preview);
   const older = Math.max(0, records.length - preview.length);
@@ -53,14 +72,59 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
   return (
     <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title" data-foreground={foreground.kind}>
       <div className={styles.ledgerTrayHead}>
-        <p className={styles.eyebrow}>PAPER LEDGER</p>
-        {historyReady && <span className={styles.boardTally}>{records.length === 1 ? '1 ON FILE' : `${records.length} ON FILE`}</span>}
+        <p className={styles.eyebrow}>YOUR RECORD</p>
+        {(historyReady || liveReady) && (
+          <span className={styles.boardTally}>
+            {records.length === 1 ? '1 PAPER' : `${records.length} PAPER`}
+            {liveEntries.length ? ` · ${liveEntries.length} LIVE` : ''}
+          </span>
+        )}
       </div>
       <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
       {ticketNow && <p className={styles.ledgerMore} role="status">{ticketNow}</p>}
+      {liveReconciling && <p className={styles.ledgerMore} role="status">Reconciling open Base transactions — nothing is being resubmitted.</p>}
       {storageError && <div role="alert"><p>{storageError}</p><button type="button" onClick={loadHistory}>Retry reading history</button></div>}
-      {historyReady && (
+
+      {liveReady && livePreview.length > 0 && (
+        <div className={styles.ledgerPreview} data-live-journal="true">
+          <h3 className={styles.ledgerDay}>Live journal · Base</h3>
+          <p className={styles.ledgerTrust}>Historical transactions. Not wallet holdings. Not paper simulations.</p>
+          <ol className={styles.ledgerLines}>
+            {livePreview.map(entry => {
+              const compact = compactLiveEntry(entry);
+              return (
+                <li key={entry.id} data-live="true">
+                  <a href={getBaseExplorerTxUrl(entry.hash)} target="_blank" rel="noreferrer">
+                    <strong>{compact.symbol} · {compact.action}</strong>
+                    <span>{compact.exchange}</span>
+                    <time dateTime={new Date(compact.recordedAt).toISOString()}>{formatRecordedTime(compact.recordedAt)}</time>
+                  </a>
+                  <details>
+                    <summary>Evidence</summary>
+                    <p>{entry.settlement.message}</p>
+                    <p>Reviewed terms: {entry.reviewed.inputAmount} {entry.reviewed.inputSymbol} → {entry.reviewed.outputAmount} {entry.reviewed.outputSymbol}</p>
+                    {entry.settlement.feeEth && <p>Network fee ≈ {entry.settlement.feeEth} ETH</p>}
+                    {entry.settlement.blockNumber != null && <p>Base block {entry.settlement.blockNumber}</p>}
+                    <p>Tx <code>{entry.hash}</code></p>
+                    <p>Document type: {entry.kind.replace(/-/g, ' ')} · not a position</p>
+                  </details>
+                </li>
+              );
+            })}
+          </ol>
+          {liveEntries.length > livePreview.length && (
+            <p className={styles.ledgerMore}>{liveEntries.length - livePreview.length} older live {liveEntries.length - livePreview.length === 1 ? 'entry' : 'entries'} retained in this browser.</p>
+          )}
+          <div className={styles.ledgerExport} role="group" aria-label="Take a copy of the live journal">
+            <button type="button" onClick={() => takeLiveCopy('csv')}>Live journal (CSV)</button>
+            <button type="button" onClick={() => takeLiveCopy('json')}>Live journal (JSON)</button>
+          </div>
+        </div>
+      )}
+
+      {historyReady && records.length > 0 && (
         <div className={styles.ledgerPreview}>
+          <h3 className={styles.ledgerDay}>Paper ledger</h3>
           {groups.map(group => (
             <div key={group.label} className={styles.ledgerDayGroup}>
               <h3 className={styles.ledgerDay}>{group.label}</h3>
@@ -84,16 +148,16 @@ export const PaperLedger = memo(function PaperLedger({ desk }: { desk: ReturnTyp
           ))}
         </div>
       )}
-      {historyReady && older > 0 && <p className={styles.ledgerMore}>{older} older in the archive</p>}
+      {historyReady && older > 0 && <p className={styles.ledgerMore}>{older} older paper in the archive</p>}
+      {exportNote && <p role="status" className={styles.ledgerMore}>{exportNote}</p>}
       {historyReady && records.length > 0 && (
         <details className={styles.ledgerArchive}>
-          <summary>The archive</summary>
-          <p className={styles.ledgerTrust}>Kept in this browser. Sign in copies records to your account; deleting here does not remove that copy.</p>
-          <div className={styles.ledgerExport} role="group" aria-label="Take a copy of the ledger">
-            <button type="button" onClick={() => takeCopy('csv')}>Take a copy (CSV)</button>
-            <button type="button" onClick={() => takeCopy('json')}>Take a copy (JSON)</button>
+          <summary>The paper archive</summary>
+          <p className={styles.ledgerTrust}>Simulations kept in this browser. Sign in copies paper records to your account; deleting here does not remove that copy. Live journal entries stay local.</p>
+          <div className={styles.ledgerExport} role="group" aria-label="Take a copy of the paper ledger">
+            <button type="button" onClick={() => takeCopy('csv')}>Paper copy (CSV)</button>
+            <button type="button" onClick={() => takeCopy('json')}>Paper copy (JSON)</button>
           </div>
-          {exportNote && <p role="status" className={styles.ledgerMore}>{exportNote}</p>}
           <PaperHistory desk={desk} embedded />
         </details>
       )}

@@ -1,7 +1,7 @@
-import { createPublicClient, http, formatUnits, parseAbi, type PublicClient } from 'viem';
+import { createPublicClient, http, formatUnits, formatEther, parseAbi, type PublicClient, type TransactionReceipt } from 'viem';
 import { base } from 'viem/chains';
 import { buildAerodromeSwapTx, buildErc20ApproveTx } from './aerodrome-router';
-import { AERODROME_SWAP_ROUTER, BASE_RPC_URL, BASE_USDC } from '../base-chain';
+import { AERODROME_SWAP_ROUTER, BASE_RPC_URL, BASE_USDC, BASE_USDC_DECIMALS } from '../base-chain';
 import type { QuoteEstimate } from './domain';
 
 export type SendTransaction = (tx: { to: `0x${string}`; data: `0x${string}`; value?: bigint; chainId: number }) => Promise<`0x${string}`>;
@@ -18,6 +18,12 @@ export type LiveOutcome = {
   message: string;
   /** Machine-readable failure reason (distinct wallet/network/RPC causes). */
   reason?: 'disconnected' | 'wrong_network' | 'insufficient_funds' | 'rejected' | 'gas_unavailable' | 'rpc_failed' | 'submit_failed';
+  gasUsedWei?: string;
+  effectiveGasPriceWei?: string;
+  feeEth?: string;
+  amountInObserved?: string;
+  amountOutObserved?: string;
+  blockNumber?: number;
 };
 
 const erc20Abi = parseAbi([
@@ -152,19 +158,121 @@ export async function executeAerodromeSwap(
   return { status: 'submitted', hash, message: 'Swap submitted. Reconciliation pending.' };
 }
 
+function inputDecimals(quote: QuoteEstimate): number {
+  return quote.intent.side === 'buy' ? BASE_USDC_DECIMALS : quote.tokenDecimals;
+}
+
+function outputDecimals(quote: QuoteEstimate): number {
+  return quote.intent.side === 'buy' ? quote.tokenDecimals : BASE_USDC_DECIMALS;
+}
+
+function outputTokenFor(quote: QuoteEstimate): `0x${string}` {
+  return (quote.intent.side === 'buy' ? quote.instrumentAddress : BASE_USDC) as `0x${string}`;
+}
+
+/** Build an honest outcome from a receipt. Reviewed quote amounts stay separate —
+ *  observed Transfer sums are fill evidence when present. */
+export function outcomeFromReceipt(
+  receipt: Pick<TransactionReceipt, 'status' | 'gasUsed' | 'effectiveGasPrice' | 'blockNumber' | 'logs'>,
+  hash: `0x${string}`,
+  quote?: QuoteEstimate,
+  walletAddress?: `0x${string}`,
+): LiveOutcome {
+  const gasUsedWei = receipt.gasUsed?.toString();
+  const effectiveGasPriceWei = receipt.effectiveGasPrice?.toString();
+  const feeEth = receipt.gasUsed != null && receipt.effectiveGasPrice != null
+    ? formatEther(receipt.gasUsed * receipt.effectiveGasPrice)
+    : undefined;
+  const blockNumber = typeof receipt.blockNumber === 'bigint'
+    ? Number(receipt.blockNumber)
+    : receipt.blockNumber;
+
+  let amountInObserved: string | undefined;
+  let amountOutObserved: string | undefined;
+  if (quote && walletAddress && receipt.logs) {
+    try {
+      const input = inputTokenFor(quote).toLowerCase();
+      const output = outputTokenFor(quote).toLowerCase();
+      const wallet = walletAddress.toLowerCase();
+      let inRaw = 0n;
+      let outRaw = 0n;
+      for (const log of receipt.logs) {
+        if (!log.topics || log.topics.length < 3) continue;
+        const address = (log.address as string).toLowerCase();
+        /* Transfer(from, to, value) — topics[1]=from, topics[2]=to */
+        const from = `0x${(log.topics[1] as string).slice(26)}`.toLowerCase();
+        const to = `0x${(log.topics[2] as string).slice(26)}`.toLowerCase();
+        const value = BigInt(log.data);
+        if (address === input && from === wallet) inRaw += value;
+        if (address === output && to === wallet) outRaw += value;
+      }
+      if (inRaw > 0n) amountInObserved = formatUnits(inRaw, inputDecimals(quote));
+      if (outRaw > 0n) amountOutObserved = formatUnits(outRaw, outputDecimals(quote));
+    } catch { /* observed amounts are best-effort */ }
+  }
+
+  const enrichment = {
+    gasUsedWei,
+    effectiveGasPriceWei,
+    feeEth,
+    amountInObserved,
+    amountOutObserved,
+    blockNumber,
+  };
+
+  if (receipt.status === 'success') {
+    return {
+      status: 'filled',
+      hash,
+      message: amountOutObserved
+        ? `Swap filled on Base. Observed receipt ≈ ${amountOutObserved} ${quote?.outputSymbol ?? 'tokens'}${feeEth ? `; network fee ≈ ${feeEth} ETH` : ''}.`
+        : `Swap filled on Base.${feeEth ? ` Network fee ≈ ${feeEth} ETH.` : ''}`,
+      ...enrichment,
+    };
+  }
+  return {
+    status: 'failed',
+    hash,
+    message: 'Swap reverted on Base.',
+    ...enrichment,
+  };
+}
+
 /** Wait for the swap receipt and return the honest live outcome. */
 export async function waitForLiveOutcome(
   publicClient: PublicClient,
   hash: `0x${string}`,
+  quote?: QuoteEstimate,
+  walletAddress?: `0x${string}`,
 ): Promise<LiveOutcome> {
   try {
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
-    if (receipt.status === 'success') {
-      return { status: 'filled', hash, message: 'Swap filled on Base.' };
-    }
-    return { status: 'failed', hash, message: 'Swap reverted on Base.' };
+    return outcomeFromReceipt(receipt, hash, quote, walletAddress);
   } catch (e) {
     return { status: 'unknown', hash, message: `Could not confirm: ${e instanceof Error ? e.message : 'unknown'}` };
+  }
+}
+
+/** Re-read a known hash after reload — never resubmits. */
+export async function reconcileLiveHash(
+  publicClient: PublicClient,
+  hash: `0x${string}`,
+  quote?: QuoteEstimate,
+  walletAddress?: `0x${string}`,
+): Promise<LiveOutcome> {
+  try {
+    const receipt = await publicClient.getTransactionReceipt({ hash });
+    if (receipt) return outcomeFromReceipt(receipt, hash, quote, walletAddress as `0x${string}` | undefined);
+  } catch { /* not mined yet — fall through to a bounded wait */ }
+  try {
+    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 15_000 });
+    return outcomeFromReceipt(receipt, hash, quote, walletAddress);
+  } catch (e) {
+    return {
+      status: 'unknown',
+      hash,
+      message: `Still unconfirmed on Base: ${e instanceof Error ? e.message : 'unknown'}. The hash is retained — nothing was resubmitted.`,
+    };
   }
 }
 

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
+import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
 import { approveInputForQuote, createBasePublicClient, estimateSwapGas, readTokenAllowance, readTokenBalance, swapForQuote, waitForLiveOutcome, type LiveOutcome } from './execute-swap';
+import { saveLiveApproval, saveLiveSubmission, updateLiveOutcome } from './live-journal';
 import { AERODROME_SWAP_ROUTER, BASE_USDC } from '../base-chain';
 import type { QuoteEstimate } from './domain';
 
@@ -59,7 +61,12 @@ function failureOutcome(e: unknown): LiveOutcome {
   };
 }
 
-export function useDeskExecution(quote: QuoteEstimate | null) {
+function journalStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try { return window.localStorage; } catch { return null; }
+}
+
+export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskId = OPEN_DESK_ID, onJournalChange?: () => void) {
   const auth = useDeskAuth();
   const publicClient = useMemo(() => createBasePublicClient(), []);
   const [state, setState] = useState<DeskExecutionState>({ stage: 'idle' });
@@ -102,21 +109,33 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
     if (!quote || !auth.walletAddress || !auth.authenticated || !inputToken) return false;
     setState({ stage: 'approving' });
     try {
-      await approveInputForQuote(
+      const hash = await approveInputForQuote(
         { sendTransaction: (tx) => auth.sendTransaction(tx), publicClient },
         quote,
       );
+      const storage = journalStorage();
+      if (storage) {
+        try {
+          saveLiveApproval(storage, {
+            hash,
+            quote,
+            walletAddress: auth.walletAddress,
+            deskId,
+          });
+          onJournalChange?.();
+        } catch { /* journal write must not block the desk */ }
+      }
       await refresh();
       return true;
     } catch (e) {
       setState({ stage: 'done', outcome: failureOutcome(e) });
       return false;
     }
-  }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient, refresh]);
+  }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient, refresh, deskId, onJournalChange]);
 
-  /** Step 2 of 2: sign and broadcast the swap, then wait for the receipt.
-   *  The quote and the reviewed wallet are captured up front: an account
-   *  change or a duplicate click cannot silently reuse the authorization. */
+  /** Step 2 of 2: sign and broadcast the swap, persist the hash immediately,
+   *  then wait for the receipt. An account change or duplicate click cannot
+   *  silently reuse the authorization. */
   const execute = useCallback(async (slippageBps: number, deadlineSeconds = 120): Promise<LiveOutcome> => {
     const boundQuote = quote;
     const boundWallet = auth.walletAddress;
@@ -142,8 +161,27 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
           slippageBps,
           deadlineSeconds,
         );
+        const storage = journalStorage();
+        if (storage) {
+          try {
+            saveLiveSubmission(storage, {
+              hash,
+              quote: boundQuote,
+              walletAddress: wallet,
+              slippageBps,
+              deskId,
+            });
+            onJournalChange?.();
+          } catch { /* journal write must not block confirmation */ }
+        }
         setState({ stage: 'confirming', hash });
-        const outcome = await waitForLiveOutcome(publicClient, hash);
+        const outcome = await waitForLiveOutcome(publicClient, hash, boundQuote, wallet);
+        if (storage && hash !== '0x') {
+          try {
+            updateLiveOutcome(storage, hash, outcome);
+            onJournalChange?.();
+          } catch { /* evidence update is best-effort after the chain truth */ }
+        }
         setState({ stage: 'done', outcome });
         return outcome;
       } catch (e) {
@@ -160,7 +198,7 @@ export function useDeskExecution(quote: QuoteEstimate | null) {
     inflightRef.current = run;
     inflightKeyRef.current = executionKey;
     return run;
-  }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient]);
+  }, [quote, auth.walletAddress, auth.authenticated, auth.sendTransaction, inputToken, publicClient, deskId, onJournalChange]);
 
   /** Clear a finished or failed outcome and re-read the wallet. */
   const reset = useCallback(() => { void refresh(); }, [refresh]);

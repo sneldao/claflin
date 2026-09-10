@@ -17,6 +17,7 @@ import { HouseDirectory } from './HouseDirectory';
 import { ClosedDesk } from './ClosedDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { usePaperSync } from '@/lib/trading/usePaperSync';
+import { useLiveJournal } from '@/lib/trading/useLiveJournal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useRoomTone } from '@/lib/desk-tone';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
@@ -75,6 +76,7 @@ export function WorkingDesk() {
   const desk = useTradingDesk();
   const auth = useDeskAuth();
   const { importAnonymousRecords, anonymousCount } = usePaperSync(desk);
+  const liveJournal = useLiveJournal(desk.deskId);
   const [hettyLive, setHettyLive] = useState(false);
   // Both sides of the line, captioned on the blotter: the caller's words and
   // Hetty's replies. Cleared when the line drops — the ticket returns to
@@ -279,8 +281,8 @@ export function WorkingDesk() {
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        {open ? <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
-        {hasLedger && <PaperLedger desk={desk} />}
+        {open ? <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} /> : <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />}
+        {hasLedger && <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />}
         <aside className={styles.support} aria-label={open ? 'The Base desk’s direct line' : 'A closed desk'}>
           {open && <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>

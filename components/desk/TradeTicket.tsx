@@ -180,8 +180,13 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
         {hash && (
           <p className={styles.liveMeta}>
             Transaction <code>{hash.slice(0, 10)}…{hash.slice(-6)}</code> · <a href={getBaseExplorerTxUrl(hash)} target="_blank" rel="noreferrer">View on BaseScan</a>
+            {outcome.feeEth && <> · Network fee ≈ {outcome.feeEth} ETH</>}
+            {(outcome.amountInObserved || outcome.amountOutObserved) && (
+              <> · Observed {outcome.amountInObserved ?? '—'} → {outcome.amountOutObserved ?? '—'}</>
+            )}
           </p>
         )}
+        <p className={styles.liveMeta}>Filed to your live journal — a historical transaction, not a wallet holding.</p>
         {outcome.status === 'failed' && (
           <button type="button" className={styles.secondary} onClick={reset}>Check the wallet and try again</button>
         )}
@@ -277,7 +282,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean }) {
+export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff, onLiveJournalChange }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean; onLiveJournalChange?: () => void }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -290,7 +295,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
      banner and Hetty read it) so the slip can stamp the outcome the way a
      paper receipt is stamped — a fill is furniture, not a toast. */
   const liveQuote = LIVE_EXECUTION_ENABLED && liveMode && foreground.kind !== 'receipt' && foreground.kind !== 'archive' && !missing && quote ? quote : null;
-  const execution = useDeskExecution(liveQuote);
+  const execution = useDeskExecution(liveQuote, desk.deskId, onLiveJournalChange);
   const liveOutcome = execution.state.stage === 'done' ? execution.state.outcome : null;
   const liveStamp = liveOutcome && liveOutcome.status !== 'failed'
     ? liveOutcome.status === 'filled' ? 'FILLED' : liveOutcome.status === 'submitted' ? 'SUBMITTED' : 'UNCONFIRMED'
