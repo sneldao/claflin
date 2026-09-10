@@ -54,6 +54,37 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
 - Retired era's `lib/useSWR.ts` is no longer present; the tape and quote
   fetches use `fetchJson()` directly and keep their own last-known-good state.
 
+## Voice line lifecycle (`components/desk/HettyCall.tsx`)
+
+The ElevenLabs provider's `startSession` silently no-ops while a conversation
+or connection-lock ref is still held, and a backgrounded or frozen tab can
+kill the socket without events — a stale line then refuses every future ring
+with no error surfaced. The line therefore owns its own lifecycle:
+
+- **Fresh provider per session.** The outer `HettyCall` shell holds a session
+  key and remounts the `ConversationProvider` after every terminal event, so
+  the next ring always starts with clean refs. Closing notes and errors are
+  held by the shell and passed back in as props, so they survive the remount.
+- **One terminal funnel.** `onDisconnect`, `onError`, the dial watchdog, user
+  cancel and the page-lifecycle handlers all converge on exactly one of
+  `onSessionEnded` / `onSessionFailed`; a per-mount guard ensures only the
+  first terminal event decides how the session is reported (an error and a
+  disconnect often arrive together).
+- **One guarded `hangUp()`.** Mute first, then `endSession`, only while
+  connected or connecting. Mic chunks already in flight during a close can
+  still throw the SDK's "WebSocket is already in CLOSING or CLOSED state"
+  console error — `@elevenlabs/client`'s `sendMessage` has no readyState
+  guard (verified through 1.25.0). Muting shrinks the window; the remaining
+  logs are benign teardown noise.
+- **Bounded dialling.** A 20s watchdog ends any ring that never connects and
+  returns the desk to ringable — "Connecting…" is never a dead end.
+- **Deliberate hangup on the way out.** `visibilitychange` → hidden,
+  `pagehide`, and bfcache restores (`pageshow` with `persisted`) end the call
+  honestly instead of leaving a zombie line. Continuity is carried by the
+  ticket: the next ring's opening line is rebuilt from the draft on the paper.
+- **End call is confirmed.** If no disconnect event returns within 2s of
+  End call (silently dead socket), the closing note is landed locally.
+
 ## Client recovery requirements
 
 [Product Direction](PRODUCT_DIRECTION.md) owns the target experience. Recovery should preserve the client's work, state what did and did not happen, and offer a safe next action. The current mascot, skeleton rows, and "redial" wording below are implementation descriptions, not a requirement to preserve the operator-themed presentation.

@@ -26,6 +26,18 @@ type ToolResult = Promise<string>;
  * instead of the desk: connecting is immediate and cancellable, the
  * opening names what is actually on the paper, conversation changes the
  * ticket, review is quiet, and ending reports the work — not the wire.
+ *
+ * Reliability model: the SDK provider's startSession silently no-ops while
+ * a conversation or lock ref is still held, and a backgrounded or frozen
+ * tab can kill the socket without events — a stale line then refuses every
+ * future ring. So the session lifecycle is owned here, not by the parent:
+ * every terminal event (disconnect, error, the dial watchdog, page hide,
+ * bfcache restore) funnels through exactly one of onSessionEnded /
+ * onSessionFailed, and the outer shell answers each by remounting the
+ * ConversationProvider — every ring gets a fresh socket. The closing note
+ * and any error survive the remount as props. Continuity between calls is
+ * carried by the ticket, not by audio memory: the next opening line is
+ * built from the draft on the paper.
  */
 
 type HettyTools = {
@@ -41,6 +53,9 @@ type HettyTools = {
 };
 
 type Caption = { role: 'user' | 'agent'; text: string; at: number };
+
+/** A ring that has not connected within this window is treated as failed. */
+const DIAL_TIMEOUT_MS = 20_000;
 
 /* A restrained receiver click — one short transient on lift, nothing more.
    The room may sound historical; the information stays clear. No telephone
@@ -65,7 +80,18 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { desk: Desk; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void }) {
+function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+  desk: Desk;
+  onLiveChange: (live: boolean) => void;
+  onUserSpoken?: (text: string) => void;
+  onAgentSpoken?: (text: string) => void;
+  /* Notes are owned by the outer shell so they survive session remounts. */
+  endNote: string | null;
+  callError: string | null;
+  onActivity: () => void;
+  onSessionEnded: (note: string | null) => void;
+  onSessionFailed: (message: string) => void;
+}) {
   const deskRef = useRef(desk);
   useEffect(() => { deskRef.current = desk; });
 
@@ -173,19 +199,22 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
     return deskNoteSpokenLine(deskRef.current.deskId);
   });
 
-  const [callError, setCallError] = useState<string | null>(null);
-  const callErrorRef = useRef<string | null>(null);
-  useEffect(() => { callErrorRef.current = callError; });
   /* Immediate, cancellable dialling. The SDK only reports `connecting`
      after startSession — this flag acknowledges the ring the moment it is
      pressed, stays cancellable through the session-URL fetch, and guards
      against a late connection opening after the client has left. */
   const [dialing, setDialing] = useState(false);
-  const [endNote, setEndNote] = useState<string | null>(null);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const dialCancelledRef = useRef(false);
   const ringGenRef = useRef(0);
   const endedByUserRef = useRef(false);
+  /* True from ring() until a terminal callback fires — the page-lifecycle
+     handlers use it to tell a live session apart from an idle provider. */
+  const sessionActiveRef = useRef(false);
+  /* One terminal callback per mount: onError and onDisconnect often arrive
+     together, and only the first may decide how the session is reported. */
+  const terminalFiredRef = useRef(false);
+  const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const auth = useDeskAuth();
   const authRef = useRef(auth);
   useEffect(() => { authRef.current = auth; });
@@ -219,14 +248,37 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
     } catch { /* transcript loss is not a desk error */ }
   }, []);
 
+  /* The two terminal paths. Each fires at most once per mount, flushes the
+     transcript, and hands the outer shell what it needs to remount the
+     provider while keeping the note on screen. */
+  const fireEnded = useCallback((note: string | null) => {
+    if (terminalFiredRef.current) return;
+    terminalFiredRef.current = true;
+    sessionActiveRef.current = false;
+    void flushTranscript();
+    onSessionEnded(note);
+  }, [flushTranscript, onSessionEnded]);
+
+  const fireFailed = useCallback((message: string) => {
+    if (terminalFiredRef.current) return;
+    terminalFiredRef.current = true;
+    sessionActiveRef.current = false;
+    setDialing(false);
+    void flushTranscript();
+    onSessionFailed(message);
+  }, [flushTranscript, onSessionFailed]);
+
   const conversation = useConversation({
-    onError: (e: unknown) => {
-      const msg = /notallowed|permission|denied|getusermedia/i.test(String((e as { name?: string; message?: string })?.name ?? '') + ' ' + String((e as { message?: string })?.message ?? e))
+    onError: (message: unknown, context?: unknown) => {
+      const haystack = [
+        String((context as { name?: string } | null)?.name ?? ''),
+        String((context as { message?: string } | null)?.message ?? ''),
+        String((message as { message?: string } | null)?.message ?? message ?? ''),
+      ].join(' ');
+      const msg = /notallowed|permission|denied|getusermedia/i.test(haystack)
         ? 'The microphone was not allowed. Grant mic access and ring again.'
         : 'The line dropped. Ring again when you are ready.';
-      callErrorRef.current = msg;
-      setCallError(msg);
-      setDialing(false);
+      fireFailed(msg);
     },
     onMessage: (m: { message: string; role?: string; source?: string }) => {
       const text = typeof m.message === 'string' ? m.message.trim() : '';
@@ -249,7 +301,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
     onConnect: () => {
       // A late connection must never open after the client has left.
       if (dialCancelledRef.current) {
-        try { conversation.endSession(); } catch { /* already closed */ }
+        hangUp();
         return;
       }
       startedAtRef.current = Date.now();
@@ -259,9 +311,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
       flushedRef.current = false;
       deskNoteShared.current = false;
       endedByUserRef.current = false;
-      setCallError(null);
-      callErrorRef.current = null;
-      setEndNote(null);
+      onActivity();
       setDialing(false);
       receiverClick();
     },
@@ -269,50 +319,116 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
       onLiveChange(false);
       setDialing(false);
       const d = deskRef.current;
-      const dropped = !endedByUserRef.current && Boolean(callErrorRef.current);
-      setEndNote(hettyClosingLine(d.state, d.foreground, dropped ? 'dropped' : 'ended'));
+      /* By the time a disconnect arrives, an error (if any) has already
+         claimed the terminal slot — so this only runs for clean hangups
+         and genuinely dropped lines. */
+      const note = hettyClosingLine(d.state, d.foreground, endedByUserRef.current ? 'ended' : 'dropped');
       endedByUserRef.current = false;
-      void flushTranscript();
+      fireEnded(note);
     },
   });
   const live = conversation.status === 'connected';
   const sdkConnecting = conversation.status === 'connecting';
   const ringing = dialing || sdkConnecting;
 
+  /* The single way the line comes down. Mute first so the audio pipeline
+     stops feeding the socket, then endSession — guarded by the latest
+     status so a dead provider is never asked to close again. (Mic chunks
+     already in flight can still hit a closing socket and log the SDK's
+     "already in CLOSING or CLOSED state" error; muting shrinks that window,
+     it cannot remove it — the SDK's sendMessage has no readyState guard.) */
+  const statusRef = useRef(conversation.status);
+  useEffect(() => { statusRef.current = conversation.status; });
+  const hangUp = useCallback(() => {
+    if (statusRef.current !== 'connected' && statusRef.current !== 'connecting') return;
+    try { conversation.setMuted(true); } catch { /* no input to mute */ }
+    try { conversation.endSession(); } catch { /* already closed */ }
+  }, [conversation]);
+
   useEffect(() => { onLiveChange(live); }, [live, onLiveChange]);
+
+  /* Unmount: cancel any in-flight ring and bring the line down through the
+     same guarded path. The provider's own unmount cleanup also ends the
+     session, so this is promptness, not correctness. */
+  const hangUpRef = useRef(hangUp);
+  useEffect(() => { hangUpRef.current = hangUp; });
   useEffect(() => () => {
     dialCancelledRef.current = true;
     ringGenRef.current += 1;
-    conversation.endSession();
+    if (endTimerRef.current) clearTimeout(endTimerRef.current);
+    hangUpRef.current();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* A ring that never connects must not be a dead end: if the line is
+     still dialling when the watchdog fires, bring it down and say so —
+     the remount returns the desk to ringable. */
+  useEffect(() => {
+    if (!ringing || live) return;
+    const timer = setTimeout(() => {
+      hangUp();
+      fireFailed('The line did not answer. Check the microphone permission and ring again.');
+    }, DIAL_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [ringing, live, hangUp, fireFailed]);
+
+  /* A hidden or frozen tab kills the socket silently, and the SDK can keep
+     believing it is connected — the next ring then dies on the stale line.
+     End the call deliberately on the way out, and after a bfcache restore:
+     the remount guarantees the next ring is a fresh conversation. */
+  useEffect(() => {
+    const endForLeave = () => {
+      if (!sessionActiveRef.current && statusRef.current === 'disconnected') return;
+      hangUp();
+      const d = deskRef.current;
+      fireEnded(hettyClosingLine(d.state, d.foreground, 'ended'));
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') endForLeave(); };
+    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) endForLeave(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', endForLeave);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', endForLeave);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [hangUp, fireEnded]);
 
   const cancelRing = useCallback(() => {
     dialCancelledRef.current = true;
     ringGenRef.current += 1;
     setDialing(false);
-    try { conversation.endSession(); } catch { /* no line to close */ }
-  }, [conversation]);
+    hangUp();
+    /* A pending startSession can leave the provider's lock held until it
+       settles — remount instead of trusting it. */
+    fireEnded(null);
+  }, [hangUp, fireEnded]);
 
   const endCall = useCallback(() => {
     endedByUserRef.current = true;
     dialCancelledRef.current = true;
     ringGenRef.current += 1;
     setDialing(false);
-    try { conversation.endSession(); } catch { /* already closed */ }
-  }, [conversation]);
+    hangUp();
+    /* If the socket is already silently dead no disconnect event may come
+       back — land the closing note ourselves rather than hang the UI. */
+    endTimerRef.current = setTimeout(() => {
+      const d = deskRef.current;
+      fireEnded(hettyClosingLine(d.state, d.foreground, 'ended'));
+    }, 2000);
+  }, [hangUp, fireEnded]);
 
   const ring = async () => {
     if (dialing || sdkConnecting || live) return;
     dialCancelledRef.current = false;
     endedByUserRef.current = false;
+    sessionActiveRef.current = true;
     const gen = ++ringGenRef.current;
     // Acknowledge immediately — before the session-URL request — so the
     // client never wonders whether the ring was heard. The ticket stays
     // usable throughout; no artificial ringing delay.
     setDialing(true);
-    setEndNote(null);
-    setCallError(null);
-    callErrorRef.current = null;
+    onActivity();
     receiverClick();
     const result = await fetchJson<{ signedUrl?: string }>('/api/hetty/session', { method: 'POST', cache: 'no-store' });
     if (dialCancelledRef.current || ringGenRef.current !== gen) return;
@@ -323,16 +439,11 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
         : e.code === 'not_connected'
           ? 'Hetty’s line is not connected on this deployment.'
           : e.message;
-      callErrorRef.current = msg;
-      setCallError(msg);
-      setDialing(false);
+      fireFailed(msg);
       return;
     }
     if (!result.data.signedUrl) {
-      const msg = 'Hetty’s line is unavailable. Please try again shortly.';
-      callErrorRef.current = msg;
-      setCallError(msg);
-      setDialing(false);
+      fireFailed('Hetty’s line is unavailable. Please try again shortly.');
       return;
     }
     // The opening already knows the foreground: recognition before
@@ -352,10 +463,7 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
       });
     } catch {
       if (dialCancelledRef.current || ringGenRef.current !== gen) return;
-      const msg = 'The line could not be opened. Check the microphone permission and ring again.';
-      callErrorRef.current = msg;
-      setCallError(msg);
-      setDialing(false);
+      fireFailed('The line could not be opened. Check the microphone permission and ring again.');
     }
   };
 
@@ -461,10 +569,37 @@ function HettyCallInner({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { d
   );
 }
 
+/* The outer shell owns the session lifecycle: every terminal event remounts
+   the ConversationProvider (fresh socket, fresh locks), while the closing
+   note and any error persist across the remount as props. */
 export const HettyCall = memo(function HettyCall({ desk, onLiveChange, onUserSpoken, onAgentSpoken }: { desk: Desk; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void }) {
+  const [sessionKey, setSessionKey] = useState(0);
+  const [endNote, setEndNote] = useState<string | null>(null);
+  const [callError, setCallError] = useState<string | null>(null);
+  const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); }, []);
+  const handleEnded = useCallback((note: string | null) => {
+    setCallError(null);
+    setEndNote(note);
+    setSessionKey(k => k + 1);
+  }, []);
+  const handleFailed = useCallback((message: string) => {
+    setEndNote(null);
+    setCallError(message);
+    setSessionKey(k => k + 1);
+  }, []);
   return (
-    <ConversationProvider>
-      <HettyCallInner desk={desk} onLiveChange={onLiveChange} onUserSpoken={onUserSpoken} onAgentSpoken={onAgentSpoken} />
+    <ConversationProvider key={sessionKey}>
+      <HettyCallInner
+        desk={desk}
+        onLiveChange={onLiveChange}
+        onUserSpoken={onUserSpoken}
+        onAgentSpoken={onAgentSpoken}
+        endNote={endNote}
+        callError={callError}
+        onActivity={handleActivity}
+        onSessionEnded={handleEnded}
+        onSessionFailed={handleFailed}
+      />
     </ConversationProvider>
   );
 });
