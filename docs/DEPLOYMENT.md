@@ -4,8 +4,8 @@
 
 | Target | URL | Notes |
 |---|---|---|
-| Vercel | `your-claflin-app.vercel.app` | Auto-deploys from `main`; serves the desk UI and `/api/*` |
-| VPS (Hetzner) | `api.your-claflin-app.com` | PM2 standalone server on port 3042; ~52 MB |
+| Vercel (frontend) | `claflin.trustfall.xyz` | Auto-deploys from `main`; desk UI; same-origin `/api/*` |
+| VPS (Hetzner API) | `api.claflin.trustfall.xyz` | PM2 standalone on `127.0.0.1:3042` behind nginx; ~52 MB |
 
 The client-facing product is the paper trading desk at `/`. Mounted desk
 routes: `/api/stocks/quote` (read-only estimates), `/api/stocks/marks`
@@ -38,13 +38,13 @@ BASE_RPC_URL=https://...
 BASE_RPC_FALLBACK_URL=https://...   # optional, rotated in after the primary
 
 # Deployment metadata (absolute canonical/OG URLs)
-NEXT_PUBLIC_APP_URL=https://your-claflin-app.vercel.app
+NEXT_PUBLIC_APP_URL=https://claflin.trustfall.xyz
 ```
 
 **Only if proxying `/api/*` to the Hetzner API** (see dual-deployment below):
 
 ```
-API_PROXY_TARGET=https://api.your-claflin-app.com
+API_PROXY_TARGET=https://api.claflin.trustfall.xyz
 ```
 
 **Only if account-tier backup or retained services are in use** (paper
@@ -113,8 +113,8 @@ routing contract (410 set, quote endpoint shape) is shared.
 ```
 Browser
   └─► Vercel (HTML/JS/CSS) — same-origin /api/* calls
-        └─► API_PROXY_TARGET = https://api.your-claflin-app.com  (server-to-server rewrite)
-              └─► Hetzner Next.js standalone (port 3042)
+        └─► API_PROXY_TARGET = https://api.claflin.trustfall.xyz  (server-to-server rewrite)
+              └─► Hetzner Next.js standalone (127.0.0.1:3042 behind nginx)
                     └─► Upstash Redis (shared, retained services only)
 ```
 
@@ -139,6 +139,34 @@ server will proxy its own routes back to itself.
 
 ---
 
+## Domains (`trustfall.xyz`)
+
+| Host | Role | Status |
+|---|---|---|
+| `claflin.trustfall.xyz` | Frontend (Vercel) | Custom domain on the Claflin Vercel project |
+| `api.claflin.trustfall.xyz` | Backend (Hetzner) | Live — nginx TLS (Let's Encrypt), upstream `127.0.0.1:3042` |
+
+DNS (GoDaddy → `trustfall.xyz`):
+
+| Type | Host | Value |
+|---|---|---|
+| A / CNAME | `claflin` | Vercel target from project Domains |
+| A | `api.claflin` | `157.180.36.156` |
+
+Vercel production env:
+
+```
+NEXT_PUBLIC_APP_URL=https://claflin.trustfall.xyz
+API_PROXY_TARGET=https://api.claflin.trustfall.xyz
+```
+
+API TLS renews via certbot’s systemd timer. Re-issue only if the site file is replaced from the HTTP-only template:
+
+```bash
+sudo certbot --nginx -d api.claflin.trustfall.xyz
+```
+
+---
 ## After Any Deployment
 
 1. `GET /` — the desk renders, paper mode is explicit, no stock preselected. Sign in appears only if Privy public env is set; there is no “Live access” banner.

@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 };
 
 // Set NEXT_PUBLIC_APP_URL in your deployment environment; the fallback is a placeholder.
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://claflin.co';
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://claflin.trustfall.xyz';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

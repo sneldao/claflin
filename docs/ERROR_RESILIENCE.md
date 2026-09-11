@@ -24,7 +24,7 @@ rewrite so the browser calls its **own origin** at `/api/*` and the Next.js
 server forwards server-to-server. No browser CORS, no preflight round-trips,
 first-party cookies, and ad-blockers stop flagging API calls.
 
-- Vercel: `API_PROXY_TARGET=https://api.your-claflin-app.com` (and unset the
+- Vercel: `API_PROXY_TARGET=https://api.claflin.trustfall.xyz` (and unset the
   legacy `NEXT_PUBLIC_API_URL`).
 - Hetzner / local dev: leave it unset — local route handlers serve directly.
 

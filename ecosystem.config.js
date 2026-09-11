@@ -46,7 +46,7 @@ module.exports = {
       env: {
         NODE_ENV: env.NODE_ENV || 'production',
         PORT: env.PORT || '3042',
-        HOSTNAME: env.HOSTNAME || '0.0.0.0',
+        HOSTNAME: env.HOSTNAME || '127.0.0.1',
 
         // Redis
         UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL || '',

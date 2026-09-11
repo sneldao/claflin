@@ -1,6 +1,6 @@
 # Hetzner VPS Deployment
 
-Claflin API server. App directory: `/opt/claflin` — Port 3042 — PM2: `claflin`
+Claflin API server. App directory: `/opt/claflin` — Port **3042** (loopback only) — PM2: `claflin` — public host: **api.claflin.trustfall.xyz** (nginx → `127.0.0.1:3042`). Frontend: **claflin.trustfall.xyz** (Vercel).
 
 ---
 
@@ -66,6 +66,8 @@ and are read by `ecosystem.config.js` at `pm2 start`.
 
 | Variable | Default | Notes |
 |---|---|---|
+| `HOSTNAME` | `127.0.0.1` | Loopback only; nginx fronts the app |
+| `PORT` | `3042` | Not exposed in UFW |
 | `BASE_RPC_URL` | `https://mainnet.base.org` | Quote service RPC — set a production provider for real traffic |
 | `BASE_RPC_FALLBACK_URL` | — | Optional second provider, rotated in after the primary |
 | `UPSTASH_REDIS_REST_URL` | `https://game-corgi-122374.upstash.io` | Upstash instance (retained services only) |
@@ -92,24 +94,49 @@ du -sh /opt/claflin
 
 ## Nginx Reverse Proxy
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+The app binds **`HOSTNAME=127.0.0.1`** so only local processes (nginx) can reach
+port 3042. UFW does not allow 3042 from the public internet.
 
-    location / {
-        proxy_pass http://127.0.0.1:3042;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
+Canonical site file: `scripts/nginx-claflin.conf` → `/etc/nginx/sites-available/claflin`
+(enabled as `sites-enabled/claflin`). Upstream is `127.0.0.1:3042`.
+
+### DNS (GoDaddy → `trustfall.xyz`)
+
+| Type | Name | Content | Notes |
+|---|---|---|---|
+| A | `api.claflin` | `157.180.36.156` | Backend → this VPS |
+| CNAME or A | `claflin` | Vercel target | Frontend — add domain in Vercel project settings |
+
+### TLS
+
+**Live:** `https://api.claflin.trustfall.xyz` (Let's Encrypt via certbot;
+auto-renew). Cert paths:
+
+```
+/etc/letsencrypt/live/api.claflin.trustfall.xyz/fullchain.pem
+/etc/letsencrypt/live/api.claflin.trustfall.xyz/privkey.pem
 ```
 
-Enable HTTPS: `sudo certbot --nginx -d your-domain.com`
+`scripts/nginx-claflin.conf` is the HTTP bootstrap template. Certbot amends the
+enabled site with `listen 443 ssl` and the redirect. If you reinstall from the
+template, re-run:
 
+```bash
+sudo certbot --nginx -d api.claflin.trustfall.xyz
+```
+
+### Verify
+
+```bash
+# Loopback only
+ss -tlnp | grep 3042   # expect 127.0.0.1:3042
+
+# Public HTTPS
+curl -sI https://api.claflin.trustfall.xyz/ | head -1
+```
+
+On Vercel: `NEXT_PUBLIC_APP_URL=https://claflin.trustfall.xyz` and
+`API_PROXY_TARGET=https://api.claflin.trustfall.xyz` (see `docs/DEPLOYMENT.md`).
 ---
 
 ## Upstash Redis

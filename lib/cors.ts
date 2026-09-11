@@ -11,7 +11,8 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://your-claflin-app.vercel.app',
+  'https://claflin.trustfall.xyz',
+  'https://claflin.vercel.app',
   'http://localhost:3000',
 ];
 

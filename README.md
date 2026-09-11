@@ -31,7 +31,7 @@ pnpm install
 pnpm dev
 ```
 
-Open `/`. Wallet, ElevenLabs, Privy and Redis setup are not prerequisites for the current paper desk. The read-only quote service uses Base's public RPC by default; configure `BASE_RPC_URL` for an appropriate production provider. Configure `NEXT_PUBLIC_APP_URL` for deployment metadata. Do not expose provider credentials through public environment variables.
+Open `/`. Wallet, ElevenLabs, Privy and Redis setup are not prerequisites for the current paper desk. The read-only quote service uses Base's public RPC by default; configure `BASE_RPC_URL` for an appropriate production provider. Production hosts: frontend `https://claflin.trustfall.xyz`, API `https://api.claflin.trustfall.xyz`. Set `NEXT_PUBLIC_APP_URL` for deployment metadata. Do not expose provider credentials through public environment variables.
 
 The old client routes—including `/desk`, `/marketplace`, `/demo`, `/profile`, `/dashboard`, `/list-your-broker`, broker profiles and the old admin pages—redirect to `/`. `/desk-study` and `/widget-probe` are development-only references, absent from client navigation and unavailable in production.
 
@@ -54,6 +54,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Live execution journal (approvals, submitted/confirmed swaps) | `lib/trading/live-journal.ts`, `lib/trading/useLiveJournal.ts`, `lib/trading/useDeskExecution.ts` |
+| Desk slips (commemorative first-paper / first-live keepsakes) | `lib/trading/desk-slips.ts`, [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md) |
 | Delight: spoken-line caption, since-last-visit tray deltas, ledger export | `lib/trading/tray-deltas.ts`, `lib/trading/ledger-export.ts` (wired in `WorkingDesk.tsx`, `DeskBoard.tsx`, `TradeTicket.tsx`, `PaperLedger.tsx`) |
 | Optional account, paper backup, transcript write | `components/auth/AuthProvider.tsx`, `lib/auth.ts`, `lib/trading/usePaperSync.ts`, `app/api/paper/route.ts`, `app/api/hetty/transcript/route.ts` |
 | Voice session | `components/desk/HettyCall.tsx`, `lib/trading/voice-tools.ts`, `lib/desk-notes.ts`, `lib/education/`, `app/api/hetty/session/route.ts` |
