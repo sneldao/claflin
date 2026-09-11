@@ -6,6 +6,7 @@ import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
+import { mintFirstPaperSlip } from './desk-slips';
 import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
@@ -140,6 +141,7 @@ export function useTradingDesk() {
     try {
       const owner = auth.authenticated && auth.userId ? auth.userId : PAPER_OWNER_ANONYMOUS;
       const saved = savePaperRecord(window.localStorage, state, Date.now(), deskId, owner);
+      try { mintFirstPaperSlip(window.localStorage, saved); } catch { /* keepsake must not block filing */ }
       setRecords(previous => [saved, ...previous.filter(record => record.id !== saved.id)]);
       setViewedRecordId(saved.id);
       dispatch({ type: 'saved', quoteId: saved.id, now: saved.createdAt });

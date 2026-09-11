@@ -5,6 +5,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
 import { approveInputForQuote, createBasePublicClient, estimateSwapGas, readTokenAllowance, readTokenBalance, swapForQuote, waitForLiveOutcome, type LiveOutcome } from './execute-swap';
 import { saveLiveApproval, saveLiveSubmission, updateLiveOutcome } from './live-journal';
+import { mintFirstLiveSlip } from './desk-slips';
 import { AERODROME_SWAP_ROUTER, BASE_USDC } from '../base-chain';
 import type { QuoteEstimate } from './domain';
 
@@ -181,7 +182,8 @@ export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskI
         const outcome = await waitForLiveOutcome(publicClient, hash, boundQuote, wallet);
         if (storage && hash !== '0x') {
           try {
-            updateLiveOutcome(storage, hash, outcome);
+            const updated = updateLiveOutcome(storage, hash, outcome);
+            if (updated) mintFirstLiveSlip(storage, updated);
             onJournalChange?.();
           } catch { /* evidence update is best-effort after the chain truth */ }
         }

@@ -9,6 +9,7 @@ import {
   updateLiveOutcome,
   type LiveJournalEntry,
 } from './live-journal';
+import { mintFirstLiveSlip } from './desk-slips';
 
 /**
  * Loads the live journal for a desk and reconciles pending hashes after
@@ -51,7 +52,10 @@ export function useLiveJournal(deskId: HouseDeskId = OPEN_DESK_ID) {
             entry.walletAddress as `0x${string}`,
           );
           if (cancelled) return;
-          updateLiveOutcome(window.localStorage, entry.hash, outcome);
+          const updated = updateLiveOutcome(window.localStorage, entry.hash, outcome);
+          if (updated) {
+            try { mintFirstLiveSlip(window.localStorage, updated); } catch { /* keepsake is best-effort */ }
+          }
         }
       } finally {
         if (!cancelled) {

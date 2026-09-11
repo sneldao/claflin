@@ -27,6 +27,7 @@ import { deskNoteEducationTopic } from '@/lib/trading/voice-tools';
 import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
+import { rememberSlipDedication } from '@/lib/trading/desk-slips';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from './WorkingDesk.module.css';
 
@@ -104,8 +105,14 @@ export function WorkingDesk() {
      release gate; the caller switches it on the slip. */
   const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
-  const handleUserSpoken = useCallback((text: string) => setSpoken(text), []);
-  const handleAgentSpoken = useCallback((text: string) => setHettySaid(text), []);
+  const handleUserSpoken = useCallback((text: string) => {
+    setSpoken(text);
+    rememberSlipDedication('user', text);
+  }, []);
+  const handleAgentSpoken = useCallback((text: string) => {
+    setHettySaid(text);
+    rememberSlipDedication('agent', text);
+  }, []);
   const tone = useRoomTone(hettyLive);
   // One reference-marks fetch for the whole desk: the tape displays it, the
   // working tray compares against it — a single honest reading of the room.

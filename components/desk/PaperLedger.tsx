@@ -5,6 +5,7 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { compactPaperEntry, formatRecordedTime, groupRecordsByDay, ledgerPreview } from '@/lib/trading/desk-documents';
 import { downloadLedger, downloadLiveJournal, type LedgerFormat } from '@/lib/trading/ledger-export';
 import { compactLiveEntry, type LiveJournalEntry } from '@/lib/trading/live-journal';
+import { loadDeskSlips, type DeskSlip } from '@/lib/trading/desk-slips';
 import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { PaperHistory } from './PaperHistory';
 import styles from './WorkingDesk.module.css';
@@ -20,8 +21,9 @@ export const PaperLedger = memo(function PaperLedger({
   liveReady?: boolean;
   liveReconciling?: boolean;
 }) {
-  const { records, historyReady, storageError, loadHistory, focusedRecordId, openRecord, foreground } = desk;
+  const { deskId, records, historyReady, storageError, loadHistory, focusedRecordId, openRecord, foreground } = desk;
   const [exportNote, setExportNote] = useState<string | null>(null);
+  const [slips, setSlips] = useState<DeskSlip[]>([]);
   const takeCopy = (format: LedgerFormat) => {
     const ok = downloadLedger(records, format);
     setExportNote(ok ? 'A paper copy is in your downloads.' : 'The copy could not be made here.');
@@ -36,10 +38,16 @@ export const PaperLedger = memo(function PaperLedger({
     const element = document.querySelector('[data-just-filed="true"]') as HTMLElement | null;
     element?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
   }, [historyReady, justFiledId]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { setSlips(loadDeskSlips(window.localStorage, deskId)); }
+    catch { setSlips([]); }
+  }, [deskId, records, liveEntries, historyReady, liveReady]);
+
   const ticketNow = foreground.kind === 'quotation'
     ? 'A quotation is on the ticket — nothing filed yet.'
     : foreground.kind === 'receipt'
-      ? 'Just filed — see the highlighted line.'
+      ? 'Just filed — see the highlighted line. A first filing may leave a commemorative desk slip below.'
       : foreground.kind === 'archive'
         ? 'Reading a filed record — the ticket is read-only.'
         : foreground.kind === 'pending'
@@ -50,7 +58,7 @@ export const PaperLedger = memo(function PaperLedger({
   const emptyLive = liveReady && liveEntries.length === 0;
   const livePreview = liveEntries.slice(0, 5);
 
-  if (emptyPaper && emptyLive) {
+  if (emptyPaper && emptyLive && slips.length === 0) {
     return (
       <section id="paper-ledger" className={styles.paperLedger} aria-labelledby="ledger-title" data-foreground={foreground.kind}>
         <div className={styles.ledgerTrayHead}>
@@ -59,7 +67,7 @@ export const PaperLedger = memo(function PaperLedger({
         </div>
         <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
         <div className={styles.ledgerEmpty}>
-          <p>No paper or live evidence on file yet. Simulations land as paper; Base transactions land in the live journal.</p>
+          <p>No paper or live evidence on file yet. Simulations land as paper; Base transactions land in the live journal. Your first filing can leave a commemorative desk slip — a keepsake, not the stock.</p>
         </div>
       </section>
     );
@@ -77,6 +85,7 @@ export const PaperLedger = memo(function PaperLedger({
           <span className={styles.boardTally}>
             {records.length === 1 ? '1 PAPER' : `${records.length} PAPER`}
             {liveEntries.length ? ` · ${liveEntries.length} LIVE` : ''}
+            {slips.length ? ` · ${slips.length} SLIP${slips.length === 1 ? '' : 'S'}` : ''}
           </span>
         )}
       </div>
@@ -84,6 +93,34 @@ export const PaperLedger = memo(function PaperLedger({
       {ticketNow && <p className={styles.ledgerMore} role="status">{ticketNow}</p>}
       {liveReconciling && <p className={styles.ledgerMore} role="status">Reconciling open Base transactions — nothing is being resubmitted.</p>}
       {storageError && <div role="alert"><p>{storageError}</p><button type="button" onClick={loadHistory}>Retry reading history</button></div>}
+
+      {slips.length > 0 && (
+        <div className={styles.ledgerPreview} data-desk-slips="true">
+          <h3 className={styles.ledgerDay}>Desk slips · keepsakes</h3>
+          <p className={styles.ledgerTrust}>Commemorative provenance of your first paper instruction or live Base fill. Not a security. Not the tokenized stock. Not a wallet holding.</p>
+          <ol className={styles.ledgerLines}>
+            {slips.map(slip => (
+              <li key={slip.id} data-slip={slip.kind}>
+                <strong>
+                  {slip.kind === 'first-paper' ? 'First paper' : 'First live'} · {slip.symbol}
+                </strong>
+                <span>{slip.instruction}</span>
+                <time dateTime={new Date(slip.mintedAt).toISOString()}>{formatRecordedTime(slip.mintedAt)}</time>
+                {slip.dedication && (
+                  <span className={styles.ledgerMore}>
+                    Dedication · {slip.dedication.role === 'user' ? 'You' : 'Hetty'}: {slip.dedication.text}
+                  </span>
+                )}
+                {slip.txHash && (
+                  <a href={getBaseExplorerTxUrl(slip.txHash)} target="_blank" rel="noreferrer">
+                    Base evidence
+                  </a>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {liveReady && livePreview.length > 0 && (
         <div className={styles.ledgerPreview} data-live-journal="true">

@@ -1,6 +1,6 @@
 # Claflin Roadmap
 
-**Updated: 2026-09-09.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience.
+**Updated: 2026-09-10.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience. Desk-slip provenance (belonging without fake equity) is sequenced in §6 and [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
 
 [Product Direction](docs/PRODUCT_DIRECTION.md) owns jobs, principles, and information hierarchy. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. [Auth and access](docs/AUTH_AND_ACCESS.md) owns identity tiers. This roadmap owns sequencing, known gaps, house-desk order, and release gates.
 
@@ -86,6 +86,21 @@ Still open before any live ticket:
 Research, reviewed market letters, saved interests and explainable adaptation support trade discovery and understanding. They are not required reading before a direct instruction. Avoid a CMS, infinite news feed or autonomous thematic basket project ahead of reliable trading.
 
 **Sourced education (Phases 4–6 slice).** A versioned catalog in `lib/education/` covers the tape, certificate, bucket shop, and travelling instruction at decision points (`DeskTerm`, dossier, quote details), with `explain_concept` sharing the same copy with Hetty. Optional house history (participation) lives in the directory, not as an intro. `/practice/delayed-tape` is a labelled simulation reached from the tape topic only. Closed desks expose educational examination methods without quote or file access.
+
+## 6. Desk slips — belonging without fake equity
+
+Desire hook for early callers who respect the desk but need a reason to *want in*. Full plan: [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
+
+**Formula:** be among the first to take a Base equity instruction by voice—and keep the slip that proves you were there. Coinbase tokenized stocks remain the fractional claim; the slip is provenance only.
+
+| Phase | Deliverable |
+|---|---|
+| **A (now)** | Local commemorative slips on first paper file and first live Base fill; optional spoken dedication; ledger surface; never framed as the stock |
+| **B** | Onchain Base mint (soulbound preferred for firsts) with the same disclaimer in metadata |
+| **C** | Optional audible dedication clip; vendor-agnostic slip metadata |
+| **D** | Limited historical participation seats — scarcity + story, no marketplace/streaks |
+
+**Not backlog under this heading:** audible NFT “parcels” of tokenised stocks, slip trading games, or any collectible that sounds like ownership of the underlying.
 
 **Multi-desk architecture (in progress, branch `multi-desk-adapters`).** The House/Desk/Market model in `lib/house.ts` is now load-bearing: quotes and marks resolve through per-desk adapter registries (`lib/trading/adapters.ts`) instead of hard-coded Base paths. What landed:
 

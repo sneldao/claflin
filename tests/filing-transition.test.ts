@@ -164,7 +164,7 @@ describe('paper ledger edge cases', () => {
       focusedRecordId: null,
       foreground: { kind: 'draft', quoteId: null, recordId: null, instrumentId: null, actionable: true, readonly: false },
     });
-    assert.match(getRootElement().innerHTML, /No paper or live evidence on file yet/);
+    assert.match(getRootElement().innerHTML, /commemorative desk slip/);
   });
 
   it('scrolls the focused older record into the compact preview', async () => {
