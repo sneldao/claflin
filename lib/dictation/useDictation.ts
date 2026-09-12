@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import type { TradeIntent } from '@/lib/trading/domain';
+import { playSolenoidClick } from '@/lib/sounds';
 
 export interface DictationState {
   status: 'idle' | 'recording' | 'transcribing' | 'success' | 'error';
@@ -40,6 +41,7 @@ export function useDictation(options?: UseDictationOptions) {
   const startRecording = useCallback(async () => {
     try {
       cleanup();
+      playSolenoidClick('engage');
       setState({
         status: 'recording',
         transcript: null,
@@ -89,6 +91,7 @@ export function useDictation(options?: UseDictationOptions) {
   const stopRecording = useCallback(async () => {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === 'inactive') return;
+    playSolenoidClick('release');
 
     const durationMs = Date.now() - startTimeRef.current;
     if (durationMs < 200) {

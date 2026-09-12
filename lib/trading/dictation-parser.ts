@@ -7,6 +7,9 @@ export interface DictatedIntentResult {
   confidence: 'full' | 'partial' | 'none';
   explanation: string;
   detectedLanguage?: string;
+  multiLegs?: Array<{ intent: Partial<TradeIntent>; explanation: string }>;
+  triggerPrice?: string;
+  isWatch?: boolean;
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -117,6 +120,43 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   else if (/\b(acheter|vendre|achète|vends|euros|actions)\b/i.test(lower)) detectedLanguage = 'fr';
   else if (/\b(kaufen|verkaufen|kaufe|verkaufe|aktien)\b/i.test(lower)) detectedLanguage = 'de';
 
+  // Check for multi-leg instructions ("and", "then", "y", "et", "und", "そして", "然后")
+  const splitMatch = text.match(/\b(?:and then|and|then|y luego|y|et ensuite|et|und dann|und|そして|然后)\b/i);
+  if (splitMatch && splitMatch.index !== undefined) {
+    const firstHalf = text.slice(0, splitMatch.index).trim();
+    const secondHalf = text.slice(splitMatch.index + splitMatch[0].length).trim();
+    if (firstHalf && secondHalf && (/\b(buy|sell|comprar|vender|acheter|vendre|kaufen|verkaufen|買う|売る|买|卖)\b/i.test(secondHalf))) {
+      const leg1 = parseDictatedTradeIntent(firstHalf);
+      const leg2 = parseDictatedTradeIntent(secondHalf);
+      return {
+        ...leg1,
+        explanation: `${leg1.explanation}; then ${leg2.explanation}`,
+        multiLegs: [
+          { intent: leg1.intent, explanation: leg1.explanation },
+          { intent: leg2.intent, explanation: leg2.explanation },
+        ],
+      };
+    }
+  }
+
+  // Check for trigger prices ("if price reaches $160", "at $160", "touching $160", "limit $160")
+  let triggerPrice: string | undefined;
+  let textForAmount = text;
+  const triggerMatch = lower.match(/\b(?:if\s+(?:price\s+)?(?:reaches|touches|hits)|when\s+(?:price\s+)?(?:reaches|touches|hits)|reaches|touches|limit)\s*[\$¥€£]?\s*(\d+(?:\.\d+)?)/i);
+  if (triggerMatch && triggerMatch[1] && triggerMatch.index !== undefined) {
+    triggerPrice = triggerMatch[1];
+    textForAmount = text.slice(0, triggerMatch.index).trim();
+  } else {
+    const atMatch = lower.match(/\bat\s*[\$¥€£]\s*(\d+(?:\.\d+)?)/i);
+    if (atMatch && atMatch[1] && atMatch.index !== undefined) {
+      triggerPrice = atMatch[1];
+      textForAmount = text.slice(0, atMatch.index).trim();
+    }
+  }
+
+  // Check for watch/pin instructions ("watch TSLA", "pin apple", "keep an eye on nvda")
+  const isWatch = /\b(watch|pin|track|monitor|observar|suivre|beobachten|監視|关注)\b/i.test(lower);
+
   // 1. Detect side across multiple languages (EN, ES, FR, DE, JA, ZH)
   let side: 'buy' | 'sell' | undefined;
   if (
@@ -184,19 +224,19 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   let amount: string | undefined;
 
   // Spoken number words check
-  const spokenNum = parseWordNumber(text);
+  const spokenNum = parseWordNumber(textForAmount);
   if (spokenNum !== null && spokenNum > 0) {
     amount = String(spokenNum);
   }
 
   // Numeric overrides / checks (e.g. "$100", "2k", "25.5")
-  const kMatch = lower.match(/(\d+(?:\.\d+)?)\s*k\b/i);
+  const kMatch = textForAmount.toLowerCase().match(/(\d+(?:\.\d+)?)\s*k\b/i);
   if (kMatch) {
     const num = parseFloat(kMatch[1]) * 1000;
     amount = String(num);
   } else {
-    const dollarMatch = text.match(/[\$¥€£]\s*(\d+(?:\.\d+)?)/i);
-    const wordsMatch = lower.match(/(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usdc|tokens|shares|dólares|euros|acciones|acties|aktien|株|美元)?/i);
+    const dollarMatch = textForAmount.match(/[\$¥€£]\s*(\d+(?:\.\d+)?)/i);
+    const wordsMatch = textForAmount.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usdc|tokens|shares|dólares|euros|acciones|acties|aktien|株|美元)?/i);
     if (dollarMatch) {
       amount = dollarMatch[1];
     } else if (wordsMatch && wordsMatch[1] && (!amount || wordsMatch[1].length > 0)) {
@@ -216,13 +256,16 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   const isPartial = Boolean(intent.side || intent.instrumentId || intent.amount);
 
   let explanation = '';
-  if (isFull && matchedInstrument) {
-    explanation = `${intent.side === 'buy' ? 'Buy' : 'Sell'} ${intent.amount} ${intent.unit} of ${matchedInstrument.symbol}`;
+  if (isWatch && matchedInstrument) {
+    explanation = `Watch ${matchedInstrument.symbol}${triggerPrice ? ` at $${triggerPrice}` : ''}`;
+  } else if (isFull && matchedInstrument) {
+    explanation = `${intent.side === 'buy' ? 'Buy' : 'Sell'} ${intent.amount} ${intent.unit} of ${matchedInstrument.symbol}${triggerPrice ? ` if price touches $${triggerPrice}` : ''}`;
   } else if (isPartial) {
     const parts: string[] = [];
     if (intent.side) parts.push(`action: ${intent.side}`);
     if (matchedInstrument) parts.push(`stock: ${matchedInstrument.symbol}`);
     if (intent.amount) parts.push(`amount: ${intent.amount}`);
+    if (triggerPrice) parts.push(`trigger: $${triggerPrice}`);
     explanation = `Partially recognized (${parts.join(', ')})`;
   } else {
     explanation = 'Could not parse trade instruction.';
@@ -231,9 +274,11 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   return {
     intent,
     matchedInstrument,
-    confidence: isFull ? 'full' : isPartial ? 'partial' : 'none',
+    confidence: isFull || (isWatch && Boolean(matchedInstrument)) ? 'full' : isPartial ? 'partial' : 'none',
     explanation,
     detectedLanguage,
+    triggerPrice,
+    isWatch,
   };
 }
 

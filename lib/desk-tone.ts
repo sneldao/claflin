@@ -55,6 +55,28 @@ function rumble(ctx: AudioContext, destination: AudioNode, now: number) {
   osc.stop(now + 0.56);
 }
 
+/** Distant exchange pit murmur — soft filtered resonance simulating a busy floor downstairs */
+function pitMurmur(ctx: AudioContext, destination: AudioNode, now: number) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  osc.type = 'triangle';
+  osc.frequency.value = 110 + Math.random() * 40;
+  filter.type = 'bandpass';
+  filter.frequency.value = 220;
+  filter.Q.value = 2.0;
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(0.008, now + 0.3);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(destination);
+  osc.start(now);
+  osc.stop(now + 1.85);
+}
+
 export function useRoomTone(silenced: boolean) {
   const [enabled, setEnabledState] = useState(false);
   const userSet = useRef(false);
@@ -93,6 +115,7 @@ export function useRoomTone(silenced: boolean) {
     let cancelled = false;
     let clickTimer = 0;
     let rumbleTimer = 0;
+    let murmurTimer = 0;
 
     const scheduleClick = () => {
       clickTimer = window.setTimeout(() => {
@@ -108,8 +131,16 @@ export function useRoomTone(silenced: boolean) {
         scheduleRumble();
       }, 14000 + Math.random() * 16000);
     };
+    const scheduleMurmur = () => {
+      murmurTimer = window.setTimeout(() => {
+        if (cancelled || document.hidden) { scheduleMurmur(); return; }
+        pitMurmur(ctx, master, ctx.currentTime);
+        scheduleMurmur();
+      }, 8000 + Math.random() * 12000);
+    };
     scheduleClick();
     scheduleRumble();
+    scheduleMurmur();
 
     const onHide = () => {
       master.gain.setTargetAtTime(document.hidden ? 0 : 0.22, ctx.currentTime, 0.08);
@@ -121,6 +152,7 @@ export function useRoomTone(silenced: boolean) {
       cancelled = true;
       window.clearTimeout(clickTimer);
       window.clearTimeout(rumbleTimer);
+      window.clearTimeout(murmurTimer);
       document.removeEventListener('visibilitychange', onHide);
       noise.stop();
       void ctx.close();

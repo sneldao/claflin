@@ -89,6 +89,28 @@ describe('AssemblyAI Dictation Intent Parser', () => {
     assert.equal(zh.detectedLanguage, 'zh');
   });
 
+  it('parses multi-leg instructions ("splits & swaps")', () => {
+    const res = parseDictatedTradeIntent('Sell 5 tokens of Apple and buy 500 USDC of Tesla');
+    assert.ok(res.multiLegs);
+    assert.equal(res.multiLegs.length, 2);
+    assert.equal(res.multiLegs[0].intent.side, 'sell');
+    assert.equal(res.multiLegs[0].intent.amount, '5');
+    assert.equal(res.multiLegs[1].intent.side, 'buy');
+    assert.equal(res.multiLegs[1].intent.amount, '500');
+  });
+
+  it('parses price triggers and watch requests', () => {
+    const res = parseDictatedTradeIntent('Buy 100 USDC of NVDA if price reaches $160');
+    assert.equal(res.intent.side, 'buy');
+    assert.equal(res.intent.amount, '100');
+    assert.equal(res.triggerPrice, '160');
+
+    const watchRes = parseDictatedTradeIntent('Watch TSLA at $210');
+    assert.equal(watchRes.isWatch, true);
+    assert.equal(watchRes.triggerPrice, '210');
+    assert.ok(watchRes.matchedInstrument?.symbol.includes('TSLA'));
+  });
+
   it('handles partial instructions gracefully', () => {
     const res = parseDictatedTradeIntent('Just looking at Google');
     assert.ok(res.matchedInstrument?.symbol.includes('GOOGL'));
