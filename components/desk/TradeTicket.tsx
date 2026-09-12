@@ -445,9 +445,17 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
               aria-label={isRecording ? 'Stop dictation' : 'Dictate instruction via AssemblyAI'}
             >
               <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
-              {isRecording ? 'Recording — tap to finish' : isTranscribing ? 'Transcribing (AssemblyAI)…' : 'Dictate (AssemblyAI)'}
+              {isRecording ? (
+                <>
+                  Recording
+                  <span className={styles.dictationWaveform} aria-hidden="true">
+                    <i /><i /><i /><i /><i /><i />
+                  </span>
+                  (tap to finish)
+                </>
+              ) : isTranscribing ? 'Transcribing (AssemblyAI)…' : 'Dictate (AssemblyAI)'}
             </button>
-            <span className={styles.dictationBadge}>Ums / Ahs Filtered</span>
+            <span className={styles.dictationBadge}>Ums / Ahs Filtered · 18 Langs</span>
           </div>
           {dictationState.transcript && (
             <p className={styles.dictationTranscript} role="status">

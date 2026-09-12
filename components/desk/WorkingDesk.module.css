@@ -1074,6 +1074,16 @@
 .dictationDot[data-recording="true"] { background: #c98f7a; animation: linePulse 0.7s ease-in-out infinite; }
 .dictationDot[data-transcribing="true"] { background: var(--desk-brass); animation: linePulse 0.9s ease-in-out infinite; }
 .dictationBadge { font: 9px/1.2 var(--font-mono), monospace; letter-spacing: .08em; color: var(--desk-paper-muted); text-transform: uppercase; }
+.dictationWaveform { display: inline-flex; align-items: center; gap: 3px; height: 14px; margin-inline: 4px; }
+.dictationWaveform i { width: 2px; height: 4px; background: currentColor; border-radius: 1px; animation: wavePulse 0.8s ease-in-out infinite alternate; }
+.dictationWaveform i:nth-child(1) { height: 4px; animation-delay: 0s; }
+.dictationWaveform i:nth-child(2) { height: 10px; animation-delay: 0.15s; }
+.dictationWaveform i:nth-child(3) { height: 14px; animation-delay: 0.3s; }
+.dictationWaveform i:nth-child(4) { height: 8px; animation-delay: 0.45s; }
+.dictationWaveform i:nth-child(5) { height: 12px; animation-delay: 0.2s; }
+.dictationWaveform i:nth-child(6) { height: 5px; animation-delay: 0.35s; }
+@keyframes wavePulse { 0% { transform: scaleY(0.3); opacity: 0.5; } 100% { transform: scaleY(1.2); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dictationWaveform i { animation: none; } }
 .dictationTranscript { margin: 8px 0 0 !important; padding: 8px 10px; background: #27362b08; border-left: 2px solid var(--desk-brass); color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
 .dictationTranscript em { font-style: normal; color: var(--desk-paper-muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; display: block; margin-bottom: 2px; }
 

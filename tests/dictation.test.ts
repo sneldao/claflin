@@ -52,6 +52,43 @@ describe('AssemblyAI Dictation Intent Parser', () => {
     assert.equal(res3.confidence, 'full');
   });
 
+  it('parses multilingual instructions in Spanish, French, German, Japanese, and Chinese', () => {
+    // Spanish
+    const es = parseDictatedTradeIntent('comprar cien dólares de nvidia');
+    assert.equal(es.intent.side, 'buy');
+    assert.equal(es.intent.amount, '100');
+    assert.ok(es.matchedInstrument?.symbol.includes('NVDA'));
+    assert.equal(es.detectedLanguage, 'es');
+
+    // French
+    const fr = parseDictatedTradeIntent('acheter cinquante euros de apple');
+    assert.equal(fr.intent.side, 'buy');
+    assert.equal(fr.intent.amount, '50');
+    assert.ok(fr.matchedInstrument?.symbol.includes('AAPL'));
+    assert.equal(fr.detectedLanguage, 'fr');
+
+    // German
+    const de = parseDictatedTradeIntent('verkaufen zwanzig aktien von tesla');
+    assert.equal(de.intent.side, 'sell');
+    assert.equal(de.intent.amount, '20');
+    assert.ok(de.matchedInstrument?.symbol.includes('TSLA'));
+    assert.equal(de.detectedLanguage, 'de');
+
+    // Japanese
+    const ja = parseDictatedTradeIntent('テスラを10株購入');
+    assert.equal(ja.intent.side, 'buy');
+    assert.equal(ja.intent.amount, '10');
+    assert.ok(ja.matchedInstrument?.symbol.includes('TSLA'));
+    assert.equal(ja.detectedLanguage, 'ja');
+
+    // Chinese
+    const zh = parseDictatedTradeIntent('买入100美元英伟达');
+    assert.equal(zh.intent.side, 'buy');
+    assert.equal(zh.intent.amount, '100');
+    assert.ok(zh.matchedInstrument?.symbol.includes('NVDA'));
+    assert.equal(zh.detectedLanguage, 'zh');
+  });
+
   it('handles partial instructions gracefully', () => {
     const res = parseDictatedTradeIntent('Just looking at Google');
     assert.ok(res.matchedInstrument?.symbol.includes('GOOGL'));
