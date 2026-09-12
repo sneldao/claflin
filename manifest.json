@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "title": "Claflin: Voice-First Trading with AssemblyAI Dictation",
+  "created_at": "2026-09-12T16:17:24Z",
+  "created_by": "compose_tool",
+  "assets": {
+    "scene_1": {
+      "id": "scene_1",
+      "type": "video",
+      "src": ".cache/scene1_title.mp4",
+      "provider": "scene_tool.remotion",
+      "generation": {
+        "tool": "render_scene",
+        "composition": "TitleOverlay",
+        "duration": 8.5,
+        "mode": "final",
+        "props": {
+          "accentColor": "#c5ac78",
+          "subtitle": "DICTATION IS THE NEW KEYBOARD",
+          "title": "CLAFLIN TRADING DESK",
+          "_durationFrames": 255,
+          "_fps": 30
+        }
+      },
+      "duration_s": 8.5
+    },
+    "scene_1_audio": {
+      "id": "scene_1_audio",
+      "type": "audio",
+      "src": "assets/voice_scene1.mp3",
+      "provider": "voice_tool.gemini_tts",
+      "duration_s": 8.3,
+      "created_at": "2026-09-12T16:12:13Z",
+      "generation": {
+        "text": "In volatile markets, typing kills your edge. Dropdowns, token selectors, fat-finger errors\u2014traditional trading UIs are a friction nightmare.",
+        "voice_name": "Puck",
+        "speakers": null,
+        "style_prompt": "High-energy, sharp, authoritative, fast-paced trading floor broker. Energetic and punchy.",
+        "profile": "tech_presenter",
+        "model": "gemini-3.1-flash-tts-preview"
+      }
+    },
+    "scene_2": {
+      "id": "scene_2",
+      "type": "video",
+      "src": ".cache/scene2_dictaphone.mp4",
+      "provider": "scene_tool.remotion",
+      "generation": {
+        "tool": "render_scene",
+        "composition": "SplitLayout",
+        "duration": 15.5,
+        "mode": "final",
+        "props": {
+          "line1": "DESK DICTAPHONE",
+          "line2": "ASSEMBLYAI SYNCHRONOUS STT \u00b7 ZERO FILLER WORDS",
+          "line2Color": "#c5ac78",
+          "_durationFrames": 465,
+          "_fps": 30
+        }
+      },
+      "duration_s": 15.5
+    },
+    "scene_2_audio": {
+      "id": "scene_2_audio",
+      "type": "audio",
+      "src": "assets/voice_scene2.mp3",
+      "provider": "voice_tool.gemini_tts",
+      "duration_s": 15.4,
+      "created_at": "2026-09-12T16:12:31Z",
+      "generation": {
+        "text": "Meet the Desk Dictaphone in Claflin, powered by AssemblyAI's Dictation API. Speak naturally with hesitations\u2014all ums and ahs are stripped at the model level synchronously.",
+        "voice_name": "Puck",
+        "speakers": null,
+        "style_prompt": "High-energy, sharp, confident, engaging floor broker. Punchy and fast.",
+        "profile": "tech_presenter",
+        "model": "gemini-3.1-flash-tts-preview"
+      }
+    },
+    "scene_3": {
+      "id": "scene_3",
+      "type": "video",
+      "src": ".cache/scene3_compliance.mp4",
+      "provider": "scene_tool.remotion",
+      "generation": {
+        "tool": "render_scene",
+        "composition": "GlassSplit",
+        "duration": 11.5,
+        "mode": "final",
+        "props": {
+          "glowColor": "#c5ac78",
+          "subtitle": "AERODROME ON BASE \u00b7 TAMPER-EVIDENT PROVENANCE",
+          "title": "CRYPTOGRAPHIC COMPLIANCE",
+          "_durationFrames": 345,
+          "_fps": 30
+        }
+      },
+      "duration_s": 11.5
+    },
+    "scene_3_audio": {
+      "id": "scene_3_audio",
+      "type": "audio",
+      "src": "assets/voice_scene3.mp3",
+      "provider": "voice_tool.gemini_tts",
+      "duration_s": 11.3,
+      "created_at": "2026-09-12T16:12:41Z",
+      "generation": {
+        "text": "Instantly, structured intent validates against Base liquidity pools, stamped with a tamper-evident cryptographic provenance seal. Deterministic compliance, zero keystrokes.",
+        "voice_name": "Puck",
+        "speakers": null,
+        "style_prompt": "High-energy, authoritative, crisp and clear.",
+        "profile": "tech_presenter",
+        "model": "gemini-3.1-flash-tts-preview"
+      }
+    },
+    "scene_4": {
+      "id": "scene_4",
+      "type": "video",
+      "src": ".cache/scene4_outro.mp4",
+      "provider": "scene_tool.remotion",
+      "generation": {
+        "tool": "render_scene",
+        "composition": "VibeTitle",
+        "duration": 10.5,
+        "mode": "final",
+        "props": {
+          "neonColor": "#c5ac78",
+          "subtitle": "18 LANGUAGES \u00b7 ZERO DISFLUENCIES \u00b7 SUB-SECOND EXECUTION",
+          "title": "CLAFLIN & CO.",
+          "_durationFrames": 315,
+          "_fps": 30
+        }
+      },
+      "duration_s": 10.5
+    },
+    "scene_4_audio": {
+      "id": "scene_4_audio",
+      "type": "audio",
+      "src": "assets/voice_scene4.mp3",
+      "provider": "voice_tool.gemini_tts",
+      "duration_s": 10.4,
+      "created_at": "2026-09-12T16:13:10Z",
+      "generation": {
+        "text": "Eighteen native languages. Zero disfluencies. Sub-second execution. Dictation is the new keyboard for trading desks. Welcome to Claflin.",
+        "voice_name": "Puck",
+        "speakers": null,
+        "style_prompt": "Climactic, high-energy, confident, triumphant.",
+        "profile": "tech_presenter",
+        "model": "gemini-3.1-flash-tts-preview"
+      }
+    },
+    "soundtrack": {
+      "id": "soundtrack",
+      "type": "audio",
+      "src": "assets/claflin_beat.mp3",
+      "provider": "voice_tool.sound",
+      "duration_s": 30.0,
+      "created_at": "2026-09-12T16:13:28Z",
+      "generation": {
+        "description": "high energy electronic trading synth beat 124 bpm dramatic brass punchy rhythm modern cyber deco no vocals",
+        "duration_seconds": 30.0,
+        "loop": true
+      }
+    }
+  },
+  "timeline": [
+    {
+      "asset_id": "scene_1",
+      "src": ".cache/scene1_title.mp4",
+      "start": 0.0,
+      "length": 8.5,
+      "audio": "assets/voice_scene1.mp3",
+      "audio_mode": "replace"
+    },
+    {
+      "asset_id": "scene_2",
+      "src": ".cache/scene2_dictaphone.mp4",
+      "start": 8.5,
+      "length": 15.5,
+      "transition": "crossfade",
+      "transition_duration": 0.5,
+      "audio": "assets/voice_scene2.mp3",
+      "audio_mode": "replace"
+    },
+    {
+      "asset_id": "scene_3",
+      "src": ".cache/scene3_compliance.mp4",
+      "start": 23.5,
+      "length": 11.5,
+      "transition": "crossfade",
+      "transition_duration": 0.5,
+      "audio": "assets/voice_scene3.mp3",
+      "audio_mode": "replace"
+    },
+    {
+      "asset_id": "scene_4",
+      "src": ".cache/scene4_outro.mp4",
+      "start": 34.5,
+      "length": 10.5,
+      "transition": "fade_black",
+      "transition_duration": 0.8,
+      "audio": "assets/voice_scene4.mp3",
+      "audio_mode": "replace"
+    }
+  ],
+  "output": {
+    "format": "mp4",
+    "resolution": "1080p",
+    "fps": 30,
+    "filename": "claflin_voice_hackathon_demo.mp4"
+  },
+  "comments": [],
+  "history": [
+    {
+      "version": 1,
+      "action": "initial_composition",
+      "by": "agent",
+      "timestamp": "2026-09-12T16:17:24Z"
+    }
+  ],
+  "soundtrack": {
+    "asset_id": "soundtrack",
+    "src": "assets/claflin_beat.mp3",
+    "volume": 0.22,
+    "fade_in": 1.5,
+    "fade_out": 2.5,
+    "mix": "mix",
+    "loop": true
+  },
+  "content_hash": "22b5ee9d74e2"
+}
