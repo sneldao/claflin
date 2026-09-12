@@ -1086,6 +1086,7 @@
 @media (prefers-reduced-motion: reduce) { .dictationWaveform i { animation: none; } }
 .dictationTranscript { margin: 8px 0 0 !important; padding: 8px 10px; background: #27362b08; border-left: 2px solid var(--desk-brass); color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
 .dictationTranscript em { font-style: normal; color: var(--desk-paper-muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+.dictationSeal { display: block; margin-top: 4px; font: 8px/1.4 var(--font-mono), monospace; letter-spacing: .1em; color: var(--desk-brass); text-transform: uppercase; }
 
 /* Hetty's hand on the paper: while the line is live, the control she just
    changed pulses once — cause and effect in the same frame. */

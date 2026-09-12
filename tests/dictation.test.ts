@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDictatedTradeIntent } from '../lib/trading/dictation-parser';
+import { createDictationProvenance } from '../lib/trading/dictation-provenance';
+import { dictationSpokenReadback } from '../lib/trading/voice-tools';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { NextRequest } from 'next/server';
 import { POST } from '../app/api/dictation/route';
@@ -109,6 +111,25 @@ describe('AssemblyAI Dictation Intent Parser', () => {
     assert.equal(watchRes.isWatch, true);
     assert.equal(watchRes.triggerPrice, '210');
     assert.ok(watchRes.matchedInstrument?.symbol.includes('TSLA'));
+  });
+
+  it('generates deterministic cryptographic provenance seals', () => {
+    const prov1 = createDictationProvenance('Buy 100 USDC of NVDA', 'NVDAc', 'buy', '100', 1726000000000);
+    const prov2 = createDictationProvenance('Buy 100 USDC of NVDA', 'NVDAc', 'buy', '100', 1726000000000);
+    const prov3 = createDictationProvenance('Buy 200 USDC of NVDA', 'NVDAc', 'buy', '200', 1726000000000);
+
+    assert.equal(prov1.hash, prov2.hash);
+    assert.notEqual(prov1.hash, prov3.hash);
+    assert.ok(prov1.hash.startsWith('0x'));
+    assert.ok(prov1.shortSeal.includes('…'));
+    assert.equal(prov1.disfluencyFiltered, true);
+  });
+
+  it('generates in-character spoken readback lines for Hetty', () => {
+    const line = dictationSpokenReadback('buy', '100', 'USDC', 'NVDAc');
+    assert.match(line, /Dictation inscribed/);
+    assert.match(line, /NVDAc/);
+    assert.match(line, /100 USDC/);
   });
 
   it('handles partial instructions gracefully', () => {

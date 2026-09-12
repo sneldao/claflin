@@ -18,6 +18,8 @@ import { HouseMark } from './HouseMark';
 import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
 import { getEducationTopic } from '@/lib/education';
 import { useDictation } from '@/lib/dictation/useDictation';
+import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
+import { dictationSpokenReadback } from '@/lib/trading/voice-tools';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -322,17 +324,31 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const [flash, setFlash] = useState<'instrument' | 'side' | 'amount' | null>(null);
   /* After closing a house explanation during review, remind that reading is not a refresh. */
   const [termsReminder, setTermsReminder] = useState(false);
+  const [provenance, setProvenance] = useState<DictationProvenance | null>(null);
+  const [dictationReadback, setDictationReadback] = useState<string | null>(null);
   const remindAfterEducation = () => {
     if (state.stage === 'review') setTermsReminder(true);
   };
-  const { state: dictationState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
-    onIntentParsed: (parsedIntent) => {
+  const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
+    onIntentParsed: (parsedIntent, cleanTranscript) => {
+      const nextSide = parsedIntent.side ?? state.draft.side;
+      const nextAmount = parsedIntent.amount ?? state.draft.amount;
+      const nextUnit = parsedIntent.unit ?? state.draft.unit;
+      const nextInstrumentId = parsedIntent.instrumentId ?? state.draft.instrumentId;
+      const symbol = DESK_INSTRUMENTS.find(i => i.id === nextInstrumentId)?.symbol ?? 'Stock';
+
       edit({
-        instrumentId: parsedIntent.instrumentId ?? state.draft.instrumentId,
-        side: parsedIntent.side ?? state.draft.side,
-        amount: parsedIntent.amount ?? state.draft.amount,
-        unit: parsedIntent.unit ?? state.draft.unit,
+        instrumentId: nextInstrumentId,
+        side: nextSide,
+        amount: nextAmount,
+        unit: nextUnit,
       } as TradeIntent);
+
+      if (nextAmount && nextInstrumentId) {
+        const prov = createDictationProvenance(cleanTranscript, symbol, nextSide, nextAmount);
+        setProvenance(prov);
+        setDictationReadback(dictationSpokenReadback(nextSide, nextAmount, nextUnit, symbol));
+      }
     },
   });
   const prevDraftRef = useRef(state.draft);
@@ -405,6 +421,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
     {live && hettyLine && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{hettyLine}</em></p>}
+    {!live && dictationReadback && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{dictationReadback}</em></p>}
     {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
     {live && typing && view === 'draft' && <p className={styles.slipNotice} role="status">Typing — Hetty holds the line.</p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
@@ -457,10 +474,15 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             </button>
             <span className={styles.dictationBadge}>Ums / Ahs Filtered · 18 Langs</span>
           </div>
-          {dictationState.transcript && (
+          {dictState.transcript && (
             <p className={styles.dictationTranscript} role="status">
-              <em>Dictated via AssemblyAI (clean audit trail)</em>
-              &ldquo;{dictationState.transcript}&rdquo;
+              <em>Dictated via AssemblyAI (clean compliance trail)</em>
+              &ldquo;{dictState.transcript}&rdquo;
+              {provenance && (
+                <span className={styles.dictationSeal} title={`Cryptographic provenance hash: ${provenance.hash}`}>
+                  Provenance Seal: {provenance.shortSeal}
+                </span>
+              )}
             </p>
           )}
           <div className={styles.fields}>

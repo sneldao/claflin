@@ -71,6 +71,11 @@ export function setAmountResult(side: 'buy' | 'sell', amount: string): string {
   return `${amount} ${side === 'sell' ? 'tokens' : 'USDC'} is on the ticket.`;
 }
 
+/** Spoken in-character confirmation when an instruction is dictated onto the ticket via AssemblyAI. */
+export function dictationSpokenReadback(side: string, amount: string, unit: string, symbol: string): string {
+  return `Dictation inscribed: ${side} ${amount} ${unit} of ${symbol}. Terms are on the ticket — ready for your review.`;
+}
+
 /** Spoken confirmation after a successful estimate, with the live review window. */
 export function estimateSpokenResult(quote: { inputAmount: string; inputSymbol: string; outputAmount: string; outputSymbol: string; expiresAt: number }, now: number, live = false): string {
   const window_ = Math.max(0, Math.ceil((quote.expiresAt - now) / 1000));

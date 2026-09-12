@@ -35,6 +35,7 @@ export type DeskSlip = {
   mode: 'paper' | 'live';
   evidenceId: string;
   txHash?: string;
+  provenanceHash?: string;
   dedication?: DeskSlipDedication;
   disclaimer: typeof DESK_SLIP_DISCLAIMER;
 };
@@ -52,6 +53,7 @@ const slipSchema = z.object({
   mode: z.enum(['paper', 'live']),
   evidenceId: z.string().min(1).max(120),
   txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  provenanceHash: z.string().optional(),
   dedication: z.object({
     role: z.enum(['user', 'agent']),
     text: z.string().min(1).max(280),
