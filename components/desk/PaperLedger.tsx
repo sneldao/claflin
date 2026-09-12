@@ -10,9 +10,11 @@ import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { PaperHistory } from './PaperHistory';
 import styles from './WorkingDesk.module.css';
 
+const EMPTY_LIVE_ENTRIES: readonly LiveJournalEntry[] = [];
+
 export const PaperLedger = memo(function PaperLedger({
   desk,
-  liveEntries = [],
+  liveEntries = EMPTY_LIVE_ENTRIES,
   liveReady = true,
   liveReconciling = false,
 }: {
@@ -67,7 +69,7 @@ export const PaperLedger = memo(function PaperLedger({
         </div>
         <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
         <div className={styles.ledgerEmpty}>
-          <p>No paper or live evidence on file yet. Simulations land as paper; Base transactions land in the live journal. Your first filing can leave a commemorative desk slip — a keepsake, not the stock.</p>
+          <p>No paper on file yet. Simulations land as paper; Base transactions land in the live journal. Your first filing can leave a commemorative desk slip — a keepsake, not the stock.</p>
         </div>
       </section>
     );
@@ -189,7 +191,7 @@ export const PaperLedger = memo(function PaperLedger({
       {exportNote && <p role="status" className={styles.ledgerMore}>{exportNote}</p>}
       {historyReady && records.length > 0 && (
         <details className={styles.ledgerArchive}>
-          <summary>The paper archive</summary>
+          <summary>The archive</summary>
           <p className={styles.ledgerTrust}>Simulations kept in this browser. Sign in copies paper records to your account; deleting here does not remove that copy. Live journal entries stay local.</p>
           <div className={styles.ledgerExport} role="group" aria-label="Take a copy of the paper ledger">
             <button type="button" onClick={() => takeCopy('csv')}>Paper copy (CSV)</button>

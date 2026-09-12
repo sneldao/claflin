@@ -1065,6 +1065,18 @@
 .spokenLine em { color: var(--desk-paper-ink); font-style: italic; }
 .spokenLine[data-voice="hetty"] { border-left-color: var(--desk-brass); }
 
+/* ————— AssemblyAI Dictation Input ————— */
+.dictationBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 6px; padding: 8px 12px; background: #27362b0c; border: 1px solid var(--desk-paper-rule); }
+.dictationButton { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--desk-paper-rule); background: transparent; color: var(--desk-paper-ink); padding: 6px 10px; font: 600 11px/1 var(--font-mono), monospace; letter-spacing: .06em; cursor: pointer; transition: background var(--dur-1) var(--ease-swift), border-color var(--dur-1); }
+.dictationButton:hover:not(:disabled) { background: #27362b14; border-color: var(--desk-paper-muted); }
+.dictationButton[data-recording="true"] { background: var(--desk-paper-ink); color: var(--desk-paper-light); border-color: var(--desk-paper-ink); }
+.dictationDot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--desk-patina); }
+.dictationDot[data-recording="true"] { background: #c98f7a; animation: linePulse 0.7s ease-in-out infinite; }
+.dictationDot[data-transcribing="true"] { background: var(--desk-brass); animation: linePulse 0.9s ease-in-out infinite; }
+.dictationBadge { font: 9px/1.2 var(--font-mono), monospace; letter-spacing: .08em; color: var(--desk-paper-muted); text-transform: uppercase; }
+.dictationTranscript { margin: 8px 0 0 !important; padding: 8px 10px; background: #27362b08; border-left: 2px solid var(--desk-brass); color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
+.dictationTranscript em { font-style: normal; color: var(--desk-paper-muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
 /* Hetty's hand on the paper: while the line is live, the control she just
    changed pulses once — cause and effect in the same frame. */
 @keyframes fieldFlash { 0% { box-shadow: 0 0 0 3px var(--desk-brass); } 100% { box-shadow: 0 0 0 0 transparent; } }

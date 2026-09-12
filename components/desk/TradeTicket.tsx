@@ -17,6 +17,7 @@ import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
 import { getEducationTopic } from '@/lib/education';
+import { useDictation } from '@/lib/dictation/useDictation';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -324,6 +325,16 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const remindAfterEducation = () => {
     if (state.stage === 'review') setTermsReminder(true);
   };
+  const { state: dictationState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
+    onIntentParsed: (parsedIntent) => {
+      edit({
+        instrumentId: parsedIntent.instrumentId ?? state.draft.instrumentId,
+        side: parsedIntent.side ?? state.draft.side,
+        amount: parsedIntent.amount ?? state.draft.amount,
+        unit: parsedIntent.unit ?? state.draft.unit,
+      } as TradeIntent);
+    },
+  });
   const prevDraftRef = useRef(state.draft);
   /* The flash flag is intentionally synchronized to draft changes in an effect. */
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -418,6 +429,32 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             ))}
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
+          <div className={styles.dictationBar}>
+            <button
+              type="button"
+              className={styles.dictationButton}
+              data-recording={isRecording ? 'true' : undefined}
+              data-transcribing={isTranscribing ? 'true' : undefined}
+              onClick={() => {
+                if (isRecording) {
+                  void stopRecording();
+                } else {
+                  void startRecording();
+                }
+              }}
+              aria-label={isRecording ? 'Stop dictation' : 'Dictate instruction via AssemblyAI'}
+            >
+              <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
+              {isRecording ? 'Recording — tap to finish' : isTranscribing ? 'Transcribing (AssemblyAI)…' : 'Dictate (AssemblyAI)'}
+            </button>
+            <span className={styles.dictationBadge}>Ums / Ahs Filtered</span>
+          </div>
+          {dictationState.transcript && (
+            <p className={styles.dictationTranscript} role="status">
+              <em>Dictated via AssemblyAI (clean audit trail)</em>
+              &ldquo;{dictationState.transcript}&rdquo;
+            </p>
+          )}
           <div className={styles.fields}>
             <div><label htmlFor="side">Instruction</label><select id="side" data-flash={flash === 'side' ? 'true' : undefined} value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
             <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" data-flash={flash === 'amount' ? 'true' : undefined} inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>

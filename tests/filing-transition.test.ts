@@ -142,7 +142,7 @@ describe('mobile filing integration through actual buttons', () => {
 describe('paper ledger edge cases', () => {
   let root: Root | null = null;
 
-  beforeEach(() => { resetContainer(); });
+  beforeEach(() => { resetContainer(); window.localStorage.clear(); });
   afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } });
 
   async function renderLedger(desk: Partial<ReturnType<typeof useTradingDesk>> & Pick<ReturnType<typeof useTradingDesk>, 'records' | 'focusedRecordId' | 'foreground'>) {
