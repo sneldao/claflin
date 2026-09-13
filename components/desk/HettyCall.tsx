@@ -756,6 +756,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
         </span>
       </div>
       <p className={styles.callNote}>{callNote}</p>
+      {!live && !ringing && (
+        <p className={styles.callHint}>A live conversation — Hetty talks back, asks questions, and works the ticket with you. To just fill the ticket from your voice with no call, use <strong>Fill ticket by voice</strong> on the ticket above.</p>
+      )}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
@@ -771,8 +774,8 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
           </>
         )}
         {!live && !ringing && captions.length === 0 && (
-          <button type="button" className={styles.callButton} onClick={() => void ring('fresh')}>
-            {desk.state.draft.instrumentId ? 'Ring Hetty with this instruction' : 'Ring Hetty'}
+          <button type="button" className={styles.callButton} onClick={() => void ring('fresh')} title="Start a live voice conversation — Hetty talks back and works the ticket with you.">
+            {desk.state.draft.instrumentId ? 'Talk with Hetty about this instruction' : 'Talk with Hetty'}
           </button>
         )}
         {ringing && !live && (

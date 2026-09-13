@@ -460,7 +460,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
                   void startRecording();
                 }
               }}
-              aria-label={isRecording ? 'Stop dictation — release to transcribe' : 'Dictate instruction via AssemblyAI — tap, speak, tap to finish'}
+              title="Fills in the ticket from your voice — no conversation. You review and confirm before anything happens."
+              aria-label={isRecording ? 'Stop dictation — release to transcribe' : 'Fill the ticket by voice — tap, speak, tap to finish'}
             >
               <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
               {isRecording ? (
@@ -471,12 +472,12 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
                   </span>
                   (tap to finish)
                 </>
-              ) : isTranscribing ? 'Writing down what you said…' : dictState.status === 'error' ? 'Try dictation again' : 'Dictate — tap, speak, tap to finish'}
+              ) : isTranscribing ? 'Writing down what you said…' : dictState.status === 'error' ? 'Try again — fill ticket by voice' : 'Fill ticket by voice — tap, speak, tap'}
             </button>
-            <span className={styles.dictationBadge}>Voice is optional · Ums / Ahs filtered · 18 languages</span>
+            <span className={styles.dictationBadge}>Fills the ticket · You confirm</span>
           </div>
           {!dictAttempted && dictState.status === 'idle' && (
-            <p className={styles.dictationHint}>Tap <strong>Dictate</strong>, say e.g. “Buy 100 USDC of Nvidia”, then tap again — or just type below.</p>
+            <p className={styles.dictationHint}>Tap <strong>Fill ticket by voice</strong>, say e.g. “Buy 100 USDC of Nvidia”, then tap again — the words land on the ticket for your review. Or just type below. For a back-and-forth conversation, <a href="#hetty">talk with Hetty</a> instead.</p>
           )}
           {isRecording && (
             <p className={styles.dictationHint} role="status">Listening — say the stock and the amount, then tap the button again to finish.</p>
@@ -489,7 +490,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           )}
           {dictState.transcript && (
             <p className={styles.dictationTranscript} role="status">
-              <em>Dictated via AssemblyAI (clean compliance trail)</em>
+              <em>You said (written down for the record)</em>
               &ldquo;{dictState.transcript}&rdquo;
               {provenance && (
                 <span className={styles.dictationSeal} title={`Cryptographic provenance hash: ${provenance.hash}`}>
