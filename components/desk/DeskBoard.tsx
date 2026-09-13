@@ -41,8 +41,6 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
   }, [deskId, points]);
 
   if (watched.length === 0) {
-    const suggestion = DESK_INSTRUMENTS.find(s => s.symbol === 'NVDAc' && s.quoteSupported)
-      ?? DESK_INSTRUMENTS.find(s => s.quoteSupported);
     return (
       <section className={styles.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
         <div className={styles.boardHead}>
@@ -52,8 +50,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
         <h2 id="board-title" className={styles.boardTitle}>Watched marks.</h2>
         <div className={styles.boardEmpty}>
           <span className={styles.boardPin} aria-hidden="true" />
-          <p>Nothing pinned. Pin a mark to keep it on the desk for next visit.</p>
-          {suggestion && <button type="button" onClick={() => watch(suggestion.id)}>Pin {suggestion.symbol}</button>}
+          <p>Nothing pinned — tap any tape mark to load it, or pin one to keep it here.</p>
         </div>
       </section>
     );

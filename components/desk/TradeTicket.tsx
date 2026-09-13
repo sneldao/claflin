@@ -446,7 +446,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             ))}
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
-          <div className={styles.dictationBar}>
+          <div className={styles.dictationBar} title="One shot, no conversation: tap, say e.g. “Buy 100 USDC of Nvidia”, tap again — the words land on the ticket for your review. Or type below.">
             <button
               type="button"
               className={styles.dictationButton}
@@ -486,7 +486,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           )}
           {dictState.transcript && (
             <p className={styles.dictationTranscript} role="status">
-              <em>You said (written down for the record)</em>
+              <em>You said</em>
               &ldquo;{dictState.transcript}&rdquo;
               {provenance && (
                 <span className={styles.dictationSeal} title={`Cryptographic provenance hash: ${provenance.hash}`}>
@@ -506,7 +506,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
               </button>
             ))}
           </div>
-          <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
+          <p className={styles.product} title={state.draft.side === 'buy' ? 'The estimate shows how many tokens you would receive.' : 'The estimate shows how much USDC you would receive.'}>{state.draft.side === 'buy' ? 'USDC to spend.' : 'Token quantity to sell.'}</p>
           <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
         </form>
         <Drawer
@@ -518,7 +518,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
           <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
           <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
         </Drawer>
-        <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
+        <p className={styles.paperFoot}>Your instruction. Your decision.</p>
       </> : pending ? <div className={styles.pendingSlip}>
         <p className={styles.quoteInstrument}>{state.draft.side === 'buy' ? 'Buy' : 'Sell'} {instrument?.symbol}<span>{instrument?.name}</span></p>
         <p className={styles.pendingAmount}>{state.draft.amount} <span>{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol ?? ''} tokens to sell`}</span></p>

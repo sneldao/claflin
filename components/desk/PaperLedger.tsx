@@ -69,7 +69,7 @@ export const PaperLedger = memo(function PaperLedger({
         </div>
         <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
         <div className={styles.ledgerEmpty}>
-          <p>No paper on file yet. Simulations land as paper; Base transactions land in the live journal. Your first filing can leave a commemorative desk slip — a keepsake, not the stock.</p>
+          <p title="Simulations file as paper; Base transactions appear in the live journal.">No paper on file yet — file your first instruction above. A first filing may leave a commemorative desk slip below.</p>
         </div>
       </section>
     );

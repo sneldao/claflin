@@ -28,14 +28,14 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
       </span>
       {marks.length === 0 ? (
         <p className={styles.tapeNote} role={failed ? 'status' : undefined}>
-          {failed ? 'Reference marks are unavailable — estimates are unaffected.' : 'Reading the tape…'}
+          {failed ? 'Tape unavailable — estimates unaffected.' : 'Reading the tape…'}
         </p>
       ) : (
         <>
           {hasStale && asOf && (
-            <p className={styles.tapeNote} role="status">
-              Reference marks are stale — last known {formatMarkAge(asOf)} ago.
-            </p>
+            <span className={styles.tapeStaleInline} role="status" title="Estimates are unaffected.">
+              STALE · last known {formatMarkAge(asOf)} ago
+            </span>
           )}
           <div className={styles.tapeWindow}>
             <div className={styles.tapeTrack}>
@@ -71,7 +71,7 @@ function TapeItem({ mark, onSelect, disabled }: { mark: DeskMark; onSelect: (id:
       <span className={styles.tapeSymbol}>{mark.symbol}</span>
       {/* key on the price re-mounts the digit on each new mark — the tape ticks. */}
       <span key={price ?? 'none'} className={styles.tapePrice}>{price ? `$${price}` : '—'}</span>
-      {stale && <span className={styles.tapeStale}>STALE</span>}
+      {stale && <span className={styles.tapeStale} title="Stale — last known mark. Reference, not your estimate.">STALE</span>}
     </button>
   );
 }

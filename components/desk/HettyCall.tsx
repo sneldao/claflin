@@ -756,6 +756,9 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
         </span>
       </div>
       <p className={styles.callNote}>{callNote}</p>
+      {!live && !ringing && (
+        <p className={styles.callHint} title="Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">A live conversation — Hetty talks back.</p>
+      )}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
@@ -831,8 +834,8 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
             : 'The conversation could not be saved to your account. The ticket keeps the instruction.'}
         </p>
       )}
-      <p className={styles.callFoot}>
-        Your browser will ask for the microphone when you ring.{auth.enabled ? ' Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : ''}
+      <p className={styles.callFoot} title={auth.enabled ? 'Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : undefined}>
+        Mic stays off until you talk.
       </p>
     </section>
   );
