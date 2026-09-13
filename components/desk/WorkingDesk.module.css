@@ -613,7 +613,6 @@
 .callLine { color: var(--desk-muted); font-size: 8px; letter-spacing: .1em; }
 .call .boardTitle { margin: 12px 0 8px !important; color: var(--desk-paper-light); font: 400 clamp(40px, 4vw, 58px)/1.05 var(--font-display), serif !important; letter-spacing: -.035em; }
 .call .callNote { max-width: 300px; margin: 0 !important; font-size: 14px; line-height: 1.7; color: var(--desk-ink); }
-.callHint { max-width: 340px; margin: 8px 0 0 !important; font-size: 11px; line-height: 1.6; color: var(--desk-muted); }
 .callActions { margin-top: 18px; min-height: 44px; }
 .callButton { display: inline-flex; align-items: center; justify-content: center; gap: 24px; min-width: 168px; min-height: 46px; padding: 12px 20px; background: linear-gradient(155deg, var(--desk-metal-light), var(--desk-brass)); color: var(--desk-deep); border: 1px solid var(--desk-brass); border-radius: 2px; box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow); font-size: 13px; }
 .callButton::after { content: '↗'; font-size: 18px; line-height: 1; }
@@ -1088,7 +1087,6 @@
 .dictationTranscript { margin: 8px 0 0 !important; padding: 8px 10px; background: #27362b08; border-left: 2px solid var(--desk-brass); color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
 .dictationTranscript em { font-style: normal; color: var(--desk-paper-muted); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; display: block; margin-bottom: 2px; }
 .dictationHint { margin: 6px 0 0 !important; color: var(--desk-paper-muted); font-size: 11px; line-height: 1.5; }
-.ticketSteps { margin: 6px 0 0 !important; font: 600 10px/1.6 var(--font-mono), monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--desk-paper-muted); }
 .dictationError { margin: 6px 0 0 !important; padding: 8px 10px; background: #6e2b1f14; border-left: 2px solid #c98f7a; color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
 .dictationSeal { display: block; margin-top: 4px; font: 8px/1.4 var(--font-mono), monospace; letter-spacing: .1em; color: var(--desk-brass); text-transform: uppercase; }
 

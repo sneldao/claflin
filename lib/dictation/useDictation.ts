@@ -22,7 +22,6 @@ export function useDictation(options?: UseDictationOptions) {
     error: null,
     provider: null,
   });
-  const [attempted, setAttempted] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -43,7 +42,6 @@ export function useDictation(options?: UseDictationOptions) {
     try {
       cleanup();
       playSolenoidClick('engage');
-      setAttempted(true);
       setState({
         status: 'recording',
         transcript: null,
@@ -201,7 +199,6 @@ export function useDictation(options?: UseDictationOptions) {
 
   return {
     state,
-    attempted,
     isRecording: state.status === 'recording',
     isTranscribing: state.status === 'transcribing',
     startRecording,

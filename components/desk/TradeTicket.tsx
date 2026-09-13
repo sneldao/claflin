@@ -329,7 +329,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const remindAfterEducation = () => {
     if (state.stage === 'review') setTermsReminder(true);
   };
-  const { state: dictState, attempted: dictAttempted, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
+  const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
     onIntentParsed: (parsedIntent, cleanTranscript) => {
       const nextSide = parsedIntent.side ?? state.draft.side;
       const nextAmount = parsedIntent.amount ?? state.draft.amount;
@@ -446,7 +446,6 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             ))}
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
-          <p className={styles.ticketSteps} aria-label="What the ticket needs">1 · Pick a stock&ensp;→&ensp;2 · Say or type the instruction&ensp;→&ensp;3 · Review the estimate</p>
           <div className={styles.dictationBar}>
             <button
               type="button"
@@ -461,30 +460,26 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
                   void startRecording();
                 }
               }}
-              title="Fills in the ticket from your voice — no conversation. You review and confirm before anything happens."
-              aria-label={isRecording ? 'Stop dictation — release to transcribe' : 'Fill the ticket by voice — tap, speak, tap to finish'}
+              title="One shot, no conversation: tap, say e.g. “Buy 100 USDC of Nvidia”, tap again — the words land on the ticket for your review. Or type below."
+              aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice — tap, speak, tap to finish'}
             >
               <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
               {isRecording ? (
                 <>
-                  Listening… speak now
+                  Listening… tap to finish
                   <span className={styles.dictationWaveform} aria-hidden="true">
                     <i /><i /><i /><i /><i /><i />
                   </span>
-                  (tap to finish)
                 </>
-              ) : isTranscribing ? 'Writing down what you said…' : dictState.status === 'error' ? 'Try again — fill ticket by voice' : 'Fill ticket by voice — tap, speak, tap'}
+              ) : isTranscribing ? 'Writing it down…' : dictState.status === 'error' ? 'Try voice again' : 'Fill ticket by voice'}
             </button>
-            <span className={styles.dictationBadge}>Fills the ticket · You confirm</span>
+            <span className={styles.dictationBadge} title="Fills the ticket only — you review and confirm. For a back-and-forth conversation, talk with Hetty ↓">No call · You confirm</span>
           </div>
-          {!dictAttempted && dictState.status === 'idle' && (
-            <p className={styles.dictationHint}>Tap <strong>Fill ticket by voice</strong>, say e.g. “Buy 100 USDC of Nvidia”, then tap again — the words land on the ticket for your review. Or just type below. For a back-and-forth conversation, <a href="#hetty">talk with Hetty</a> instead.</p>
-          )}
           {isRecording && (
-            <p className={styles.dictationHint} role="status">Listening — say the stock and the amount, then tap the button again to finish.</p>
+            <p className={styles.dictationHint} role="status">Say the stock and the amount, then tap again.</p>
           )}
           {isTranscribing && (
-            <p className={styles.dictationHint} role="status">Writing down what you said — a moment…</p>
+            <p className={styles.dictationHint} role="status">Writing it down…</p>
           )}
           {dictState.status === 'error' && dictState.error && (
             <p className={styles.dictationError} role="alert">{dictState.error}</p>
