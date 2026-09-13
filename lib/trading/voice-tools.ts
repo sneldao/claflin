@@ -76,6 +76,17 @@ export function dictationSpokenReadback(side: string, amount: string, unit: stri
   return `Dictation inscribed: ${side} ${amount} ${unit} of ${symbol}. Terms are on the ticket — ready for your review.`;
 }
 
+/**
+ * Written confirmation line for a dictated ticket (no live call).
+ * Never invents a missing amount — names exactly what was heard and what
+ * still needs the caller's hand.
+ */
+export function dictationTicketLine(side: string, amount: string, unit: string, symbol: string): string {
+  const action = side === 'sell' ? 'Sell' : 'Buy';
+  if (amount) return `${action} ${amount} ${unit} of ${symbol} — on the ticket, ready for your review.`;
+  return `${action} ${symbol} heard — add the amount on the ticket.`;
+}
+
 /** Spoken confirmation after a successful estimate, with the live review window. */
 export function estimateSpokenResult(quote: { inputAmount: string; inputSymbol: string; outputAmount: string; outputSymbol: string; expiresAt: number }, now: number, live = false): string {
   const window_ = Math.max(0, Math.ceil((quote.expiresAt - now) / 1000));

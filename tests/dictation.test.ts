@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDictatedTradeIntent } from '../lib/trading/dictation-parser';
 import { createDictationProvenance } from '../lib/trading/dictation-provenance';
-import { dictationSpokenReadback } from '../lib/trading/voice-tools';
+import { dictationSpokenReadback, dictationTicketLine } from '../lib/trading/voice-tools';
 import { friendlyDictationError } from '../lib/dictation/useDictation';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { NextRequest } from 'next/server';
@@ -131,6 +131,18 @@ describe('AssemblyAI Dictation Intent Parser', () => {
     assert.match(line, /Dictation inscribed/);
     assert.match(line, /NVDAc/);
     assert.match(line, /100 USDC/);
+  });
+
+  it('writes honest ticket lines that never invent a missing amount', () => {
+    assert.equal(
+      dictationTicketLine('buy', '25', 'USDC', 'GOOGLc'),
+      'Buy 25 USDC of GOOGLc — on the ticket, ready for your review.',
+    );
+    assert.equal(
+      dictationTicketLine('buy', '', 'USDC', 'GOOGLc'),
+      'Buy GOOGLc heard — add the amount on the ticket.',
+    );
+    assert.doesNotMatch(dictationTicketLine('buy', '', 'USDC', 'GOOGLc'), /\d/);
   });
 
   it('handles partial instructions gracefully', () => {

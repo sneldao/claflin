@@ -19,7 +19,7 @@ import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
 import { getEducationTopic } from '@/lib/education';
 import { useDictation } from '@/lib/dictation/useDictation';
 import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
-import { dictationSpokenReadback } from '@/lib/trading/voice-tools';
+import { dictationTicketLine } from '@/lib/trading/voice-tools';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -331,9 +331,12 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   };
   const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
     onIntentParsed: (parsedIntent, cleanTranscript) => {
+      // Dictation never inherits a stale amount: if the parser heard no
+      // amount, the amount box is cleared so a previous figure can never be
+      // announced back as if the caller said it.
       const nextSide = parsedIntent.side ?? state.draft.side;
-      const nextAmount = parsedIntent.amount ?? state.draft.amount;
-      const nextUnit = parsedIntent.unit ?? state.draft.unit;
+      const nextAmount = parsedIntent.amount ?? '';
+      const nextUnit = parsedIntent.unit ?? (nextSide === 'sell' ? 'token' : 'USDC');
       const nextInstrumentId = parsedIntent.instrumentId ?? state.draft.instrumentId;
       const symbol = DESK_INSTRUMENTS.find(i => i.id === nextInstrumentId)?.symbol ?? 'Stock';
 
@@ -344,10 +347,14 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
         unit: nextUnit,
       } as TradeIntent);
 
-      if (nextAmount && nextInstrumentId) {
-        const prov = createDictationProvenance(cleanTranscript, symbol, nextSide, nextAmount);
+      if (nextInstrumentId) {
+        const prov = createDictationProvenance(cleanTranscript, symbol, nextSide, nextAmount || '—');
         setProvenance(prov);
-        setDictationReadback(dictationSpokenReadback(nextSide, nextAmount, nextUnit, symbol));
+        setDictationReadback(dictationTicketLine(nextSide, nextAmount, nextUnit, symbol));
+        if (!nextAmount) {
+          // Put the cursor where the missing piece goes.
+          setTimeout(() => document.getElementById('amount')?.focus({ preventScroll: true }), 50);
+        }
       }
     },
   });
@@ -421,7 +428,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
     {live && hettyLine && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{hettyLine}</em></p>}
-    {!live && dictationReadback && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{dictationReadback}</em></p>}
+    {!live && dictationReadback && <p className={styles.spokenLine} role="status" aria-live="polite">On the ticket: <em>{dictationReadback}</em></p>}
     {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
     {live && typing && view === 'draft' && <p className={styles.slipNotice} role="status">Typing — Hetty holds the line.</p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}
@@ -489,8 +496,8 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
               <em>You said</em>
               &ldquo;{dictState.transcript}&rdquo;
               {provenance && (
-                <span className={styles.dictationSeal} title={`Cryptographic provenance hash: ${provenance.hash}`}>
-                  Provenance Seal: {provenance.shortSeal}
+                <span className={styles.dictationSeal} title="A record of what was heard — not a trade, not an approval.">
+                  Heard · {provenance.shortSeal}
                 </span>
               )}
             </p>
