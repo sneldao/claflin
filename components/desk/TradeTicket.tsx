@@ -446,6 +446,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             ))}
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
+          <p className={styles.ticketSteps} aria-label="What the ticket needs">1 · Pick a stock&ensp;→&ensp;2 · Say or type the instruction&ensp;→&ensp;3 · Review the estimate</p>
           <div className={styles.dictationBar}>
             <button
               type="button"
