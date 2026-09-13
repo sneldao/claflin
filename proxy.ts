@@ -54,6 +54,7 @@ export function proxy(request: NextRequest) {
     '/api/stocks/quote',
     '/api/stocks/marks',
     '/api/desk',
+    '/api/dictation',
     '/api/hetty/session',
     '/api/hetty/transcript',
     '/api/paper',
