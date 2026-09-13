@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { parseDictatedTradeIntent } from '../lib/trading/dictation-parser';
 import { createDictationProvenance } from '../lib/trading/dictation-provenance';
 import { dictationSpokenReadback } from '../lib/trading/voice-tools';
+import { friendlyDictationError } from '../lib/dictation/useDictation';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { NextRequest } from 'next/server';
 import { POST } from '../app/api/dictation/route';
@@ -170,5 +171,116 @@ describe('AssemblyAI Dictation API Route (/api/dictation)', () => {
     assert.ok(data.transcript);
     assert.equal(data.disfluencyFiltered, true);
     assert.ok(data.parsedIntent);
+  });
+
+  it('forwards audio to AssemblyAI as a multipart `audio` file part', async () => {
+    const seen: Array<{ url: string; contentType: string | null; isForm: boolean; fileName: string | null }> = [];
+    const originalFetch = globalThis.fetch;
+    const originalKey = process.env.ASSEMBLYAI_API_KEY;
+    process.env.ASSEMBLYAI_API_KEY = 'test-key';
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async (input: unknown, init?: { headers?: Record<string, string>; body?: unknown }) => {
+      const body = init?.body as FormData | undefined;
+      const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+      const file = isForm ? body.get('audio') as File | null : null;
+      seen.push({
+        url: String(input),
+        contentType: init?.headers?.['Content-Type'] ?? init?.headers?.['content-type'] ?? null,
+        isForm,
+        fileName: file && typeof file !== 'string' ? file.name : null,
+      });
+      return new Response(JSON.stringify({ text: 'Buy 100 USDC of NVDA' }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const form = new FormData();
+      form.append('audio', new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' }), 'recording.webm');
+      const req = new NextRequest('http://localhost:3000/api/dictation', { method: 'POST', body: form });
+      const res = await POST(req);
+      assert.equal(res.status, 200);
+      assert.equal(seen.length, 1);
+      assert.equal(seen[0].isForm, true);
+      assert.equal(seen[0].contentType, null);
+      assert.ok(seen[0].fileName);
+      const data = await res.json();
+      assert.equal(data.transcript, 'Buy 100 USDC of NVDA');
+    } finally {
+      (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+      if (originalKey === undefined) delete process.env.ASSEMBLYAI_API_KEY;
+      else process.env.ASSEMBLYAI_API_KEY = originalKey;
+    }
+  });
+
+  it('returns 422 no_speech when AssemblyAI hears no words', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalKey = process.env.ASSEMBLYAI_API_KEY;
+    process.env.ASSEMBLYAI_API_KEY = 'test-key';
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () =>
+      new Response(JSON.stringify({ text: '   ', llm_response: null }), { status: 200 })) as typeof fetch;
+    try {
+      const form = new FormData();
+      form.append('audio', new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' }), 'recording.webm');
+      const req = new NextRequest('http://localhost:3000/api/dictation', { method: 'POST', body: form });
+      const res = await POST(req);
+      assert.equal(res.status, 422);
+      const data = await res.json();
+      assert.equal(data.error, 'no_speech');
+    } finally {
+      (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+      if (originalKey === undefined) delete process.env.ASSEMBLYAI_API_KEY;
+      else process.env.ASSEMBLYAI_API_KEY = originalKey;
+    }
+  });
+
+  it('prefers the llm_response rewrite over the verbatim text', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalKey = process.env.ASSEMBLYAI_API_KEY;
+    process.env.ASSEMBLYAI_API_KEY = 'test-key';
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () =>
+      new Response(JSON.stringify({ text: 'Um buy uh 100 of Nvidia', llm_response: 'Buy 100 USDC of NVDA', llm_error: null }), { status: 200 })) as typeof fetch;
+    try {
+      const form = new FormData();
+      form.append('audio', new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' }), 'recording.webm');
+      const req = new NextRequest('http://localhost:3000/api/dictation', { method: 'POST', body: form });
+      const res = await POST(req);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.transcript, 'Buy 100 USDC of NVDA');
+      assert.equal(data.cleanedUp, true);
+      assert.equal(data.verbatimTranscript, 'Um buy uh 100 of Nvidia');
+    } finally {
+      (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+      if (originalKey === undefined) delete process.env.ASSEMBLYAI_API_KEY;
+      else process.env.ASSEMBLYAI_API_KEY = originalKey;
+    }
+  });
+
+  it('maps invalid keys (404) to 503 credits_exhausted, not a raw 404', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalKey = process.env.ASSEMBLYAI_API_KEY;
+    process.env.ASSEMBLYAI_API_KEY = 'test-key';
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () =>
+      new Response(JSON.stringify({ status: 404, title: 'Not Found', detail: 'Invalid API key' }), { status: 404 })) as typeof fetch;
+    try {
+      const form = new FormData();
+      form.append('audio', new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' }), 'recording.webm');
+      const req = new NextRequest('http://localhost:3000/api/dictation', { method: 'POST', body: form });
+      const res = await POST(req);
+      assert.equal(res.status, 503);
+      const data = await res.json();
+      assert.equal(data.error, 'credits_exhausted');
+    } finally {
+      (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+      if (originalKey === undefined) delete process.env.ASSEMBLYAI_API_KEY;
+      else process.env.ASSEMBLYAI_API_KEY = originalKey;
+    }
+  });
+});
+
+describe('Dictation UX copy (friendlyDictationError)', () => {
+  it('never leaks status codes and always offers a way forward', () => {
+    for (const [status, code] of [[502, 'dictation_failed'], [503, 'credits_exhausted'], [429, 'rate_limited'], [422, 'no_speech'], [400, 'bad_request']] as Array<[number, string]>) {
+      const copy = friendlyDictationError(status, code, 'raw server words');
+      assert.ok(!/\b50[023]\b|\b42[29]\b|\b40[04]\b/.test(copy), `must not leak status: ${copy}`);
+      assert.ok(/type|try again|wait/i.test(copy), `must offer a way forward: ${copy}`);
+    }
   });
 });

@@ -329,7 +329,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const remindAfterEducation = () => {
     if (state.stage === 'review') setTermsReminder(true);
   };
-  const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
+  const { state: dictState, attempted: dictAttempted, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
     onIntentParsed: (parsedIntent, cleanTranscript) => {
       const nextSide = parsedIntent.side ?? state.draft.side;
       const nextAmount = parsedIntent.amount ?? state.draft.amount;
@@ -452,6 +452,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
               className={styles.dictationButton}
               data-recording={isRecording ? 'true' : undefined}
               data-transcribing={isTranscribing ? 'true' : undefined}
+              disabled={isTranscribing}
               onClick={() => {
                 if (isRecording) {
                   void stopRecording();
@@ -459,21 +460,33 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
                   void startRecording();
                 }
               }}
-              aria-label={isRecording ? 'Stop dictation' : 'Dictate instruction via AssemblyAI'}
+              aria-label={isRecording ? 'Stop dictation — release to transcribe' : 'Dictate instruction via AssemblyAI — tap, speak, tap to finish'}
             >
               <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
               {isRecording ? (
                 <>
-                  Recording
+                  Listening… speak now
                   <span className={styles.dictationWaveform} aria-hidden="true">
                     <i /><i /><i /><i /><i /><i />
                   </span>
                   (tap to finish)
                 </>
-              ) : isTranscribing ? 'Transcribing (AssemblyAI)…' : 'Dictate (AssemblyAI)'}
+              ) : isTranscribing ? 'Writing down what you said…' : dictState.status === 'error' ? 'Try dictation again' : 'Dictate — tap, speak, tap to finish'}
             </button>
-            <span className={styles.dictationBadge}>Ums / Ahs Filtered · 18 Langs</span>
+            <span className={styles.dictationBadge}>Voice is optional · Ums / Ahs filtered · 18 languages</span>
           </div>
+          {!dictAttempted && dictState.status === 'idle' && (
+            <p className={styles.dictationHint}>Tap <strong>Dictate</strong>, say e.g. “Buy 100 USDC of Nvidia”, then tap again — or just type below.</p>
+          )}
+          {isRecording && (
+            <p className={styles.dictationHint} role="status">Listening — say the stock and the amount, then tap the button again to finish.</p>
+          )}
+          {isTranscribing && (
+            <p className={styles.dictationHint} role="status">Writing down what you said — a moment…</p>
+          )}
+          {dictState.status === 'error' && dictState.error && (
+            <p className={styles.dictationError} role="alert">{dictState.error}</p>
+          )}
           {dictState.transcript && (
             <p className={styles.dictationTranscript} role="status">
               <em>Dictated via AssemblyAI (clean compliance trail)</em>

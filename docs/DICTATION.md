@@ -1,6 +1,6 @@
 # AssemblyAI Dictation in Claflin
 
-**Dictation is the new keyboard for financial execution.** Claflin integrates AssemblyAI's synchronous Dictation API (`dictation.assemblyai.com/transcribe`) as its default voice input engine, creating a clean, auditable trading ticket flow.
+**Dictation is the new keyboard for financial execution.** Claflin integrates AssemblyAI's Dictation API (`https://dictation.assemblyai.com/v1/transcribe/live`) as its default voice input engine, creating a clean, auditable trading ticket flow.
 
 ---
 
@@ -47,17 +47,20 @@ Claflin decouples voice input from voice output to provide an institutional-grad
 ## 2. API Endpoints & Configuration
 
 ### Endpoint
-- **Beta Dictation**: `https://dictation.assemblyai.com/transcribe`
+- **Dictation**: `https://dictation.assemblyai.com/v1/transcribe/live` (multipart: `config` JSON part first, `audio` WAV/PCM part second; see [docs](https://www.assemblyai.com/docs/dictation))
 - **Fallback**: `https://sync.assemblyai.com/transcribe`
 
 ### Local Proxy Route
-- `POST /api/dictation` accepts audio streams (`audio/wav`, `audio/webm`, or multipart form data) and routes to AssemblyAI.
+- `POST /api/dictation` accepts browser audio (webm/opus, mp4, wav — anything MediaRecorder produces), transcodes to 16kHz mono WAV in-browser (`lib/dictation/useDictation.ts`), and forwards as `config` + `audio` parts to AssemblyAI.
+- Only WAV (`audio/wav`) and raw PCM S16LE (`audio/pcm`) are accepted upstream — webm/mp3/m4a are rejected with 415 (`unsupported_audio`).
+- The response prefers `llm_response` (cleaned-up, send-ready) and falls back to verbatim `text`; both are returned (`transcript`, `verbatimTranscript`, `cleanedUp`).
+- An invalid key returns 404 upstream, mapped to 503 `credits_exhausted`; empty transcripts return 422 `no_speech`.
 - Client secrets stay server-side (`ASSEMBLYAI_API_KEY`).
 
 ### Environment Variables
 ```bash
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key
-ASSEMBLYAI_DICTATION_ENDPOINT=https://dictation.assemblyai.com/transcribe
+ASSEMBLYAI_DICTATION_ENDPOINT=https://dictation.assemblyai.com/v1/transcribe/live
 ```
 
 ---

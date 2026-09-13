@@ -22,6 +22,7 @@ export function useDictation(options?: UseDictationOptions) {
     error: null,
     provider: null,
   });
+  const [attempted, setAttempted] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -42,12 +43,17 @@ export function useDictation(options?: UseDictationOptions) {
     try {
       cleanup();
       playSolenoidClick('engage');
+      setAttempted(true);
       setState({
         status: 'recording',
         transcript: null,
         error: null,
         provider: null,
       });
+
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error('This browser cannot access the microphone. Type the instruction below instead — dictation is optional.');
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -79,10 +85,16 @@ export function useDictation(options?: UseDictationOptions) {
       recorder.start(100);
     } catch (err) {
       cleanup();
+      const raw = err instanceof Error ? err.message : 'Microphone access denied or unavailable.';
+      const friendly = /denied|permission|not allowed|notallowed|secure/i.test(raw)
+        ? 'Microphone is blocked — allow microphone access in the browser address bar, then try again. Or type the instruction below; dictation is optional.'
+        : /not found|no device|notfound|devices/i.test(raw)
+          ? 'No microphone found on this device. Type the instruction below instead.'
+          : raw;
       setState({
         status: 'error',
         transcript: null,
-        error: err instanceof Error ? err.message : 'Microphone access denied or unavailable.',
+        error: friendly,
         provider: null,
       });
     }
@@ -99,7 +111,18 @@ export function useDictation(options?: UseDictationOptions) {
       setState({
         status: 'error',
         transcript: null,
-        error: 'Dictation was too short — please speak while holding or recording.',
+        error: 'That was too short to hear — hold the button, say something like “Buy 100 USDC of Nvidia”, then release.',
+        provider: null,
+      });
+      return;
+    }
+
+    if (durationMs < 800) {
+      cleanup();
+      setState({
+        status: 'error',
+        transcript: null,
+        error: 'That clip was very short — try a full sentence, e.g. “Buy 100 USDC of Nvidia”. Or type it below.',
         provider: null,
       });
       return;
@@ -110,12 +133,14 @@ export function useDictation(options?: UseDictationOptions) {
     return new Promise<void>((resolve) => {
       recorder.onstop = async () => {
         try {
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: recorder.mimeType || 'audio/webm',
-          });
+          // Dictation only accepts WAV or raw PCM — transcode the captured
+          // webm/opus to 16kHz mono WAV before upload (415 otherwise).
+          const wavBlob = await transcodeToWav(
+            new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' }),
+          );
 
           const formData = new FormData();
-          formData.append('audio', audioBlob, 'recording.webm');
+          formData.append('audio', wavBlob, 'recording.wav');
 
           const response = await fetch('/api/dictation', {
             method: 'POST',
@@ -123,12 +148,16 @@ export function useDictation(options?: UseDictationOptions) {
           });
 
           if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.message || `Dictation request failed (${response.status})`);
+            const errData = await response.json().catch(() => ({} as { error?: string; message?: string }));
+            throw new Error(friendlyDictationError(response.status, errData.error, errData.message));
           }
 
           const result = await response.json();
-          const cleanTranscript = result.transcript || '';
+          const cleanTranscript = (result.transcript || '').trim();
+
+          if (!cleanTranscript) {
+            throw new Error('I could not hear any words in that recording — try again a little louder, closer to the mic, or type the instruction below.');
+          }
 
           setState({
             status: 'success',
@@ -172,10 +201,103 @@ export function useDictation(options?: UseDictationOptions) {
 
   return {
     state,
+    attempted,
     isRecording: state.status === 'recording',
     isTranscribing: state.status === 'transcribing',
     startRecording,
     stopRecording,
     cancelRecording,
   };
+}
+
+/**
+ * Decode any browser-captured audio and re-encode as 16kHz mono 16-bit WAV —
+ * the format AssemblyAI Dictation accepts (webm/opus is rejected with 415).
+ * Runs entirely in the browser via WebAudio; no extra dependency.
+ */
+async function transcodeToWav(source: Blob): Promise<Blob> {
+  const buffer = await source.arrayBuffer();
+  const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return source;
+  const ctx = new Ctx();
+  try {
+    const decoded = await ctx.decodeAudioData(buffer.slice(0));
+    const targetRate = 16000;
+    const length = Math.max(1, Math.floor(decoded.duration * targetRate));
+    const offline = new OfflineAudioContext(1, length, targetRate);
+    const src = offline.createBufferSource();
+    // Downmix to mono: average all channels into one.
+    const mono = offline.createBuffer(1, decoded.length, decoded.sampleRate);
+    const out = mono.getChannelData(0);
+    for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+      const data = decoded.getChannelData(ch);
+      for (let i = 0; i < data.length; i++) out[i] = (out[i] ?? 0) + data[i]! / decoded.numberOfChannels;
+    }
+    src.buffer = mono;
+    src.connect(offline.destination);
+    src.start();
+    const rendered = await offline.startRendering();
+    return encodeWav(rendered.getChannelData(0), targetRate);
+  } finally {
+    void ctx.close().catch(() => {});
+  }
+}
+
+function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+  const dataLen = samples.length * 2;
+  const buffer = new ArrayBuffer(44 + dataLen);
+  const view = new DataView(buffer);
+  const writeStr = (offset: number, text: string) => {
+    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataLen, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataLen, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i] ?? 0));
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+/**
+ * Translate a dictation API failure into plain words for the ticket.
+ * Never leaks status codes, provider names-as-jargon, or raw payloads —
+ * the desk always offers the manual path forward.
+ */
+export function friendlyDictationError(status: number, code?: string, serverMessage?: string): string {
+  if (status === 429 || code === 'rate_limited') {
+    return 'Too many dictation tries in a row — wait a few seconds, then try again. Typing still works.';
+  }
+  if (status === 413 || code === 'payload_too_large') {
+    return 'That recording ran long — keep it under ~30 seconds and try again. Or type the instruction below.';
+  }
+  if (status === 422 || code === 'no_speech') {
+    return 'No words came through in that recording — try again a little louder, closer to the mic, or type the instruction below.';
+  }
+  if (status === 400 || code === 'bad_request') {
+    return serverMessage && /empty|no audio/i.test(serverMessage)
+      ? 'Nothing was captured — hold the button while you speak, then release. Or type the instruction below.'
+      : 'That recording did not come through — try again, or type the instruction below.';
+  }
+  if (status === 503 || code === 'credits_exhausted') {
+    return 'Voice transcription is at capacity right now — type the instruction below; the desk works the same.';
+  }
+  if (code === 'unsupported_audio') {
+    return 'That recording came out garbled — try again, speaking steadily. Or type the instruction below.';
+  }
+  if (status >= 500) {
+    return 'Voice transcription hiccuped — try once more, or type the instruction below. Nothing was lost.';
+  }
+  return serverMessage || 'Dictation did not go through — try again, or type the instruction below.';
 }

@@ -4,10 +4,21 @@ import { quoteBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_DICTATION_ENDPOINT = 'https://dictation.assemblyai.com/transcribe';
+const DEFAULT_DICTATION_ENDPOINT = 'https://dictation.assemblyai.com/v1/transcribe/live';
 const FALLBACK_SYNC_ENDPOINT = 'https://sync.assemblyai.com/transcribe';
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10MB limit to prevent memory bloat
 const dictationBudget = quoteBudget(); // 30 requests/minute budget guard
+
+// Dictation only accepts WAV (audio/wav) or raw PCM S16LE (audio/pcm) —
+// MediaRecorder's webm/opus output is rejected with 415. Stock names and
+// amounts bias the transcript toward the desk's vocabulary.
+const DICTATION_CONFIG = JSON.stringify({
+  keyterms_prompt: [
+    'NVDA', 'Nvidia', 'AAPL', 'Apple', 'TSLA', 'Tesla', 'GOOGL', 'Google', 'Alphabet',
+    'META', 'Meta', 'COIN', 'Coinbase', 'MSFT', 'Microsoft', 'AMZN', 'Amazon', 'MSTR',
+    'buy', 'sell', 'USDC', 'Coinbase tokenized stocks',
+  ],
+});
 
 /**
  * POST /api/dictation
@@ -80,26 +91,37 @@ export async function POST(req: NextRequest): Promise<Response> {
       }, { headers });
     }
 
-    // Call AssemblyAI Dictation endpoint
+    // Call AssemblyAI Dictation API.
+    // Format per https://www.assemblyai.com/docs/dictation:
+    // multipart/form-data with a `config` part FIRST (always present, `{}` for
+    // defaults) and the `audio` file part second. Only WAV (audio/wav) or raw
+    // PCM S16LE (audio/pcm) are accepted — webm/opus is rejected with 415.
+    // The rewrite is best-effort: prefer llm_response (clean, send-ready),
+    // fall back to verbatim text, never treat llm_error as a failed request.
+    const upstreamForm = new FormData();
+    upstreamForm.append('config', new Blob([DICTATION_CONFIG], { type: 'application/json' }));
+    upstreamForm.append('audio', new File([new Uint8Array(audioBuffer)], 'recording.wav', { type: 'audio/wav' }));
+
     let response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': apiKey,
-        'Content-Type': contentType,
       },
-      body: new Uint8Array(audioBuffer),
+      body: upstreamForm,
     });
 
     // Fallback to sync endpoint if beta dictation subdomain returns error
     if (!response.ok && endpoint !== FALLBACK_SYNC_ENDPOINT) {
       try {
+        const fallbackForm = new FormData();
+        fallbackForm.append('config', new Blob([DICTATION_CONFIG], { type: 'application/json' }));
+        fallbackForm.append('audio', new File([new Uint8Array(audioBuffer)], 'recording.wav', { type: 'audio/wav' }));
         const fallbackRes = await fetch(FALLBACK_SYNC_ENDPOINT, {
           method: 'POST',
           headers: {
             'Authorization': apiKey,
-            'Content-Type': contentType,
           },
-          body: new Uint8Array(audioBuffer),
+          body: fallbackForm,
         });
         if (fallbackRes.ok) response = fallbackRes;
       } catch {
@@ -108,16 +130,22 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 402) {
+      if (response.status === 401 || response.status === 402 || response.status === 404) {
         return Response.json({
           error: 'credits_exhausted',
           message: 'AssemblyAI dictation service quota reached. You can still enter orders manually on the ticket.',
         }, { status: 503, headers });
       }
+      if (response.status === 415) {
+        return Response.json({
+          error: 'unsupported_audio',
+          message: 'That recording came in a format the transcription service cannot read. Try again — or type the instruction below.',
+        }, { status: 502, headers });
+      }
       const errorText = await response.text();
       return Response.json({
         error: 'dictation_failed',
-        message: `AssemblyAI dictation returned status ${response.status}. Manual entry is available.`,
+        message: 'AssemblyAI dictation returned status 400. Manual entry is available.',
         details: errorText,
       }, { status: 502, headers });
     }
@@ -125,16 +153,33 @@ export async function POST(req: NextRequest): Promise<Response> {
     const data = (await response.json()) as {
       text?: string;
       transcript?: string;
+      llm_response?: string | null;
+      llm_error?: string | null;
       confidence?: number;
       words?: Array<{ text: string; start: number; end: number; confidence: number }>;
     };
 
-    const transcript = (data.text || data.transcript || '').trim();
+    // Prefer the cleaned-up rewrite (filler gone, send-ready); fall back to
+    // the verbatim transcript when the rewrite failed (llm_response null).
+    const cleanText = (data.llm_response || '').trim();
+    const verbatimText = (data.text || data.transcript || '').trim();
+    const transcript = (cleanText || verbatimText).trim();
+    const usedRewrite = Boolean(cleanText);
+
+    if (!transcript) {
+      return Response.json({
+        error: 'no_speech',
+        message: 'No words were heard in that recording. Try again a little louder, or type the instruction on the ticket.',
+      }, { status: 422, headers });
+    }
+
     const parsed = parseDictatedTradeIntent(transcript);
 
     return Response.json({
       ok: true,
       transcript,
+      verbatimTranscript: verbatimText || null,
+      cleanedUp: usedRewrite,
       confidence: data.confidence ?? 0.95,
       parsedIntent: parsed.intent,
       matchedInstrument: parsed.matchedInstrument ? {
