@@ -57,10 +57,13 @@ module.exports = {
         // Chain
         BASE_RPC_URL: env.BASE_RPC_URL || 'https://mainnet.base.org',
         BASE_RPC_FALLBACK_URL: env.BASE_RPC_FALLBACK_URL || '',
+        ASSEMBLYAI_API_KEY: env.ASSEMBLYAI_API_KEY || '',
+        ASSEMBLYAI_DICTATION_ENDPOINT: env.ASSEMBLYAI_DICTATION_ENDPOINT || '',
         ARBITRUM_RPC_URL: env.ARBITRUM_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
 
         // ElevenLabs
         ELEVENLABS_API_KEY: env.ELEVENLABS_API_KEY || '',
+        ELEVENLABS_AGENT_HETTY: env.ELEVENLABS_AGENT_HETTY || '',
         ELEVENLABS_CONVERSATIONAL_ENABLED: env.ELEVENLABS_CONVERSATIONAL_ENABLED || 'true',
         ELEVENLABS_DEFAULT_VOICE: env.ELEVENLABS_DEFAULT_VOICE || 'Adam',
         ELEVENLABS_AGENT_SOLANA_SAGE: env.ELEVENLABS_AGENT_SOLANA_SAGE || '',
