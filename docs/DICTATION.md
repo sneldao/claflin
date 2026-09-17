@@ -65,11 +65,11 @@ ASSEMBLYAI_DICTATION_ENDPOINT=https://dictation.assemblyai.com/v1/transcribe/liv
 
 ---
 
-## 3. Intent Parser & Compliance Audit Trail
+## 3. Intent Parser & Hearing Receipt
 
 Trading instructions require deterministic precision. AssemblyAI Dictation filters out hesitations and filler words, allowing the intent parser (`lib/trading/dictation-parser.ts`) to extract:
-- **Action / Side**: `buy` vs. `sell`
+- **Action / Side**: `buy` vs. `sell` — only when the utterance names one; otherwise the ticket asks.
 - **Asset**: Tokenized stocks (`NVDAc`, `AAPLc`, `TSLAc`, `GOOGLc`, etc.)
-- **Amount & Units**: Numeric quantities or dollar/USDC spends (supports `$100`, `2k`, etc.)
+- **Amount & Units**: Numeric quantities or dollar/USDC spends (supports `$100`, `2k`, etc.) — only when the utterance names one; a missing amount clears the box and focuses it, never inherits a stale figure.
 
-The clean transcript is stamped directly on the ticket as the client's explicit instruction trail before paper or live quotation review.
+The clean transcript is shown on the ticket as what was heard, with a hearing receipt (`Heard · …`) binding transcript, provider session id, and timestamp — a record of the hearing, not a trade and not an approval. Partial hearings are shown as partial ("Buy GOOGLc heard — add the amount on the ticket"). See [Honest speech](AGENTIC_ARCHITECTURE.md#honest-speech-restating-only-what-was-observed); the binding rule is [Product Direction principle 10](PRODUCT_DIRECTION.md).

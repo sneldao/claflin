@@ -1,6 +1,6 @@
 # Claflin Roadmap
 
-**Updated: 2026-09-10.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience. Desk-slip provenance (belonging without fake equity) is sequenced in §6 and [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
+**Updated: 2026-09-17.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience. Desk-slip provenance (belonging without fake equity) is sequenced in §6 and [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
 
 [Product Direction](docs/PRODUCT_DIRECTION.md) owns jobs, principles, and information hierarchy. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. [Auth and access](docs/AUTH_AND_ACCESS.md) owns identity tiers. This roadmap owns sequencing, known gaps, house-desk order, and release gates.
 
@@ -8,7 +8,7 @@
 
 - `/` is Claflin's desk. Hetty is the current Base broker, not the house. `/desk` is an alias, not a second product. Former marketplace, demo, profile, dashboard, broker-profile, listing and admin pages redirect to `/`.
 - No onboarding wizard, broker questionnaire, directory, ratings, streaks or free-call funnel is mounted. The paper desk does not require a wallet, an account, or a microphone.
-- The seated first pass put the ticket and the line on one writing surface and removed the competing hero, empty continuity sections, and future-desks grid. Paper-only disclosures, review safeguards, and opt-in microphone/audio are preserved. The physical room, Claflin display identity, and receiver still-then-WebGL swap are in place. Remaining work is completion, recovery, and comprehension — not more rooms.
+- The seated first pass put the ticket and the line on one writing surface and removed the competing hero, empty continuity sections, and future-desks grid. Paper/live disclosures, review safeguards, and opt-in microphone/audio are preserved. The physical room, Claflin display identity, and receiver still-then-WebGL swap are in place. Remaining work is completion, recovery, and comprehension — not more rooms.
 - The job is paper estimate → review → local record, optionally driven by the line — plus an env-gated live Base path (approve → execute → receipt) on the same ticket. The ticket, voice tools, and receiver share one foreground document; browsing a filed record is read-only. After filing, the compact ledger sits in the working area; the archive opens from there. Surfaces exist to serve that job: ticket, tape, board (when something exists), shareable `?intent=` drafts. They are not a landing inventory.
 - A live tape (`/api/stocks/marks`) shows indicative Chainlink reference marks for the quote-supported instruments — never offers — with explicit stale/unavailable labels. Tape marks load the instrument into the ticket. The receiver is furniture beside the line. Handset pickup is reserved for an actual voice connection, not a pending quote. First paint is a still from the model; WebGL replaces it after a matching frame.
 - A live ElevenLabs voice session (“Ring Hetty”) drives the same draft through client tools executing in the caller's browser: `choose_instrument`, `set_instruction`, `set_amount`, `request_estimate`, `describe_desk`, `record_paper`, `cancel_instruction`, `watch_mark`, `share_desk_note`. Session URLs are minted server-side (`/api/hetty/session`); the agent id and API key never reach the client. Hetty cannot sign, submit or reconcile — she drafts, quotes and records paper only, and speaks the desk's live/paper mode on every empty-ticket opening. The desk note is spoken verbatim from the house record — once per call, attributed, never advice, never an improvised quote. She belongs on a nameplate, not as the principal heading.
@@ -17,12 +17,19 @@
 - Wallet signing, two-step approval/execution and live receipt reconciliation exist behind `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED` (see `docs/LIVE_BASE_SPRINT.md`); with the flag off the desk stays paper-only. A durable live journal (`claflin.live.v1.*`) persists approval and swap hashes as soon as submission returns, reconciles pending/unknown rows after reload without resubmitting, and shows them beside paper in Your record — historical transactions, not holdings. A read-only Coinbase Verifications check exists in source (`lib/eligibility.ts`, `/api/eligibility`) for a later authority tier. It is not shown on the paper desk.
 - Public broker discovery/listing and ratings APIs return 410 through the routing layer. Former provider/settlement modules remain source infrastructure, not the product's identity or navigation model. No database deletion was performed.
 - `/desk-study` and `/widget-probe` are development references only and return not-found in production.
+- `/night-desk` is a public, noindex fixture prototype shipped in `decace0`: 3D room, scripted Jesse dialogue, fictional comparison/quotes and one tab-local example record. It does not open Jesse's real trading mandate. `/` remains Hetty/Base.
 - House sequence (Jesse / Isabel / Arbitrum) lives in §5. It is strategy, not first-page IA. The house directory can visit a planned desk as a closed room. That visit cannot quote, file paper, ring Hetty, or carry a Base approval. A four-card grid must not return.
 - Paper success is a filed paper record, not a live outcome. Live journal document types are approval, submitted swap, and confirmed swap; statuses remain `submitted`, `pending`, `filled`, `failed`, `unknown`.
 
-## Immediate opportunity
+## Immediate opportunity: Stocklana
 
-The user supplied Base's September 2 Builder Quest announcement for projects helping people trade or use Coinbase Tokenized Stocks on Base, with a $5,000 prize pool and Loom/X plus form submission. Confirm current terms, deadline and permitted demo modes before submitting. The quest motivates a coherent working demonstration; it does not justify fabricated execution or a return to marketplace breadth. Demo script: [docs/QUEST_DEMO.md](docs/QUEST_DEMO.md). If Privy is configured on the recorded deployment, Sign in will appear — do not present it as wallet bootstrap or live access.
+Current priority is Jesse/Solana for Stocklana, confirmed submission deadline **September 25, 2026 at 16:00 ET / 20:00 UTC / 21:00 BST**. The [four-engineer build plan](docs/STOCKLANA_BUILD_PLAN.md) is the executable brief. Start at `decace0` or a descendant; reuse the approved Night Desk prototype, connect real xStocks/Jupiter/Pyth/AssemblyAI, and retain controlled live execution as the separately gated R2 target. Do not port Hetty or replace the working homepage. Bounty scope is settled (2026-09-17): main track primary, Pyth secondary, PreStocks sanctioned as an additional secondary on Jesse's desk; Clawpump, Tessera, and Meteora-DBC-as-primary are declined — rationale and constraints live in the build plan's contest-focus section.
+
+Experience decision: Night and direct presentations are available from first use, with the same work/capabilities. The room gains continuity through explicit paper records and watches—not exams, XP, account balance, trade count, or paid-call activity. See [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation).
+
+Sequence: shared contracts → real quote/paper-file/return → duplex evidence and voice correction in both presentations → integrated failure/first/return acceptance → independently gated live proposal/signature/reconciliation → submission. Engineer 1 owns core contracts; 2 market evidence/presenter; 3 conversation/shared attention; 4 scene integration/direct view/wallet UI/release. Each supplies evidence; the lead reviews the integrated result before promotion.
+
+The earlier Base Builder Quest remains separate historical context, with [its demo script](docs/QUEST_DEMO.md). Do not treat that quest's assumptions or deadline as Stocklana requirements.
 
 ## 1. Finish the first useful client journey
 
@@ -93,6 +100,8 @@ Desire hook for early callers who respect the desk but need a reason to *want in
 
 **Formula:** be among the first to take a Base equity instruction by voice—and keep the slip that proves you were there. Coinbase tokenized stocks remain the fractional claim; the slip is provenance only.
 
+A keepsake records participation; it never unlocks the Night Desk or financial permissions. Stocklana requires ordinary retrievable paper records and explicit watches, not scarce seats, NFT minting or collectible mechanics. Do not build later keepsake phases as a dependency of Jesse's integration.
+
 | Phase | Deliverable |
 |---|---|
 | **A (now)** | Local commemorative slips on first paper file and first live Base fill; optional spoken dedication; ledger surface; never framed as the stock |
@@ -102,7 +111,7 @@ Desire hook for early callers who respect the desk but need a reason to *want in
 
 **Not backlog under this heading:** audible NFT “parcels” of tokenised stocks, slip trading games, or any collectible that sounds like ownership of the underlying.
 
-**Multi-desk architecture (in progress, branch `multi-desk-adapters`).** The House/Desk/Market model in `lib/house.ts` is now load-bearing: quotes and marks resolve through per-desk adapter registries (`lib/trading/adapters.ts`) instead of hard-coded Base paths. What landed:
+**Multi-desk adapter seams (on main; Solana integration incomplete).** The House/Desk/Market model in `lib/house.ts` is now load-bearing: quotes and marks resolve through per-desk adapter registries (`lib/trading/adapters.ts`) instead of hard-coded Base paths. What landed:
 
 - Instrument identity is a URN grammar — Base ids stay byte-identical (`8453:0x…`) so stored drafts and paper records keep resolving; `base:` folds to the canonical form; `sol:`/`rh:` parse for later. `VenuePair.venue`/`quoteSymbol` are open strings with `chainId` per pair.
 - Paper quote guardrails (10,000 USDC buy / 1,000 token sell, quote decimals) moved from the quote service into `deskQuoteLimits()` in the mandate, so a new desk never inherits Base's limits by accident.
@@ -114,7 +123,7 @@ Deliberately unchanged: `TradeIntent` units (`USDC`/`token`), the voice tool nam
 | Desk | Sequence and gate |
 |---|---|
 | Hetty / Base | First. Coinbase Tokenized Stocks, verified products, explicit access and execution policy. Adapter-backed (Aerodrome + Chainlink) on the desk-aware routes. |
-| Jesse Livermore / Solana | Second. Distinct instruments, signing/execution adapter and accountable handoff. Fully on-chain — proves the adapter pattern without broker paperwork. **Needs:** Jupiter quote API shape and a marks source decision (Pyth vs Switchboard). No Solana docs reviewed yet. |
+| Jesse Livermore / Solana | Second desk and current Stocklana priority. Night Desk fixture prototype shipped. xStocks Token-2022, Jupiter v2 and Pyth Pro documentation reviewed; exact mint/feed units, provider access, real quotes, voice and execution still require implementation/verification. Night/direct are presentation choices, not authority tiers. See [build plan](docs/STOCKLANA_BUILD_PLAN.md). |
 | Isabel Benham / Robinhood Chain | Third. EVM L2 (Arbitrum Orbit, chain ID 4663) — reuses the EVM adapter pattern, not Arbitrum One. Baseline already reviewed in [Architecture](docs/AGENTIC_ARCHITECTURE.md#robinhood-chain-integration-baseline): 18-decimal stock tokens, Chainlink per-token feeds, `/assets` + `/prices` data APIs, RFQ/AMM secondary venues. **Needs:** verified secondary-market venue with quote/submission interfaces, eligibility policy, account/gas setup. Not an order-placement API today. |
 | Jay Cooke / Arbitrum | Fourth. Named for the financier who built the distribution rails that let ordinary investors reach government bonds — fitting for an infrastructure-first network. Mostly config-level EVM reuse once the registry holds a second EVM entry; mandate, execution adapter and access model remain to be defined; existing billing infrastructure does not move it forward in the sequence. |
 
@@ -126,4 +135,4 @@ Do not revive open broker registration, marketplace rankings, personality quizze
 
 ## Verification and evidence
 
-The preceding paper slice passed unit/type/build checks and mocked browser lifecycle checks, with a separate read-only mainnet estimate. Viewport checks of the seated composition exist; they do not certify user comprehension of filing, return, or recovery. Neither set of checks claims a validated live voice or trading release. Live execution remains §4.
+The preceding paper slice passed unit/type/build checks and mocked browser lifecycle checks, with a separate read-only mainnet estimate. Viewport checks of the seated composition exist; they do not certify user comprehension of filing, return, or recovery. Neither set of checks claims a validated live voice or trading release. Live execution remains §4. The Night Desk prototype at decace0 separately passed 13 focused logic tests, 22 cloud desktop assertions and a production build; mobile and real provider integrations were not certified. Keep prototype and integrated-release evidence separate.

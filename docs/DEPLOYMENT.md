@@ -7,7 +7,10 @@
 | Vercel (frontend) | `claflin.trustfall.xyz` | Auto-deploys from `main`; desk UI; same-origin `/api/*` |
 | VPS (Hetzner API) | `api.claflin.trustfall.xyz` | PM2 standalone on `127.0.0.1:3042` behind nginx; ~52 MB |
 
-The client-facing product is the paper trading desk at `/`. Mounted desk
+The client-facing product is the trading desk at `/`, with real Base swaps
+when `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true` and paper trading available
+alongside them. With the flag off or unset, the desk is paper-only. Live
+transactions use the client wallet integration, not a server-held signer. Mounted desk
 routes: `/api/stocks/quote` (read-only estimates), `/api/stocks/marks`
 (indicative tape), `/api/hetty/session` (voice signed URL), and — when an
 account is configured — `/api/paper` and `/api/hetty/transcript`.
@@ -169,7 +172,7 @@ sudo certbot --nginx -d api.claflin.trustfall.xyz
 ---
 ## After Any Deployment
 
-1. `GET /` — the desk renders, paper mode is explicit, no stock preselected. Sign in appears only if Privy public env is set; there is no “Live access” banner.
+1. `GET /` — the desk renders, mode is explicit (live initial when the flag is on, paper recording still available), no stock preselected. Sign in appears only if Privy public env is set; there is no “Live access” banner.
 2. `GET /api/stocks/quote?instrumentId=<catalog-id>&side=buy&amount=100` —
    returns an estimate labelled with venue/reference freshness (requires
    `BASE_RPC_URL` for reliable results).

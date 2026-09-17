@@ -8,6 +8,29 @@
 
 **Governing idea:** you are not looking at a trading application with antique styling. You are giving an instruction to a house that keeps a record.
 
+## Night Desk progression and presentation
+
+**Approved 2026-09-17.** The room does not unlock; it becomes yours through the work you choose to keep. This decision supersedes older language that treats every spatial object as decorative weather or limits Jesse to a new nameplate and comparison card. It does not weaken trading safeguards or authorize a new homepage cutover.
+
+Today `/` remains the working Hetty/Base desk. `/night-desk` is the public, noindex, scripted Jesse/Solana experience study shipped in `decace0`; it has fictional prices/quotes, optional browser speech, no microphone or provider/trading connection, and one explicitly kept example record in tab-only sessionStorage. It is not the integrated Jesse desk. [Stocklana Build Plan](STOCKLANA_BUILD_PLAN.md) owns the four-engineer integration work and September 25 deadline.
+
+The integrated target has two presentations of the same broker and work: **Night Desk** (spatial/conversational) and **direct desk** (compact/low-graphics/keyboard-friendly). Neither is beginner/expert, premium/earned, or an authorization tier. Make both available from the first visit. Switching presentation preserves the active desk, chain, account, instruction, quote identity/expiry, saved work and existing authorization boundaries. Changing broker/network is separate. Keep `/` as it is until a later explicit default-entry decision.
+
+Progression means continuity and contextual depth:
+
+- First visit: a clear question or instruction path, not empty history panels or a compulsory tour.
+- First explicit paper save: a retrievable paper record, not a fill, rank, ownership certificate or room unlock.
+- Return: offer to revisit actual retained work; no invented familiarity, assumed holdings, or automatic transcript retention.
+- Explicit watch: give that instrument a place in the tray; respect unwatch/delete and the actual browser/account storage scope.
+- A request for more detail: reveal relevant evidence and explanation. Material terms remain available at the action regardless of experience.
+- A consequential live action: explain the actual product, units, reference-versus-quote distinction, fees and authority; separately enforce access policy and explicit wallet authorization.
+
+No entrance exam, XP, streak, balance threshold, minimum trades, paid-call consumption, or financial success metric unlocks the experience. A contextual comprehension check may support a risky action where appropriate; passing it never proves eligibility or grants spending authority. A standalone quiz/grading system is not in the Stocklana sprint. An optional invitation after a first saved paper instruction is allowed only if Night Desk access was already available.
+
+Declining to trade is a valid outcome. Explicit watches provide non-trading continuity; saving a research/comparison artifact can be added later without making it a prerequisite for trading. Never increase turnover to make the room feel more personal. No account or microphone is required to enter either presentation.
+
+The room participates in shared attention: comparison brings the duplex instrument and its evidence forward; a correction visibly supersedes the old quotation; successful filing gives the record a stable place in the ledger. Scene focus never authorizes an action. Keep readable HTML, clear labels and keyboard/manual equivalents; no free roaming, hidden controls or mandatory camera travel.
+
 ## The central idea
 
 **Claflin is a voice-first trading product expressed as a Deco-futurist brokerage house. Specialist AI brokers help clients turn trading intent into clearly understood, explicitly authorized, verifiable execution.**
@@ -30,7 +53,7 @@ The initial audience is clients who want a simpler way to discover, understand, 
 
 The core job is: **help me make the trade I intend, on the right market and account, under terms I understand and approve, and show me what actually happened.** Research helps clarify intent; it is not a substitute for an execution-capable product.
 
-Paper simulation and testnet transactions are development/validation stages, not the long-term end product. Live execution is a core planned milestone with explicit integration, eligibility, and security gates; it is not currently implemented. A user's decision not to proceed must always be respected.
+Paper simulation and testnet transactions are development/validation stages, not the long-term end product. Base has an env-gated execution implementation; Jesse live execution remains unimplemented and separately gated. Code presence or a paper/testnet result does not establish release acceptance. A user's decision not to proceed must always be respected.
 
 Return visits should make it easy to review actual orders/positions, resume a pending decision, or place another intended trade without restarting a discovery or content-consumption sequence.
 
@@ -41,10 +64,11 @@ Return visits should make it easy to review actual orders/positions, resume a pe
 3. **Trade facilitation is primary.** Instrument access, quote quality, order review, execution, and outcome tracking take priority over editorial content and call telemetry. Keep call controls/terms available, but do not make publications or prolonged conversation a prerequisite for a trade.
 4. **Clarity wins over theater.** No artificial connection waits, obscure controls, surprise microphone activation, fictional market data presented as real, or aesthetic treatment that conceals a financial boundary. A certificate-inspired dossier must not pretend to be a legal ownership certificate. **Desk slips** (commemorative provenance of an instruction or Base fill) may create belonging; they must never be framed as the tokenized stock, a parcel of equity, or a second ownership claim — see [Desk slips](DESK_SLIPS.md).
 5. **Continuity, not consumption.** Help clients resume notes and unresolved questions. Do not reward paid minutes, daily calling streaks, or trading frequency. Limited historical “seat / participation” keepsakes are provenance, not gamification.
-6. **Progressive disclosure, not hidden terms.** Keep provider/protocol detail secondary; expose AI identity, paper-only status, trial terms, paid rate, actual cap, and required approval before the relevant action.
+6. **Progressive disclosure, not hidden terms.** Keep provider/protocol detail secondary; expose AI identity, the active paper/live mode, trial terms, paid rate, actual cap, and required approval before the relevant action.
 7. **Immersion is optional; usability is not.** The complete journey must work without ambient audio, spatial motion, a pointer gesture, or a desktop-sized viewport. Most objects establish the room; the client must never play "find the trading controls."
-8. **A desk, not a page.** The ticket or the line is the first semantic thing. The receiver, a nameplate, the tape, and the room are weather — they must not become a hero, a tour, or a second homepage. Do not introduce the broker four times. Do not explain the house on first arrival. Navigation describes the client's work, not page chapters.
+8. **A desk, not a page.** The ticket or the line is the first useful action. In the Night Desk, relevant instruments and papers may become the semantic work through shared focus, not merely background scenery. Do not require a hero tour or create a separate marketing homepage before the task. Do not introduce the broker four times. Navigation describes the client's work; scene movement must not compete with review.
 9. **Paper is the house language.** The blotter is the draft; a returned estimate is a quotation slip; saved work is a ledger; watched marks are pigeonholes; the ticker is labelled reference, never a fabricated screen. One document whose state you understand — not separate decorative animations. A commemorative desk slip is furniture beside the ledger — a kept blotter line — not a trading surface.
+10. **Every word the desk speaks must be true of what it observed.** Confirmations restate only what the current input contributed; carried-over state is dropped or labelled as carried-over. A voice-attributed line originates from that voice. Certainty is computed from evidence or omitted — never a reassuring constant. Missing values stay missing until the client supplies them. See [Honest speech](AGENTIC_ARCHITECTURE.md#honest-speech-restating-only-what-was-observed).
 
 ## Information hierarchy
 
@@ -77,8 +101,8 @@ The seated first pass (`WorkingDesk.tsx`) consolidated the ticket and the line o
 
 | Desk | Character and editorial lens | Intended initial access | Status |
 |---|---|---|---|
-| Hetty Green | Capital preservation, independent judgment, downside and concentration before conviction. | **Coinbase Tokenized Stocks on Base**: B20 tokens issued by Coinbase, 1:1 claims on shares in regulated custody, eligible non-US users only. Catalog and contract addresses documented in the [integration baseline](AGENTIC_ARCHITECTURE.md#coinbase-tokenized-stocks-on-base-integration-baseline); Aerodrome read-only quote adapter implemented for the initial paper subset. | First delivery priority; paper estimate/review/local-record flow exists, execution adapter not implemented. Eligibility gating is Claflin's responsibility—secondary trading is permissionless onchain. |
-| Jesse Livermore | Price action, timing, market structure, disciplined speculation. | Solana; asset catalog and execution adapter to be selected. | Later specialist desk, after Hetty's flow is proven. |
+| Hetty Green | Capital preservation, independent judgment, downside and concentration before conviction. | **Coinbase Tokenized Stocks on Base**: B20 tokens issued by Coinbase, 1:1 claims on shares in regulated custody, eligible non-US users only. Catalog and contract addresses documented in the [integration baseline](AGENTIC_ARCHITECTURE.md#coinbase-tokenized-stocks-on-base-integration-baseline); Aerodrome read-only quote adapter implemented for the initial paper subset. | Established Base desk; paper estimate/review/local-record flow and env-gated execution code exist. Live release acceptance remains separate from code presence. Eligibility gating is Claflin's responsibility—secondary trading is permissionless onchain. |
+| Jesse Livermore | Price action, timing, market structure, disciplined speculation. | Solana xStocks, Jupiter and Pyth are the selected integration direction; exact coverage/access remain verification gates. | Current Stocklana priority. Public Night Desk fixture study shipped; real market/voice/execution integrations remain the four-engineer build. |
 | Isabel Benham | Fundamental and sector analysis supporting trade decisions. | Robinhood Chain, not Robinhood's brokerage-account API. | Network choice resolved by the user. Official docs describe a live EVM L2 and Stock Token integrations; Claflin's specific products, venue, eligibility, and adapter remain to be verified. |
 | Jay Cooke | Distribution and access: the financier who built the machinery that put Civil War government bonds into ordinary hands — rails before trades. | Arbitrum; likely the deepest existing Claflin infrastructure overlap. | Fourth and last in the current sequence—after Base, Solana, and Robinhood Chain. The desk's mandate, execution adapter and access model remain to be defined when commissioned. Do not accelerate it because call billing already uses Arbitrum; billing infrastructure is not an execution mandate. |
 
@@ -172,7 +196,7 @@ Build credibility through useful reasoning, reproducible sources, honest revisio
 
 ## Adaptive and adaptable desk
 
-**Target behavior for a later desk, not the current page outline.** Do not build ranking, pins, or “why shown” as first-page architecture.
+**Explicit-save/return continuity is in the current Jesse integration scope; inferred personalization and ranking remain later work.** Do not build an engagement score or empty “why shown” sections as first-page architecture.
 
 **Adaptive** means the system surfaces relevant work. **Adaptable** means the client controls that workspace. Neither means rearranging essential controls unpredictably or inventing personal knowledge.
 
@@ -229,14 +253,15 @@ The September 5 review used repository documentation and source, not a live visu
 | [Retro-futuristic UI](https://github.com/Imetomi/retro-futuristic-ui-design) | Tactile hardware, recessed illuminated displays, directional highlights, raised/pressed feedback. | Its 1970s–80s cassette-futurist spacecraft/surveillance identity, recurring glitches, boot delays, or distorted text. Capable machinery, not simulated malfunction. |
 | [Sylva](https://github.com/MengTo/sylva) | Scene and interface sharing depth, a memorable central subject, responsive materials, a composed static first frame. | Moss/pollen, signature composition, source code/artwork, or shader controls everywhere. Its own code/design/artwork have no reuse license; use as a principle-level reference only. |
 | [MengTo Skills](https://github.com/MengTo/Skills) | Small, coherent workflows for art direction, tactile surfaces, motion, and lifecycle/performance verification. | A wholesale skill import, mandatory smooth scrolling, or marketing-page conventions applied to a working product. |
+| [John and Patricia's comfort website](https://github.com/andrewwoan/john-and-patricias-romantic-comfort-website) | Objects as meaningful destinations, bounded camera focus and spatial continuity. | Its artwork/music, compulsory entry ceremony, or exploratory navigation as a prerequisite for a financial action. |
 
 **Art Deco supplies the architecture. Retro-futurism supplies the instruments. Sylva supplies the standard of spatial integration. The house supplies the room. The active broker supplies the relationship.**
 
-The physical brokerage is the stronger immersiveness path: dark wood, frosted glass, brass signs, blotters, ledgers, pigeonholes, a ticker feeding a strip of paper, correspondence that looks handled. Not rows of traders staring at screens. Not a spectacular telephone. Keep the consolidated interface. Do not add another layer of atmosphere until filing, return, and recovery stay coherent.
+The physical brokerage is the chosen immersiveness path: warm wood, cool glass, brass instruments, blotters and a ledger. Reuse the shipped Night Desk scene rather than adding rooms or copying reference assets. Its duplex instrument and paper/ledger sequence carry the client's work; they are not another layer of decoration around a form. Keep completion, return and recovery coherent in both presentations.
 
 ### A seated desk, not a layout contract
 
-The seated first pass put the ticket and the line on one writing surface (green felt, walnut, brass). That organisation, and the physical room around it, are in place. Further objects are not the next job. Completion and recovery — what happened, where it lives, that no funds moved — are.
+The earlier Base desk remains the working default. Jesse's approved Night Desk prototype adds a connected scene, duplex evidence focus, a moving slip and an opening ledger. Integrating those objects with real, shared work is now the job—not constructing additional rooms or preserving a fixed two-column form layout.
 
 The receiver is furniture: a sculptural enamel/brass object with a recessed display. It is not an off-the-shelf rotary phone, not the brand, and not the primary invitation. Reserve handset pickup for an actual voice connection — not a pending quote. Do not squeeze the application into the object's display.
 
@@ -254,7 +279,7 @@ Use Deco geometry in silhouettes, proportions, framing, and identity rather than
 
 Motion should establish continuity and respond to meaningful events. A quotation slip arriving beside the instruction, then becoming a filed paper record after explicit approval, is the signature interaction — one document whose changing state you understand. Restrained pointer-responsive reflections or depth may establish material; they must be additive for touch/keyboard users. No artificial waits, simulated malfunctions, or success indicators without evidence.
 
-Three.js is justified for selective movement of the receiver, paper transport, and depth — not a fully simulated office and not a reason to rebuild the app. Use a complete static still (not a different SVG), bounded pixel ratio, no continuous idle render loop, and full resource cleanup. The first study uses existing CSS/React for interaction; it does not add a second motion library or a scroll engine.
+Three.js is justified for the bounded Night Desk scene, focus transitions, instruments and paper continuity—not a free-roaming office. Keep one renderer, bounded pixel ratio, render-on-demand and full cleanup. Financial text and actions remain semantic HTML, with direct/low-graphics and reduced-motion paths using the same work controller. The prototype has no second motion library or scroll engine; do not add one without a demonstrated need.
 
 Sound may include a restrained receiver click, paper movement, or distant office activity. It must be opt-in, controllable, and quiet or absent during speech. Preserve voice intelligibility; no aggressive period filtering or automatic background soundtrack. The live desk offers an opt-in floor tone (`Hear the floor`); it stays off by default, dies while the line is live, and is not a soundtrack. Voice casting remains separate work.
 
@@ -262,11 +287,11 @@ Sound may include a restrained receiver click, paper movement, or distant office
 
 The live product is `/`, driven by `useTradingDesk` and the current broker session. Stages are desk states (draft, review, saved, on the line), not landing-page sections. The seated desk and physical room are the organisation to keep. Remaining acceptance is completion, recovery, and whether a person can say what happened, where the record lives, and that no funds moved.
 
-`/desk-study` (`app/desk-study/page.tsx`, `components/desk/DeskStudy.tsx`, `lib/desk-study.ts`) remains a development-only fixture: three manually selectable states, in-memory acknowledgement, no records, no market-data or microphone access, noindex, absent from client navigation and production. Do not treat it as the product or as visual acceptance of `/`.
+The current study is `/night-desk` (`app/night-desk/page.tsx`, `components/night-desk/`, `lib/night-desk-scene.ts`, `lib/night-desk-state.ts`, `lib/night-desk-fixtures.ts`). It demonstrates scripted comparison, 100-to-50 correction, and a kept example slip with tab-only restoration. `/desk-study` points to the same study only in development and stays not-found in production. The older `components/desk/DeskStudy.tsx`/`lib/desk-study.ts` remain source, not the current routed study. Do not treat any of these fixtures as real market data, production voice or trading acceptance.
 
 Geometry, wordmark, and CSS fallback are original; no reference assets or code were transplanted. Three.js and its bundled environment helper are the rendering dependency, not Sylva's implementation.
 
-Browser visual and device validation remain required for recovery and short viewports; source, type, and build checks do not certify comprehension.
+The Night Desk prototype passed cloud Chromium desktop checks and a production build; the user approved its direction. This does not certify final materials, actual provider voice, real financial integrations, mobile acceptance, or user comprehension. Integrated first/return-visit, device and failure validation remain required.
 
 Open decisions: how far paper analogues go before they become decoration, exact historical vocabulary, identity/portrait treatment, the current broker's sonic character beyond the live voice session, and measured device budgets. Preserve reference attribution and update this section rather than creating a competing design brief.
 
@@ -321,7 +346,7 @@ Evaluate publications and adaptation by their contribution to discovery, compreh
 ## Documentation ownership
 
 - **This document** owns enduring product principles, the client journey, information hierarchy (house identity and attention), exclusions, and reference-dependent decisions. It does not own a component list or a visual stack.
-- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, remaining completion-and-recovery work, house-desk order, and release evidence. Live trading stays a later milestone.
+- **[ROADMAP.md](../ROADMAP.md)** owns sequencing, remaining completion-and-recovery work, house-desk order, and release evidence. Jesse live trading is the gated R2 target in the Stocklana build; it is not unlocked by experience.
 - **[AUTH_AND_ACCESS.md](AUTH_AND_ACCESS.md)** owns capability tiers and what the account scaffold actually does.
 - **[README.md](../README.md)** owns orientation, setup, and the documentation map.
 - **Technical documents** own implementation details and dated observations, not independent product strategies. Distinguish historical behavior, current code, and proposed behavior explicitly.
