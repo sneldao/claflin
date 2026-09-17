@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TradeIntent } from '@/lib/trading/domain';
 import { playSolenoidClick } from '@/lib/sounds';
 
@@ -15,6 +15,10 @@ export interface UseDictationOptions {
   onIntentParsed?: (intent: Partial<TradeIntent>, transcript: string) => void;
 }
 
+/* The Wake Lock API is not in every TS DOM lib yet — a structural type is
+   all the hook needs. */
+type WakeLockSentinelLike = { release: () => Promise<void> };
+
 export function useDictation(options?: UseDictationOptions) {
   const [state, setState] = useState<DictationState>({
     status: 'idle',
@@ -27,6 +31,23 @@ export function useDictation(options?: UseDictationOptions) {
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const startTimeRef = useRef<number>(0);
+  const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
+
+  const releaseWakeLock = useCallback(() => {
+    void wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
+  }, []);
+
+  /* A dimmed screen reads as a dead mic: hold the display awake while the
+     caller talks. A nicety only — never blocks dictation. */
+  const acquireWakeLock = useCallback(async () => {
+    try {
+      const wakeLock = (navigator as Navigator & { wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> } }).wakeLock;
+      wakeLockRef.current = (await wakeLock?.request('screen')) ?? null;
+    } catch {
+      wakeLockRef.current = null;
+    }
+  }, []);
 
   const cleanup = useCallback(() => {
     if (streamRef.current) {
@@ -36,7 +57,20 @@ export function useDictation(options?: UseDictationOptions) {
     mediaRecorderRef.current = null;
     audioChunksRef.current = [];
     startTimeRef.current = 0;
-  }, []);
+    releaseWakeLock();
+  }, [releaseWakeLock]);
+
+  /* The OS drops the wake lock when the tab hides; retake it on return if
+     the caller is still mid-sentence. */
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && mediaRecorderRef.current?.state === 'recording') {
+        void acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [acquireWakeLock]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -62,6 +96,22 @@ export function useDictation(options?: UseDictationOptions) {
         },
       });
       streamRef.current = stream;
+
+      /* A call, Siri, or a pulled headset ends the track without asking.
+         stop() never fires 'ended', so our own cleanup cannot trip this. */
+      stream.getAudioTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          cleanup();
+          setState({
+            status: 'error',
+            transcript: null,
+            error: 'The microphone was interrupted — try again when the line is clear, or type the instruction below.',
+            provider: null,
+          });
+        });
+      });
+
+      void acquireWakeLock();
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm')
         ? 'audio/webm'
@@ -96,7 +146,7 @@ export function useDictation(options?: UseDictationOptions) {
         provider: null,
       });
     }
-  }, [cleanup]);
+  }, [cleanup, acquireWakeLock]);
 
   const stopRecording = useCallback(async () => {
     const recorder = mediaRecorderRef.current;
@@ -109,7 +159,7 @@ export function useDictation(options?: UseDictationOptions) {
       setState({
         status: 'error',
         transcript: null,
-        error: 'That was too short to hear — hold the button, say something like “Buy 100 USDC of Nvidia”, then release.',
+        error: 'That was too short to hear — try again and say something like “Buy 100 USDC of Nvidia”.',
         provider: null,
       });
       return;
@@ -284,7 +334,7 @@ export function friendlyDictationError(status: number, code?: string, serverMess
   }
   if (status === 400 || code === 'bad_request') {
     return serverMessage && /empty|no audio/i.test(serverMessage)
-      ? 'Nothing was captured — hold the button while you speak, then release. Or type the instruction below.'
+      ? 'Nothing was captured — try again, speaking a full sentence. Or type the instruction below.'
       : 'That recording did not come through — try again, or type the instruction below.';
   }
   if (status === 503 || code === 'credits_exhausted') {

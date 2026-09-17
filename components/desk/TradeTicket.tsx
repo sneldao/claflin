@@ -319,6 +319,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const expiringSoon = !recorded && !expired && secondsLeft !== null && secondsLeft <= 5;
   /* Typing while the line is live: Hetty holds, the ticket listens to keys. */
   const [typing, setTyping] = useState(false);
+  /* Touch dictates by press-and-hold (the phone-native pattern); the mouse
+     keeps tap-to-toggle. holdReleaseRef swallows the synthetic click that
+     follows a touch release on some browsers. */
+  const [holdMode, setHoldMode] = useState(false);
+  const holdReleaseRef = useRef(0);
   /* While the line is live, a changed control pulses once — the caller sees
      Hetty's words land on the paper, not just hears them in the room. */
   const [flash, setFlash] = useState<'instrument' | 'side' | 'amount' | null>(null);
@@ -453,27 +458,53 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             ))}
           </fieldset>
           <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
-          <div className={styles.dictationBar} title="One shot, no conversation: tap, say e.g. “Buy 100 USDC of Nvidia”, tap again — the words land on the ticket for your review. Or type below.">
+          <div className={styles.dictationBar} title="One shot, no conversation: press and hold, say e.g. “Buy 100 USDC of Nvidia”, release — the words land on the ticket for your review. Or type below.">
             <button
               type="button"
               className={styles.dictationButton}
               data-recording={isRecording ? 'true' : undefined}
               data-transcribing={isTranscribing ? 'true' : undefined}
               disabled={isTranscribing}
+              onPointerDown={e => {
+                if (e.pointerType === 'mouse' || isTranscribing) return;
+                /* Touch: press-and-hold. Pointer capture keeps the release
+                   landing here even if the finger drifts off the button. */
+                e.preventDefault();
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older Safari */ }
+                setHoldMode(true);
+                void startRecording();
+              }}
+              onPointerUp={e => {
+                if (e.pointerType === 'mouse' || !holdMode) return;
+                holdReleaseRef.current = Date.now();
+                setHoldMode(false);
+                void stopRecording();
+              }}
+              onPointerCancel={() => {
+                if (!holdMode) return;
+                holdReleaseRef.current = Date.now();
+                setHoldMode(false);
+                void stopRecording();
+              }}
+              onContextMenu={e => {
+                // An iOS long-press must never open the callout menu mid-dictation.
+                e.preventDefault();
+              }}
               onClick={() => {
+                if (Date.now() - holdReleaseRef.current < 700) return;
                 if (isRecording) {
                   void stopRecording();
                 } else {
                   void startRecording();
                 }
               }}
-              title="One shot, no conversation: tap, say e.g. “Buy 100 USDC of Nvidia”, tap again — the words land on the ticket for your review. Or type below."
-              aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice — tap, speak, tap to finish'}
+              title="One shot, no conversation: press and hold, say e.g. “Buy 100 USDC of Nvidia”, release — the words land on the ticket for your review. Or type below."
+              aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice — press and hold, speak, release to finish'}
             >
               <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
               {isRecording ? (
                 <>
-                  Listening… tap to finish
+                  {holdMode ? 'Listening… release to finish' : 'Listening… tap to finish'}
                   <span className={styles.dictationWaveform} aria-hidden="true">
                     <i /><i /><i /><i /><i /><i />
                   </span>
@@ -483,7 +514,9 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             <span className={styles.dictationBadge} title="Fills the ticket only — you review and confirm. For a back-and-forth conversation, talk with Hetty ↓">No call · You confirm</span>
           </div>
           {isRecording && (
-            <p className={styles.dictationHint} role="status">Say the stock and the amount, then tap again.</p>
+            <p className={styles.dictationHint} role="status">
+              {holdMode ? 'Keep holding — say the stock and the amount, then release.' : 'Say the stock and the amount, then tap again.'}
+            </p>
           )}
           {isTranscribing && (
             <p className={styles.dictationHint} role="status">Writing it down…</p>

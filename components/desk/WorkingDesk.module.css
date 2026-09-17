@@ -1069,7 +1069,7 @@
 
 /* ————— AssemblyAI Dictation Input ————— */
 .dictationBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 6px; padding: 8px 12px; background: #27362b0c; border: 1px solid var(--desk-paper-rule); }
-.dictationButton { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--desk-paper-rule); background: transparent; color: var(--desk-paper-ink); padding: 6px 10px; font: 600 11px/1 var(--font-mono), monospace; letter-spacing: .06em; cursor: pointer; transition: background var(--dur-1) var(--ease-swift), border-color var(--dur-1); }
+.dictationButton { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--desk-paper-rule); background: transparent; color: var(--desk-paper-ink); padding: 6px 10px; font: 600 11px/1 var(--font-mono), monospace; letter-spacing: .06em; cursor: pointer; transition: background var(--dur-1) var(--ease-swift), border-color var(--dur-1); -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
 .dictationButton:hover:not(:disabled) { background: #27362b14; border-color: var(--desk-paper-muted); }
 .dictationButton[data-recording="true"] { background: var(--desk-paper-ink); color: var(--desk-paper-light); border-color: var(--desk-paper-ink); }
 .dictationDot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--desk-patina); }
@@ -1091,6 +1091,28 @@
 .dictationHint { margin: 6px 0 0 !important; color: var(--desk-paper-muted); font-size: 11px; line-height: 1.5; }
 .dictationError { margin: 6px 0 0 !important; padding: 8px 10px; background: #6e2b1f14; border-left: 2px solid #c98f7a; color: var(--desk-paper-ink); font-size: 11px; line-height: 1.5; }
 .dictationSeal { display: block; margin-top: 4px; font: 8px/1.4 var(--font-mono), monospace; letter-spacing: .1em; color: var(--desk-brass); text-transform: uppercase; }
+
+/* ————— Voice bar on small screens: pinned to the thumb zone —————
+   On a phone the dictaphone is the primary input, so it docks to the
+   bottom edge, clear of the home indicator; the drafting ticket keeps
+   room to scroll beneath it. */
+@media (max-width: 760px) {
+  .dictationBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--desk-paper-light);
+    border: 0;
+    border-top: 1px solid var(--desk-paper-rule);
+    box-shadow: 0 -6px 18px #15251f33;
+  }
+  .dictationButton { flex: 1; justify-content: center; min-height: 48px; }
+  .ticket[data-ticket-view="draft"] { padding-bottom: 96px; }
+}
 
 /* Hetty's hand on the paper: while the line is live, the control she just
    changed pulses once — cause and effect in the same frame. */

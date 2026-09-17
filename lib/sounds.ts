@@ -16,6 +16,11 @@ function getAudioContext(): AudioContext | null {
       return null;
     }
   }
+  // iOS creates the context suspended until a user gesture. Every sound here
+  // is triggered from one, so resuming is allowed and keeps the click audible.
+  if (audioCtx.state === 'suspended') {
+    void audioCtx.resume().catch(() => {});
+  }
   return audioCtx;
 }
 

@@ -30,6 +30,9 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  // cover extends the page under the notch/home indicator so the pinned
+  // dictaphone bar can pad itself with env(safe-area-inset-bottom).
+  viewportFit: 'cover',
   themeColor: '#15251f',
 };
 
