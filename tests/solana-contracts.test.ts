@@ -5,7 +5,7 @@ import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
 import { quoteAdapterFor } from '../lib/trading/adapters';
 import { isJesseIntent, isSolanaEstimate, isSolanaInstrumentId } from '../lib/solana/contracts';
-import { decodeBase58, getSolanaInstrument, instrumentsForSolanaDesk, parseSolanaInstrumentId, SOLANA_INSTRUMENTS } from '../lib/solana/catalog';
+import { decodeBase58, getSolanaInstrument, instrumentsForSolanaDesk, parseSolanaInstrumentId, SOLANA_INSTRUMENTS, SOLANA_USDC_DECIMALS, SOLANA_USDC_MINT } from '../lib/solana/catalog';
 import { displayedToRaw, effectiveDisplayed, rawToDisplayed } from '../lib/solana/amounts';
 import { AAPLX_FIXTURE, JESSE_BUY_INTENT, JESSE_SELL_INTENT, SOLANA_PAPER_ESTIMATE_FIXTURE } from '../lib/solana/fixtures';
 
@@ -49,9 +49,38 @@ describe('desk capabilities drive openness', () => {
 });
 
 describe('solana instrument catalog', () => {
-  it('ships an empty allowlist until mints are verified', () => {
-    assert.equal(SOLANA_INSTRUMENTS.length, 0);
-    assert.equal(instrumentsForSolanaDesk().length, 0);
+  it('ships the verified xStock allowlist with provenance', () => {
+    /* Verified 2026-09-17 against the issuer API and mainnet RPC — see the
+       module header in lib/solana/catalog.ts. Identity is verified here;
+       quoteSupported flips only after route/feed validation. */
+    assert.equal(SOLANA_INSTRUMENTS.length, 3);
+    assert.equal(instrumentsForSolanaDesk(), SOLANA_INSTRUMENTS);
+    assert.deepEqual(SOLANA_INSTRUMENTS.map(i => i.symbol), ['AAPLx', 'NVDAx', 'TSLAx']);
+    assert.deepEqual(SOLANA_INSTRUMENTS.map(i => i.underlyingSymbol), ['AAPL', 'NVDA', 'TSLA']);
+    assert.equal(new Set(SOLANA_INSTRUMENTS.map(i => i.mint)).size, 3, 'mints are unique');
+    for (const instrument of SOLANA_INSTRUMENTS) {
+      assert.equal(instrument.network, 'solana:mainnet');
+      assert.equal(instrument.deskId, 'jesse');
+      assert.equal(instrument.tokenProgram, 'spl-token-2022');
+      assert.equal(instrument.decimals, 8, `${instrument.symbol}: RPC-verified decimals`);
+      assert.equal(instrument.id, `sol:${instrument.mint}`);
+      assert.equal(instrument.quoteSupported, false, `${instrument.symbol}: route not yet validated`);
+      assert.equal(decodeBase58(instrument.mint)?.length, 32, `${instrument.symbol}: mint decodes to a public key`);
+      assert.ok(instrument.identitySourceUrl.startsWith('https://api.xstocks.fi/'), instrument.symbol);
+      assert.ok(instrument.verifiedAt > 0, instrument.symbol);
+    }
+  });
+  it('resolves a real allowlisted mint, case-exact', () => {
+    const aaplx = getSolanaInstrument('sol:XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp');
+    assert.equal(aaplx.symbol, 'AAPLx');
+    /* Case carries information in base58: the lowercased twin is a valid
+       32-byte string but is NOT this instrument. */
+    assert.equal(codeOf(() => getSolanaInstrument('sol:XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp'.toLowerCase())).code, 'unknown_instrument');
+  });
+  it('keeps the canonical USDC mint decodable and separate from Base USDC', () => {
+    assert.equal(decodeBase58(SOLANA_USDC_MINT)?.length, 32);
+    assert.equal(SOLANA_USDC_DECIMALS, 6);
+    assert.notEqual(SOLANA_USDC_MINT.toLowerCase(), SOLANA_USDC_MINT, 'mixed case preserved');
   });
   it('preserves an exact mixed-case mint through a catalog round trip', () => {
     const mint = AAPLX_FIXTURE.mint;

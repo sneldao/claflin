@@ -1,8 +1,25 @@
 /**
  * Jesse's Solana instrument catalog — a sourced allowlist, never a dynamic
- * arbitrary-token catalog. EMPTY for now: real xStock mints, decimals, and
- * multiplier extensions are verified against authoritative sources in a
- * later work-order step and persisted here with their provenance.
+ * arbitrary-token catalog. Every entry was verified 2026-09-17 against two
+ * independent authorities: the issuer's public API (Backed/xStocks,
+ * `identitySourceUrl` per entry) and Solana mainnet RPC `getAccountInfo`
+ * (solana-rpc.publicnode.com, slot 447810681).
+ *
+ * What the mints showed on-chain, and what it means for the desk:
+ * - All three xStocks are Token-2022 mints (owner TokenzQdBN…PxuEb) with
+ *   8 decimals — not the 6 of the plan's worked examples.
+ * - All three carry metadataPointer, permanentDelegate, defaultAccountState,
+ *   scaledUiAmountConfig, pausableConfig, confidentialTransferMint,
+ *   transferHook and tokenMetadata extensions, plus live issuer mint/freeze
+ *   authorities — expected for issuer-controlled RWAs, disclosed on the
+ *   ticket, and re-checked at any live preparation (plan §4.3).
+ * - The scaled-UI multiplier is fee-accreting: observed raw fields had
+ *   AAPLx 1.0026642075893797 (queued 1.0032690125398187 activating
+ *   2026-09-10) and NVDAx 1.0009180758490996 (queued 1.001701196801074
+ *   activating 2026-09-10), TSLAx exactly 1. The multiplier is therefore
+ *   NEVER stored here — it is read live at quote time with the program's
+ *   effective-at semantics. This catalog holds identity, not conversion
+ *   state.
  *
  * Solana mint case is preserved everywhere in this module — the legacy
  * getDeskInstrument lowercases entire ids, and that EVM normalization must
@@ -59,8 +76,71 @@ export function parseSolanaInstrumentId(id: string): SolanaInstrumentId {
   return id;
 }
 
-/** The verified allowlist — intentionally empty until mints are sourced. */
-export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([]);
+/**
+ * Canonical Solana USDC — confirmed from the issuer's own stablecoin list
+ * (every xStock deployment above quotes USDC at this address) and from RPC
+ * (legacy spl-token program, 6 decimals, supply consistent with the canonical
+ * Circle mint). Never copied from Base's USDC address.
+ */
+export const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+export const SOLANA_USDC_DECIMALS = 6;
+
+/**
+ * The verified allowlist. `quoteSupported` stays false until each mint's
+ * Jupiter route and Pyth feed mapping pass their own validation (plan §3,
+ * work-order item 3) — identity is verified here, quotability is not
+ * claimed yet. verifiedAt is the identity-check instant (2026-09-17).
+ */
+export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([
+  Object.freeze({
+    id: 'sol:XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp',
+    network: 'solana:mainnet',
+    deskId: 'jesse',
+    mint: 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp',
+    symbol: 'AAPLx',
+    name: 'Apple xStock',
+    underlyingSymbol: 'AAPL',
+    decimals: 8,
+    tokenProgram: 'spl-token-2022',
+    issuer: 'Backed Finance (xStocks)',
+    termsUrl: 'https://xstocks.fi/us/products#AAPLx',
+    identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/AAPLx',
+    verifiedAt: 1789653043000,
+    quoteSupported: false,
+  } satisfies SolanaInstrument),
+  Object.freeze({
+    id: 'sol:Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh',
+    network: 'solana:mainnet',
+    deskId: 'jesse',
+    mint: 'Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh',
+    symbol: 'NVDAx',
+    name: 'NVIDIA xStock',
+    underlyingSymbol: 'NVDA',
+    decimals: 8,
+    tokenProgram: 'spl-token-2022',
+    issuer: 'Backed Finance (xStocks)',
+    termsUrl: 'https://xstocks.fi/us/products#NVDAx',
+    identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/NVDAx',
+    verifiedAt: 1789653043000,
+    quoteSupported: false,
+  } satisfies SolanaInstrument),
+  Object.freeze({
+    id: 'sol:XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
+    network: 'solana:mainnet',
+    deskId: 'jesse',
+    mint: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
+    symbol: 'TSLAx',
+    name: 'Tesla xStock',
+    underlyingSymbol: 'TSLA',
+    decimals: 8,
+    tokenProgram: 'spl-token-2022',
+    issuer: 'Backed Finance (xStocks)',
+    termsUrl: 'https://xstocks.fi/us/products#TSLAx',
+    identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/TSLAx',
+    verifiedAt: 1789653043000,
+    quoteSupported: false,
+  } satisfies SolanaInstrument),
+]);
 
 /** Every instrument Jesse's desk may quote — today, none. */
 export function instrumentsForSolanaDesk(): readonly SolanaInstrument[] {

@@ -27,6 +27,9 @@ SKIP_PATTERNS=(
   "docs/DICTATION.md"
   "docs/STOCKLANA_BUILD_PLAN.md"
   "lib/eligibility.ts"
+  # Public Solana token mint addresses (base58, 32-byte keys) trip the
+  # generic 40+ pattern — they are public identifiers, not secrets.
+  "lib/solana/catalog.ts"
 )
 
 # ─────────────────────────────────────────────
