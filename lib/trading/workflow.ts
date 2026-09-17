@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getDeskInstrument, resolveDeskAlias } from './catalog';
-import { formatAmount, intentSchema, LIVE_ASSUMPTIONS, PAPER_ASSUMPTIONS, parseAmount, parseIntent, type QuoteEstimate, type TradeIntent } from './domain';
+import { formatAmount, intentSchema, LIVE_ASSUMPTIONS, PAPER_ASSUMPTIONS, parseAmount, parseIntent, type BaseQuoteEstimate, type QuoteEstimate, type TradeIntent } from './domain';
 
 const positiveRaw = z.string().max(78).regex(/^[1-9]\d*$/);
 const decimal = z.string().max(180).regex(/^\d+(\.\d+)?$/);
@@ -13,7 +13,10 @@ const estimateSchema = z.object({
   blockNumber: z.number().int().positive(), blockTimestamp: z.number().int().positive(), quotedAt: z.number().int().positive(), expiresAt: z.number().int().positive(), assumptions: z.literal(PAPER_ASSUMPTIONS).or(z.literal(LIVE_ASSUMPTIONS)),
 }).strict();
 
-export function parseEstimate(input: unknown): QuoteEstimate {
+/** Base estimates only — the strict schema demands pool/block/multiplier
+ *  evidence a Jupiter estimate never carries, so a Solana payload fails here
+ *  rather than being rebound to Hetty's desk. */
+export function parseEstimate(input: unknown): BaseQuoteEstimate {
   const q = estimateSchema.parse(input);
   const stock = getDeskInstrument(q.intent.instrumentId);
   const decimals = q.intent.side === 'buy' ? 6 : q.tokenDecimals;
@@ -35,17 +38,19 @@ export function estimateUsable(q: QuoteEstimate, now: number): boolean {
   return now >= q.quotedAt && now < q.expiresAt;
 }
 
+/* This reducer is Hetty's legacy document — a Solana estimate never enters
+   * it; Jesse's desk gets its own controller over the shared contracts. */
 export interface DeskState {
   draft: TradeIntent;
   stage: 'draft' | 'loading' | 'review' | 'saved' | 'cancelled';
   requestId: string | null;
-  quote: QuoteEstimate | null;
+  quote: BaseQuoteEstimate | null;
   message: string | null;
 }
 export type DeskAction =
   | { type: 'edit'; draft: TradeIntent }
   | { type: 'request'; requestId: string }
-  | { type: 'quoted'; requestId: string; quote: QuoteEstimate }
+  | { type: 'quoted'; requestId: string; quote: BaseQuoteEstimate }
   | { type: 'failed'; requestId: string; message: string }
   | { type: 'cancel' }
   | { type: 'saved'; quoteId: string; now: number }

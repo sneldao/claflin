@@ -34,7 +34,7 @@ import type { TokenizedStock, VenuePair } from './tokenized-stocks';
 import { createAerodromeReader } from './trading/aerodrome';
 import { createQuoteService, referenceObservation } from './trading/quotes';
 import { getDeskInstrument, getQuotePair } from './trading/catalog';
-import { formatAmount, type QuoteEstimate } from './trading/domain';
+import { formatAmount, type BaseQuoteEstimate } from './trading/domain';
 
 const estimate = createQuoteService(createAerodromeReader());
 
@@ -87,14 +87,15 @@ export interface MarketPrice {
   status: PriceLayerStatus;
 }
 
-export interface ExecutableQuote extends QuoteEstimate {
-  // Raw input units are carried in amountInRaw.
-  // Raw output units are carried in amountOutRaw.
-  /** Amounts are decimal strings; no floating-point sizing. */
-  /** A small buy quote is not a neutral market mid or impact benchmark. */
-  // quotedAt and expiresAt use unix ms.
-  /** This legacy type name now exposes a paper-only estimate, never an execution. */
-}
+// Raw input units are carried in amountInRaw.
+// Raw output units are carried in amountOutRaw.
+/** Amounts are decimal strings; no floating-point sizing. */
+/** A small buy quote is not a neutral market mid or impact benchmark. */
+// quotedAt and expiresAt use unix ms.
+/** This legacy type name now exposes a paper-only estimate, never an execution.
+ *  A type alias, not an interface — the shared QuoteEstimate is a union now,
+ *  and this module only ever handles the Base branch. */
+export type ExecutableQuote = BaseQuoteEstimate;
 
 /** Reference observation validity is defined in trading/quotes, not inferred from session age. */
 /** Estimate expiry is anchored to request start in the shared quote service. */

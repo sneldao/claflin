@@ -1,7 +1,7 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, formatAmount, parseAmount } from '../lib/trading/domain';
-import type { QuoteEstimate, TradeIntent } from '../lib/trading/domain';
+import type { BaseQuoteEstimate, TradeIntent } from '../lib/trading/domain';
 import type { MarksResult } from '../lib/trading/marks-shared';
 import type { PaperRecord } from '../lib/trading/paper-records';
 
@@ -15,7 +15,7 @@ function makeEstimate(
   amount: string,
   id: string,
   time: number,
-): QuoteEstimate {
+): BaseQuoteEstimate {
   const decimals = instrument.decimals!;
   const inputDecimals = side === 'buy' ? 6 : decimals;
   const outputDecimals = side === 'buy' ? decimals : 6;

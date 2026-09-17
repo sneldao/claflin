@@ -1,5 +1,5 @@
 import { getDeskInstrument, getQuotePair, type DeskInstrument } from './catalog';
-import { formatAmount, LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED, PAPER_ASSUMPTIONS, parseAmount, parseIntent, TradingError, type QuoteEstimate, type ReferenceObservation } from './domain';
+import { formatAmount, LIVE_ASSUMPTIONS, LIVE_EXECUTION_ENABLED, PAPER_ASSUMPTIONS, parseAmount, parseIntent, TradingError, type BaseQuoteEstimate, type ReferenceObservation } from './domain';
 import { deskQuoteLimits, type DeskQuoteLimits } from './desk-mandate';
 import { OPEN_DESK_ID } from '../house';
 import type { VenuePair } from '../tokenized-stocks';
@@ -42,7 +42,7 @@ export function createQuoteService(
   id = () => crypto.randomUUID(),
   limits: DeskQuoteLimits = deskQuoteLimits(OPEN_DESK_ID),
 ) {
-  return async (input: unknown): Promise<QuoteEstimate> => {
+  return async (input: unknown): Promise<BaseQuoteEstimate> => {
     const intent = parseIntent(input);
     const stock = getDeskInstrument(intent.instrumentId);
     const pair = getQuotePair(stock);

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
 import { canFileOnDesk } from './desk-mandate';
 import { estimateUsable, parseEstimate, sameIntent, type DeskState } from './workflow';
-import type { QuoteEstimate } from './domain';
+import type { BaseQuoteEstimate } from './domain';
 
 export interface PaperRecord {
   version: 1;
@@ -12,7 +12,9 @@ export interface PaperRecord {
   /** Who this browser attributes the record to. Missing on legacy rows → anonymous. */
   owner: string;
   createdAt: number;
-  quote: QuoteEstimate;
+  /** v1 rows are always narrowed Base estimates — Jesse's records get their
+   *  own versioned wrapper (`claflin.paper.v2.jesse.*`) in a later step. */
+  quote: BaseQuoteEstimate;
 }
 export type PaperOwner = string; // userId or 'anonymous'
 export const PAPER_OWNER_ANONYMOUS = 'anonymous' as const;

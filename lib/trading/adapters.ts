@@ -16,9 +16,11 @@ import { chainlinkMarkAdapter } from './adapters/chainlink';
  * touching the routes, the ticket, or the voice tools.
  */
 
+/* Chain binding is venue-specific, not an interface requirement — the
+ * Aerodrome adapter keeps its own numeric chain property; a Solana adapter
+ * binds a network instead. `quote` returns the shared estimate union. */
 export interface QuoteAdapter {
   readonly venue: string;
-  readonly chainId: number;
   canQuote(instrument: DeskInstrument): boolean;
   quote(input: unknown): Promise<QuoteEstimate>;
 }

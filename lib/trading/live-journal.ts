@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
 import { DESK_INSTRUMENTS } from './catalog';
 import { parseEstimate } from './workflow';
-import type { QuoteEstimate } from './domain';
+import type { BaseQuoteEstimate, QuoteEstimate } from './domain';
 import type { LiveOutcome } from './execute-swap';
 import { LIVE_OUTCOME_STATUSES, type LiveOutcomeStatus } from './outcomes';
 
@@ -42,7 +42,9 @@ export type LiveJournalEntry = {
   updatedAt: number;
   walletAddress: string;
   hash: `0x${string}`;
-  quote: QuoteEstimate;
+  /** Always a narrowed Base estimate — parseEstimate refuses anything else,
+   *  so no Solana quote can ever enter the EVM `0x` journal. */
+  quote: BaseQuoteEstimate;
   slippageBps: number | null;
   /** Terms the caller reviewed — never rewritten from the fill. */
   reviewed: {
@@ -101,7 +103,7 @@ const schema = z.object({
   isPosition: z.literal(false),
 }).strict();
 
-function reviewedFromQuote(quote: QuoteEstimate) {
+function reviewedFromQuote(quote: BaseQuoteEstimate) {
   return {
     inputAmount: quote.inputAmount,
     inputSymbol: quote.inputSymbol,

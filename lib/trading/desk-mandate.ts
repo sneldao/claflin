@@ -1,5 +1,5 @@
 import { OPEN_DESK_ID, isOpenDesk, type HouseDeskId } from '@/lib/house';
-import type { QuoteEstimate, TradeIntent } from './domain';
+import type { BaseQuoteEstimate, TradeIntent } from './domain';
 import { initialDesk, type DeskState } from './workflow';
 
 /**
@@ -7,7 +7,7 @@ import { initialDesk, type DeskState } from './workflow';
  * Today's venue quotes are Base paper estimates, so they belong only to Hetty;
  * anything else is refused rather than silently reassigned.
  */
-export function quoteDeskId(quote: Pick<QuoteEstimate, 'chainId' | 'mode'>): HouseDeskId | null {
+export function quoteDeskId(quote: Pick<BaseQuoteEstimate, 'chainId' | 'mode'>): HouseDeskId | null {
   if (quote.chainId === 8453 && quote.mode === 'paper') return OPEN_DESK_ID;
   return null;
 }
@@ -38,7 +38,7 @@ export function deskQuoteLimits(deskId: HouseDeskId): DeskQuoteLimits {
   return DESK_QUOTE_LIMITS[deskId];
 }
 
-export function canReviewOnDesk(quote: Pick<QuoteEstimate, 'chainId' | 'mode' | 'liveExecutionEnabled'>, deskId: HouseDeskId): boolean {
+export function canReviewOnDesk(quote: Pick<BaseQuoteEstimate, 'chainId' | 'mode' | 'liveExecutionEnabled'>, deskId: HouseDeskId): boolean {
   return isOpenDesk(deskId) && quoteDeskId(quote) === deskId && quote.liveExecutionEnabled === false;
 }
 

@@ -2,7 +2,16 @@ import { createPublicClient, http, formatUnits, formatEther, parseAbi, type Publ
 import { base } from 'viem/chains';
 import { buildAerodromeSwapTx, buildErc20ApproveTx } from './aerodrome-router';
 import { AERODROME_SWAP_ROUTER, BASE_RPC_URL, BASE_USDC, BASE_USDC_DECIMALS } from '../base-chain';
-import type { QuoteEstimate } from './domain';
+import { TradingError, type BaseQuoteEstimate, type QuoteEstimate } from './domain';
+import { isSolanaEstimate } from '../solana/contracts';
+
+/** Base live execution speaks EVM only — a Jesse/Solana estimate is refused
+ *  at this boundary, never passed to wallet signing or RPC hooks. */
+function assertBaseQuote(quote: QuoteEstimate): asserts quote is BaseQuoteEstimate {
+  if (isSolanaEstimate(quote)) {
+    throw new TradingError('desk_unavailable', 'Live Base execution accepts only Base desk estimates.', 422);
+  }
+}
 
 export type SendTransaction = (tx: { to: `0x${string}`; data: `0x${string}`; value?: bigint; chainId: number }) => Promise<`0x${string}`>;
 
@@ -75,6 +84,7 @@ export async function sendApproveForQuote(
   deps: Pick<LiveExecutionDeps, 'sendTransaction'>,
   quote: QuoteEstimate,
 ): Promise<`0x${string}`> {
+  assertBaseQuote(quote);
   const token = inputTokenFor(quote);
   const amount = inputAmountFor(quote);
   const tx = buildErc20ApproveTx(token, AERODROME_SWAP_ROUTER, amount);
@@ -100,6 +110,7 @@ export async function swapForQuote(
   slippageBps: number,
   deadlineSeconds = 120,
 ): Promise<`0x${string}`> {
+  assertBaseQuote(quote);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
   const swap = buildAerodromeSwapTx(quote, slippageBps, deps.walletAddress, deadline);
   return deps.sendTransaction({ to: swap.to, data: swap.data, value: swap.value, chainId: base.id });
@@ -113,6 +124,7 @@ export async function estimateSwapGas(
   quote: QuoteEstimate,
   walletAddress: `0x${string}`,
 ): Promise<{ gas: bigint; gasPrice: bigint } | null> {
+  assertBaseQuote(quote);
   try {
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 120);
     const swap = buildAerodromeSwapTx(quote, 50, walletAddress, deadline);
@@ -133,6 +145,7 @@ export async function executeAerodromeSwap(
   slippageBps: number,
   deadlineSeconds = 120,
 ): Promise<LiveOutcome> {
+  assertBaseQuote(quote);
   const { walletAddress, sendTransaction, publicClient } = deps;
   const token = inputTokenFor(quote);
   const amount = inputAmountFor(quote);
@@ -159,10 +172,12 @@ export async function executeAerodromeSwap(
 }
 
 function inputDecimals(quote: QuoteEstimate): number {
+  assertBaseQuote(quote);
   return quote.intent.side === 'buy' ? BASE_USDC_DECIMALS : quote.tokenDecimals;
 }
 
 function outputDecimals(quote: QuoteEstimate): number {
+  assertBaseQuote(quote);
   return quote.intent.side === 'buy' ? quote.tokenDecimals : BASE_USDC_DECIMALS;
 }
 
@@ -178,6 +193,9 @@ export function outcomeFromReceipt(
   quote?: QuoteEstimate,
   walletAddress?: `0x${string}`,
 ): LiveOutcome {
+  /* Narrow before the best-effort receipt parsing — a Solana estimate must
+     fail loudly here, not be swallowed by the observed-amounts fallback. */
+  if (quote) assertBaseQuote(quote);
   const gasUsedWei = receipt.gasUsed?.toString();
   const effectiveGasPriceWei = receipt.effectiveGasPrice?.toString();
   const feeEth = receipt.gasUsed != null && receipt.effectiveGasPrice != null

@@ -14,7 +14,9 @@ import type { QuoteAdapter } from '../adapters';
  * quote service; this adapter only binds that service to its venue,
  * chain, and desk limits.
  */
-export const aerodromeQuoteAdapter: QuoteAdapter = {
+/* The numeric chain id stays on this adapter itself — it moved off the
+ * shared QuoteAdapter interface so non-EVM venues never fake one. */
+export const aerodromeQuoteAdapter: QuoteAdapter & { readonly chainId: number } = {
   venue: AERODROME_VENUE,
   chainId: BASE_CHAIN_ID,
   canQuote(instrument: DeskInstrument): boolean {

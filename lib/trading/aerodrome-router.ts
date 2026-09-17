@@ -2,6 +2,7 @@ import { encodeFunctionData, parseAbi, type Address, type Hex } from 'viem';
 import { AERODROME_SWAP_ROUTER, BASE_CHAIN_ID, BASE_USDC } from '../base-chain';
 import { getInstrumentAndPairByPoolAddress } from './catalog';
 import type { QuoteEstimate } from './domain';
+import { isSolanaEstimate } from '../solana/contracts';
 
 /**
  * Aerodrome SlipStream Swap Router call builder.
@@ -60,6 +61,11 @@ export function minimumOut(amountOut: bigint, slippageBps: number): bigint {
  * instrument A with instrument B's pool) is refused, not encoded.
  */
 function bindQuoteToCatalog(quote: QuoteEstimate, tickSpacingOverride?: number): number {
+  /* A Solana paper estimate must never be encoded as an EVM swap — refuse
+     at the module boundary before any pool or chain field is read. */
+  if (isSolanaEstimate(quote)) {
+    throw new Error('Quote is not a verified Base Aerodrome estimate');
+  }
   if (quote.chainId !== BASE_CHAIN_ID || quote.venue !== 'aerodrome') {
     throw new Error('Quote is not a verified Base Aerodrome estimate');
   }
