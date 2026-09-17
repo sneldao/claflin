@@ -39,7 +39,10 @@ describe('desk capabilities drive openness', () => {
        execution boundary). Planned desks never trade live. */
     const hettyLive = process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true';
     assert.deepEqual(DESK_CAPABILITIES.hetty, { quote: true, paper: true, voice: 'elevenlabs-convai', live: hettyLive });
-    for (const deskId of ['jesse', 'isabel', 'arbitrum'] as const) {
+    /* Jesse quotes (Jupiter adapter landed) but cannot file paper yet —
+       quote-only is not an open desk. */
+    assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: false, voice: null, live: false });
+    for (const deskId of ['isabel', 'arbitrum'] as const) {
       assert.deepEqual(DESK_CAPABILITIES[deskId], { quote: false, paper: false, voice: null, live: false });
     }
     assert.equal(OPEN_DESK_ID, 'hetty');
@@ -64,7 +67,7 @@ describe('solana instrument catalog', () => {
       assert.equal(instrument.tokenProgram, 'spl-token-2022');
       assert.equal(instrument.decimals, 8, `${instrument.symbol}: RPC-verified decimals`);
       assert.equal(instrument.id, `sol:${instrument.mint}`);
-      assert.equal(instrument.quoteSupported, false, `${instrument.symbol}: route not yet validated`);
+      assert.equal(instrument.quoteSupported, true, `${instrument.symbol}: Jupiter route verified both directions 2026-09-17`);
       assert.equal(decodeBase58(instrument.mint)?.length, 32, `${instrument.symbol}: mint decodes to a public key`);
       assert.ok(instrument.identitySourceUrl.startsWith('https://api.xstocks.fi/'), instrument.symbol);
       assert.ok(instrument.verifiedAt > 0, instrument.symbol);
@@ -168,10 +171,13 @@ describe('base seams stay byte-identical', () => {
   it('keeps sol: ids out of Hetty’s catalog', () => {
     assert.equal(codeOf(() => getDeskInstrument(AAPLX_FIXTURE.id)).code, 'unknown_instrument');
   });
-  it('still refuses Jesse quote resolution with desk_unavailable', () => {
-    const failure = codeOf(() => quoteAdapterFor('jesse'));
-    assert.equal(failure.code, 'desk_unavailable');
-    assert.equal(failure.status, 422);
+  it('resolves Jesse through its own venue while planned desks still refuse', () => {
     assert.equal(quoteAdapterFor('hetty').venue, 'aerodrome');
+    assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
+    for (const deskId of ['isabel', 'arbitrum']) {
+      const failure = codeOf(() => quoteAdapterFor(deskId));
+      assert.equal(failure.code, 'desk_unavailable');
+      assert.equal(failure.status, 422);
+    }
   });
 });

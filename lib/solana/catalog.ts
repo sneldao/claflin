@@ -86,10 +86,12 @@ export const SOLANA_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 export const SOLANA_USDC_DECIMALS = 6;
 
 /**
- * The verified allowlist. `quoteSupported` stays false until each mint's
- * Jupiter route and Pyth feed mapping pass their own validation (plan §3,
- * work-order item 3) — identity is verified here, quotability is not
- * claimed yet. verifiedAt is the identity-check instant (2026-09-17).
+ * The verified allowlist. Identity was verified 2026-09-17 (above);
+ * `quoteSupported` flipped the same day after every entry quoted
+ * successfully both directions on Jupiter Swap V2 (`/order`, Metis router,
+ * ExactIn, 50 bps, keyless tier) — AAPLx, NVDAx and TSLAx all routed.
+ * The Pyth feed mapping (Engineer 2) is a separate validation and does not
+ * gate Jupiter quoting. verifiedAt is the identity-check instant.
  */
 export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([
   Object.freeze({
@@ -106,7 +108,7 @@ export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([
     termsUrl: 'https://xstocks.fi/us/products#AAPLx',
     identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/AAPLx',
     verifiedAt: 1789653043000,
-    quoteSupported: false,
+    quoteSupported: true,
   } satisfies SolanaInstrument),
   Object.freeze({
     id: 'sol:Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh',
@@ -122,7 +124,7 @@ export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([
     termsUrl: 'https://xstocks.fi/us/products#NVDAx',
     identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/NVDAx',
     verifiedAt: 1789653043000,
-    quoteSupported: false,
+    quoteSupported: true,
   } satisfies SolanaInstrument),
   Object.freeze({
     id: 'sol:XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
@@ -138,7 +140,7 @@ export const SOLANA_INSTRUMENTS: readonly SolanaInstrument[] = Object.freeze([
     termsUrl: 'https://xstocks.fi/us/products#TSLAx',
     identitySourceUrl: 'https://api.xstocks.fi/api/v2/public/assets/TSLAx',
     verifiedAt: 1789653043000,
-    quoteSupported: false,
+    quoteSupported: true,
   } satisfies SolanaInstrument),
 ]);
 

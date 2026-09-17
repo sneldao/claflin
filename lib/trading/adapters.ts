@@ -1,8 +1,10 @@
-import { getHouseDesk, OPEN_DESK_ID, type HouseDeskId } from '../house';
+import { DESK_CAPABILITIES, getHouseDesk, OPEN_DESK_ID, type HouseDeskId } from '../house';
 import { TradingError, type QuoteEstimate } from './domain';
 import type { DeskInstrument } from './catalog';
+import type { SolanaInstrument } from '../solana/contracts';
 import type { MarksResult } from './marks-shared';
 import { aerodromeQuoteAdapter } from './adapters/aerodrome';
+import { jupiterQuoteAdapter } from './adapters/jupiter';
 import { chainlinkMarkAdapter } from './adapters/chainlink';
 
 /**
@@ -21,7 +23,9 @@ import { chainlinkMarkAdapter } from './adapters/chainlink';
  * binds a network instead. `quote` returns the shared estimate union. */
 export interface QuoteAdapter {
   readonly venue: string;
-  canQuote(instrument: DeskInstrument): boolean;
+  /* Instruments are protocol-specific — Base DeskInstrument or
+     SolanaInstrument. Adapters narrow to their own protocol. */
+  canQuote(instrument: DeskInstrument | SolanaInstrument): boolean;
   quote(input: unknown): Promise<QuoteEstimate>;
 }
 
@@ -39,7 +43,7 @@ export interface ExecutionAdapter {
 
 const QUOTE_ADAPTERS: Record<HouseDeskId, QuoteAdapter | null> = {
   hetty: aerodromeQuoteAdapter,
-  jesse: null,
+  jesse: jupiterQuoteAdapter,
   isabel: null,
   arbitrum: null,
 };
@@ -60,7 +64,10 @@ function unavailable(deskId: string): TradingError {
 export function quoteAdapterFor(deskId: string): QuoteAdapter {
   const key = deskId.toLowerCase() as HouseDeskId;
   const adapter = QUOTE_ADAPTERS[key];
-  if (!adapter || key !== OPEN_DESK_ID) throw unavailable(deskId);
+  /* Resolution follows the capability table, not the legacy default desk —
+     a desk with a registered adapter and the quote capability resolves;
+     anything else refuses rather than borrowing another desk's venue. */
+  if (!adapter || !DESK_CAPABILITIES[key]?.quote) throw unavailable(deskId);
   return adapter;
 }
 

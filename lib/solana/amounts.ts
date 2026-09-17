@@ -84,3 +84,23 @@ export function displayedToRaw(quantity: string, decimals: number, multiplier: s
 export function effectiveDisplayed(rawAtoms: bigint, decimals: number, multiplier: string): string {
   return rawToDisplayed(rawAtoms, decimals, multiplier);
 }
+
+/** Exact decimal comparison (-1 | 0 | 1) without floats — for limit checks
+ *  on displayed quantities, where atom-floor rounding must not smuggle a
+ *  fraction past a cap. */
+export function compareDecimals(a: string, b: string): -1 | 0 | 1 {
+  const parse = (text: string) => {
+    if (!DECIMAL_PATTERN.test(text)) throw new Error('Expected a positive decimal string.');
+    const [whole, fraction = ''] = text.split('.');
+    return { whole, fraction };
+  };
+  const x = parse(a);
+  const y = parse(b);
+  if (x.whole.length !== y.whole.length) return x.whole.length < y.whole.length ? -1 : 1;
+  if (x.whole !== y.whole) return x.whole < y.whole ? -1 : 1;
+  const places = Math.max(x.fraction.length, y.fraction.length);
+  const fx = x.fraction.padEnd(places, '0');
+  const fy = y.fraction.padEnd(places, '0');
+  if (fx === fy) return 0;
+  return fx < fy ? -1 : 1;
+}

@@ -55,8 +55,13 @@ describe('adapter registries', () => {
       try { fn(); } catch (error) { return (error as { code?: string }).code ?? 'no-code'; }
       return 'did-not-throw';
     };
-    for (const deskId of ['jesse', 'isabel', 'arbitrum', 'nope']) {
+    for (const deskId of ['isabel', 'arbitrum', 'nope']) {
       assert.equal(codeOf(() => quoteAdapterFor(deskId)), 'desk_unavailable');
+    }
+    /* Jesse quotes via Jupiter since the adapter landed; his marks stay
+       unregistered until the Pyth reader (Engineer 2) exists. */
+    assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
+    for (const deskId of ['jesse', 'isabel', 'arbitrum', 'nope']) {
       assert.equal(codeOf(() => markAdapterFor(deskId)), 'desk_unavailable');
     }
   });
