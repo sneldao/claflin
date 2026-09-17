@@ -24,6 +24,8 @@ SKIP_PATTERNS=(
   "tsconfig.tsbuildinfo"
   "tests/"
   "docs/PRODUCT_DIRECTION.md"
+  "docs/DICTATION.md"
+  "docs/STOCKLANA_BUILD_PLAN.md"
   "lib/eligibility.ts"
 )
 
