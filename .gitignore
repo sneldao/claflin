@@ -55,6 +55,15 @@ dump.rdb
 # Backups
 /backups/
 
+# Remotion promo-video production (renders, caches, source project, narration/media assets)
+.cache/
+.render_cache/
+.remotion/
+assets/
+demo-video/
+scripts/generate-promo-video.py
+scripts/generate-promo-video.sh
+
 # Playwright
 /test-results/
 /playwright-report/
