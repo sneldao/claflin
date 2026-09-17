@@ -58,6 +58,17 @@ export function isOpenDesk(id: string): id is typeof OPEN_DESK_ID {
   return Boolean(capabilities && capabilities.quote && capabilities.paper);
 }
 
+/**
+ * Optional account sync stays Hetty-only for this release (plan §5, E1
+ * item 5). Jesse records are browser-local: there is no server schema for
+ * them, no import UI, and no sync traffic — this is not a claim of cloud
+ * backup. The gate exists so callers cannot accidentally run Hetty's
+ * /api/paper flows for another desk.
+ */
+export function supportsAccountSync(deskId: string): boolean {
+  return deskId === OPEN_DESK_ID;
+}
+
 export const RETIRED_CLIENT_PATHS = Object.freeze([
   '/marketplace', '/demo', '/dashboard', '/profile', '/list-your-broker', '/admin', '/admin/analytics',
 ]);

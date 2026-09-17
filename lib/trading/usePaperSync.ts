@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
+import { supportsAccountSync } from '@/lib/house';
 import {
   mergePulledRecords,
   paperOwnerOf,
@@ -67,8 +68,13 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
     lastUserId.current = userId;
   }, [userId]);
 
+  /* Account sync is Hetty-only for this release: a desk without sync
+     * support (Jesse) never counts, pulls, pushes, or imports — its records
+     * stay browser-local and are labelled as such by the desk UI. */
+  const syncable = supportsAccountSync(deskId);
+
   useEffect(() => {
-    if (!userId || !authenticated) {
+    if (!userId || !authenticated || !syncable) {
       setAnonymousCount(0);
       return;
     }
@@ -78,10 +84,10 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
       snapshotDoneFor.current = userId;
     }
     setAnonymousCount(records.filter(r => isAnonymousRecord(r) && !claimsRef.current.has(r.id)).length);
-  }, [authenticated, userId, historyReady, records]);
+  }, [authenticated, userId, historyReady, records, syncable]);
 
   useEffect(() => {
-    if (!authenticated || !userId || !historyReady || pulled.current) return;
+    if (!syncable || !authenticated || !userId || !historyReady || pulled.current) return;
     if (snapshotDoneFor.current !== userId) return;
     pulled.current = true;
     (async () => {
@@ -107,7 +113,7 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
         }
       } catch { /* offline or unavailable — local history stands */ }
     })();
-  }, [authenticated, getAccessToken, userId, deskId, historyReady]);
+  }, [authenticated, getAccessToken, userId, deskId, historyReady, syncable]);
 
   const ownedRecords = (list: PaperRecord[]) =>
     list.filter(r => {
@@ -117,7 +123,7 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
     });
 
   useEffect(() => {
-    if (!authenticated || !historyReady || records.length === 0 || !userId) return;
+    if (!syncable || !authenticated || !historyReady || records.length === 0 || !userId) return;
     if (suppressNextPush.current) {
       suppressNextPush.current = false;
       lastPushedIds.current = ownedRecords(records).map(r => r.id).join(',');
@@ -146,11 +152,11 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
         lastPushedIds.current = signature;
       } catch { /* sync is best-effort; the next change retries */ }
     })();
-  }, [authenticated, getAccessToken, userId, historyReady, records, pushKick]);
+  }, [authenticated, getAccessToken, userId, historyReady, records, pushKick, syncable]);
 
   /** Explicitly attribute anonymous browser work to this account and upload. */
   const importAnonymousRecords = useCallback(async () => {
-    if (!userId || !authenticated) return;
+    if (!syncable || !userId || !authenticated) return;
     const toImport = records.filter(r => isAnonymousRecord(r) && !claimsRef.current.has(r.id));
     const retryUpload = importStatus === 'failed';
     if (toImport.length === 0 && !retryUpload) {
@@ -202,7 +208,7 @@ export function usePaperSync(desk: ReturnType<typeof useTradingDesk>) {
       lastPushedIds.current = null;
       setPushKick(k => k + 1);
     }
-  }, [authenticated, getAccessToken, importStatus, records, userId]);
+  }, [authenticated, getAccessToken, importStatus, records, userId, syncable]);
 
   return { importAnonymousRecords, anonymousCount, importStatus };
 }
