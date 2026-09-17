@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { JesseIntent, SolanaPaperEstimate } from '../solana/contracts';
 
 export class TradingError extends Error {
   constructor(public code: string, message: string, public status = 400) {
@@ -14,6 +15,11 @@ export const intentSchema = z.discriminatedUnion('side', [
   z.object({ ...base, side: z.literal('sell'), unit: z.literal('token') }).strict(),
 ]);
 export type TradeIntent = z.infer<typeof intentSchema>;
+
+/** Shared intent union — the Base schema stays the legacy branch. Desk/mint
+ *  validation, not shape alone, decides which branch is valid: `scaled-token`
+ *  sells are Jesse-only, raw `token` sells are Hetty-only. */
+export type DeskIntent = TradeIntent | JesseIntent;
 
 export function parseIntent(input: unknown): TradeIntent {
   const parsed = intentSchema.safeParse(input);
@@ -48,7 +54,9 @@ export type ReferenceObservation = {
   pauseStatus: 'unchecked';
 };
 
-export interface QuoteEstimate {
+/** Hetty's legacy Base estimate — EVM pool/block evidence and a B20
+ *  corporate-action multiplier. Field-for-field the pre-union QuoteEstimate. */
+export interface BaseQuoteEstimate {
   id: string;
   kind: 'estimate';
   mode: 'paper';
@@ -77,6 +85,12 @@ export interface QuoteEstimate {
   expiresAt: number;
   assumptions: string;
 }
+
+/** The shared paper-estimate union (plan §4.2). Narrow with
+ *  `isSolanaEstimate` / `network === 'solana:mainnet'` before touching
+ *  Base-only fields — never invent an EVM chain id, pool, block, or
+ *  multiplier to fit a Jupiter route. */
+export type QuoteEstimate = BaseQuoteEstimate | SolanaPaperEstimate;
 
 export const PAPER_ASSUMPTIONS = 'Simulated fill at the quoted output, including pool swap fees. No additional slippage, gas, platform or call charges are applied. No wallet, holdings, eligibility or transaction authorization is verified. This is a local paper record, not a live order or position.';
 

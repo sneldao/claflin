@@ -7,12 +7,12 @@ import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } fro
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 describe('one canonical house', () => {
-  it('starts with Hetty Green, paper-only execution, live voice, and planned desks marked planned', () => {
+  it('starts with Hetty Green, flag-gated live execution, live voice, and planned desks marked planned', () => {
     assert.equal(HOUSE_DESKS[0].id, 'hetty');
     assert.equal(HOUSE_DESKS[0].name, 'Hetty Green');
     assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Arbitrum']);
     assert.equal(HOUSE_DESKS[3].name, 'Jay Cooke');
-    assert.equal(HOUSE.liveExecutionEnabled, false);
+    assert.equal(HOUSE.liveExecutionEnabled, process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true');
     assert.equal(HOUSE.voiceConversationEnabled, true);
     assert.ok(HOUSE_DESKS.slice(1).every(d => d.status === 'planned'));
   });

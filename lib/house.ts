@@ -1,10 +1,18 @@
+import { LIVE_EXECUTION_ENABLED } from './trading/domain';
+import type { DeskCapabilities } from './solana/contracts';
+
+/**
+ * Static house identity. Operational capability lives in DESK_CAPABILITIES —
+ * read live execution there, not here, so the flag is single-sourced.
+ */
 export const HOUSE = Object.freeze({
   name: 'Claflin',
   title: 'Claflin — the office above the pit',
   tagline: 'The office above the pit',
-  description: 'The pit is downstairs. This desk is for deciding. Paper trading on Coinbase Tokenized Stocks on Base.',
+  description: 'The pit is downstairs. This desk is for deciding. Coinbase Tokenized Stocks on Base — real onchain trades when live execution is enabled, paper records alongside.',
   mode: 'paper' as const,
-  liveExecutionEnabled: false as const,
+  /** Retained for legacy consumers; the desk flag is authoritative. */
+  liveExecutionEnabled: LIVE_EXECUTION_ENABLED as boolean,
   voiceConversationEnabled: true as const,
 });
 
@@ -20,12 +28,31 @@ export type HouseDeskId = HouseDesk['id'];
 
 export const OPEN_DESK_ID: HouseDeskId = 'hetty';
 
+/**
+ * Explicit per-desk capabilities — the directory, adapters, and mandate all
+ * consult this record instead of inferring openness from a desk id. Voice
+ * and live are independent capabilities: an open desk does not imply either.
+ *
+ * `live` means the desk can execute real onchain trades. For Hetty it is the
+ * NEXT_PUBLIC_LIVE_EXECUTION_ENABLED deployment flag (single-sourced from
+ * trading/domain); planned desks are false until their integration ships.
+ */
+export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
+  hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
+  jesse: { quote: false, paper: false, voice: null, live: false },
+  isabel: { quote: false, paper: false, voice: null, live: false },
+  arbitrum: { quote: false, paper: false, voice: null, live: false },
+};
+
 export function getHouseDesk(id: string): HouseDesk | undefined {
   return HOUSE_DESKS.find(desk => desk.id === id);
 }
 
+/** Open means quotation and paper filing are both real — today only Hetty,
+ *  so OPEN_DESK_ID stays the legacy/default storage owner. */
 export function isOpenDesk(id: string): id is typeof OPEN_DESK_ID {
-  return id === OPEN_DESK_ID;
+  const capabilities = DESK_CAPABILITIES[id as HouseDeskId];
+  return Boolean(capabilities && capabilities.quote && capabilities.paper);
 }
 
 export const RETIRED_CLIENT_PATHS = Object.freeze([
