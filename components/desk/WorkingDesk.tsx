@@ -45,8 +45,9 @@ function HettyDoorShell() {
         <span className={styles.callLine}>DIRECT LINE</span>
       </div>
       <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
+      <p className={styles.callHint}>Say the trade — Hetty fills the ticket and reads it back before anything is filed.</p>
       <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
-      <p className={styles.callFoot}>The microphone stays off until you ring.</p>
+      <p className={styles.callFoot}>Mic stays off until you talk — nothing is filed without your review.</p>
     </section>
   );
 }
@@ -289,7 +290,7 @@ export function WorkingDesk() {
             <button type="button" onClick={auth.logout}>Sign out</button>
           </span>
         ) : (
-          <button type="button" className={styles.authLink} onClick={auth.login}>Sign in</button>
+          <button type="button" className={styles.authLink} onClick={auth.login} title="Optional. Keeps your paper record and Hetty's saved lines on your account instead of only this browser.">Sign in to keep your record</button>
         ))}
       </nav>
     </header>
@@ -301,6 +302,16 @@ export function WorkingDesk() {
             : <><strong>PAPER TRADING</strong><span>Real estimates, no real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — instruction unchanged.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
+      {/* First-run lead: while the ticket is still untouched, the room states
+          the promise and the first step. It retires the moment the caller
+          works — an experienced desk does not repeat the pitch. */}
+      {open && desk.state.stage === 'draft' && !desk.state.draft.instrumentId && (
+        <div className={styles.introduction} id="introduction">
+          <p className={styles.eyebrow}>THE OFFICE ABOVE THE PIT</p>
+          <h1>Say the trade. <span>Read the slip.</span> Then decide.</h1>
+          <p>A working ticket, real estimates, and Hetty on the line to talk it through — nothing is filed until you say so. Pick a mark off the tape, or ring the desk.</p>
+        </div>
+      )}
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
@@ -344,6 +355,20 @@ export function WorkingDesk() {
           <path className={styles.sealInner} d="M35 20a11 11 0 1 0 0 16M21 14v28M27 12v8m0 16v8M33 15v5m0 16v5" stroke="currentColor" strokeWidth="1.5" pathLength={1} />
         </svg>
       </div>
+      {open && (
+        <a
+          href="#instruction"
+          className={styles.footerCta}
+          onClick={(e) => {
+            e.preventDefault();
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+            document.getElementById('amount')?.focus({ preventScroll: true });
+          }}
+        >
+          Back to your ticket ↑
+        </a>
+      )}
       <span>THE OFFICE ABOVE THE PIT</span>
     </footer>
   </div>;

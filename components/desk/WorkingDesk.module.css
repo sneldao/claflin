@@ -251,6 +251,10 @@
 .header { min-height: 110px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--desk-line); }
 .header nav { display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; color: var(--desk-muted); }
 .header a { padding-block: 12px; }
+.header nav > a { position: relative; transition: color var(--dur-1) var(--ease-swift); }
+.header nav > a:hover { color: var(--desk-ink); }
+.header nav > a::after { content: ''; position: absolute; inset: auto 0 6px; height: 1px; background: var(--desk-brass); transform: scaleX(0); transform-origin: left; transition: transform var(--dur-1) var(--ease-swift); }
+.header nav > a:hover::after { transform: scaleX(1); }
 .mode { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 24px 0; color: var(--desk-muted); font-size: 11px; }
 .mode strong { color: var(--desk-brass); border: 1px solid var(--desk-brass-dim); padding: 7px 10px; font-weight: 400; letter-spacing: .06em; }
 .chainId { font-family: var(--font-mono), monospace; font-size: 9px; letter-spacing: .08em; color: var(--desk-brass-dim); border: 1px solid var(--desk-line); padding: 2px 5px; margin-left: 6px; vertical-align: 1px; }
@@ -351,11 +355,12 @@
 .amountChip[data-active="true"] { background: var(--desk-paper-ink); color: var(--desk-paper-light); border-color: var(--desk-paper-ink); }
 .amountChip:active:not(:disabled) { transform: translateY(1px); }
 .amountChip:disabled { opacity: .5; cursor: default; }
-.primary { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 16px 18px; border: 1px solid var(--desk-paper-ink); background: var(--desk-enamel); color: var(--desk-paper-light); font-size: 13px; text-align: left; min-height: 52px; transition: transform 120ms ease-out, background 150ms; }
-.primary:hover:not(:disabled) { background: var(--desk-deep); }
-.primary:active:not(:disabled) { transform: translateY(1.5px) scale(.99); }
-.primary:disabled { opacity: .5; }
-.secondary { color: var(--desk-paper-ink); border: 0; background: transparent; padding: 14px 0; min-height: 44px; text-decoration: underline; transition: transform 120ms ease-out; }
+.primary { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 16px 18px; border: 1px solid var(--desk-brass); background: linear-gradient(155deg, var(--desk-metal-light), var(--desk-brass)); color: var(--desk-deep); border-radius: 2px; box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow); font-size: 13px; font-weight: 500; text-align: left; min-height: 52px; transition: transform var(--dur-1) var(--ease-swift), box-shadow var(--dur-1) var(--ease-swift), background var(--dur-1) var(--ease-swift); }
+.primary:hover:not(:disabled) { background: var(--desk-metal-light); }
+.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 1px 0 var(--desk-brass-dim); }
+.primary:disabled { background: transparent; border-color: var(--desk-paper-muted); box-shadow: none; color: var(--desk-paper-muted); opacity: .55; }
+.secondary { color: var(--desk-paper-ink); border: 0; background: transparent; padding: 14px 0; min-height: 44px; text-decoration: underline; text-underline-offset: 3px; transition: transform var(--dur-1) var(--ease-swift), color var(--dur-1) var(--ease-swift); }
+.secondary:hover:not(:disabled) { color: var(--desk-paper-muted); }
 .secondary:active:not(:disabled) { transform: translateY(1px); }
 .notice { border-left: 2px solid currentColor; padding: 10px 12px; margin: 18px 0 !important; font-size: 13px; line-height: 1.6; }
 .review { margin-top: 24px; padding-top: 24px; border-top: 1px solid #27362b60; scroll-margin-top: 20px; }
@@ -412,6 +417,10 @@
   .seal .sealMid, .seal .sealInner { transition-delay: 0s; }
 }
 .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; margin-top: 24px; border-top: 1px solid var(--desk-line); padding-top: 25px; color: var(--desk-muted); font: 9px/1.8 var(--font-mono), monospace; }
+/* The colophon is a dead end by design — but the desk is not. One quiet
+   return path back into the work. */
+.footerCta { color: var(--desk-brass); font: 10px/1.8 var(--font-mono), monospace; letter-spacing: .12em; text-transform: uppercase; text-decoration: none; border-bottom: 1px solid var(--desk-brass-dim); padding-bottom: 2px; transition: color var(--dur-1) var(--ease-swift), border-color var(--dur-1) var(--ease-swift); }
+.footerCta:hover { color: var(--desk-metal-light); border-color: var(--desk-brass); }
 .noticePage { display: grid; place-items: center; padding: 32px; }
 .noticePage > div { width: min(100%, 540px); }
 .noticePage h1 { font: 44px/1.2 var(--font-display), serif; margin: 40px 0 24px; }
@@ -463,11 +472,21 @@
 /* ————— Hetty's line ————— */
 .call { margin-top: 0; padding-top: 0; border-top: 0; }
 .callNote { color: var(--desk-muted); font-size: 13px; line-height: 1.75; max-width: 400px; }
+.callHint { margin: 6px 0 0 !important; font-size: 11px; line-height: 1.5; color: var(--desk-muted); cursor: help; }
 .callActions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 18px; }
-.callButton { border: 1px solid var(--desk-brass); background: var(--desk-brass); color: var(--desk-room); padding: 12px 22px; min-height: 44px; font-size: 12px; letter-spacing: .08em; }
-.callButton:hover { background: #d4bc85; }
-.callButtonSecondary { border: 1px solid var(--desk-brass-dim); color: var(--desk-brass); background: transparent; padding: 12px; min-height: 44px; font-size: 12px; }
-.callButtonSecondary:hover { border-color: var(--desk-brass); }
+.callButton { position: relative; border: 1px solid var(--desk-brass); background: linear-gradient(155deg, var(--desk-metal-light), var(--desk-brass)); color: var(--desk-deep); border-radius: 2px; box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow); padding: 12px 22px; min-height: 46px; font-size: 12px; font-weight: 500; letter-spacing: .08em; transition: transform var(--dur-1) var(--ease-swift), box-shadow var(--dur-1) var(--ease-swift), background var(--dur-1) var(--ease-swift); }
+.callButton:hover:not(:disabled) { background: var(--desk-metal-light); }
+.callButton:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 1px 0 var(--desk-brass-dim); }
+.callButton:disabled { background: transparent; border-color: var(--desk-brass-dim); box-shadow: none; color: var(--desk-brass-dim); }
+/* An idle line advertises itself: one quiet ring of the bell, never a loop
+   that fights the live line for attention. */
+.callButton[data-cue="idle"] { animation: cueGlow 3.2s ease-in-out infinite; }
+.callButton[data-cue="idle"]::after { content: '→'; margin-left: 12px; color: var(--desk-deep); opacity: .7; }
+@keyframes cueGlow {
+  0%, 100% { box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow); }
+  50% { box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow), 0 0 0 5px #c5ac7824; }
+}
+@media (prefers-reduced-motion: reduce) { .callButton[data-cue="idle"] { animation: none; } }
 .callStatus { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--desk-ink); font: 12px/1 var(--font-mono), monospace; letter-spacing: .08em; }
 .callDot { width: 7px; height: 7px; border-radius: 50%; background: #8fae8a; }
 .callDot[data-speaking="true"] { background: var(--desk-brass); animation: linePulse 0.9s ease-in-out infinite; }
@@ -616,11 +635,11 @@
 .call .callNote { max-width: 300px; margin: 0 !important; font-size: 14px; line-height: 1.7; color: var(--desk-ink); }
 .callHint { margin: 6px 0 0 !important; font-size: 11px; line-height: 1.5; color: var(--desk-muted); cursor: help; }
 .callActions { margin-top: 18px; min-height: 44px; }
-.callButton { display: inline-flex; align-items: center; justify-content: center; gap: 24px; min-width: 168px; min-height: 46px; padding: 12px 20px; background: linear-gradient(155deg, var(--desk-metal-light), var(--desk-brass)); color: var(--desk-deep); border: 1px solid var(--desk-brass); border-radius: 2px; box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 3px 0 var(--desk-brass-dim), 0 6px 14px var(--desk-shadow); font-size: 13px; }
+.callButton { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-width: 168px; min-height: 46px; padding: 12px 20px; font-size: 13px; }
 .callButton::after { content: '↗'; font-size: 18px; line-height: 1; }
-.callButton:hover:not(:disabled) { background: var(--desk-metal-light); }
-.callButton:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 var(--desk-paper-light), 0 1px 0 var(--desk-brass-dim); }
-.callButton:disabled { opacity: .55; }
+/* The idle cue swaps the decorative arrow for the pointer glyph, both
+   aligned on the same inline gap. */
+.callButton[data-cue="idle"]::after { content: '→'; margin-left: 0; font-size: inherit; color: var(--desk-deep); opacity: .75; }
 .callButton:disabled::after { content: none; }
 .callFoot { max-width: 340px; margin-top: 12px !important; font-size: 10px; line-height: 1.6; color: var(--desk-muted); }
 /* The line as a way to work at the desk: once connected the strip stays

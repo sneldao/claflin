@@ -757,7 +757,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
       </div>
       <p className={styles.callNote}>{callNote}</p>
       {!live && !ringing && (
-        <p className={styles.callHint} title="Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">A live conversation — Hetty talks back.</p>
+        <p className={styles.callHint} title="Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">Say the trade — Hetty fills the ticket and reads it back before anything is filed.</p>
       )}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
@@ -774,8 +774,8 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
           </>
         )}
         {!live && !ringing && captions.length === 0 && (
-          <button type="button" className={styles.callButton} onClick={() => void ring('fresh')} title="A live conversation — Hetty talks back and works the ticket with you. Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">
-            Talk with Hetty
+          <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')} title="A live conversation — Hetty talks back and works the ticket with you. Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">
+            Talk it through with Hetty
           </button>
         )}
         {ringing && !live && (
@@ -835,7 +835,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
         </p>
       )}
       <p className={styles.callFoot} title={auth.enabled ? 'Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : undefined}>
-        Mic stays off until you talk.
+        Mic stays off until you talk — nothing is filed without your review.
       </p>
     </section>
   );
