@@ -34,13 +34,16 @@ export function lastCaption(
 
 /** A short inspectable summary of the discussion so far — the last exchange,
  *  never authority. The ticket stays the instruction of record. */
-export function summarizeDiscussion(captions: readonly DiscussionCaption[]): string | null {
+export function summarizeDiscussion(
+  captions: readonly DiscussionCaption[],
+  agentName = 'Hetty',
+): string | null {
   const user = lastCaption(captions, 'user');
   const agent = lastCaption(captions, 'agent');
   if (!user && !agent) return null;
   const parts: string[] = [];
   if (user) parts.push(`You said: ${user.text}`);
-  if (agent) parts.push(`Hetty replied: ${agent.text}`);
+  if (agent) parts.push(`${agentName} replied: ${agent.text}`);
   return `Last exchange — ${parts.join(' ')} (${captions.length} ${captions.length === 1 ? 'line' : 'lines'} this session). The ticket holds the instruction.`;
 }
 
@@ -49,11 +52,12 @@ export function summarizeDiscussion(captions: readonly DiscussionCaption[]): str
 export function boundedDiscussionContext(
   captions: readonly DiscussionCaption[],
   maxChars = CONTEXT_MAX,
+  agentName = 'Hetty',
 ): string | null {
   if (captions.length === 0) return null;
   const recent = captions.slice(-6);
   const lines = recent.map(c => {
-    const who = c.role === 'user' ? 'Caller' : 'Hetty';
+    const who = c.role === 'user' ? 'Caller' : agentName;
     const text = c.text.length > 140 ? `${c.text.slice(0, 139)}…` : c.text;
     return `${who}: ${text}`;
   });

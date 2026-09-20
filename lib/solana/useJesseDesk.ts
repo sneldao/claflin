@@ -45,12 +45,12 @@ export interface JesseDesk {
   storageError: string | null;
   viewedRecordId: string | null;
   foreground: JesseForeground;
-  edit: (partial: Partial<JesseDraft>, field: ClarifyField) => void;
+  edit: (partial: Partial<JesseDraft>, field: ClarifyField) => Promise<CommandResult>;
   quote: () => Promise<void>;
   compare: () => Promise<void>;
   file: () => Promise<CommandResult>;
-  cancel: () => Promise<void>;
-  watch: (id: SolanaInstrumentId) => Promise<void>;
+  cancel: () => Promise<CommandResult>;
+  watch: (id: SolanaInstrumentId) => Promise<CommandResult>;
   openRecord: (id: string) => void;
   dismissRecord: () => void;
   removeRecord: (id: string) => void;
@@ -357,19 +357,44 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
   }, [session]);
 
   const edit = useCallback((partial: Partial<JesseDraft>, field: ClarifyField) => {
-    void session?.edit(partial, field);
+    if (!session) {
+      return Promise.resolve({
+        status: 'rejected' as const,
+        revision: 0,
+        quoteId: null,
+        evidenceId: null,
+        spokenText: 'Desk not ready.',
+      });
+    }
+    return session.edit(partial, field);
   }, [session]);
 
-  const quote = useCallback(async () => { await session?.quote(); }, [session]);
-  const compare = useCallback(async () => { await session?.compare(); }, [session]);
+  const quote = useCallback(async () => {
+    if (!session) return;
+    await session.quote();
+  }, [session]);
+  const compare = useCallback(async () => {
+    if (!session) return;
+    await session.compare();
+  }, [session]);
   const file = useCallback(async () => {
     if (!session) {
       return { status: 'rejected' as const, revision: 0, quoteId: null, evidenceId: null, spokenText: 'Desk not ready.' };
     }
     return session.file();
   }, [session]);
-  const cancel = useCallback(async () => { await session?.cancel(); }, [session]);
-  const watch = useCallback(async (id: SolanaInstrumentId) => { await session?.watch(id); }, [session]);
+  const cancel = useCallback(async () => {
+    if (!session) {
+      return { status: 'rejected' as const, revision: 0, quoteId: null, evidenceId: null, spokenText: 'Desk not ready.' };
+    }
+    return session.cancel();
+  }, [session]);
+  const watch = useCallback(async (id: SolanaInstrumentId) => {
+    if (!session) {
+      return { status: 'rejected' as const, revision: 0, quoteId: null, evidenceId: null, spokenText: 'Desk not ready.' };
+    }
+    return session.watch(id);
+  }, [session]);
   const openRecord = useCallback((id: string) => { session?.openRecord(id); }, [session]);
   const dismissRecord = useCallback(() => { session?.dismissRecord(); }, [session]);
   const removeRecord = useCallback((id: string) => { session?.removeRecord(id); }, [session]);

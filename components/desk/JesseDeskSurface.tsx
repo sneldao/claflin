@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DeskInstrument } from './DeskInstrument';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -11,6 +11,7 @@ import { JesseCall } from './JesseCall';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
+import { signalLine } from '@/lib/trading/line-signal';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
@@ -22,34 +23,43 @@ type Desk = ReturnType<typeof useTradingDesk>;
 export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const jesse = useJesseDesk();
   const [spoken, setSpoken] = useState<string | null>(null);
+  const [jesseLive, setJesseLive] = useState(false);
 
   const reviewActive = jesse.foreground.kind === 'quotation'
     || jesse.foreground.kind === 'receipt'
     || jesse.foreground.kind === 'archive';
-  const stage = jesse.inFlight === 'quote'
-    ? 'conversation'
-    : reviewActive
-      ? 'confirmation'
-      : 'arrival';
+  const stage = jesseLive
+    ? (jesse.inFlight === 'quote' ? 'conversation' : reviewActive ? 'confirmation' : 'conversation')
+    : jesse.inFlight === 'quote'
+      ? 'conversation'
+      : reviewActive
+        ? 'confirmation'
+        : 'arrival';
   const selected = SOLANA_INSTRUMENTS.find(s => s.id === jesse.state.draft.instrumentId);
   const instrumentLabel = jesse.foreground.kind === 'missing'
     ? 'RECORD UNAVAILABLE'
     : jesse.foreground.kind === 'archive'
       ? 'FILED RECORD · READ ONLY'
-      : selected
-        ? `${selected.symbol} · ${jesse.foreground.kind === 'pending' || jesse.inFlight === 'quote' ? 'REQUESTING ESTIMATE' : jesse.foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
-        : 'JESSE · SOLANA PAPER';
+      : jesseLive
+        ? (selected ? `${selected.symbol} · ON THE LINE` : 'JESSE · ON THE LINE')
+        : selected
+          ? `${selected.symbol} · ${jesse.foreground.kind === 'pending' || jesse.inFlight === 'quote' ? 'REQUESTING ESTIMATE' : jesse.foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
+          : 'JESSE · SOLANA PAPER';
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'h' && e.key !== 'H') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      signalLine();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const sayToDesk = useCallback((phrase: string) => {
     setSpoken(phrase);
-    void jesse.run({
-      type: 'clarify',
-      draft: jesse.state.draft,
-      field: 'amount',
-      question: '',
-    }).then(() => {
-      /* Speech parsing lands in WP6 — for now the lead chips fill common intents. */
-    });
     if (phrase === 'buy $100 of Apple') {
       const apple = SOLANA_INSTRUMENTS.find(s => s.symbol === 'AAPLx');
       if (apple) {
@@ -57,7 +67,9 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
       }
+      return;
     }
+    signalLine();
   }, [jesse]);
 
   return (
@@ -65,11 +77,13 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       deskId={desk.deskId}
       activeDesk={desk.activeDesk}
       open
+      lineLive={jesseLive}
       deskStage={jesse.state.stage}
       onSwitchDesk={desk.switchDesk}
       navExtras={
         <>
           <a href="#instruction">Your ticket</a>
+          <a href="#jesse-line">The line</a>
           <a href="#paper-ledger">Your record</a>
         </>
       }
@@ -91,21 +105,23 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </div>
         </div>
       )}
-      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'} data-ledger="true" data-foreground={jesse.foreground.kind}>
+      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'} data-ledger="true" data-foreground={jesse.foreground.kind} data-live={jesseLive ? 'true' : 'false'}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO. · SOLANA</span></div>
         <DeskObjects />
         <JesseTicket jesse={jesse} spokenLine={spoken} />
         <JesseLedger jesse={jesse} />
         <aside className={styles.support} aria-label="Jesse’s desk">
-          <JesseCall jesse={jesse} onUserSpoken={setSpoken} />
+          <JesseCall jesse={jesse} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />
           <JesseCommandBar jesse={jesse} onHeard={setSpoken} />
           <div className={styles.instrumentShell} data-stage={stage}>
             <div className={styles.instrument} data-stage={stage}>
               <DeskInstrument eager poster="/desk-receiver.webp" stage={stage} label={instrumentLabel} reviewing={reviewActive} />
             </div>
-            <p className={styles.receiverCue}>
-              Type below or fill the ticket. Conversational line with Jesse lands next.
-            </p>
+            {!jesseLive && (
+              <p className={styles.receiverCue}>
+                Lift the receiver — or press <kbd>H</kbd>. Speak first; the form is only how the desk writes it down.
+              </p>
+            )}
           </div>
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>

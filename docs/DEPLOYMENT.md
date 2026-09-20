@@ -73,6 +73,15 @@ ELEVENLABS_API_KEY=
 ELEVENLABS_AGENT_HETTY=
 ```
 
+Jesse’s Solana desk uses a separate ConvAI agent (and a dedicated TTS voice
+id for standalone readbacks). Without them the seated desk still quotes and
+files paper; the call card reports the line as not connected:
+
+```
+ELEVENLABS_AGENT_JESSE=
+ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
+```
+
 Optional Sign in (does not gate the desk; not live access):
 
 ```
@@ -82,8 +91,10 @@ PRIVY_APP_ID=
 PRIVY_APP_SECRET=
 ```
 
-Provision the agent once with `node --env-file=.env.local scripts/create-hetty-agent.mjs`,
-then set the printed id.
+Provision Hetty once with `node --env-file=.env.local scripts/create-hetty-agent.mjs`,
+then set the printed id. Provision Jesse with
+`node --env-file=.env.local scripts/create-jesse-agent.mjs` (or refresh prompt/tools
+with `scripts/update-jesse-agent.mjs`).
 
 After updating env vars, trigger a manual redeploy — Vercel only picks up new
 values on the next build.
