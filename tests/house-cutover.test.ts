@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import postcss from 'postcss';
 import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } from '../lib/house';
+import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -14,7 +15,8 @@ describe('one canonical house', () => {
     assert.equal(HOUSE_DESKS[3].name, 'Jay Cooke');
     assert.equal(HOUSE.liveExecutionEnabled, process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true');
     assert.equal(HOUSE.voiceConversationEnabled, true);
-    assert.ok(HOUSE_DESKS.slice(1).every(d => d.status === 'planned'));
+    assert.equal(HOUSE_DESKS[1].status, JESSE_PAPER_ENABLED ? 'paper' : 'planned');
+    assert.ok(HOUSE_DESKS.slice(2).every(d => d.status === 'planned'));
   });
   it('renders the desk at root with no onboarding, directory, or automatic call entry', () => {
     const home = source('app/page.tsx');
@@ -34,16 +36,17 @@ describe('one canonical house', () => {
     assert.doesNotMatch(desk, /useWallet|OnboardingFlow|Header|AgentRegistration|useEffect/);
   });
   it('has no developer navigation or directory selling points in the desk', () => {
-    const desk = source('components/desk/WorkingDesk.tsx');
+    const desk = source('components/desk/HettyDeskSurface.tsx');
+    const room = source('components/desk/DeskRoom.tsx');
     assert.doesNotMatch(desk, /href="\/desk-study"|Broker directory|Exact instrument|token decimals|per minute|Start a free call|Live access|useEligibility|YOUR AI BROKER|WELCOME TO CLAFLIN|A CONSIDERED APPROACH/);
     assert.match(desk, /The pit is/);
     assert.match(desk, /About Hetty/);
     assert.match(desk, /PAPER TRADING/);
-    assert.match(desk, /Hear the floor/);
+    assert.match(room, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
   });
   it('puts the ticket before the room and introduces the line only once', () => {
-    const desk = source('components/desk/WorkingDesk.tsx');
+    const desk = source('components/desk/HettyDeskSurface.tsx');
     /* The desk's one lead (styles.introduction) is sanctioned while the
        ticket is untouched — but the room stays honest: no fake broker
        plate, no status prop, no desk map. The line itself is mounted once. */
@@ -53,11 +56,9 @@ describe('one canonical house', () => {
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
   });
   it('shows continuity shells with empty states, without hiding storage failures', () => {
-    const desk = source('components/desk/WorkingDesk.tsx');
-    assert.match(desk, /const hasTray = open/);
-    assert.match(desk, /const hasLedger = open/);
-    assert.match(desk, /hasLedger && <PaperLedger/);
-    assert.match(desk, /hasTray && <div id="on-desk"/);
+    const desk = source('components/desk/HettyDeskSurface.tsx');
+    assert.match(desk, /PaperLedger/);
+    assert.match(desk, /id="on-desk"/);
     assert.doesNotMatch(desk, /hasLedger && <PaperHistory/);
     assert.match(source('components/desk/PaperLedger.tsx'), /No paper on file yet/);
     assert.match(source('components/desk/DeskBoard.tsx'), /Nothing pinned/);
@@ -68,7 +69,7 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
+    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
@@ -98,7 +99,7 @@ describe('one canonical house', () => {
     assert.doesNotMatch(source('components/desk/HettyCall.tsx'), /className=\{styles\.boardTitle\}>Hetty\./);
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
-    const desk = source('components/desk/WorkingDesk.tsx');
+    const desk = source('components/desk/HettyDeskSurface.tsx');
     assert.match(desk, /import \{ DeskInstrument \} from '\.\/DeskInstrument'/);
     assert.match(desk, /<DeskInstrument eager poster="\/desk-receiver\.webp"/);
     const receiver = source('components/desk/DeskInstrument.tsx');
@@ -132,7 +133,7 @@ describe('one canonical house', () => {
   it('can present a quotation slip while the voice line remains connected', () => {
     const receiver = source('components/desk/DeskInstrument.tsx');
     assert.match(receiver, /setReview\(reviewing\)/);
-    assert.match(source('components/desk/WorkingDesk.tsx'), /reviewing=\{open && reviewActive\}/);
+    assert.match(source('components/desk/HettyDeskSurface.tsx'), /reviewing=\{reviewActive\}/);
     const renderer = source('lib/desk-instrument.ts');
     const stageSetter = renderer.slice(renderer.indexOf('setStage(nextStage)'), renderer.indexOf('setReview(reviewing)'));
     assert.doesNotMatch(stageSetter, /slipTarget/);
@@ -166,9 +167,16 @@ describe('one canonical house', () => {
     const call = source('components/desk/HettyCall.tsx');
     assert.match(call, /onLiveChange\(live\)/);
     assert.doesNotMatch(call, /onLiveChange\(live \|\| connecting\)/);
-    const desk = source('components/desk/WorkingDesk.tsx');
+    const desk = source('components/desk/HettyDeskSurface.tsx');
     const stage = desk.slice(desk.indexOf('const instrumentStage'), desk.indexOf('const instrumentLabel'));
     assert.doesNotMatch(stage, /loading/);
+  });
+  it('routes open desks through dedicated surfaces without replacing the homepage', () => {
+    const desk = source('components/desk/WorkingDesk.tsx');
+    assert.match(desk, /HettyDeskSurface/);
+    assert.match(desk, /JesseDeskSurface/);
+    assert.match(desk, /ClosedDesk/);
+    assert.match(source('app/page.tsx'), /WorkingDesk/);
   });
   it('retires marketplace distribution without intercepting quote or webhook infrastructure', () => {
     for (const path of ['/api/agents', '/api/agents/', '/api/agents/general_helper', '/api/sdk/register', '/api/ratings']) assert.equal(isRetiredMarketplaceApi(path), true);

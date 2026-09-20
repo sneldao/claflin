@@ -40,7 +40,7 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
           <EducationTopicTrigger topic={participation} label="Participation and access" />
         </p>
       )}
-      <p className={styles.directoryFoot}>Only the Base desk can quote or file paper. Visiting another room cannot carry an approval with you.</p>
+      <p className={styles.directoryFoot}>Hetty&apos;s Base desk and Jesse&apos;s Solana desk quote and file paper. Visiting another room cannot carry an approval with you.</p>
     </div>
   </details>;
 }

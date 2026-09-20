@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { HOUSE_DESKS, getHouseDesk, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
+import { HOUSE_DESKS, getHouseDesk, isOpenDesk, OPEN_DESK_ID, usesLegacyDeskDocuments } from '../lib/house';
+import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 import { deskNoteOfTheDay } from '../lib/desk-notes';
 import { fetchJson } from '../lib/api-client';
 
@@ -14,9 +15,12 @@ describe('the house roster', () => {
     assert.equal(getHouseDesk('hetty')?.name, 'Hetty Green');
     assert.equal(getHouseDesk('arbitrum')?.name, 'Jay Cooke');
   });
-  it('keeps Hetty as the only open desk and the desk order stable', () => {
+  it('keeps Hetty as the legacy document owner and the desk order stable', () => {
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.ok(isOpenDesk('hetty'));
+    assert.ok(usesLegacyDeskDocuments('hetty'));
+    assert.ok(!usesLegacyDeskDocuments('jesse'));
+    assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
     assert.ok(!isOpenDesk('arbitrum'));
     assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Arbitrum']);
   });

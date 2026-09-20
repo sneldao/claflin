@@ -12,11 +12,18 @@ const dictationBudget = quoteBudget(); // 30 requests/minute budget guard
 // Dictation only accepts WAV (audio/wav) or raw PCM S16LE (audio/pcm) —
 // MediaRecorder's webm/opus output is rejected with 415. Stock names and
 // amounts bias the transcript toward the desk's vocabulary.
-const DICTATION_CONFIG = JSON.stringify({
+const HETTY_DICTATION_CONFIG = JSON.stringify({
   keyterms_prompt: [
     'NVDA', 'Nvidia', 'AAPL', 'Apple', 'TSLA', 'Tesla', 'GOOGL', 'Google', 'Alphabet',
     'META', 'Meta', 'COIN', 'Coinbase', 'MSFT', 'Microsoft', 'AMZN', 'Amazon', 'MSTR',
     'buy', 'sell', 'USDC', 'Coinbase tokenized stocks',
+  ],
+});
+
+const JESSE_DICTATION_CONFIG = JSON.stringify({
+  keyterms_prompt: [
+    'AAPLx', 'Apple', 'AAPL', 'NVDAx', 'NVIDIA', 'NVDA', 'TSLAx', 'Tesla', 'TSLA',
+    'buy', 'sell', 'USDC', 'xStock', 'scaled', 'compare', 'file paper record', 'Jupiter', 'Solana',
   ],
 });
 
@@ -26,6 +33,7 @@ const DICTATION_CONFIG = JSON.stringify({
  * AssemblyAI Dictation API Integration for Claflin Trading Desk.
  * Transcribes voice orders with disfluencies (ums, ahs) filtered out at the model level,
  * returning a clean, auditable transcript and parsed trade intent for the ticket.
+ * Optional form field `desk=jesse` swaps keyterms and skips Base intent parsing.
  */
 export async function POST(req: NextRequest): Promise<Response> {
   const headers = { 'Cache-Control': 'no-store' };
@@ -40,11 +48,14 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     let audioBuffer: Buffer;
     let contentType = 'audio/wav';
+    let desk = 'hetty';
 
     const reqContentType = req.headers.get('content-type') || '';
 
     if (reqContentType.includes('multipart/form-data')) {
       const formData = await req.formData();
+      const deskField = formData.get('desk');
+      if (typeof deskField === 'string' && deskField === 'jesse') desk = 'jesse';
       const file = formData.get('audio') as File | null;
       if (!file) {
         return Response.json({ error: 'bad_request', message: 'No audio payload provided.' }, { status: 400, headers });
@@ -69,12 +80,25 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
     }
 
+    const dictationConfig = desk === 'jesse' ? JESSE_DICTATION_CONFIG : HETTY_DICTATION_CONFIG;
     const apiKey = process.env.ASSEMBLYAI_API_KEY;
     const endpoint = process.env.ASSEMBLYAI_DICTATION_ENDPOINT || DEFAULT_DICTATION_ENDPOINT;
 
     // If API key is not configured, provide mock transcription for local dev/testing
     if (!apiKey) {
-      const mockText = 'Buy 100 USDC of NVDA';
+      const mockText = desk === 'jesse' ? 'Buy 100 USDC of Apple' : 'Buy 100 USDC of NVDA';
+      if (desk === 'jesse') {
+        return Response.json({
+          ok: true,
+          transcript: mockText,
+          confidence: 0.98,
+          parsedIntent: null,
+          matchedInstrument: null,
+          disfluencyFiltered: true,
+          provider: 'AssemblyAI Dictation (dev simulated)',
+          desk,
+        }, { headers });
+      }
       const parsed = parseDictatedTradeIntent(mockText);
       return Response.json({
         ok: true,
@@ -88,6 +112,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         } : null,
         disfluencyFiltered: true,
         provider: 'AssemblyAI Dictation (dev simulated)',
+        desk,
       }, { headers });
     }
 
@@ -99,7 +124,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // The rewrite is best-effort: prefer llm_response (clean, send-ready),
     // fall back to verbatim text, never treat llm_error as a failed request.
     const upstreamForm = new FormData();
-    upstreamForm.append('config', new Blob([DICTATION_CONFIG], { type: 'application/json' }));
+    upstreamForm.append('config', new Blob([dictationConfig], { type: 'application/json' }));
     upstreamForm.append('audio', new File([new Uint8Array(audioBuffer)], 'recording.wav', { type: 'audio/wav' }));
 
     let response = await fetch(endpoint, {
@@ -114,7 +139,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!response.ok && endpoint !== FALLBACK_SYNC_ENDPOINT) {
       try {
         const fallbackForm = new FormData();
-        fallbackForm.append('config', new Blob([DICTATION_CONFIG], { type: 'application/json' }));
+        fallbackForm.append('config', new Blob([dictationConfig], { type: 'application/json' }));
         fallbackForm.append('audio', new File([new Uint8Array(audioBuffer)], 'recording.wav', { type: 'audio/wav' }));
         const fallbackRes = await fetch(FALLBACK_SYNC_ENDPOINT, {
           method: 'POST',
@@ -173,6 +198,21 @@ export async function POST(req: NextRequest): Promise<Response> {
       }, { status: 422, headers });
     }
 
+    if (desk === 'jesse') {
+      return Response.json({
+        ok: true,
+        transcript,
+        verbatimTranscript: verbatimText || null,
+        cleanedUp: usedRewrite,
+        confidence: data.confidence ?? 0.95,
+        parsedIntent: null,
+        matchedInstrument: null,
+        disfluencyFiltered: true,
+        provider: 'AssemblyAI Dictation',
+        desk,
+      }, { headers });
+    }
+
     const parsed = parseDictatedTradeIntent(transcript);
 
     return Response.json({
@@ -189,6 +229,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       } : null,
       disfluencyFiltered: true,
       provider: 'AssemblyAI Dictation',
+      desk,
     }, { headers });
   } catch (err) {
     return Response.json({

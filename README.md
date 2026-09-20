@@ -2,17 +2,17 @@
 
 **Claflin is the voice-first trading desk for global investors who want to trade tokenized US stocks onchain.**
 
-The product spans Hetty / Base and Jesse / Solana. Implementation status below describes this checkout: Base has wallet-authorized execution; the checked-in Solana surface is the Night Desk study and Stocklana integration plan. It does not establish the status of other branches or deployments.
+The product spans Hetty / Base and Jesse / Solana. Implementation status below describes this checkout: Base has wallet-authorized execution; Jesse’s seated paper desk (Jupiter quotes, local v2 records) is open from the house directory — `/night-desk` remains the spatial study. It does not establish the status of other branches or deployments.
 
 **A voice-first trading product expressed as a Deco-futurist brokerage house — the office above the pit.** Clients give an instruction to a house that keeps a record. Voice, research, publications and personalization support that job.
 
-Claflin is the institution. Hetty / Base is the first relationship, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace. Hetty's Base desk supports real onchain trades when live execution is enabled; the other desks remain planned integrations or experience studies. The first broker is not the brand.
+Claflin is the institution. Hetty / Base is the first relationship, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace. Hetty's Base desk supports real onchain trades when live execution is enabled; Jesse’s Solana desk quotes and files paper from the house directory (homepage stays Hetty). Isabel and Arbitrum remain planned. The first broker is not the brand.
 
 ## Night Desk and Stocklana team handoff
 
-[The public Night Desk](https://claflin.trustfall.xyz/night-desk) is the shipped `decace0` experience study: a spatial Jesse/Solana direction with scripted conversation, fictional data and a tab-local example slip. It has no real microphone, market-provider or execution integration. `/` remains the working Hetty/Base desk.
+[The public Night Desk](https://claflin.trustfall.xyz/night-desk) remains the shipped `decace0` spatial study (scripted conversation, fictional data). The **integrated Jesse paper desk** is the seated surface on `/` via the house directory — real Jupiter quotes, v2 local paper, honest Pyth comparison when available. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base.
 
-**Engineers: start with [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md).** It contains the four ownership boundaries, shared contracts, confirmed September 25 deadline, integration order and acceptance/handoff checklist. [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) records the approved rule: Night/direct views are available from day one; continuity comes from explicitly saved work, not tests, XP, balances or trade counts. Real Jesse integrations remain to build; do not treat the study as a completed trading flow.
+**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining voice streaming, Pyth daemon, Night presentation bind, and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) records Night/direct as presentation choices over the same work.
 
 ## One front door
 
@@ -29,7 +29,7 @@ The current release supports **real onchain trading on Base and paper trading, b
 
 The live path builds Aerodrome router transactions, submits them through the client's Privy wallet integration, and checks transaction receipts. Swap hashes are saved locally after submission returns; pending or unknown entries can be reconciled after reload without resubmitting. Live history is transaction evidence, not a holdings view. A successful receipt, not a quote or a submitted hash alone, establishes the displayed fill outcome.
 
-No stock or amount is preselected. Paper records are simulations, not fills, submissions, wallet positions, or call receipts. They live in this browser first. Visiting Jesse, Isabel, or Arbitrum from the house directory is a closed room — an approval from the Base desk cannot come with you. When an optional account is configured and the client is signed in, new records are also copied to that account (best-effort; local storage stays authoritative; deletes are local-only and can reappear from the account copy). Records are visible to anyone using that browser profile.
+No stock or amount is preselected. Paper records are simulations, not fills, submissions, wallet positions, or call receipts. They live in this browser first. Visiting Isabel or Arbitrum from the house directory is a closed room — an approval from one desk cannot come with you. Jesse’s Solana paper desk is open; its records stay browser-local (no account sync). When an optional account is configured and the client is signed in on Hetty, new Base records are also copied to that account (best-effort; local storage stays authoritative; deletes are local-only and can reappear from the account copy). Records are visible to anyone using that browser profile.
 
 **Voice & Dictation:** 
 - **AssemblyAI Dictation (Input / Audit Trail):** Dictation on the trading ticket uses AssemblyAI's synchronous Dictation API (`POST /api/dictation` routing to `dictation.assemblyai.com/transcribe`). Spoken instructions (e.g., *"Buy 100 USDC of NVDA"*) have disfluencies (*"ums"*, *"ahs"*) stripped at the speech model level, outputting a clean, auditable transcript that automatically structures the order ticket draft. See [docs/DICTATION.md](docs/DICTATION.md).
@@ -37,7 +37,7 @@ No stock or amount is preselected. Paper records are simulations, not fills, sub
 
 **Account and wallet:** `NEXT_PUBLIC_PRIVY_APP_ID` enables Privy sign-in; `NEXT_PUBLIC_PRIVY_CLIENT_ID` is optional. Sign-in never gates the tape, estimates, paper records or ringing Hetty. An account supports best-effort paper backup and write-only transcript storage. Live Base execution additionally requires a connected wallet, input tokens, ETH for gas and explicit wallet authorization. Sign-in alone neither authorizes spending nor proves eligibility.
 
-**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. The desk initially selects live mode when this flag is on; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. The checked-in Jesse Night Desk is a non-executing study; the Stocklana plan describes its Solana integration. Paper trading never grants spending authority.
+**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. The desk initially selects live mode when this flag is on; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. Jesse’s seated desk is paper-only; Solana live execution remains gated (R2). `/night-desk` is still a non-executing study. Paper trading never grants spending authority.
 
 ## Local development
 
@@ -103,7 +103,8 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 
 ## Canonical documentation
 
-- [Stocklana build plan](docs/STOCKLANA_BUILD_PLAN.md): four-engineer Jesse integration brief and experience acceptance.
+- [Jesse desk](docs/JESSE_DESK.md): seated Solana paper desk — storage, ports, grammar, evidence honesty.
+- [Stocklana build plan](docs/STOCKLANA_BUILD_PLAN.md): four-engineer Jesse integration brief and remaining acceptance.
 - [Product Direction](docs/PRODUCT_DIRECTION.md): jobs, principles, and information hierarchy — not page anatomy.
 - [Roadmap](ROADMAP.md): current state and next release gates.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.

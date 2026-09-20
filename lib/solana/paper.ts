@@ -141,6 +141,11 @@ const comparisonSchema = z.object({
   reasonCodes: z.array(z.string().min(1).max(60)).max(16),
 }).strict();
 
+/** Validate a MarketComparison payload from the comparison API or storage. */
+export function parseMarketComparison(input: unknown): MarketComparison {
+  return comparisonSchema.parse(input);
+}
+
 const recordSchema = z.object({
   version: z.literal(2),
   id: z.string().min(1).max(100).regex(/^[\w-]+$/),

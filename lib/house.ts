@@ -1,5 +1,6 @@
 import { LIVE_EXECUTION_ENABLED } from './trading/domain';
 import type { DeskCapabilities } from './solana/contracts';
+import { JESSE_PAPER_ENABLED } from './solana/flags';
 
 /**
  * Static house identity. Operational capability lives in DESK_CAPABILITIES —
@@ -16,11 +17,13 @@ export const HOUSE = Object.freeze({
   voiceConversationEnabled: true as const,
 });
 
+export type DeskStatus = 'paper' | 'planned';
+
 export const HOUSE_DESKS = Object.freeze([
-  Object.freeze({ id: 'hetty', name: 'Hetty Green', shortName: 'Hetty', market: 'Base', approach: 'Independent judgment. Capital preservation. Deliberate decisions.', status: 'paper' as const }),
-  Object.freeze({ id: 'jesse', name: 'Jesse Livermore', shortName: 'Jesse', market: 'Solana', approach: 'Price action, timing, and disciplined speculation.', status: 'planned' as const }),
-  Object.freeze({ id: 'isabel', name: 'Isabel Benham', shortName: 'Isabel', market: 'Robinhood Chain', approach: 'Fundamental analysis and patient investigation.', status: 'planned' as const }),
-  Object.freeze({ id: 'arbitrum', name: 'Jay Cooke', shortName: 'Jay', market: 'Arbitrum', approach: 'Building the rails that let everyone else move money.', status: 'planned' as const }),
+  Object.freeze({ id: 'hetty', name: 'Hetty Green', shortName: 'Hetty', market: 'Base', approach: 'Independent judgment. Capital preservation. Deliberate decisions.', status: 'paper' as DeskStatus }),
+  Object.freeze({ id: 'jesse', name: 'Jesse Livermore', shortName: 'Jesse', market: 'Solana', approach: 'Price action, timing, and disciplined speculation.', status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus }),
+  Object.freeze({ id: 'isabel', name: 'Isabel Benham', shortName: 'Isabel', market: 'Robinhood Chain', approach: 'Fundamental analysis and patient investigation.', status: 'planned' as DeskStatus }),
+  Object.freeze({ id: 'arbitrum', name: 'Jay Cooke', shortName: 'Jay', market: 'Arbitrum', approach: 'Building the rails that let everyone else move money.', status: 'planned' as DeskStatus }),
 ]);
 
 export type HouseDesk = (typeof HOUSE_DESKS)[number];
@@ -36,13 +39,13 @@ export const OPEN_DESK_ID: HouseDeskId = 'hetty';
  * `live` means the desk can execute real onchain trades. For Hetty it is the
  * NEXT_PUBLIC_LIVE_EXECUTION_ENABLED deployment flag (single-sourced from
  * trading/domain); planned desks are false until their integration ships.
+ *
+ * Jesse paper filing is gated by NEXT_PUBLIC_JESSE_PAPER_ENABLED so the seated
+ * surface can land behind a flag before the default opens.
  */
 export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
-  /* Jesse quotes via Jupiter (Metis) since the adapter landed; paper filing,
-     voice, and live each wait for their own work-order items. quote-only
-     does not open the desk — isOpenDesk also requires paper. */
-  jesse: { quote: true, paper: false, voice: null, live: false },
+  jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: null, live: false },
   isabel: { quote: false, paper: false, voice: null, live: false },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };
@@ -51,11 +54,23 @@ export function getHouseDesk(id: string): HouseDesk | undefined {
   return HOUSE_DESKS.find(desk => desk.id === id);
 }
 
-/** Open means quotation and paper filing are both real — today only Hetty,
- *  so OPEN_DESK_ID stays the legacy/default storage owner. */
-export function isOpenDesk(id: string): id is typeof OPEN_DESK_ID {
+/**
+ * Open means quotation and paper filing are both real capabilities.
+ * Today Hetty; Jesse when JESSE_PAPER_ENABLED is on. This is the directory /
+ * surface routing gate — not the owner of Base v1 documents.
+ */
+export function isOpenDesk(id: string): id is HouseDeskId {
   const capabilities = DESK_CAPABILITIES[id as HouseDeskId];
   return Boolean(capabilities && capabilities.quote && capabilities.paper);
+}
+
+/**
+ * Legacy Base document owner — v1 paper records, Base drafts, Base watches,
+ * Aerodrome estimates. Independent of isOpenDesk so opening Jesse never makes
+ * useTradingDesk treat Solana as a Hetty session.
+ */
+export function usesLegacyDeskDocuments(id: string): id is typeof OPEN_DESK_ID {
+  return id === OPEN_DESK_ID;
 }
 
 /**

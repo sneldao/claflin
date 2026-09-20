@@ -158,6 +158,34 @@ export function mintFirstPaperSlip(
   return writeSlip(storage, slip);
 }
 
+/** Idempotent first-paper keepsake for a Jesse v2 filing. */
+export function mintFirstJessePaperSlip(
+  storage: SlipStorage,
+  record: { id: string; deskId: 'jesse'; quote: { intent: { instrumentId: string; side: 'buy' | 'sell' }; inputAmount: string; inputSymbol: string; outputAmount: string; outputSymbol: string }; instrumentSnapshot: { symbol: string } },
+  now = Date.now(),
+  dedication: DeskSlipDedication | null = takeSlipDedication(),
+): DeskSlip {
+  const existing = findDeskSlipByKind(storage, 'first-paper', 'jesse');
+  if (existing) return existing;
+  const { quote, instrumentSnapshot } = record;
+  const slip: DeskSlip = {
+    version: 1,
+    id: 'first-paper-jesse',
+    kind: 'first-paper',
+    deskId: 'jesse',
+    mintedAt: now,
+    symbol: instrumentSnapshot.symbol,
+    instrumentId: quote.intent.instrumentId,
+    side: quote.intent.side,
+    instruction: `Paper ${quote.intent.side} · ${quote.inputAmount} ${quote.inputSymbol} → ${quote.outputAmount} ${quote.outputSymbol}`,
+    mode: 'paper',
+    evidenceId: record.id,
+    ...(dedication ? { dedication } : {}),
+    disclaimer: DESK_SLIP_DISCLAIMER,
+  };
+  return writeSlip(storage, slip);
+}
+
 /** Idempotent: one first-live slip per desk, only for confirmed fills. */
 export function mintFirstLiveSlip(
   storage: SlipStorage,

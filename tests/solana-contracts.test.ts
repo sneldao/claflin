@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
+import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID, usesLegacyDeskDocuments } from '../lib/house';
+import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
 import { quoteAdapterFor } from '../lib/trading/adapters';
@@ -39,15 +40,20 @@ describe('desk capabilities drive openness', () => {
        execution boundary). Planned desks never trade live. */
     const hettyLive = process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true';
     assert.deepEqual(DESK_CAPABILITIES.hetty, { quote: true, paper: true, voice: 'elevenlabs-convai', live: hettyLive });
-    /* Jesse quotes (Jupiter adapter landed) but cannot file paper yet —
-       quote-only is not an open desk. */
-    assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: false, voice: null, live: false });
+    /* Jesse paper tracks NEXT_PUBLIC_JESSE_PAPER_ENABLED — quote-only is not
+       an open desk until the seated surface can file. */
+    assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: JESSE_PAPER_ENABLED, voice: null, live: false });
     for (const deskId of ['isabel', 'arbitrum'] as const) {
       assert.deepEqual(DESK_CAPABILITIES[deskId], { quote: false, paper: false, voice: null, live: false });
     }
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.equal(isOpenDesk('hetty'), true);
-    for (const deskId of ['jesse', 'isabel', 'arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
+    assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
+    for (const deskId of ['isabel', 'arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
+    /* Legacy Base documents stay Hetty-owned regardless of Jesse's flag. */
+    assert.equal(usesLegacyDeskDocuments('hetty'), true);
+    assert.equal(usesLegacyDeskDocuments('jesse'), false);
+    assert.equal(usesLegacyDeskDocuments('isabel'), false);
   });
 });
 

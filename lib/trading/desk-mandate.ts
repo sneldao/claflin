@@ -1,4 +1,4 @@
-import { OPEN_DESK_ID, isOpenDesk, type HouseDeskId } from '@/lib/house';
+import { OPEN_DESK_ID, usesLegacyDeskDocuments, type HouseDeskId } from '@/lib/house';
 import type { BaseQuoteEstimate, TradeIntent } from './domain';
 import { initialDesk, type DeskState } from './workflow';
 
@@ -39,11 +39,11 @@ export function deskQuoteLimits(deskId: HouseDeskId): DeskQuoteLimits {
 }
 
 export function canReviewOnDesk(quote: Pick<BaseQuoteEstimate, 'chainId' | 'mode' | 'liveExecutionEnabled'>, deskId: HouseDeskId): boolean {
-  return isOpenDesk(deskId) && quoteDeskId(quote) === deskId && quote.liveExecutionEnabled === false;
+  return usesLegacyDeskDocuments(deskId) && quoteDeskId(quote) === deskId && quote.liveExecutionEnabled === false;
 }
 
 export function canFileOnDesk(state: DeskState, deskId: HouseDeskId): boolean {
-  return isOpenDesk(deskId) && Boolean(state.quote) && canReviewOnDesk(state.quote!, deskId);
+  return usesLegacyDeskDocuments(deskId) && Boolean(state.quote) && canReviewOnDesk(state.quote!, deskId);
 }
 
 export function emptyDraft(): TradeIntent {
@@ -64,7 +64,7 @@ export function enterDesk(
 ): ParkedDesk {
   const cached = parked[id];
   if (cached) return cached;
-  if (!isOpenDesk(id)) {
+  if (!usesLegacyDeskDocuments(id)) {
     return { deskId: id, state: initialDesk(emptyDraft()), viewedRecordId: null, error: null };
   }
   return {

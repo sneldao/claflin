@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
-import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
+import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, usesLegacyDeskDocuments, type HouseDeskId } from '@/lib/house';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
@@ -15,7 +15,7 @@ import { fetchJson } from '../api-client';
 const WATCH_MAX = 12;
 
 function loadWatched(storage: Storage, deskId: HouseDeskId): string[] {
-  if (!isOpenDesk(deskId)) return [];
+  if (!usesLegacyDeskDocuments(deskId)) return [];
   try {
     const raw = JSON.parse(storage.getItem(watchStorageKey(deskId)) ?? '[]');
     if (!Array.isArray(raw)) return [];
@@ -25,7 +25,7 @@ function loadWatched(storage: Storage, deskId: HouseDeskId): string[] {
 }
 
 function readHistory(deskId: HouseDeskId, userId: string | null): PaperRecord[] {
-  const all = isOpenDesk(deskId) ? loadPaperRecords(window.localStorage, deskId) : [];
+  const all = usesLegacyDeskDocuments(deskId) ? loadPaperRecords(window.localStorage, deskId) : [];
   return all.filter(record => recordVisibleToAccount(record, userId));
 }
 
@@ -74,7 +74,7 @@ export function useTradingDesk() {
     loadHistory();
   }, [auth.userId, loadHistory]);
   useEffect(() => {
-    if (!deskReady || !isOpenDesk(deskId)) return;
+    if (!deskReady || !usesLegacyDeskDocuments(deskId)) return;
     try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
   }, [deskReady, deskId, state]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -94,7 +94,7 @@ export function useTradingDesk() {
   }, [knownRecords, state, viewedRecordId]);
 
   const requestQuote = useCallback(async () => {
-    if (!isOpenDesk(deskId)) {
+    if (!usesLegacyDeskDocuments(deskId)) {
       setError('This desk is not open.');
       return;
     }
@@ -193,7 +193,7 @@ export function useTradingDesk() {
   }, [loadHistory, state.quote?.id, viewedRecordId]);
 
   const watch = useCallback((instrumentId: string) => {
-    if (!isOpenDesk(deskId) || !DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
+    if (!usesLegacyDeskDocuments(deskId) || !DESK_INSTRUMENTS.some(s => s.id === instrumentId)) return;
     setWatched(previous => {
       const next = previous.includes(instrumentId) ? previous : [instrumentId, ...previous].slice(0, WATCH_MAX);
       try { window.localStorage.setItem(watchStorageKey(deskId), JSON.stringify(next)); } catch { /* watching is optional */ }
@@ -202,7 +202,7 @@ export function useTradingDesk() {
   }, [deskId]);
 
   const unwatch = useCallback((instrumentId: string) => {
-    if (!isOpenDesk(deskId)) return;
+    if (!usesLegacyDeskDocuments(deskId)) return;
     setWatched(previous => {
       const next = previous.filter(id => id !== instrumentId);
       try { window.localStorage.setItem(watchStorageKey(deskId), JSON.stringify(next)); } catch { /* watching is optional */ }
@@ -214,16 +214,16 @@ export function useTradingDesk() {
     if (id === deskId || !getHouseDesk(id)) return;
     request.current?.abort();
     requestGen.current += 1;
-    if (isOpenDesk(deskId)) {
+    if (usesLegacyDeskDocuments(deskId)) {
       try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
     }
-    let entered: ParkedDesk = { deskId: id, state: initialDesk(isOpenDesk(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
+    let entered: ParkedDesk = { deskId: id, state: initialDesk(usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
     try {
       const result = switchDeskSession(
         { deskId, state, viewedRecordId, error },
         id,
         sessions.current,
-        isOpenDesk(id) ? readRestorableDraft(window.localStorage, id) : null,
+        usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) : null,
       );
       sessions.current = result.parked;
       entered = result.entered;
