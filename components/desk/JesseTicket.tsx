@@ -101,7 +101,14 @@ export const JesseTicket = memo(function JesseTicket({
     const q = state.quote;
     const instrument = state.presentedInstrument;
     return (
-      <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
+      <section
+        id="instruction"
+        key={q.id}
+        className={`${styles.ticket} ${styles.quotationSlip}`}
+        aria-labelledby="instruction-title"
+        data-ticket-view="review"
+        data-slip="true"
+      >
         <PaperChrome />
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <div className={styles.slipBody}>
