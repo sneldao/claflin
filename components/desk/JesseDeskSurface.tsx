@@ -165,6 +165,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       <a href="#instruction">Your ticket</a>
       <a href="#jesse-line">The line</a>
       <a href="#paper-ledger">Your record</a>
+      <a href="#venue-duplex-title">Venue duplex</a>
       <a href="#prestocks-title">PreStocks</a>
     </>
   );
@@ -175,7 +176,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       <h1>Before you trade, <span>read the tape.</span></h1>
       <p>
         Ring the desk. Speak an xStock instruction — Backed Token-2022 mints on Solana, quoted through Jupiter.
-        Room and Compact are the same work; only the layout changes.
+        Free venue duplex on the ticket; live settle when both live flags are on. Room and Compact are the same work.
       </p>
       <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
         <span className={styles.voiceSayLead}>Say it — or tap it</span>

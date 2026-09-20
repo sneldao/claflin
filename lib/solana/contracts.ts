@@ -85,6 +85,60 @@ export interface SolanaPaperEstimate {
   assumptions: string;
 }
 
+// §4.6 — live proposal (Jupiter order → sign → execute).
+
+export interface SolanaLiveProposal {
+  version: 1;
+  id: string;
+  deskId: 'jesse';
+  network: SolanaNetwork;
+  mode: 'live';
+  intent: JesseIntent;
+  wallet: string;
+  revision: number;
+  reviewedEstimate: {
+    inputMint: string;
+    outputMint: string;
+    inputSymbol: string;
+    outputSymbol: string;
+    inputAmount: string;
+    outputAmount: string;
+    amountInRaw: string;
+    amountOutRaw: string;
+    minOutputRaw: string;
+    router: string;
+    feeBps: number | null;
+    slippageBps: number;
+    scaling: SolanaPaperEstimate['scaling'];
+  };
+  transactionBase64: string;
+  messageHash: string;
+  providerRequestId: string;
+  lastValidBlockHeight: string | null;
+  expiresAt: number;
+  minOutputRaw: string;
+  slippageBps: number;
+  feeSummary: {
+    networkFeeLamports: string | null;
+    rentLamports: string | null;
+    providerFeeBps: number | null;
+  };
+}
+
+export type SolanaLiveStatus =
+  | 'idle'
+  | 'preparing'
+  | 'review'
+  | 'signing'
+  | 'signed'
+  | 'submitting'
+  | 'submitted'
+  | 'confirmed'
+  | 'failed'
+  | 'unknown'
+  | 'rejected'
+  | 'expired';
+
 // §4.4 — market evidence.
 
 export interface MarketObservation {

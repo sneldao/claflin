@@ -1,6 +1,6 @@
 import { LIVE_EXECUTION_ENABLED } from './trading/domain';
 import type { DeskCapabilities } from './solana/contracts';
-import { JESSE_PAPER_ENABLED } from './solana/flags';
+import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
 
 /**
  * Static house identity. Operational capability lives in DESK_CAPABILITIES —
@@ -40,7 +40,7 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Jesse',
     market: 'Solana',
     approach: 'Price action, timing, and disciplined speculation.',
-    access: 'Backed xStocks · Jupiter · Solana paper',
+    access: 'Backed xStocks · Jupiter · Solana paper (+ gated live)',
     status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
@@ -82,7 +82,7 @@ export const OPEN_DESK_ID: HouseDeskId = 'hetty';
  */
 export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
-  jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
+  jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: JESSE_LIVE_CLIENT_ENABLED },
   isabel: { quote: false, paper: false, voice: null, live: false },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };

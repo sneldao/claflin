@@ -9,9 +9,28 @@ import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { HouseMark } from '../desk/HouseMark';
 import { MarketEvidence } from '../solana/MarketEvidence';
 import { PreStocksEvidence } from '../solana/PreStocksEvidence';
+import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
+import { JesseLiveSettle } from './JesseLiveSettle';
+import type { JesseIntent } from '@/lib/solana/contracts';
 import styles from '../desk/WorkingDesk.module.css';
 
 const AMOUNT_CHIPS = { buy: ['25', '100', '250'], sell: ['1', '5', '10'] } as const;
+
+function intentFromDraft(draft: {
+  instrumentId: string | null;
+  side: 'buy' | 'sell' | null;
+  unit: 'USDC' | 'scaled-token' | null;
+  amount: string | null;
+}): JesseIntent | null {
+  if (!draft.instrumentId || !draft.side || !draft.amount || !draft.unit) return null;
+  if (draft.side === 'buy' && draft.unit === 'USDC') {
+    return { instrumentId: draft.instrumentId as JesseIntent['instrumentId'], side: 'buy', unit: 'USDC', amount: draft.amount };
+  }
+  if (draft.side === 'sell' && draft.unit === 'scaled-token') {
+    return { instrumentId: draft.instrumentId as JesseIntent['instrumentId'], side: 'sell', unit: 'scaled-token', amount: draft.amount };
+  }
+  return null;
+}
 
 export const JesseTicket = memo(function JesseTicket({
   jesse,
@@ -154,12 +173,15 @@ export const JesseTicket = memo(function JesseTicket({
           <button type="button" className={styles.secondary} onClick={() => { void compare(); }}>Compare market</button>
         </div>
         <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
+        <VenueDuplexEvidence instrumentId={q.intent.instrumentId} />
+        <JesseLiveSettle intent={q.intent} revision={state.revision} />
         <PreStocksEvidence />
       </section>
     );
   }
 
   /* Draft / pending */
+  const liveIntent = intentFromDraft(draft);
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome />
@@ -244,8 +266,10 @@ export const JesseTicket = memo(function JesseTicket({
         </div>
       </form>
       <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
+      <VenueDuplexEvidence instrumentId={draft.instrumentId} />
+      <JesseLiveSettle intent={liveIntent} revision={state.revision} />
       <PreStocksEvidence />
-      <p className={styles.paperFoot}>PAPER · SOLANA · TOKEN-2022 · NO WALLET · NO LIVE ORDER</p>
+      <p className={styles.paperFoot}>PAPER · SOLANA · TOKEN-2022 · LIVE SETTLE GATED</p>
     </section>
   );
 });

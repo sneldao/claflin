@@ -1,10 +1,10 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are live presentations of the same controller (`/?desk=jesse&view=room|compact`). PreStocks duplex on the ticket review path. Pyth comparison stays honest-unavailable without Pro entitlement. `/night-desk` redirects to live Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Venue duplex** (Backed/Jupiter stock reference vs Jupiter venue USD) and **PreStocks** duplex on the ticket. Pyth comparison stays honest-unavailable without Pro entitlement + unit basis. **Live settle** (Jupiter order → wallet sign → execute) is implemented but **off by default** — both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` required. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
-Jesse is a first-class Claflin desk: same room craft as Hetty, real Jupiter Metis paper quotes, explicit v2 paper filing that survives reload, honest market evidence (including unavailable). No live Solana execution in this release.
+Jesse is a first-class Claflin desk: same room craft as Hetty, real Jupiter Metis paper quotes, explicit v2 paper filing that survives reload, honest market evidence (including unavailable), and an env-gated live Solana settle path that never pretends to be paper.
 
 ## House model
 
@@ -38,14 +38,19 @@ Desk chooses broker + market. Room and Compact are presentations of the same wor
 | `claflin.draft.v2.jesse` | Draft checkpoint |
 | `claflin.watched.v2.jesse` | Explicit watches |
 | `claflin.presentation.v1.jesse` | Room/compact view preference |
+| `claflin.jesse.live.v1.*` (Redis / memory) | Short-lived live proposals (server) |
 
 Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 
 ## Ports
 
 - Quote: `GET /api/desk/jesse/quote` → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
-- Compare (xStock): `GET /api/desk/jesse/comparison` → returns `unavailable` with reason codes until Pyth Pro + unit basis are verified — never a synthetic number
+- Compare (Pyth): `GET /api/desk/jesse/comparison` → returns `unavailable` with reason codes until Pyth Pro + unit basis are verified — never a synthetic number
+- Venue duplex (free): `GET /api/desk/jesse/venue-duplex?instrumentId=sol:…` → Backed public `price-data` when present, else Jupiter Price v3 `stockData`, versus Jupiter venue `usdPrice` — evidence only, never labelled Pyth
 - PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
+- Live prepare: `POST /api/desk/jesse/live/prepare` → fresh Metis `/order` with `taker` (both live flags required)
+- Live submit: `POST /api/desk/jesse/live/submit` → message-bound signed tx → Jupiter `/execute`
+- Live status: `GET /api/desk/jesse/live/status?proposalId=…`
 - Voice token: `POST /api/desk/jesse/voice/token` → AssemblyAI short-lived token, or 503 when unconfigured
 - Voice session: `POST /api/desk/jesse/session` → ElevenLabs ConvAI signed URL
 
@@ -62,11 +67,29 @@ Typed bar and speech parser: [`lib/jesse/speech.ts`](../lib/jesse/speech.ts). Ex
 - `file this paper record`
 - `cancel`
 
-Missing amounts never inherit. Unknown tickers never resolve to the catalog.
+Missing amounts never inherit. Unknown tickers never resolve to the catalog. Live settle is a separate UI path (wallet sign) — not a voice tool in this release.
 
 ## Evidence honesty
 
-Every feed mapping currently has `tokenUnitBasis: null`. The comparison panel shows reason sentences (e.g. unverified unit basis) without inventing basis points. Filing does not wait on evidence.
+- **Pyth panel:** every feed mapping currently has `tokenUnitBasis: null`. The comparison panel shows reason sentences without inventing basis points. Filing does not wait on evidence.
+- **Venue duplex:** free Backed/Jupiter reference vs Jupiter venue USD. Reference difference is labelled as a reading, not profit or arbitrage. When Backed `quote` is null, Jupiter `stockData` may stand in with an explicit source label.
+- **PreStocks:** SPV issuer mark vs issuer token price — secondary bounty track only.
+
+## Live settle (gated)
+
+Implements build-plan §4.6 slice: prepare → review → `signTransaction` → execute. Defaults **off**.
+
+| Env | Role |
+|---|---|
+| `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` | Shows the settle UI; sets `DESK_CAPABILITIES.jesse.live` |
+| `JESSE_LIVE_ENABLED=true` | Server accepts prepare/submit/status |
+
+Neither flag alone enables real funds. Demo limits: **25 USDC** buy / **0.1** scaled sell. Paper filing stays separate. Execute timeout → `unknown` — reconcile the same signature; do not resign a different order. UI: [`JesseLiveSettle`](../components/desk/JesseLiveSettle.tsx). Wallet: Phantom/Solflare-shaped browser port ([`lib/solana/wallet.ts`](../lib/solana/wallet.ts)).
+
+```bash
+NEXT_PUBLIC_JESSE_LIVE_ENABLED=true
+JESSE_LIVE_ENABLED=true
+```
 
 ## Voice agent
 
@@ -88,10 +111,10 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 
 - No Jesse mark adapter / tape
 - Pyth Pro duplex awaits entitlement / unit basis; comparison stays honest-unavailable
-- PreStocks is evidence-only (issuer mark vs tokenPrice) — shown on the ticket review path, not filed as xStock paper
+- Venue duplex is free evidence, not Pyth Pro quality or an exchange print
+- PreStocks is evidence-only — not filed as xStock paper
+- Live settle requires both flags; instruction-allowlist / wallet challenge auth from the full R2 plan are not yet complete
 - Hearable Solana-native phrases on the Jesse lead (quote / correct / compare / refuse)
-- No R2 live wallet path
-- Full 3D NightDeskScene is not yet the night presentation renderer (seated atmosphere + toggle first)
 - Account call-transcript sync stays Hetty-only
 - Stocklana judges should open `/?desk=jesse` — see [STOCKLANA_SUBMISSION.md](STOCKLANA_SUBMISSION.md)
 
@@ -100,4 +123,8 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 ```bash
 # Close Jesse’s seated desk
 NEXT_PUBLIC_JESSE_PAPER_ENABLED=false
+
+# Enable live Jupiter settle (both required)
+NEXT_PUBLIC_JESSE_LIVE_ENABLED=true
+JESSE_LIVE_ENABLED=true
 ```
