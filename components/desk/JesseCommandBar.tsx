@@ -29,7 +29,7 @@ export function JesseCommandBar({
       let parsed = parseJesseSpeech(heard, jesse.state.draft);
       parsed = bindFilePaperCommand(parsed, jesse.state.quote?.id ?? null);
       if (!parsed.command) {
-        setNote('I didn’t catch a supported instruction. Try “buy 100 USDC of Apple” or “compare NVIDIA”.');
+        setNote('I didn’t catch a supported instruction. Try “buy 100 USDC of AAPLx” or “compare NVIDIA xStock”.');
         return;
       }
       const result = await jesse.run(parsed.command);
@@ -51,7 +51,7 @@ export function JesseCommandBar({
         <input
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder='e.g. buy 100 USDC of Apple'
+          placeholder='e.g. buy 100 USDC of AAPLx'
           autoComplete="off"
           disabled={busy}
         />

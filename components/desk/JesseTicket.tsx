@@ -8,6 +8,7 @@ import { mintFirstJessePaperSlip } from '@/lib/trading/desk-slips';
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { HouseMark } from '../desk/HouseMark';
 import { MarketEvidence } from '../solana/MarketEvidence';
+import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import styles from '../desk/WorkingDesk.module.css';
 
 const AMOUNT_CHIPS = { buy: ['25', '100', '250'], sell: ['1', '5', '10'] } as const;
@@ -117,16 +118,23 @@ export const JesseTicket = memo(function JesseTicket({
           </p>
           <p>Spend <strong>{q.inputAmount} {q.inputSymbol}</strong> → receive about <strong>{q.outputAmount} {q.outputSymbol}</strong></p>
           <p className={styles.product}>
-            Jupiter · Metis · Solana
+            Jupiter · Metis · Solana · Token-2022
             {q.priceImpactPercent != null && <> · impact {q.priceImpactPercent}%</>}
             {q.feeBps != null && <> · fee {q.feeBps} bps</>}
           </p>
           <p className={styles.product}>
-            Multiplier {q.scaling.multiplier} (slot {q.scaling.observedSlot})
+            Scaled UI multiplier {q.scaling.multiplier} (slot {q.scaling.observedSlot})
             {q.scaling.nextEffectiveAt != null && (
               <> · A corporate-action multiplier activates at {new Date(q.scaling.nextEffectiveAt).toLocaleTimeString()} — this estimate expires then.</>
             )}
           </p>
+          {(instrument ?? state.presentedInstrument) && (
+            <p className={styles.assumptions}>
+              Mint {(instrument ?? state.presentedInstrument)!.mint} ·{' '}
+              {(instrument ?? state.presentedInstrument)!.issuer} ·{' '}
+              {(instrument ?? state.presentedInstrument)!.decimals} decimals · display units are scaled, not raw tokens
+            </p>
+          )}
           <p role="status" className={styles.notice} data-urgent={freezeSoon ? 'true' : undefined}>
             {quoteFresh
               ? `${secondsLeft}s left to file — then request a fresh estimate.`
@@ -146,6 +154,7 @@ export const JesseTicket = memo(function JesseTicket({
           <button type="button" className={styles.secondary} onClick={() => { void compare(); }}>Compare market</button>
         </div>
         <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
+        <PreStocksEvidence />
       </section>
     );
   }
@@ -160,7 +169,7 @@ export const JesseTicket = memo(function JesseTicket({
           ? 'Getting a Jupiter paper estimate…'
           : spokenLine
             ? <>You said: <em>{spokenLine}</em></>
-            : 'Speak or type an instruction — “buy 100 USDC of Apple” — or fill the plaques below.'}
+            : 'Speak or type an instruction — “buy 100 USDC of AAPLx” — or fill the plaques below.'}
       </p>
       {(localError || lastResult?.status === 'clarify' || lastResult?.status === 'rejected') && (
         <p className={styles.notice} role="alert">{localError ?? lastResult?.spokenText}</p>
@@ -184,8 +193,13 @@ export const JesseTicket = memo(function JesseTicket({
         </fieldset>
         <p className={styles.product}>
           {draft.instrumentId
-            ? `${SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId)?.symbol ?? ''} · Token-2022 xStock on Solana`
-            : 'Verified xStocks on Solana — scaled display units, Jupiter Metis routes.'}
+            ? (() => {
+                const stock = SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId);
+                return stock
+                  ? `${stock.symbol} · Token-2022 · ${stock.issuer} · mint ${stock.mint.slice(0, 8)}…`
+                  : 'Token-2022 xStock on Solana';
+              })()
+            : 'Verified Backed xStocks on Solana — Token-2022, scaled display units, Jupiter Metis routes.'}
         </p>
         <div className={styles.row}>
           <label>
@@ -230,7 +244,8 @@ export const JesseTicket = memo(function JesseTicket({
         </div>
       </form>
       <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
-      <p className={styles.paperFoot}>PAPER · SOLANA · NO WALLET · NO LIVE ORDER</p>
+      <PreStocksEvidence />
+      <p className={styles.paperFoot}>PAPER · SOLANA · TOKEN-2022 · NO WALLET · NO LIVE ORDER</p>
     </section>
   );
 });

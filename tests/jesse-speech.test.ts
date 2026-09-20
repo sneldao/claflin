@@ -19,6 +19,23 @@ describe('parseJesseSpeech', () => {
     }
   });
 
+  it('parses Solana-native hearables: AAPLx quote, size correction, and unknown ticker refusal', () => {
+    const quote = parseJesseSpeech('buy 100 USDC of AAPLx');
+    assert.equal(quote.command?.type, 'draft');
+    const correct = parseJesseSpeech('make that 50 USDC of AAPLx');
+    assert.equal(correct.command?.type, 'draft');
+    if (correct.command?.type === 'draft') {
+      assert.equal(correct.command.intent.amount, '50');
+      assert.equal(correct.command.intent.side, 'buy');
+    }
+    const refuse = parseJesseSpeech('buy DOGE on Solana');
+    assert.equal(refuse.command?.type, 'clarify');
+    if (refuse.command?.type === 'clarify') {
+      assert.equal(refuse.command.field, 'instrument');
+      assert.equal(refuse.command.draft.instrumentId, null);
+    }
+  });
+
   it('parses compare and file commands', () => {
     assert.equal(parseJesseSpeech('compare NVIDIA').command?.type, 'compare');
     assert.equal(parseJesseSpeech('file this paper record').command?.type, 'file-paper');

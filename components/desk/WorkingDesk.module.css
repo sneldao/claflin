@@ -1,14 +1,14 @@
 .workspace {
-  --desk-ink: #e8e6d9;
-  --desk-muted: #aeb9aa;
-  --desk-room: #15251f;
-  --desk-deep: #0c1814;
+  --desk-ink: var(--claflin-ink, #e8e6d9);
+  --desk-muted: var(--claflin-muted, #aeb9aa);
+  --desk-room: var(--claflin-room, #15251f);
+  --desk-deep: var(--claflin-deep, #0c1814);
   --desk-enamel: #203c31;
-  --desk-brass: #c5ac78;
-  --desk-brass-dim: #82724f;
-  --desk-paper: #e7dfc9;
+  --desk-brass: var(--claflin-brass, #c5ac78);
+  --desk-brass-dim: var(--claflin-brass-dim, #82724f);
+  --desk-paper: var(--claflin-paper, #e7dfc9);
   --desk-paper-light: #f0eadb;
-  --desk-paper-ink: #27362b;
+  --desk-paper-ink: var(--claflin-paper-ink, #27362b);
   --desk-paper-muted: #59614d;
   --desk-line: #b3bca326;
   --desk-shadow: #030b0873;
@@ -26,14 +26,14 @@
   --desk-occlusion: #02090799;
   --desk-luster: #e4d3a820;
   --desk-window-line: #101e15aa;
-  /* ———— Motion language — a single dialect for every animation ———— */
-  --dur-1: 240ms;   /* micro: hovers, ticks, focus */
-  --dur-2: 460ms;   /* standard: entrance, settle */
-  --dur-3: 700ms;   /* signature: room, scene, slip */
-  --ease-swift: cubic-bezier(.16, .8, .3, 1);       /* decisive ease-out */
-  --ease-overshoot: cubic-bezier(.2, 1.1, .35, 1);  /* tiny settle bounce */
-  --ease-in-out-c: cubic-bezier(.4, 0, .2, 1);       /* symmetric */
-  --stagger: 110ms;  /* arrival step between children */
+  /* ———— Motion language — shared with Night via styles/desk-craft.css ———— */
+  --dur-1: var(--claflin-dur-1, 240ms);
+  --dur-2: var(--claflin-dur-2, 460ms);
+  --dur-3: var(--claflin-dur-3, 700ms);
+  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
+  --ease-overshoot: var(--claflin-ease-overshoot, cubic-bezier(.2, 1.1, .35, 1));
+  --ease-in-out-c: var(--claflin-ease-in-out, cubic-bezier(.4, 0, .2, 1));
+  --stagger: var(--claflin-stagger, 110ms);
   position: relative;
   isolation: isolate;
   min-height: 100svh;
@@ -682,21 +682,93 @@
 .deskSurface > span {
   transition: letter-spacing var(--dur-2) var(--ease-swift), opacity var(--dur-2) var(--ease-swift);
 }
-.grid[data-presentation="night"] {
+.grid[data-presentation="room"] {
   --desk-night-veil: color-mix(in srgb, #0c1218 12%, transparent);
 }
-.grid[data-presentation="night"] .deskSurface {
+.grid[data-presentation="room"] .deskSurface {
   opacity: 0.88;
   filter: saturate(0.82) brightness(0.94);
 }
-.grid[data-presentation="night"] .deskSurface > span {
+.grid[data-presentation="room"] .deskSurface > span {
   letter-spacing: 0.14em;
   opacity: 0.82;
 }
 @media (prefers-reduced-motion: reduce) {
   .presentationButton, .deskSurface > span { transition: none; }
-  .grid[data-presentation="night"] .deskSurface { filter: none; }
+  .grid[data-presentation="room"] .deskSurface { filter: none; }
 }
+
+/* ———— Room view (NightDeskScene + HTML work overlays) ———— */
+.roomView {
+  --dur-1: var(--claflin-dur-1, 240ms);
+  --dur-2: var(--claflin-dur-2, 460ms);
+  --dur-3: var(--claflin-dur-3, 700ms);
+  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
+  --desk-ink: var(--claflin-ink, #e8e6d9);
+  --desk-muted: var(--claflin-muted, #aeb9aa);
+  --desk-brass: var(--claflin-brass, #c5ac78);
+  --desk-brass-dim: var(--claflin-brass-dim, #82724f);
+  --desk-paper: var(--claflin-paper, #e7dfc9);
+  --desk-paper-ink: var(--claflin-paper-ink, #27362b);
+  --desk-deep: var(--claflin-deep, #0c1814);
+  --desk-line: #b3bca326;
+  color: var(--desk-ink);
+  background: var(--claflin-night-room, #0d1218);
+}
+.roomViewHeader {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px clamp(16px, 3vw, 36px) 10px;
+  pointer-events: auto;
+}
+.roomViewNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 20px;
+  font-size: 12px;
+}
+.roomViewNav a { color: var(--desk-muted); text-decoration: none; }
+.roomViewNav a:hover { color: var(--desk-brass); }
+.roomViewOverlay {
+  position: relative;
+  z-index: 3;
+  max-width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 8px clamp(12px, 3vw, 28px) 48px;
+  pointer-events: auto;
+  animation: riseIn var(--dur-2) var(--ease-swift) both;
+}
+.roomViewKicker {
+  margin: 0 0 12px;
+  font: 10px/1.4 var(--font-mono), monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--desk-brass-dim);
+}
+.roomView .mode {
+  padding: 8px 0 16px;
+  color: var(--desk-muted);
+}
+.roomView .grid {
+  background: color-mix(in srgb, var(--desk-deep) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--desk-brass-dim) 35%, transparent);
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+}
+.roomViewBoard {
+  margin-top: 20px;
+  padding: 12px 0 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .roomViewOverlay { animation: none; }
+}
+
 .prestockPick { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .prestockPick select {
   max-width: 100%;
@@ -1107,12 +1179,117 @@
 .tickerStation .tapeItem { border-color: var(--desk-paper-rule); padding: 12px 20px; }
 .tickerStation .tapeItem:hover:not(:disabled) { background: var(--desk-paper-wash); transform: none; }
 .tickerStation .tapeItem:focus-visible { outline-color: var(--desk-paper-ink); }
+/* ————— Claflin foyer: house first, then open-desk doors ————— */
+.foyer {
+  position: relative; z-index: 2;
+  width: min(720px, 100%);
+  margin: 48px auto 64px;
+  padding: 36px 32px 40px;
+  display: grid;
+  gap: 28px;
+  animation: riseIn var(--dur-2) var(--ease-swift) both;
+}
+.foyerPending {
+  margin: 80px auto;
+  text-align: center;
+  color: var(--desk-muted);
+}
+.foyerMark { display: grid; gap: 10px; justify-items: start; }
+.foyerMark h1 {
+  margin: 0 !important;
+  font: 400 clamp(36px, 5vw, 52px)/1.1 var(--font-display), serif !important;
+  letter-spacing: -.03em;
+  color: var(--desk-ink);
+}
+.foyerPromise {
+  margin: 4px 0 0 !important;
+  font: 400 22px/1.35 var(--font-display), serif;
+  color: var(--desk-brass);
+}
+.foyerNote {
+  margin: 0 !important;
+  max-width: 42ch;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--desk-muted);
+}
+.foyerDoors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.foyerDoor {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 18px 20px;
+  text-align: left;
+  border: 1px solid var(--desk-brass-dim);
+  background: color-mix(in srgb, var(--desk-room) 70%, transparent);
+  color: var(--desk-ink);
+  box-shadow: inset 0 1px 0 var(--desk-luster), 0 8px 24px var(--desk-occlusion);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-1) var(--ease-swift),
+    background var(--dur-1) var(--ease-swift),
+    transform var(--dur-1) var(--ease-swift);
+}
+.foyerDoor:hover {
+  border-color: var(--desk-brass);
+  background: color-mix(in srgb, var(--desk-brass) 10%, var(--desk-room));
+}
+.foyerDoor:active { transform: translateY(1px); }
+.foyerDoorName {
+  font: 400 26px/1.2 var(--font-display), serif;
+  letter-spacing: -.02em;
+}
+.foyerDoorMarket {
+  font: 10px/1 var(--font-mono), monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.foyerDoorAccess {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--desk-ink);
+}
+.foyerDoorApproach {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--desk-muted);
+}
+.foyerDoorCue {
+  margin-top: 6px;
+  font: 11px/1 var(--font-mono), monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.foyerPlanned {
+  margin: 0 !important;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--desk-muted);
+}
+@media (max-width: 760px) {
+  .foyer { margin: 24px auto 40px; padding: 24px 16px 28px; }
+  .foyerDoor { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foyer { animation: none; }
+  .foyerDoor { transition: none; }
+}
+
 .houseDirectory { position: relative; }
 .houseDirectory > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; list-style: none; }
 .houseDirectory > summary::-webkit-details-marker { display: none; }
 .houseDirectory > summary::after { content: '+'; font: 14px/1 var(--font-mono), monospace; color: var(--desk-brass); }
 .houseDirectory[open] > summary::after { content: '−'; }
-.directoryPaper { position: absolute; top: calc(100% + 8px); left: 0; width: min(330px, calc(100vw - 32px)); padding: 24px; background: var(--desk-paper-light); color: var(--desk-paper-ink); border: 1px solid var(--desk-paper-edge); box-shadow: 2px 4px 0 var(--desk-paper-edge), 0 16px 48px var(--desk-occlusion); z-index: 20; }
+.directoryPaper { position: absolute; top: calc(100% + 8px); left: 0; width: min(360px, calc(100vw - 32px)); padding: 24px; background: var(--desk-paper-light); color: var(--desk-paper-ink); border: 1px solid var(--desk-paper-edge); box-shadow: 2px 4px 0 var(--desk-paper-edge), 0 16px 48px var(--desk-occlusion); z-index: 20; }
 .directoryTitle { font: 26px/1.2 var(--font-display), serif; }
 .directoryNote { margin-top: 6px !important; font-size: 12px; color: var(--desk-paper-muted); }
 .directoryPaper ul { list-style: none; padding: 0; margin: 18px 0; }
@@ -1121,7 +1298,7 @@
 .directoryDesk:hover strong { color: var(--desk-paper-ink); }
 .directoryDesk[aria-current="true"] { box-shadow: inset 3px 0 0 var(--desk-brass); padding-left: 10px; }
 .directoryPaper li strong { display: block; font: 16px/1.3 var(--font-display), serif; }
-.directoryPaper li span { display: block; font-size: 11px; color: var(--desk-paper-muted); margin-top: 3px; }
+.directoryPaper li span { display: block; font-size: 11px; color: var(--desk-paper-muted); margin-top: 3px; max-width: 220px; }
 .directoryPaper li small { font: 9px/1.5 var(--font-mono), monospace; color: var(--desk-paper-muted); white-space: nowrap; }
 .closedBoundary { margin: 0 0 16px !important; color: var(--desk-paper-ink); font-size: 14px; line-height: 1.6; }
 .directoryFoot { font-size: 11px; line-height: 1.7; color: var(--desk-paper-muted); }
@@ -1333,7 +1510,7 @@
   .window, .glassPartition, .dispatchCabinet { transform: none; }
   .lightPool, .instrument { transform: none; }
   .grid[data-review="true"] .quotationSlip { transform: none; }
-  .grid[data-presentation="night"] .deskSurface { filter: none; }
+  .grid[data-presentation="room"] .deskSurface { filter: none; }
   .call[data-live="true"] { filter: none; }
 }
 

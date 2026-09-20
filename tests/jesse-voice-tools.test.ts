@@ -20,7 +20,7 @@ const emptyState = (): JesseDeskState => ({
   quote: null,
   presentedInstrument: null,
   comparison: null,
-  presentation: { mode: 'direct', focus: 'desk', objectId: null },
+  presentation: { mode: 'compact', focus: 'desk', objectId: null },
   watches: [],
 });
 

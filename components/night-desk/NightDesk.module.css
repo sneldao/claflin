@@ -2,9 +2,13 @@
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  color: #e8ddc2;
+  color: var(--claflin-ink, #e8ddc2);
   font-family: var(--font-body), 'IBM Plex Sans', sans-serif;
-  background: #0d1218;
+  background: var(--claflin-night-room, #0d1218);
+  --dur-1: var(--claflin-dur-1, 240ms);
+  --dur-2: var(--claflin-dur-2, 460ms);
+  --dur-3: var(--claflin-dur-3, 700ms);
+  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
 }
 
 .study::after {
@@ -54,7 +58,7 @@
 .fallbackRoom {
   position: absolute;
   inset: 0;
-  transition: opacity 0.8s ease;
+  transition: opacity var(--dur-3, 700ms) var(--ease-swift, ease);
   background:
     radial-gradient(120% 90% at 18% 30%, rgba(216, 164, 94, 0.16), transparent 46%),
     linear-gradient(180deg, #101820 0%, #16202c 42%, #241c14 78%, #161009 100%);
@@ -249,7 +253,7 @@
   padding: 6px 12px;
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color var(--dur-1, 240ms) var(--ease-swift, ease), color var(--dur-1, 240ms) var(--ease-swift, ease);
 }
 
 .soundToggle:hover,
@@ -325,7 +329,7 @@
   padding: 13px 26px;
   cursor: pointer;
   box-shadow: 0 8px 28px rgba(201, 169, 95, 0.28);
-  transition: transform 0.18s, box-shadow 0.18s;
+  transition: transform var(--dur-1, 240ms) var(--ease-swift, ease), box-shadow var(--dur-1, 240ms) var(--ease-swift, ease);
 }
 
 .primary:hover {
@@ -382,7 +386,7 @@
   padding: 6px 12px;
   cursor: pointer;
   backdrop-filter: blur(6px);
-  transition: color 0.2s, border-color 0.2s;
+  transition: color var(--dur-1, 240ms) var(--ease-swift, ease), border-color var(--dur-1, 240ms) var(--ease-swift, ease);
 }
 
 .objectLabel:hover {
@@ -398,7 +402,7 @@
   top: 50%;
   transform: translateY(-50%);
   width: min(350px, 80vw);
-  animation: sheetIn 0.45s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+  animation: sheetIn var(--dur-2, 460ms) var(--ease-swift, cubic-bezier(0.22, 0.8, 0.3, 1)) both;
   background: linear-gradient(160deg, #efe6cd, #e2d4b2);
   color: #3a3122;
   border-radius: 2px;
@@ -717,7 +721,7 @@
   padding: 8px 13px;
   cursor: pointer;
   backdrop-filter: blur(6px);
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: border-color var(--dur-1, 240ms) var(--ease-swift, ease), color var(--dur-1, 240ms) var(--ease-swift, ease), background var(--dur-1, 240ms) var(--ease-swift, ease);
 }
 
 .samples button:hover {
@@ -783,7 +787,7 @@
   border-radius: 999px;
   padding: 8px 15px;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  transition: color var(--dur-1, 240ms) var(--ease-swift, ease), background var(--dur-1, 240ms) var(--ease-swift, ease);
 }
 
 .viewNav button:hover {

@@ -1,12 +1,12 @@
 # Stocklana: Jesse's Solana Desk — Four-Engineer Build Plan
 
-**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — seated Jesse paper desk, ConvAI line, Night/Direct presentation toggle, and PreStocks secondary duplex landed. **Status:** approved integration brief; `/night-desk` remains the fixture study (full 3D scene bind deferred); seated R1 paper path is in product; Pyth Pro entitlement + unit basis, Redis daemon, and R2 live execution remain.
+**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — Claflin foyer + `?desk=` entry, seated Jesse paper desk, ConvAI line, live Room/Compact presentations (NightDeskScene bound to controller), Hetty presentation parity, PreStocks duplex on the ticket review path. **Status:** approved integration brief; `/night-desk` redirects to `/?desk=jesse&view=room` (fixture study via `?study=1`); seated R1 paper path is in product; Stocklana submission pack in `docs/STOCKLANA_SUBMISSION.md`; Pyth Pro entitlement + unit basis, Redis daemon, and R2 live execution remain.
 
 **Product owner:** project lead. **Integration/release captain:** Engineer 4. **Contract owner:** Engineer 1. Assign actual people to these roles before work starts.
 
 ## Team start here
 
-Start from `decace0` or a descendant on `main`. The public [Night Desk prototype](https://claflin.trustfall.xyz/night-desk) is the approved spatial study (still fixture data). The seated Jesse paper desk is open from the house directory on `/` with Night/Direct presentation preference and a PreStocks evidence duplex. Homepage still defaults to Hetty. Do not replace that homepage or port Hetty's provider stack. Product surface notes: [Jesse desk](JESSE_DESK.md).
+Start from `decace0` or a descendant on `main`. Canonical Room view is `/?desk=jesse&view=room` (`/night-desk` redirects; fixtures at `?study=1`). The Jesse paper desk is open from the house directory on `/` with Room/Compact presentations and a PreStocks evidence duplex. Homepage still defaults to Hetty after the foyer. Do not replace that homepage or port Hetty's provider stack. Product surface notes: [Jesse desk](JESSE_DESK.md).
 
 Read this brief in order: §2 (what exists), §3 (approved experience), §4 (contracts), then your §5 work package. Read [Product Direction](PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) for the governing progression decision. Engineer 1 lands the shared contracts first; Engineers 2–4 start against those fixtures in parallel. No one independently changes shared types or the lockfile.
 
@@ -91,7 +91,7 @@ The working tree contains existing modified docs, deleted `out/` artifacts, and 
 
 ### Primary journey
 
-1. Today, `/night-desk` is the public fixture study and `/` is Hetty/Base. Build the integrated Jesse experience behind the agreed release gates; promote `/night-desk` to it only after G3 and lead approval. Its default presentation is Night Desk, with an always-available direct view (`/night-desk?view=direct`). Preserve `/?desk=jesse` as a supported desk entry once Jesse is operational. These are target entries, not claims that those query switches work today. Keep the homepage on Hetty until a separate decision changes it.
+1. Today, `/night-desk` is the public fixture study and `/` is Hetty/Base. Build the integrated Jesse experience behind the agreed release gates; promote `/night-desk` to it only after G3 and lead approval. Its default presentation is Night Desk, with an always-available direct view (`/night-desk?view=compact`). Preserve `/?desk=jesse` as a supported desk entry once Jesse is operational. These are target entries, not claims that those query switches work today. Keep the homepage on Hetty until a separate decision changes it.
 2. Start with no default instrument or amount. Support Apple/AAPLx first, then NVIDIA/NVDAx and Tesla/TSLAx **only after each mint, multiplier, quote route, and feed mapping passes validation**. A one-instrument completed flow beats three guessed integrations; two verified instruments are the coverage target.
 3. “Talk with Jesse” requests microphone consent. Also provide keyboard/manual controls and a typed command input using the same controller. No wallet or sign-in prerequisite for quotes or paper.
 4. “Compare Apple.” Bring the duplex instrument and its readable evidence folio into focus: underlying reference, token observation, their own timestamps/session/units, and only a valid comparison. Jupiter's size-specific quotation remains a third, distinct slip. The room participates in the work rather than surrounding a conventional price-card dashboard.
@@ -116,7 +116,7 @@ The working tree contains existing modified docs, deleted `out/` artifacts, and 
 
 Retain and integrate the approved Night Desk scene: warm paper/walnut/brass, cool window depth, a duplex instrument, a shared blotter, and a retrievable ledger. The conversation arranges the relevant work; it does not merely fill a permanently displayed form. Use a small set of predictable camera views, stable object identities, crisp HTML terms, and cancellable motion. No free-roaming office, hidden trading controls, compulsory tour, talking-head avatar requirement, or fake market activity. Sound is opt-in and must not compete with speech.
 
-Night and direct are presentation preferences for the same broker and work, not beginner/expert products. The direct view uses the same controller, data, commands, permissions, and disclosures. Neither presentation is earned. Do not infer expertise, suitability, or authorization from the chosen view. Selecting a broker/network is a separate, explicit action.
+Night and direct are view preferences for the same broker and work, not beginner/expert products. The direct view uses the same controller, data, commands, permissions, and disclosures. Neither presentation is earned. Do not infer expertise, suitability, or authorization from the chosen view. Selecting a broker/network is a separate, explicit action.
 
 ### Progression: the room becomes yours
 
@@ -400,7 +400,7 @@ export interface SolanaLiveProposal {
 Engineer 1 owns the shared work/controller contracts; Engineer 4 owns the renderers. Add the following client-safe presentation contract without changing the financial schemas:
 
 ```ts
-export type DeskPresentation = 'night' | 'direct';
+export type DeskPresentation = 'room' | 'compact';
 export interface DeskPresentationState {
   mode: DeskPresentation;
   focus: 'desk' | 'evidence' | 'instruction' | 'record';
@@ -470,7 +470,7 @@ Work order:
 **Own:** `components/desk/**` except E3's Jesse component/styles; `components/solana/**` except E2's MarketEvidence files; `components/night-desk/**`, `lib/night-desk-scene.ts`, `app/night-desk/page.tsx`, `app/desk-study/page.tsx`; `app/page.tsx` and desk-entry query wiring; `lib/solana/useSolanaWallet.ts` and client wallet bridge; `lib/share.ts`; `e2e/**`, `playwright.config.ts`; `next.config.js`, `proxy.ts`, deployment configs and example env files; submission assets/docs. Shared domain/controller changes go to E1. Do not overwrite currently modified canonical docs without coordinating with their owner.
 
 Work order:
-1. Reuse the shipped Night Desk scene/composition and adapt it to E1's controller; keep fixture-only state and storage separate. Implement night/direct presentation switching with the same work and always-visible access. Promote /night-desk only after G3 and lead approval; keep / unchanged and /desk-study development-only. Resolve desk/view/shared-intent routing before hydration, with no transient Base write or quote and no second controller.
+1. Reuse the shipped Night Desk scene/composition and adapt it to E1's controller; keep fixture-only state and storage separate. Implement room/compact presentation switching with the same work and always-visible access. Promote /night-desk only after G3 and lead approval; keep / unchanged and /desk-study development-only. Resolve desk/view/shared-intent routing before hydration, with no transient Base write or quote and no second controller.
 2. Narrow UI by quote/instrument protocol. Replace Base/Aerodrome labels only where appropriate; show Jesse units, network, route, source age, local-only records. Confirm new capability matrix is used for directory/open/closed decisions. Jesse page must never request Base allowances, sign-in, or live execution accidentally.
 3. Integrate JesseCall and comparison reader. Manual ticket, typed commands and voice operate one revisioned document. Use provisional-hearing styling separate from authoritative field values. Keep numerical data accessible without narration/animation. Mount E2's evidence presenter and E3's conversational surface; do not independently rebuild their logic. First visit has no empty-history panels; return visit exposes actual saved work. No quiz, balance, paid-call or trade-count gate.
 4. Implement Solana Wallet Standard connection bridge with explicit supported wallet capabilities; pass signature bytes to E1's proposal controller, never send autonomously. Show account/network/fees/minimum and distinct paper versus live actions. Test account changes, wallet rejection and unsupported wallet capability.
@@ -529,7 +529,7 @@ The contract PR is the intentional shared dependency. Do not pretend four isolat
 |---|---|---|
 | G0: proof and contracts | September 25 deadline recorded; identity and unit evidence; provider-access checks; types/fixtures; package choices | E1 + E2 + E3; lead resolves access/rules |
 | G1: first vertical slice | Integrated Jesse entry → manual real Jupiter quote → validated paper file → reload; no Base/study-data leakage | E1 + E4 |
-| G2: differentiated desk | Duplex evidence + closed-market warnings + real AssemblyAI conversation/correction + actual TTS + shared night/direct work | E2 + E3 + E4 |
+| G2: differentiated desk | Duplex evidence + closed-market warnings + real AssemblyAI conversation/correction + actual TTS + shared room/compact work | E2 + E3 + E4 |
 | G3: submission-ready R1 | Real provider checks, first/return-visit and view-parity acceptance, regression pass, truthful demo and known limitations | E4 + lead |
 | G4: R2 live | Product-access signoff, transaction policy, wallet tests, approved live evidence and reconciliation | E1 + E4 + lead |
 | G5: submission | Receipt verified before confirmed September 25 cutoff; links playable/reachable; exact delivered scope | lead, E4 prepares |

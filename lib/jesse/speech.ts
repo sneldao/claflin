@@ -115,8 +115,9 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
     return { command: { type: 'watch', instrumentId }, confidence: 'full', heard };
   }
 
-  const side = detectSide(heard);
   const amount = parseAmount(heard);
+  const side = detectSide(heard)
+    ?? (/\b(make that|change (it|that) to|actually)\b/i.test(heard) && amount ? 'buy' : null);
   const reuseInstrument = instrumentId
     ?? (/\b(that|it|this|make that|change (it|that) to)\b/i.test(heard) ? currentDraft?.instrumentId ?? null : null);
 

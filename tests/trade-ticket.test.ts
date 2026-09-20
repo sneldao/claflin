@@ -40,8 +40,8 @@ function render(state: DeskState, options: { time?: number; historyReady?: boole
     loadHistory: noop, removeRecord: noop, watch: noop, unwatch: noop,
     viewedRecordId: options.viewedRecordId ?? null, focusedRecordId: options.focusedRecordId ?? null,
     openRecord: noop, dismissRecord: noop,
-    deskId: 'hetty', activeDesk: { id: 'hetty', name: 'Hetty', market: 'Base', approach: '', status: 'paper' },
-    open: true, switchDesk: noop, foreground: foregroundDocument(state, options.viewedRecordId ?? null, options.records),
+    deskId: 'hetty', activeDesk: { id: 'hetty', name: 'Hetty', shortName: 'Hetty', market: 'Base', approach: '', access: 'Coinbase Tokenized Stocks · Base paper', status: 'paper' },
+    open: true, switchDesk: noop, enterDesk: noop, entryPhase: 'desk', foreground: foregroundDocument(state, options.viewedRecordId ?? null, options.records),
   };
   try { return renderToStaticMarkup(createElement(TradeTicket, { desk })); }
   finally { clock.mock.restore(); }

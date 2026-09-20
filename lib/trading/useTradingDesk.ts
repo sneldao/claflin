@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, usesLegacyDeskDocuments, type HouseDeskId } from '@/lib/house';
+import { loadLastDesk, resolveHouseEntry, saveLastDesk, syncDeskQuery } from '@/lib/house-entry';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
@@ -29,8 +30,11 @@ function readHistory(deskId: HouseDeskId, userId: string | null): PaperRecord[] 
   return all.filter(record => recordVisibleToAccount(record, userId));
 }
 
+export type HouseEntryPhase = 'pending' | 'foyer' | 'desk';
+
 export function useTradingDesk() {
   const auth = useDeskAuth();
+  const [entryPhase, setEntryPhase] = useState<HouseEntryPhase>('pending');
   const [deskId, setDeskId] = useState<HouseDeskId>(OPEN_DESK_ID);
   const [state, dispatch] = useReducer(deskReducer, emptyDraft(), initialDesk);
   const [records, setRecords] = useState<PaperRecord[]>([]);
@@ -58,25 +62,55 @@ export function useTradingDesk() {
     catch { setHistoryReady(false); setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.'); }
   }, []);
 
+  const hydrateDesk = useCallback((id: HouseDeskId) => {
+    setDeskId(id);
+    deskIdRef.current = id;
+    const draft = usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft();
+    dispatch({ type: 'hydrate', state: initialDesk(draft) });
+    setViewedRecordId(null);
+    setError(null);
+    try {
+      setRecords(readHistory(id, userIdRef.current));
+      setWatched(loadWatched(window.localStorage, id));
+      setHistoryReady(true);
+      setStorageError(null);
+    } catch {
+      setHistoryReady(false);
+      setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.');
+    }
+  }, []);
+
   /* Loading initial paper history and syncing with browser storage is intentionally done in an effect;
      localStorage is not available during SSR and the storage event is an external subscription. */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    loadHistory();
-    setWatched(loadWatched(window.localStorage, OPEN_DESK_ID));
-    const restored = readRestorableDraft(window.localStorage, OPEN_DESK_ID);
-    if (restored) dispatch({ type: 'edit', draft: restored });
+    const params = new URLSearchParams(window.location.search);
+    const entry = resolveHouseEntry(params.get('desk'), window.localStorage);
+    if (entry.kind === 'foyer') {
+      setEntryPhase('foyer');
+      setHistoryReady(true);
+      setDeskReady(true);
+      return () => { request.current?.abort(); };
+    }
+    hydrateDesk(entry.deskId);
+    if (entry.source === 'query' || !loadLastDesk(window.localStorage)) {
+      saveLastDesk(window.localStorage, entry.deskId);
+    }
+    syncDeskQuery(entry.deskId);
+    setEntryPhase('desk');
     setDeskReady(true);
-    window.addEventListener('storage', loadHistory);
-    return () => { request.current?.abort(); window.removeEventListener('storage', loadHistory); };
-  }, [loadHistory]);
+    return () => { request.current?.abort(); };
+  }, [hydrateDesk]);
   useEffect(() => {
+    if (entryPhase !== 'desk') return;
     loadHistory();
-  }, [auth.userId, loadHistory]);
+    window.addEventListener('storage', loadHistory);
+    return () => window.removeEventListener('storage', loadHistory);
+  }, [auth.userId, entryPhase, loadHistory]);
   useEffect(() => {
-    if (!deskReady || !usesLegacyDeskDocuments(deskId)) return;
+    if (!deskReady || entryPhase !== 'desk' || !usesLegacyDeskDocuments(deskId)) return;
     try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
-  }, [deskReady, deskId, state]);
+  }, [deskReady, deskId, entryPhase, state]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const knownRecords = historyReady ? records : undefined;
@@ -210,8 +244,23 @@ export function useTradingDesk() {
     });
   }, [deskId]);
 
+  const enterDesk = useCallback((id: HouseDeskId) => {
+    if (!getHouseDesk(id)) return;
+    request.current?.abort();
+    requestGen.current += 1;
+    sessions.current = {};
+    hydrateDesk(id);
+    saveLastDesk(window.localStorage, id);
+    syncDeskQuery(id);
+    setEntryPhase('desk');
+  }, [hydrateDesk]);
+
   const switchDesk = useCallback((id: HouseDeskId) => {
     if (id === deskId || !getHouseDesk(id)) return;
+    if (entryPhase === 'foyer') {
+      enterDesk(id);
+      return;
+    }
     request.current?.abort();
     requestGen.current += 1;
     if (usesLegacyDeskDocuments(deskId)) {
@@ -232,6 +281,8 @@ export function useTradingDesk() {
     dispatch({ type: 'hydrate', state: entered.state });
     setViewedRecordId(entered.viewedRecordId);
     setError(entered.error);
+    saveLastDesk(window.localStorage, entered.deskId);
+    syncDeskQuery(entered.deskId);
     try {
       setRecords(readHistory(entered.deskId, userIdRef.current));
       setWatched(loadWatched(window.localStorage, entered.deskId));
@@ -241,7 +292,7 @@ export function useTradingDesk() {
       setHistoryReady(false);
       setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.');
     }
-  }, [deskId, error, state, viewedRecordId]);
+  }, [deskId, enterDesk, entryPhase, error, state, viewedRecordId]);
 
   const focusedRecordId = activeRecordId(state, viewedRecordId);
   const foreground = foregroundDocument(state, viewedRecordId, knownRecords);
@@ -250,11 +301,12 @@ export function useTradingDesk() {
 
   return useMemo(
     () => ({
+      entryPhase, enterDesk,
       deskId, activeDesk, open, switchDesk, foreground,
       state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
       loadHistory, removeRecord, watched, watch, unwatch,
       viewedRecordId, focusedRecordId, openRecord, dismissRecord,
     }),
-    [deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
+    [entryPhase, enterDesk, deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

@@ -69,7 +69,7 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
+    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
@@ -90,13 +90,25 @@ describe('one canonical house', () => {
     assert.match(directory, /Visit · planned/);
     assert.match(directory, /onVisit/);
     assert.match(directory, /<button/);
+    assert.match(directory, /desk\.access/);
     assert.doesNotMatch(directory, /requestQuote|Record paper|Ring Hetty|href=/);
     const desk = source('components/desk/WorkingDesk.tsx');
     assert.match(desk, /<ClosedDesk /);
-    assert.match(desk, /switchDesk/);
+    assert.match(desk, /HouseFoyer/);
+    assert.match(desk, /enterDesk|switchDesk/);
     assert.match(source('components/desk/ClosedDesk.tsx'), /This desk is not open/);
     assert.match(source('components/desk/ClosedDesk.tsx'), /No quote, no paper file, no live order/);
     assert.doesNotMatch(source('components/desk/HettyCall.tsx'), /className=\{styles\.boardTitle\}>Hetty\./);
+  });
+  it('opens from a Claflin foyer with desk deep links, not Hetty by default', () => {
+    const entry = source('lib/house-entry.ts');
+    assert.match(entry, /claflin\.desk\.v1\.last/);
+    assert.match(entry, /resolveHouseEntry/);
+    assert.match(entry, /\?desk=/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /HOUSE\.promise/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /desk\.access/);
+    assert.match(source('lib/trading/useTradingDesk.ts'), /entryPhase/);
+    assert.match(source('components/desk/WorkingDesk.tsx'), /entryPhase === 'foyer'/);
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');

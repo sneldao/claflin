@@ -422,7 +422,7 @@ describe('jesse controller — presentation-only commands', () => {
     assert.equal(controller.getState().revision, revision); // presentation-only
     assert.equal(controller.getState().presentation.focus, 'record');
     assert.equal(controller.getState().presentation.objectId, quote.id);
-    assert.deepEqual(loadJessePresentation(storage), { mode: 'night', focus: 'record', objectId: quote.id });
+    assert.deepEqual(loadJessePresentation(storage), { mode: 'room', focus: 'record', objectId: quote.id });
   });
 
   it('focus on evidence requires the current comparison id', async () => {
@@ -579,7 +579,7 @@ describe('jesse controller — restore', () => {
     const s = reloaded.getState();
     assert.deepEqual(s.draft, { instrumentId: instrument.id, side: null, unit: null, amount: '10' });
     assert.deepEqual(s.watches, [instrument.id]);
-    assert.deepEqual(s.presentation, { mode: 'night', focus: 'desk', objectId: null });
+    assert.deepEqual(s.presentation, { mode: 'room', focus: 'desk', objectId: null });
     assert.equal(s.stage, 'draft'); // no work state is invented on restore
     assert.equal(s.quote, null);
   });

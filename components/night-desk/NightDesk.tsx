@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, FileText, LineChart, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, BookOpen, FileText, LineChart, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { NIGHT_DESK_FIXTURES, type NightDeskAmount, type NightDeskView } from '@/lib/night-desk-fixtures';
 import {
   initialNightDeskState,
@@ -223,12 +223,13 @@ export function NightDesk() {
       <header className={styles.masthead}>
         <div className={styles.brandBlock}>
           <HouseMark small className={styles.mark} />
-          <span className={styles.brandText}><strong>CLAFLIN</strong><small>THE NIGHT DESK · JESSE · SOLANA</small></span>
+          <span className={styles.brandText}><strong>CLAFLIN</strong><small>EXPERIENCE STUDY · FIXTURE DATA</small></span>
         </div>
         <p className={styles.disclosure}>{F.disclosure}</p>
         <p className={styles.disclosure} role="note">
-          Study only — fictional data, no live quotes. For the working Jesse desk (Jupiter paper + Night/Direct presentation), open{' '}
-          <Link href="/">Claflin</Link>, choose Jesse in the house directory, then Night room.
+          Study only — fictional prices and lines. For the live Jesse Room view (same Jupiter paper as Compact), open{' '}
+          <Link href="/?desk=jesse&view=room">/?desk=jesse&amp;view=room</Link>.
+          Fixture route: <Link href="/night-desk?study=1">/night-desk?study=1</Link>.
         </p>
         <div className={styles.mastActions}>
           <button
@@ -246,7 +247,7 @@ export function NightDesk() {
             {!speechSupported ? 'Voice unavailable' : soundOn ? 'Sound on' : 'Sound off'}
           </button>
           <button type="button" className={styles.mastLink} onClick={resetStudy}><RotateCcw size={14} />Reset study</button>
-          <Link href="/" prefetch={false} className={styles.mastLink}><ArrowLeft size={14} />Working desk</Link>
+          <Link href="/?desk=jesse&view=room" prefetch={false} className={styles.mastLink}><ArrowRight size={14} />Live Room view</Link>
         </div>
       </header>
 

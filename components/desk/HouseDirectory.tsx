@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { HOUSE_DESKS, type HouseDeskId } from '@/lib/house';
+import { HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { getEducationTopic } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
 import styles from './WorkingDesk.module.css';
@@ -13,7 +13,7 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
     <summary>The house</summary>
     <div className={styles.directoryPaper}>
       <p className={styles.directoryTitle}>Claflin &amp; Co.</p>
-      <p className={styles.directoryNote}>One house. Specialist desks. A visit is not a trade.</p>
+      <p className={styles.directoryNote}>Ring the desk. Speak the instruction. Different markets behind each door.</p>
       <ul>
         {HOUSE_DESKS.map(desk => <li key={desk.id}>
           <button
@@ -25,9 +25,12 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
               setOpen(false);
             }}
           >
-            <div><strong>{desk.name}</strong><span>{desk.market}</span></div>
+            <div>
+              <strong>{desk.name}</strong>
+              <span>{desk.market} · {desk.access}</span>
+            </div>
             <small>
-              {desk.status === 'paper'
+              {isOpenDesk(desk.id)
                 ? desk.id === activeDeskId ? 'Here · paper' : 'Open · paper'
                 : desk.id === activeDeskId ? 'Here · planned' : 'Visit · planned'}
             </small>

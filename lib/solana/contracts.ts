@@ -146,7 +146,15 @@ export type CommandResult = {
 
 // §4.7 — presentation and continuity boundary.
 
-export type DeskPresentation = 'night' | 'direct';
+export type DeskPresentation = 'room' | 'compact';
+
+/** Map legacy night/direct tokens onto the canonical room/compact view axis. */
+export function normalizeDeskPresentation(raw: unknown): DeskPresentation | null {
+  if (raw === 'room' || raw === 'night') return 'room';
+  if (raw === 'compact' || raw === 'direct') return 'compact';
+  return null;
+}
+
 export interface DeskPresentationState {
   mode: DeskPresentation;
   focus: 'desk' | 'evidence' | 'instruction' | 'record';

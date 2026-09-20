@@ -9,6 +9,9 @@
  * create/reuse authorization. In-flight operations remain the same operation;
  * if a quote expires during a transition, ordinary expiry policy still applies.
  *
+ * Canonical view tokens: room | compact. Legacy night | direct are accepted
+ * on read and rewritten on the next save.
+ *
  * Client-safe: no server imports, no env access, no React. Malformed or
  * missing preference rows read back as the default — a preference is a
  * convenience, never evidence, and never a permission signal (no
@@ -17,17 +20,23 @@
 import { z } from 'zod';
 import type { PaperStorage } from '../trading/paper-records';
 import type { DeskPresentation, DeskPresentationState } from './contracts';
+import { normalizeDeskPresentation } from './contracts';
 
 export const JESSE_PRESENTATION_KEY = 'claflin.presentation.v1.jesse';
 
 export const DEFAULT_JESSE_PRESENTATION: DeskPresentationState = Object.freeze({
-  mode: 'night',
+  mode: 'room',
   focus: 'desk',
   objectId: null,
 });
 
+const modeSchema = z.preprocess(
+  (value) => normalizeDeskPresentation(value) ?? value,
+  z.enum(['room', 'compact']),
+);
+
 const presentationSchema = z.object({
-  mode: z.enum(['night', 'direct']),
+  mode: modeSchema,
   focus: z.enum(['desk', 'evidence', 'instruction', 'record']),
   objectId: z.string().min(1).max(100).nullable(),
 }).strict();
@@ -38,16 +47,19 @@ export function loadJessePresentation(storage: Pick<PaperStorage, 'getItem'>): D
   const raw = storage.getItem(JESSE_PRESENTATION_KEY);
   if (!raw) return { ...DEFAULT_JESSE_PRESENTATION };
   try {
-    return presentationSchema.parse(JSON.parse(raw));
+    return presentationSchema.parse(JSON.parse(raw)) as DeskPresentationState;
   } catch {
     return { ...DEFAULT_JESSE_PRESENTATION };
   }
 }
 
 /** Persist the presentation preference, validated and write-verified like
- *  every other desk document. */
+ *  every other desk document. Always writes canonical room|compact. */
 export function saveJessePresentation(storage: PaperStorage, state: DeskPresentationState): void {
-  const parsed = presentationSchema.parse(state);
+  const parsed = presentationSchema.parse({
+    ...state,
+    mode: normalizeDeskPresentation(state.mode) ?? state.mode,
+  }) as DeskPresentationState;
   const serialized = JSON.stringify(parsed);
   storage.setItem(JESSE_PRESENTATION_KEY, serialized);
   if (storage.getItem(JESSE_PRESENTATION_KEY) !== serialized) {
@@ -61,7 +73,9 @@ export function switchJessePresentation(
   current: DeskPresentationState,
   mode: DeskPresentation,
 ): DeskPresentationState {
-  return { ...current, mode };
+  const next = normalizeDeskPresentation(mode);
+  if (!next) return current;
+  return { ...current, mode: next };
 }
 
 /** Move focus to a known object on the active desk. Changes ONLY focus and

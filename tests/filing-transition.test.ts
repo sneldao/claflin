@@ -48,6 +48,7 @@ describe('mobile filing integration through actual buttons', () => {
   beforeEach(() => {
     resetContainer();
     window.localStorage.clear();
+    window.history.replaceState({}, '', '/?desk=hetty');
     desk = null;
     setViewport(375, 812);
     injectWorkingDeskCss();

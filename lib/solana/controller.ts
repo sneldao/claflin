@@ -29,6 +29,7 @@ import { z } from 'zod';
 import {
   isJesseIntent,
   isSolanaInstrumentId,
+  normalizeDeskPresentation,
   type CommandResult,
   type DeskPresentation,
   type DeskPresentationState,
@@ -183,7 +184,7 @@ export interface JesseController {
   getState(): Readonly<JesseDeskState>;
   applyJesseCommand(command: JesseCommand, expected: DeskRevision): Promise<CommandResult>;
   /** Presentation-only mode switch (§4.7) — never bumps revision or quotes. */
-  setPresentationMode(mode: DeskPresentation): { ok: boolean; spokenText: string };
+  setPresentationMode(mode: DeskPresentation | 'night' | 'direct'): { ok: boolean; spokenText: string };
   /** Start a new session generation: pending quote responses die, and an
    *  in-flight quoting stage returns to draft. Revision is untouched. */
   endSession(): void;
@@ -248,7 +249,7 @@ export function createJesseController(opts: {
     comparison: null,
     quoteRequestId: 0,
     requestRevision: null,
-    presentation: { mode: 'night', focus: 'desk', objectId: null },
+    presentation: { mode: 'room', focus: 'desk', objectId: null },
     watches: [],
   };
 
@@ -646,11 +647,12 @@ export function createJesseController(opts: {
       }
     },
 
-    setPresentationMode(mode: DeskPresentation): { ok: boolean; spokenText: string } {
-      if (mode !== 'night' && mode !== 'direct') {
-        return { ok: false, spokenText: 'Presentation mode must be night or direct.' };
+    setPresentationMode(mode: DeskPresentation | 'night' | 'direct'): { ok: boolean; spokenText: string } {
+      const view = normalizeDeskPresentation(mode);
+      if (!view) {
+        return { ok: false, spokenText: 'View must be room or compact.' };
       }
-      state.presentation = switchJessePresentation(state.presentation, mode);
+      state.presentation = switchJessePresentation(state.presentation, view);
       try {
         saveJessePresentation(storage, state.presentation);
       } catch {
@@ -658,9 +660,9 @@ export function createJesseController(opts: {
       }
       return {
         ok: true,
-        spokenText: mode === 'night'
-          ? 'Night room presentation — the instruction is unchanged.'
-          : 'Direct desk presentation — the instruction is unchanged.',
+        spokenText: view === 'room'
+          ? 'Room view — the instruction is unchanged.'
+          : 'Compact view — the instruction is unchanged.',
       };
     },
 

@@ -10,7 +10,8 @@ export const HOUSE = Object.freeze({
   name: 'Claflin',
   title: 'Claflin — the office above the pit',
   tagline: 'The office above the pit',
-  description: 'The pit is downstairs. This desk is for deciding. Coinbase Tokenized Stocks on Base — real onchain trades when live execution is enabled, paper records alongside.',
+  description: 'The pit is downstairs. This desk is for deciding. Specialist desks, real market access, a paper record you can keep.',
+  promise: 'Ring the desk. Speak the instruction.',
   mode: 'paper' as const,
   /** Retained for legacy consumers; the desk flag is authoritative. */
   liveExecutionEnabled: LIVE_EXECUTION_ENABLED as boolean,
@@ -19,11 +20,47 @@ export const HOUSE = Object.freeze({
 
 export type DeskStatus = 'paper' | 'planned';
 
+/**
+ * Desk doors carry mandate + access in one glance — not biographies.
+ * `access` is the product/network the desk can actually quote; `approach` stays the editorial lens.
+ */
 export const HOUSE_DESKS = Object.freeze([
-  Object.freeze({ id: 'hetty', name: 'Hetty Green', shortName: 'Hetty', market: 'Base', approach: 'Independent judgment. Capital preservation. Deliberate decisions.', status: 'paper' as DeskStatus }),
-  Object.freeze({ id: 'jesse', name: 'Jesse Livermore', shortName: 'Jesse', market: 'Solana', approach: 'Price action, timing, and disciplined speculation.', status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus }),
-  Object.freeze({ id: 'isabel', name: 'Isabel Benham', shortName: 'Isabel', market: 'Robinhood Chain', approach: 'Fundamental analysis and patient investigation.', status: 'planned' as DeskStatus }),
-  Object.freeze({ id: 'arbitrum', name: 'Jay Cooke', shortName: 'Jay', market: 'Arbitrum', approach: 'Building the rails that let everyone else move money.', status: 'planned' as DeskStatus }),
+  Object.freeze({
+    id: 'hetty',
+    name: 'Hetty Green',
+    shortName: 'Hetty',
+    market: 'Base',
+    approach: 'Independent judgment. Capital preservation. Deliberate decisions.',
+    access: 'Coinbase Tokenized Stocks · Base paper',
+    status: 'paper' as DeskStatus,
+  }),
+  Object.freeze({
+    id: 'jesse',
+    name: 'Jesse Livermore',
+    shortName: 'Jesse',
+    market: 'Solana',
+    approach: 'Price action, timing, and disciplined speculation.',
+    access: 'Backed xStocks · Jupiter · Solana paper',
+    status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
+  }),
+  Object.freeze({
+    id: 'isabel',
+    name: 'Isabel Benham',
+    shortName: 'Isabel',
+    market: 'Robinhood Chain',
+    approach: 'Fundamental analysis and patient investigation.',
+    access: 'Planned — not open for quotation',
+    status: 'planned' as DeskStatus,
+  }),
+  Object.freeze({
+    id: 'arbitrum',
+    name: 'Jay Cooke',
+    shortName: 'Jay',
+    market: 'Arbitrum',
+    approach: 'Building the rails that let everyone else move money.',
+    access: 'Planned — not open for quotation',
+    status: 'planned' as DeskStatus,
+  }),
 ]);
 
 export type HouseDesk = (typeof HOUSE_DESKS)[number];

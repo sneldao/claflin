@@ -33,6 +33,7 @@ describe('deleted/missing receipt recovery', () => {
   beforeEach(() => {
     resetContainer();
     window.localStorage.clear();
+    window.history.replaceState({}, '', '/?desk=hetty');
     desk = null;
   });
 

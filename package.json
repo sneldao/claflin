@@ -2,7 +2,7 @@
   "name": "claflin",
   "version": "0.1.0",
   "private": true,
-  "description": "Claflin — a curated brokerage house. Hetty’s Base desk brings live tokenized-stock estimates, explicit review, and paper trade records together.",
+  "description": "Claflin — a Deco-futurist brokerage house. Specialist desks for Base (Hetty) and Solana (Jesse): voice-first paper trading, explicit review, and a record you keep.",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "NODE_ENV=production next build --webpack",

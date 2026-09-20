@@ -62,10 +62,11 @@ export function PreStocksEvidence() {
 
   return (
     <section className={styles.marketEvidence} data-source="prestocks" aria-labelledby="prestocks-title">
-      <p className={styles.eyebrow}>PRESTOCKS · SECONDARY</p>
+      <p className={styles.eyebrow}>PRESTOCKS · REFERENCE VERSUS TOKEN</p>
       <h2 id="prestocks-title">Issuer mark versus token.</h2>
       <p className={styles.evidenceBody}>
-        SPV-backed PreStocks — issuer mark and issuer token price. Not a public equity quote, not an exchange price, and not part of Jesse’s xStock paper ticket.
+        Same duplex idea as an equity-versus-xStock comparison — here the issuer mark stands in for a public equity feed.
+        SPV-backed PreStocks only. Not an exchange price, not arbitrage, and not part of the xStock paper ticket you can file.
       </p>
       {items.length > 0 && (
         <label className={styles.prestockPick}>

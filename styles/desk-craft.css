@@ -1,0 +1,23 @@
+/**
+ * Shared Claflin craft tokens — one motion/material dialect for Direct and Night.
+ * Imported globally; desk CSS modules alias these under .workspace / .study.
+ */
+:root {
+  --claflin-dur-1: 240ms;
+  --claflin-dur-2: 460ms;
+  --claflin-dur-3: 700ms;
+  --claflin-ease-swift: cubic-bezier(.16, .8, .3, 1);
+  --claflin-ease-overshoot: cubic-bezier(.2, 1.1, .35, 1);
+  --claflin-ease-in-out: cubic-bezier(.4, 0, .2, 1);
+  --claflin-stagger: 110ms;
+
+  --claflin-ink: #e8e6d9;
+  --claflin-muted: #aeb9aa;
+  --claflin-brass: #c5ac78;
+  --claflin-brass-dim: #82724f;
+  --claflin-paper: #e7dfc9;
+  --claflin-paper-ink: #27362b;
+  --claflin-deep: #0c1814;
+  --claflin-room: #15251f;
+  --claflin-night-room: #0d1218;
+}

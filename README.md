@@ -2,17 +2,17 @@
 
 **Claflin is the voice-first trading desk for global investors who want to trade tokenized US stocks onchain.**
 
-The product spans Hetty / Base and Jesse / Solana. Implementation status below describes this checkout: Base has wallet-authorized execution; Jesse’s seated paper desk (Jupiter quotes, local v2 records) is open from the house directory — `/night-desk` remains the spatial study. It does not establish the status of other branches or deployments.
+The product spans Hetty / Base and Jesse / Solana. Implementation status below describes this checkout: Base has wallet-authorized execution; Jesse’s paper desk (Jupiter quotes, local v2 records) opens from the house directory with live Room/Compact views — `/night-desk` redirects to `/?desk=jesse&view=room`. It does not establish the status of other branches or deployments.
 
 **A voice-first trading product expressed as a Deco-futurist brokerage house — the office above the pit.** Clients give an instruction to a house that keeps a record. Voice, research, publications and personalization support that job.
 
 Claflin is the institution. Hetty / Base is the first relationship, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace. Hetty's Base desk supports real onchain trades when live execution is enabled; Jesse’s Solana desk quotes and files paper from the house directory (homepage stays Hetty). Isabel and Arbitrum remain planned. The first broker is not the brand.
 
-## Night Desk and Stocklana team handoff
+## Desk views and Stocklana team handoff
 
-[The public Night Desk](https://claflin.trustfall.xyz/night-desk) remains the shipped `decace0` spatial study (scripted conversation, fictional data). The **integrated Jesse paper desk** is the seated surface on `/` via the house directory — real Jupiter quotes, v2 local paper, Night/Direct presentation toggle, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base.
+[The public Room view](https://claflin.trustfall.xyz/?desk=jesse&view=room) is the live Jesse spatial layout (same controller as Compact). Fixture study: [`/night-desk?study=1`](https://claflin.trustfall.xyz/night-desk?study=1). The **integrated Jesse paper desk** opens on `/` via the house directory — real Jupiter quotes, v2 local paper, Room/Compact views, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base after the foyer.
 
-**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining Pyth Pro entitlement/daemon, full Night scene bind, and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) records Night/direct as presentation choices over the same work.
+**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining Pyth Pro entitlement/daemon and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#desk-views-room--compact) records Room/Compact as view choices over the same work.
 
 ## One front door
 
@@ -37,7 +37,7 @@ No stock or amount is preselected. Paper records are simulations, not fills, sub
 
 **Account and wallet:** `NEXT_PUBLIC_PRIVY_APP_ID` enables Privy sign-in; `NEXT_PUBLIC_PRIVY_CLIENT_ID` is optional. Sign-in never gates the tape, estimates, paper records or ringing Hetty. An account supports best-effort paper backup and write-only transcript storage. Live Base execution additionally requires a connected wallet, input tokens, ETH for gas and explicit wallet authorization. Sign-in alone neither authorizes spending nor proves eligibility.
 
-**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. The desk initially selects live mode when this flag is on; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. Jesse’s seated desk is paper-only; Solana live execution remains gated (R2). `/night-desk` is still a non-executing study. Paper trading never grants spending authority.
+**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. The desk initially selects live mode when this flag is on; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. Jesse’s desk is paper-only; Solana live execution remains gated (R2). Night presentation never grants spending authority. Paper trading never grants spending authority.
 
 ## Local development
 
@@ -60,7 +60,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Period desk notes and words of the house (one note or term of the day, never advice) | `lib/desk-notes.ts` |
 | Sourced education catalog, broker examination methods, delayed-tape practice | `lib/education/`, `components/desk/EducationTopic.tsx`, `app/practice/delayed-tape/` |
 | Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
-| Night Desk fixture study, spatial renderer and scripted state | `app/night-desk/page.tsx`; `components/night-desk/`; `lib/night-desk-scene.ts`; `lib/night-desk-state.ts`; `lib/night-desk-fixtures.ts` |
+| Room view + fixture study | `/?desk=jesse&view=room`; `app/night-desk/page.tsx` (redirect / `?study=1`); `components/night-desk/` (scene + study); `components/desk/RoomPresentation.tsx`; `lib/room-view-projection.ts`; `lib/desk-presentation.ts`; `styles/desk-craft.css` |
 | Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
 | Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperLedger.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |
 | House mark and desk instrument | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |

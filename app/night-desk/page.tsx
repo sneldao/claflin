@@ -1,18 +1,32 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { NightDesk } from '@/components/night-desk/NightDesk';
 
-const title = 'The Night Desk — experience study';
-const description = 'An interactive Claflin experience study with a 3D brokerage room, scripted conversation, and fictional market data. No microphone, wallet, or trades.';
+const title = 'The Room — live Jesse view';
+const description = 'Canonical Room view of Jesse’s Solana desk. Same paper and line as Compact; the room is presentation only.';
 
 export const metadata: Metadata = {
   title,
   description,
   robots: { index: false, follow: false },
-  alternates: { canonical: '/night-desk' },
-  openGraph: { title, description, url: '/night-desk', images: [] },
+  alternates: { canonical: '/?desk=jesse&view=room' },
+  openGraph: { title, description, url: '/?desk=jesse&view=room', images: [] },
   twitter: { card: 'summary', title, description, images: [] },
 };
 
-export default function NightDeskPage() {
-  return <NightDesk />;
+/**
+ * Canonical Room view is `/?desk=jesse&view=room` (live controller).
+ * Fixture study remains at `?study=1` and at `/desk-study` in development.
+ */
+export default async function NightDeskPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ study?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const study = Array.isArray(params.study) ? params.study[0] : params.study;
+  if (study === '1') {
+    return <NightDesk />;
+  }
+  redirect('/?desk=jesse&view=room');
 }

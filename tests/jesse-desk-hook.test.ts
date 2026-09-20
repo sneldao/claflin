@@ -173,7 +173,7 @@ describe('jesse foreground', () => {
       quote: null,
       presentedInstrument: null,
       comparison: null,
-      presentation: { mode: 'direct' as const, focus: 'desk' as const, objectId: null },
+      presentation: { mode: 'compact' as const, focus: 'desk' as const, objectId: null },
       watches: [],
     };
     assert.deepEqual(jesseForeground(state, 'gone', []), { kind: 'missing', recordId: 'gone' });
