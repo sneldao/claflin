@@ -1,4 +1,4 @@
-import { quoteBudget } from '@/lib/trading/http';
+import { busyResponse, clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/http';
 import { accountFromRequest } from '@/lib/auth';
 import { NextRequest } from 'next/server';
 
@@ -14,22 +14,9 @@ export const dynamic = 'force-dynamic';
  */
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
-const sessionBudget = quoteBudget(); // 10 signed URLs per minute per instance
-const userBudgets = new Map<string, { count: number; resetAt: number }>();
-const USER_SESSION_LIMIT = 5; // per minute, per account
-
-function userBudget(userId: string): boolean {
-  const now = Date.now();
-  const entry = userBudgets.get(userId);
-  if (!entry || entry.resetAt < now) {
-    userBudgets.set(userId, { count: 1, resetAt: now + 60_000 });
-    if (userBudgets.size > 5000) userBudgets.clear();
-    return true;
-  }
-  if (entry.count >= USER_SESSION_LIMIT) return false;
-  entry.count += 1;
-  return true;
-}
+const instanceBudget = requestBudget(12); // signed URLs / minute / instance
+const anonIpBudget = keyedBudget(3); // anonymous IP / minute
+const userBudget = keyedBudget(5); // signed-in account / minute
 
 export async function POST(req: NextRequest): Promise<Response> {
   const headers = { 'Cache-Control': 'no-store' };
@@ -41,9 +28,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ error: 'unauthorized', message: 'Sign in again to ring Jesse.' }, { status: 401, headers });
   }
 
-  const allowed = userId ? userBudget(userId) : sessionBudget();
+  if (!instanceBudget()) {
+    return busyResponse('Too many call requests. Please wait a moment.');
+  }
+  const allowed = userId
+    ? userBudget(`user:${userId}`)
+    : anonIpBudget(clientKeyFromRequest(req));
   if (!allowed) {
-    return Response.json({ error: 'busy', message: 'Too many call requests. Please wait a moment.' }, { status: 429, headers: { ...headers, 'Retry-After': '10' } });
+    return busyResponse('Too many call requests. Please wait a moment.');
   }
 
   const apiKey = process.env.ELEVENLABS_API_KEY;

@@ -186,4 +186,25 @@ describe('quote HTTP boundary', () => {
     time += 60000;
     assert.equal((await limited(new Request('http://localhost/api/stocks/quote'))).status, 200);
   });
+
+  it('requestBudget and keyedBudget enforce per-minute caps', async () => {
+    const { requestBudget, keyedBudget, clientKeyFromRequest } = await import('../lib/trading/http.ts');
+    let time = 1000;
+    const instance = requestBudget(2, () => time);
+    assert.equal(instance(), true);
+    assert.equal(instance(), true);
+    assert.equal(instance(), false);
+    time += 60_000;
+    assert.equal(instance(), true);
+
+    time = 1000;
+    const perKey = keyedBudget(1, 100, () => time);
+    assert.equal(perKey('ip:a'), true);
+    assert.equal(perKey('ip:a'), false);
+    assert.equal(perKey('ip:b'), true);
+    assert.equal(
+      clientKeyFromRequest(new Request('http://localhost', { headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' } })),
+      'ip:203.0.113.9',
+    );
+  });
 });

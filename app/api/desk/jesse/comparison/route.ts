@@ -3,8 +3,11 @@ import { isSolanaInstrumentId } from '@/lib/solana/contracts';
 import { feedMappingFor } from '@/lib/solana/market/feeds';
 import { readJesseComparison } from '@/lib/solana/market/reader';
 import type { SnapshotStore } from '@/lib/solana/market/snapshots';
+import { busyResponse, requestBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
+
+const comparisonBudget = requestBudget(40);
 
 /**
  * GET /api/desk/jesse/comparison?instrumentId=sol:<mint>
@@ -41,6 +44,7 @@ function storeForRequest(): SnapshotStore {
 }
 
 export async function GET(req: Request): Promise<Response> {
+  if (!comparisonBudget()) return busyResponse();
   const instrumentId = new URL(req.url).searchParams.get('instrumentId');
   if (!instrumentId || !isSolanaInstrumentId(instrumentId)) {
     return Response.json({ error: 'invalid_instrument_id' }, { status: 400 });

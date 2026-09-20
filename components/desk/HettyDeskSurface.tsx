@@ -21,6 +21,7 @@ import {
   loadDeskPresentation,
   parseViewQuery,
   saveDeskPresentation,
+  shouldPreferCompactView,
   syncViewQuery,
   type DeskPresentation,
 } from '@/lib/desk-presentation';
@@ -33,10 +34,14 @@ import { TickerTape } from './TickerTape';
 import { DeskInstrument } from './DeskInstrument';
 import { DeskObjects, TapeMachine } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
-import { RoomPresentation } from './RoomPresentation';
 import styles from './WorkingDesk.module.css';
 
 const NO_MARKS: DeskMark[] = [];
+
+const RoomPresentation = dynamic(
+  () => import('./RoomPresentation').then(m => m.RoomPresentation),
+  { ssr: false },
+);
 
 function HettyDoorShell() {
   return (
@@ -104,7 +109,9 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       syncViewQuery(fromQuery);
       return;
     }
-    const stored = loadDeskPresentation(window.localStorage, 'hetty');
+    const stored = loadDeskPresentation(window.localStorage, 'hetty', {
+      preferCompactWhenUnset: shouldPreferCompactView(),
+    });
     setPresentation(stored);
     syncViewQuery(stored);
   }, []);

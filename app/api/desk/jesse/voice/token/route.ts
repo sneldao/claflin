@@ -3,13 +3,22 @@
  *
  * Mints a short-lived AssemblyAI streaming token for Jesse. Returns
  * unavailable (never a fake token) when credentials are missing.
+ * Instance + IP budgets limit quota burn on a public demo URL.
  */
 import { NextRequest } from 'next/server';
+import { busyResponse, clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(_req: NextRequest): Promise<Response> {
+const instanceBudget = requestBudget(20); // AssemblyAI mints / minute / instance
+const ipBudget = keyedBudget(5); // per client IP / minute
+
+export async function POST(req: NextRequest): Promise<Response> {
   const headers = { 'Cache-Control': 'no-store' };
+  if (!instanceBudget() || !ipBudget(clientKeyFromRequest(req))) {
+    return busyResponse('Too many voice-token requests. Please wait a moment.');
+  }
+
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
     return Response.json({

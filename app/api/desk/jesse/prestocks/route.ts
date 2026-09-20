@@ -4,8 +4,11 @@ import {
   buildPreStockDuplex,
   unavailablePreStockDuplex,
 } from '@/lib/solana/market/prestocks';
+import { busyResponse, requestBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
+
+const prestocksBudget = requestBudget(40);
 
 /**
  * GET /api/desk/jesse/prestocks
@@ -18,6 +21,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request): Promise<Response> {
   const headers = { 'Cache-Control': 'no-store' };
+  if (!prestocksBudget()) return busyResponse();
   const symbol = new URL(req.url).searchParams.get('symbol');
 
   try {

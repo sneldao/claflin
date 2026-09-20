@@ -756,10 +756,9 @@
   color: var(--desk-muted);
 }
 .roomView .grid {
-  background: color-mix(in srgb, var(--desk-deep) 55%, transparent);
+  background: color-mix(in srgb, var(--desk-deep) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--desk-brass-dim) 35%, transparent);
   border-radius: 4px;
-  backdrop-filter: blur(8px);
 }
 .roomViewBoard {
   margin-top: 20px;

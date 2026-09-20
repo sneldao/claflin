@@ -14,9 +14,20 @@ export type { DeskPresentation };
 
 export const DEFAULT_DESK_PRESENTATION: DeskPresentation = 'compact';
 
-/** Jesse defaults to room — the spatial shell is the intended Solana first paint. */
+/** Jesse defaults to room on capable desktops; constrained devices prefer Compact. */
 export function defaultPresentationForDesk(deskId: HouseDeskId): DeskPresentation {
   return deskId === 'jesse' ? 'room' : 'compact';
+}
+
+/** Coarse pointer or reduced-motion — prefer Compact for first paint when no preference is stored. */
+export function shouldPreferCompactView(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      || window.matchMedia('(pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
 }
 
 export function presentationStorageKey(deskId: HouseDeskId): string {
@@ -28,10 +39,14 @@ const modeSchema = z.enum(['room', 'compact']);
 export function loadDeskPresentation(
   storage: Pick<Storage, 'getItem'>,
   deskId: HouseDeskId,
+  opts?: { preferCompactWhenUnset?: boolean },
 ): DeskPresentation {
   try {
     const raw = storage.getItem(presentationStorageKey(deskId));
-    if (!raw) return defaultPresentationForDesk(deskId);
+    if (!raw) {
+      if (opts?.preferCompactWhenUnset) return 'compact';
+      return defaultPresentationForDesk(deskId);
+    }
     const parsed = JSON.parse(raw) as unknown;
     if (typeof parsed === 'string') {
       return normalizeDeskPresentation(parsed) ?? defaultPresentationForDesk(deskId);

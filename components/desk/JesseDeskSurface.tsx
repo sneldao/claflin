@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DeskInstrument } from './DeskInstrument';
 import { DeskObjects } from './BrokerageRoom';
@@ -8,17 +9,26 @@ import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
-import { RoomPresentation } from './RoomPresentation';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
 import type { DeskPresentation } from '@/lib/solana/contracts';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { bindFilePaperCommand, parseJesseSpeech } from '@/lib/jesse/speech';
 import { projectJesseToRoom } from '@/lib/room-view-projection';
-import { parseViewQuery, syncViewQuery } from '@/lib/desk-presentation';
+import {
+  parseViewQuery,
+  presentationStorageKey,
+  shouldPreferCompactView,
+  syncViewQuery,
+} from '@/lib/desk-presentation';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import styles from './WorkingDesk.module.css';
+
+const RoomPresentation = dynamic(
+  () => import('./RoomPresentation').then(m => m.RoomPresentation),
+  { ssr: false },
+);
 
 type Desk = ReturnType<typeof useTradingDesk>;
 
@@ -50,9 +60,17 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       viewQueryApplied.current = true;
       jesse.setPresentationMode(fromQuery);
       syncViewQuery(fromQuery);
-    } else {
-      syncViewQuery(presentationMode);
+      return;
     }
+    const stored = window.localStorage.getItem(presentationStorageKey('jesse'));
+    if (!stored && shouldPreferCompactView()) {
+      viewQueryApplied.current = true;
+      jesse.setPresentationMode('compact');
+      syncViewQuery('compact');
+      return;
+    }
+    viewQueryApplied.current = true;
+    syncViewQuery(presentationMode);
   }, [jesse, presentationMode]);
 
   const reviewActive = jesse.foreground.kind === 'quotation'
@@ -119,8 +137,14 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
 
   const onRoomView = (view: NightDeskView) => {
     if (view === 'evidence') {
-      void jesse.compare();
-      void jesse.run({ type: 'focus', target: 'evidence', objectId: jesse.state.comparison?.id ?? null });
+      const existing = jesse.state.comparison;
+      if (existing) {
+        void jesse.run({ type: 'focus', target: 'evidence', objectId: existing.id });
+        return;
+      }
+      void jesse.compare().then(() => {
+        void jesse.run({ type: 'focus', target: 'evidence', objectId: null });
+      });
       return;
     }
     if (view === 'review') {

@@ -105,9 +105,12 @@ export function createNightDeskScene(
     return { setView() {}, setStage() {}, dispose() {} };
   }
   renderer.setClearColor(0x0d1218, 1);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+  const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
+  const lowQuality = coarse || narrow;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowQuality ? 1 : 1.5));
+  renderer.shadowMap.enabled = !lowQuality;
+  if (!lowQuality) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.08;
 
@@ -388,10 +391,12 @@ export function createNightDeskScene(
   const lampLight = new THREE.SpotLight('#ffc98a', 45, 16, 0.85, 0.55, 1.6);
   lampLight.position.set(-1.55, 2.2, -2.1);
   lampLight.target.position.set(0.6, 0, -0.6);
-  lampLight.castShadow = true;
-  lampLight.shadow.mapSize.set(1024, 1024);
-  lampLight.shadow.normalBias = 0.03;
-  lampLight.shadow.bias = -0.0002;
+  if (!lowQuality) {
+    lampLight.castShadow = true;
+    lampLight.shadow.mapSize.set(1024, 1024);
+    lampLight.shadow.normalBias = 0.03;
+    lampLight.shadow.bias = -0.0002;
+  }
   scene.add(lampLight, lampLight.target);
 
   const ledger = new THREE.Group();

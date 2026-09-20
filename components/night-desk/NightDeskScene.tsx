@@ -5,6 +5,10 @@ import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
 import type { NightDeskAnchors, NightDeskSceneController } from '@/lib/night-desk-scene';
 import styles from './NightDesk.module.css';
 
+/**
+ * Room scene host — CSS fallback covers first paint; WebGL boots eagerly
+ * when Room is active. Reduced-motion keeps the fallback only (no WebGL).
+ */
 export function NightDeskScene({
   view,
   stage,
@@ -22,6 +26,10 @@ export function NightDeskScene({
   const anchorsRef = useRef(onAnchors);
   const [ready, setReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(() => (
+    typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ));
 
   useEffect(() => {
     viewRef.current = view;
@@ -30,9 +38,22 @@ export function NightDeskScene({
   });
 
   useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReducedMotion(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
-    if (!host || !canvas) return;
+    if (!host || !canvas || reducedMotion) {
+      controllerRef.current?.dispose();
+      controllerRef.current = null;
+      setReady(false);
+      return;
+    }
     let cancelled = false;
     let controller: NightDeskSceneController | null = null;
     import('@/lib/night-desk-scene')
@@ -55,8 +76,9 @@ export function NightDeskScene({
       cancelled = true;
       controllerRef.current = null;
       controller?.dispose();
+      setReady(false);
     };
-  }, []);
+  }, [reducedMotion]);
 
   useEffect(() => {
     controllerRef.current?.setView(view);
@@ -67,7 +89,12 @@ export function NightDeskScene({
   }, [stage]);
 
   return (
-    <div ref={hostRef} className={styles.sceneHost} data-scene={ready && !unavailable ? 'live' : 'static'}>
+    <div
+      ref={hostRef}
+      className={styles.sceneHost}
+      data-scene={ready && !unavailable && !reducedMotion ? 'live' : 'static'}
+      data-motion={reducedMotion ? 'reduce' : 'full'}
+    >
       <div className={styles.fallbackRoom} aria-hidden="true">
         <div className={styles.fallbackWindow}><i /><i /><i /><i /><i /><i /></div>
         <div className={styles.fallbackCity}><i /><i /><i /><i /><i /><i /><i /><i /></div>
@@ -79,7 +106,7 @@ export function NightDeskScene({
           <i className={styles.fallbackBlotter} />
         </div>
       </div>
-      <canvas ref={canvasRef} className={styles.sceneCanvas} aria-hidden="true" />
+      {!reducedMotion && <canvas ref={canvasRef} className={styles.sceneCanvas} aria-hidden="true" />}
     </div>
   );
 }
