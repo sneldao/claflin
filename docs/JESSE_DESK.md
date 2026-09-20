@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Homepage remains Hetty. Jesse ConvAI line is wired (`ELEVENLABS_AGENT_JESSE` / session route / `JesseCall` client tools). Night Desk stays a labelled study until bound as a presentation mode.
+**Status:** Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Homepage remains Hetty. Jesse ConvAI line wired; Night/Direct presentation toggle on the seated desk; PreStocks secondary duplex (evidence-only). Pyth comparison stays honest-unavailable without Pro entitlement. `/night-desk` remains a labelled study.
 
 ## Product bar
 
@@ -26,9 +26,15 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 
 ## Ports
 
-- Quote: `GET /api/desk/jesse/quote` → Jupiter adapter → `parseJesseEstimate`
-- Compare: `GET /api/desk/jesse/comparison` → returns `unavailable` with reason codes until Pyth Pro + unit basis are verified — never a synthetic number
+- Quote: `GET /api/desk/jesse/quote` → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
+- Compare (xStock): `GET /api/desk/jesse/comparison` → returns `unavailable` with reason codes until Pyth Pro + unit basis are verified — never a synthetic number
+- PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
 - Voice token: `POST /api/desk/jesse/voice/token` → AssemblyAI short-lived token, or 503 when unconfigured
+- Voice session: `POST /api/desk/jesse/session` → ElevenLabs ConvAI signed URL
+
+## Presentation
+
+Night / Direct is a preference only (`claflin.presentation.v1.jesse`). Toggle on the seated desk or `?view=night|direct`. Switching never remounts the controller, re-quotes, or resets the draft. `/night-desk` remains a labelled fiction study.
 
 ## Command grammar
 
@@ -64,8 +70,10 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 ## Known limits
 
 - No Jesse mark adapter / tape
-- No PreStocks, no R2 live wallet path
-- Night Desk not yet bound to this controller
+- Pyth Pro duplex awaits entitlement / unit basis; comparison stays honest-unavailable
+- PreStocks is evidence-only (issuer mark vs tokenPrice) — not on the paper ticket
+- No R2 live wallet path
+- Full 3D NightDeskScene is not yet the night presentation renderer (seated atmosphere + toggle first)
 - Account call-transcript sync stays Hetty-only
 
 ## Flags

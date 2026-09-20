@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CommandResult,
+  DeskPresentation,
   JesseCommand,
   JesseDraft,
   JesseIntent,
@@ -54,6 +55,7 @@ export interface JesseDesk {
   openRecord: (id: string) => void;
   dismissRecord: () => void;
   removeRecord: (id: string) => void;
+  setPresentationMode: (mode: DeskPresentation) => { ok: boolean; spokenText: string };
   run: (command: JesseCommand) => Promise<CommandResult>;
 }
 
@@ -277,6 +279,12 @@ export function createJesseDeskSession(opts: {
     }
   };
 
+  const setPresentationMode = (mode: DeskPresentation) => {
+    const outcome = controller.setPresentationMode(mode);
+    notify();
+    return outcome;
+  };
+
   const dispose = () => {
     disposed = true;
     controller.endSession();
@@ -300,6 +308,7 @@ export function createJesseDeskSession(opts: {
     openRecord,
     dismissRecord,
     removeRecord,
+    setPresentationMode,
     reloadRecords,
     dispose,
   };
@@ -398,6 +407,10 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
   const openRecord = useCallback((id: string) => { session?.openRecord(id); }, [session]);
   const dismissRecord = useCallback(() => { session?.dismissRecord(); }, [session]);
   const removeRecord = useCallback((id: string) => { session?.removeRecord(id); }, [session]);
+  const setPresentationMode = useCallback((mode: DeskPresentation) => {
+    if (!session) return { ok: false, spokenText: 'Desk not ready.' };
+    return session.setPresentationMode(mode);
+  }, [session]);
 
   return {
     state: snapshot.state,
@@ -417,6 +430,7 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     openRecord,
     dismissRecord,
     removeRecord,
+    setPresentationMode,
     run,
   };
 }

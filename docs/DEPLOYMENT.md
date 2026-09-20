@@ -82,6 +82,12 @@ ELEVENLABS_AGENT_JESSE=
 ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
 ```
 
+Optional Jupiter key (paper quotes work keyless; set for higher rate limits):
+
+```
+JUPITER_API_KEY=
+```
+
 Optional Sign in (does not gate the desk; not live access):
 
 ```

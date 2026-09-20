@@ -30,6 +30,7 @@ import {
   isJesseIntent,
   isSolanaInstrumentId,
   type CommandResult,
+  type DeskPresentation,
   type DeskPresentationState,
   type DeskRevision,
   type JesseCommand,
@@ -53,6 +54,7 @@ import {
   applyJesseFocus,
   loadJessePresentation,
   saveJessePresentation,
+  switchJessePresentation,
 } from './presentation';
 import type { PaperStorage } from '../trading/paper-records';
 
@@ -180,6 +182,8 @@ export interface JesseDeskState {
 export interface JesseController {
   getState(): Readonly<JesseDeskState>;
   applyJesseCommand(command: JesseCommand, expected: DeskRevision): Promise<CommandResult>;
+  /** Presentation-only mode switch (§4.7) — never bumps revision or quotes. */
+  setPresentationMode(mode: DeskPresentation): { ok: boolean; spokenText: string };
   /** Start a new session generation: pending quote responses die, and an
    *  in-flight quoting stage returns to draft. Revision is untouched. */
   endSession(): void;
@@ -640,6 +644,24 @@ export function createJesseController(opts: {
         default:
           return result('rejected', 'That is not something Jesse’s desk can do. Nothing was changed.');
       }
+    },
+
+    setPresentationMode(mode: DeskPresentation): { ok: boolean; spokenText: string } {
+      if (mode !== 'night' && mode !== 'direct') {
+        return { ok: false, spokenText: 'Presentation mode must be night or direct.' };
+      }
+      state.presentation = switchJessePresentation(state.presentation, mode);
+      try {
+        saveJessePresentation(storage, state.presentation);
+      } catch {
+        return { ok: false, spokenText: 'The presentation preference could not be saved in this browser.' };
+      }
+      return {
+        ok: true,
+        spokenText: mode === 'night'
+          ? 'Night room presentation — the instruction is unchanged.'
+          : 'Direct desk presentation — the instruction is unchanged.',
+      };
     },
 
     endSession(): void {

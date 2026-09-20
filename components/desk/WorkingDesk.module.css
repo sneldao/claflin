@@ -616,6 +616,39 @@
 .mode { min-height: 44px; padding: 0 0 12px; gap: 12px; font-size: 11px; }
 .mode strong { padding: 5px 7px; font: 9px/1.2 var(--font-mono), monospace; letter-spacing: .08em; background: var(--desk-deep); }
 .modeMarket { margin-left: auto; font: 9px/1.4 var(--font-mono), monospace; letter-spacing: .12em; }
+.presentationToggle { display: inline-flex; gap: 4px; margin-left: 8px; }
+.presentationButton {
+  font: 10px/1.2 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border: 1px solid var(--desk-brass-dim, #8a7a55);
+  background: transparent;
+  color: var(--desk-muted);
+  cursor: pointer;
+}
+.presentationButton[aria-pressed="true"] {
+  border-color: var(--desk-brass, #c5ac78);
+  color: var(--desk-ink, #1a1612);
+  background: color-mix(in srgb, var(--desk-brass, #c5ac78) 18%, transparent);
+}
+.grid[data-presentation="night"] {
+  --desk-night-veil: color-mix(in srgb, #0c1218 12%, transparent);
+}
+.grid[data-presentation="night"] .deskSurface {
+  opacity: 0.92;
+  letter-spacing: 0.14em;
+}
+.prestockPick { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.prestockPick select {
+  max-width: 100%;
+  font: 12px/1.4 var(--font-mono), monospace;
+  padding: 8px 10px;
+  border: 1px solid var(--desk-paper-rule, #d4cfc4);
+  background: transparent;
+  color: inherit;
+}
+.evidenceSub { margin: 8px 0; font: 400 15px/1.3 var(--font-display), serif; color: var(--desk-paper-ink); }
 .grid { position: relative; isolation: isolate; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 36px; padding: 28px 32px 36px; margin-bottom: 28px; }
 .deskSurface { position: absolute; z-index: -1; inset: 0 -12px; border: 1px solid var(--desk-walnut-edge); border-radius: 12px 12px 18px 18px; background: repeating-linear-gradient(2deg, transparent 0 3px, var(--desk-shadow) 4px, transparent 5px), var(--desk-walnut); box-shadow: inset 0 1px 0 var(--desk-luster), 0 8px 0 var(--desk-walnut), 0 10px 0 var(--desk-walnut-edge), 0 24px 48px var(--desk-occlusion); }
 .deskSurface::before { content: ''; position: absolute; inset: 12px; border: 1px solid var(--desk-brass-dim); border-radius: 5px; background: radial-gradient(ellipse at 68% 12%, var(--desk-felt-lit), transparent 65%), var(--desk-felt); box-shadow: inset 0 0 50px var(--desk-shadow), 0 1px 3px var(--desk-occlusion); }

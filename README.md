@@ -10,9 +10,9 @@ Claflin is the institution. Hetty / Base is the first relationship, followed by 
 
 ## Night Desk and Stocklana team handoff
 
-[The public Night Desk](https://claflin.trustfall.xyz/night-desk) remains the shipped `decace0` spatial study (scripted conversation, fictional data). The **integrated Jesse paper desk** is the seated surface on `/` via the house directory — real Jupiter quotes, v2 local paper, honest Pyth comparison when available. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base.
+[The public Night Desk](https://claflin.trustfall.xyz/night-desk) remains the shipped `decace0` spatial study (scripted conversation, fictional data). The **integrated Jesse paper desk** is the seated surface on `/` via the house directory — real Jupiter quotes, v2 local paper, Night/Direct presentation toggle, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base.
 
-**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining voice streaming, Pyth daemon, Night presentation bind, and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) records Night/direct as presentation choices over the same work.
+**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining Pyth Pro entitlement/daemon, full Night scene bind, and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) records Night/direct as presentation choices over the same work.
 
 ## One front door
 

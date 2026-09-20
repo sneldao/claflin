@@ -226,6 +226,10 @@ export function NightDesk() {
           <span className={styles.brandText}><strong>CLAFLIN</strong><small>THE NIGHT DESK · JESSE · SOLANA</small></span>
         </div>
         <p className={styles.disclosure}>{F.disclosure}</p>
+        <p className={styles.disclosure} role="note">
+          Study only — fictional data, no live quotes. For the working Jesse desk (Jupiter paper + Night/Direct presentation), open{' '}
+          <Link href="/">Claflin</Link>, choose Jesse in the house directory, then Night room.
+        </p>
         <div className={styles.mastActions}>
           <button
             type="button"

@@ -1,12 +1,12 @@
 # Stocklana: Jesse's Solana Desk — Four-Engineer Build Plan
 
-**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — seated Jesse paper desk landed on `/` via the house directory. **Status:** approved integration brief; Night Desk spatial study remains; seated R1 paper path (catalog, Jupiter quotes, v2 records, evidence UI, typed grammar) is in product; streaming voice, Pyth live evidence, Night presentation bind, and R2 live execution remain.
+**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — seated Jesse paper desk, ConvAI line, Night/Direct presentation toggle, and PreStocks secondary duplex landed. **Status:** approved integration brief; `/night-desk` remains the fixture study (full 3D scene bind deferred); seated R1 paper path is in product; Pyth Pro entitlement + unit basis, Redis daemon, and R2 live execution remain.
 
 **Product owner:** project lead. **Integration/release captain:** Engineer 4. **Contract owner:** Engineer 1. Assign actual people to these roles before work starts.
 
 ## Team start here
 
-Start from `decace0` or a descendant on `main`. The public [Night Desk prototype](https://claflin.trustfall.xyz/night-desk) is the approved spatial direction. The seated Jesse paper desk is open from the house directory on `/` (homepage still defaults to Hetty). Do not replace that homepage or port Hetty's provider stack. Product surface notes: [Jesse desk](JESSE_DESK.md).
+Start from `decace0` or a descendant on `main`. The public [Night Desk prototype](https://claflin.trustfall.xyz/night-desk) is the approved spatial study (still fixture data). The seated Jesse paper desk is open from the house directory on `/` with Night/Direct presentation preference and a PreStocks evidence duplex. Homepage still defaults to Hetty. Do not replace that homepage or port Hetty's provider stack. Product surface notes: [Jesse desk](JESSE_DESK.md).
 
 Read this brief in order: §2 (what exists), §3 (approved experience), §4 (contracts), then your §5 work package. Read [Product Direction](PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) for the governing progression decision. Engineer 1 lands the shared contracts first; Engineers 2–4 start against those fixtures in parallel. No one independently changes shared types or the lockfile.
 

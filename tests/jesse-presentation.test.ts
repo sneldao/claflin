@@ -61,6 +61,28 @@ describe('jesse presentation preference', () => {
     assert.equal(current.focus, 'desk');
   });
 
+  it('controller setPresentationMode persists without bumping revision', async () => {
+    const { createJesseController } = await import('../lib/solana/controller.ts');
+    const storage = memoryStorage();
+    const controller = createJesseController({
+      storage,
+      ports: {
+        quote: async () => { throw new Error('no quote'); },
+        compare: async () => null,
+      },
+    });
+    controller.restore();
+    const before = controller.getState().revision;
+    const outcome = controller.setPresentationMode('direct');
+    assert.equal(outcome.ok, true);
+    assert.equal(controller.getState().presentation.mode, 'direct');
+    assert.equal(controller.getState().revision, before);
+    assert.equal(loadJessePresentation(storage).mode, 'direct');
+    controller.setPresentationMode('night');
+    assert.equal(controller.getState().presentation.mode, 'night');
+    assert.equal(controller.getState().revision, before);
+  });
+
   it('a write that cannot be verified throws', () => {
     const storage = memoryStorage();
     const broken: PaperStorage = {

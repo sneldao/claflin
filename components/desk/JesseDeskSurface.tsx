@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DeskInstrument } from './DeskInstrument';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -8,7 +8,9 @@ import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
+import { PreStocksEvidence } from '@/components/solana/PreStocksEvidence';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
+import type { DeskPresentation } from '@/lib/solana/contracts';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { signalLine } from '@/lib/trading/line-signal';
@@ -18,12 +20,27 @@ type Desk = ReturnType<typeof useTradingDesk>;
 
 /**
  * Jesse's seated Solana desk — ticket, ledger, evidence, and typed/spoken
- * commands all drive the same controller session.
+ * commands all drive the same controller session. Night/direct is presentation
+ * only (§4.7): one useJesseDesk instance either way.
  */
 export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const jesse = useJesseDesk();
   const [spoken, setSpoken] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
+  const viewQueryApplied = useRef(false);
+
+  const presentationMode = jesse.state.presentation.mode;
+  const night = presentationMode === 'night';
+
+  useEffect(() => {
+    if (viewQueryApplied.current) return;
+    if (typeof window === 'undefined') return;
+    const view = new URLSearchParams(window.location.search).get('view');
+    if (view === 'night' || view === 'direct') {
+      viewQueryApplied.current = true;
+      jesse.setPresentationMode(view);
+    }
+  }, [jesse]);
 
   const reviewActive = jesse.foreground.kind === 'quotation'
     || jesse.foreground.kind === 'receipt'
@@ -72,6 +89,15 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     signalLine();
   }, [jesse]);
 
+  const setMode = (mode: DeskPresentation) => {
+    jesse.setPresentationMode(mode);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', mode);
+      window.history.replaceState({}, '', url.toString());
+    } catch { /* preference still saved */ }
+  };
+
   return (
     <DeskRoom
       deskId={desk.deskId}
@@ -85,12 +111,31 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           <a href="#instruction">Your ticket</a>
           <a href="#jesse-line">The line</a>
           <a href="#paper-ledger">Your record</a>
+          <a href="#prestocks-title">PreStocks</a>
         </>
       }
     >
-      <div className={styles.mode}>
+      <div className={styles.mode} data-presentation={presentationMode}>
         <strong>PAPER TRADING</strong>
         <span>Real Jupiter estimates, no real funds move. Kept in this browser.</span>
+        <div className={styles.presentationToggle} role="group" aria-label="Desk presentation">
+          <button
+            type="button"
+            className={styles.presentationButton}
+            aria-pressed={night}
+            onClick={() => setMode('night')}
+          >
+            Night room
+          </button>
+          <button
+            type="button"
+            className={styles.presentationButton}
+            aria-pressed={!night}
+            onClick={() => setMode('direct')}
+          >
+            Direct desk
+          </button>
+        </div>
         <span className={styles.modeMarket}>XSTOCKS · SOLANA · JUPITER</span>
       </div>
       {jesse.state.stage === 'draft' && !jesse.state.draft.instrumentId && (
@@ -105,14 +150,24 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </div>
         </div>
       )}
-      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'} data-ledger="true" data-foreground={jesse.foreground.kind} data-live={jesseLive ? 'true' : 'false'}>
-        <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO. · SOLANA</span></div>
+      <div
+        className={styles.grid}
+        data-review={reviewActive ? 'true' : 'false'}
+        data-ledger="true"
+        data-foreground={jesse.foreground.kind}
+        data-live={jesseLive ? 'true' : 'false'}
+        data-presentation={presentationMode}
+      >
+        <div className={styles.deskSurface} aria-hidden="true">
+          <span>{night ? 'CLAFLIN & CO. · NIGHT ROOM · SOLANA' : 'CLAFLIN & CO. · SOLANA'}</span>
+        </div>
         <DeskObjects />
         <JesseTicket jesse={jesse} spokenLine={spoken} />
         <JesseLedger jesse={jesse} />
         <aside className={styles.support} aria-label="Jesse’s desk">
           <JesseCall jesse={jesse} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />
           <JesseCommandBar jesse={jesse} onHeard={setSpoken} />
+          <PreStocksEvidence />
           <div className={styles.instrumentShell} data-stage={stage}>
             <div className={styles.instrument} data-stage={stage}>
               <DeskInstrument eager poster="/desk-receiver.webp" stage={stage} label={instrumentLabel} reviewing={reviewActive} />
