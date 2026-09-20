@@ -17,6 +17,7 @@ import { resolveDeskAlias } from '@/lib/trading/catalog';
 import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, explainConceptResult, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
+import { LINE_SIGNAL_EVENT } from '@/lib/trading/line-signal';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
@@ -713,6 +714,23 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     }
   };
 
+  /* The receiver on the desk and the H key are hands on this same switch:
+     the room signals, the line answers — session state stays owned here.
+     Idle rings, a ringing line cancels, a live line hangs up. `ring` is
+     re-created each render, so the listener reads it through a ref. */
+  const ringRef = useRef(ring);
+  ringRef.current = ring;
+  useEffect(() => {
+    const onSignal = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== 'toggle') return;
+      if (live) endCall();
+      else if (ringing) cancelRing();
+      else void ringRef.current('fresh');
+    };
+    window.addEventListener(LINE_SIGNAL_EVENT, onSignal);
+    return () => window.removeEventListener(LINE_SIGNAL_EVENT, onSignal);
+  }, [live, ringing, endCall, cancelRing]);
+
   /* Truthful line states — only what real SDK or desk events support.
      Not speaking does not mean listening, especially muted or waiting. */
   const estimating = desk.state.stage === 'loading' || desk.foreground.kind === 'pending';
@@ -747,7 +765,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
         : 'Speak your instruction. Review it on the same ticket.';
 
   return (
-    <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'} data-state={statusKey}>
+    <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
         <h2 id="call-title">Hetty Green <small>AI BROKER · BASE</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>

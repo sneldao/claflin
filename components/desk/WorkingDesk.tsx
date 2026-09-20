@@ -28,6 +28,7 @@ import { appliedTicketLine } from '@/lib/trading/voice-tools';
 import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
 import { rememberSlipDedication } from '@/lib/trading/desk-slips';
+import { signalLine } from '@/lib/trading/line-signal';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from './WorkingDesk.module.css';
 
@@ -207,6 +208,38 @@ export function WorkingDesk() {
     document.getElementById('amount')?.focus({ preventScroll: true });
   };
 
+  /* A hearable invitation: quoting a line writes it to the ticket exactly
+     as the mic would; the conversational asks ring Hetty instead — she is
+     the interface for questions. */
+  const sayToDesk = useCallback((phrase: string) => {
+    if (phrase === 'buy $25 of Apple') {
+      const apple = resolveDeskAlias('apple');
+      if (apple?.quoteSupported) {
+        desk.edit({ instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '25' });
+        handleUserSpoken(phrase);
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+        return;
+      }
+    }
+    signalLine();
+  }, [desk, handleUserSpoken]);
+
+  /* The H key is a hand on the same receiver: lift or hang up without
+     leaving the keyboard. Never steals a keystroke from a field. */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'h' && e.key !== 'H') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      signalLine();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   // Pointer drives the room: the light pool follows, the window drifts
   // against it, the instrument tilts. Coalesced to one rAF per frame and
   // written as CSS vars directly on the element — no React re-render, no
@@ -302,14 +335,20 @@ export function WorkingDesk() {
             : <><strong>PAPER TRADING</strong><span>Real estimates, no real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — instruction unchanged.</span>}<span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span></>
           : <><strong>PLANNED DESK</strong><span>Not open for quotation or recording.</span><span className={styles.modeMarket}>{desk.activeDesk.market.toUpperCase()} · {desk.activeDesk.name.toUpperCase()}</span></>}
       </div>
-      {/* First-run lead: while the ticket is still untouched, the room states
-          the promise and the first step. It retires the moment the caller
-          works — an experienced desk does not repeat the pitch. */}
+      {/* First-run lead: while the ticket is still untouched, the room makes
+          its one pitch — in the medium it sells. Each line is real: tap it
+          and the desk hears it. It retires the moment the caller works. */}
       {open && desk.state.stage === 'draft' && !desk.state.draft.instrumentId && (
         <div className={styles.introduction} id="introduction">
           <p className={styles.eyebrow}>THE OFFICE ABOVE THE PIT</p>
-          <h1>Say the trade. <span>Read the slip.</span> Then decide.</h1>
-          <p>A working ticket, real estimates, and Hetty on the line to talk it through — nothing is filed until you say so. Pick a mark off the tape, or ring the desk.</p>
+          <h1>The desk <span>hears you.</span></h1>
+          <p>No forms to learn. Say the trade — Hetty writes the slip, reads it back, and waits. The decision stays yours; the words are enough.</p>
+          <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
+            <span className={styles.voiceSayLead}>Say it — or tap it</span>
+            <button type="button" onClick={() => sayToDesk('buy $25 of Apple')}>“buy $25 of Apple”</button>
+            <button type="button" onClick={() => sayToDesk('what’s moving on the tape?')}>“what’s moving on the tape?”</button>
+            <button type="button" onClick={() => sayToDesk('explain the estimate before I decide')}>“explain the estimate before I decide”</button>
+          </div>
         </div>
       )}
       <div className={styles.grid} data-review={open && reviewActive ? 'true' : 'false'} data-ledger={hasLedger ? 'true' : 'false'} data-foreground={open ? foreground.kind : undefined} data-live={hettyLive ? 'true' : 'false'}>
@@ -321,6 +360,11 @@ export function WorkingDesk() {
           {open && <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />}
           <div className={styles.instrumentShell} data-stage={open ? instrumentStage : 'arrival'}>
             <div className={styles.instrument} data-stage={open ? instrumentStage : 'arrival'}><DeskInstrument eager poster="/desk-receiver.webp" stage={open ? instrumentStage : 'arrival'} label={open ? instrumentLabel : `PLANNED · ${desk.activeDesk.market.toUpperCase()}`} reviewing={open && reviewActive} /></div>
+            {open && !hettyLive && (
+              <p className={styles.receiverCue}>
+                Lift the receiver — or press <kbd>H</kbd>. Speak first; the form is only how the desk writes it down.
+              </p>
+            )}
           </div>
           <div className={styles.deskInscription}>
             <span>The pit is downstairs.</span>

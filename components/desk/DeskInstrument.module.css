@@ -1,4 +1,24 @@
+
 .instrument { position: absolute; width: 77%; height: 590px; right: -9%; top: -25px; z-index: 1; }
+/* The receiver is a working control: the button carries the whole instrument,
+   so the lift affordance covers poster, fallback and live canvas alike. */
+.receiverLift { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: inherit; border-radius: 12px; }
+.receiverLift:focus-visible { outline: 2px solid var(--desk-brass, #c5ac78); outline-offset: 6px; }
+.instrument[data-line="idle"] .receiverLift:hover .instrumentFallback { filter: brightness(1.1); }
+.instrument[data-line="idle"] .receiverLift:hover .fallbackReceiver { transform: translateY(-4px); }
+.fallbackReceiver { transition: transform var(--dur-1, 240ms) var(--ease-swift, cubic-bezier(.16,.8,.3,1)); }
+.instrument[data-line="ringing"] .fallbackReceiver { animation: receiverRing 1s ease-in-out infinite; }
+@keyframes receiverRing {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-5px) rotate(-1.2deg); }
+  40% { transform: translateY(-4px) rotate(1.2deg); }
+  60% { transform: translateY(-5px) rotate(-.8deg); }
+}
+.instrument[data-line="live"] .fallbackReceiver { transform: translateY(-6px); }
+@media (prefers-reduced-motion: reduce) {
+  .instrument[data-line="ringing"] .fallbackReceiver { animation: none; transform: translateY(-3px); }
+}
+
 .instrumentCanvas { display: block; width: 100%; height: 100%; opacity: 0; transform: scale(.985); filter: blur(4px); transition: opacity var(--dur-3, 700ms), transform var(--dur-3, 700ms) var(--ease-swift, cubic-bezier(.16,.8,.3,1)), filter var(--dur-3, 700ms) var(--ease-swift, cubic-bezier(.16,.8,.3,1)); }
 .instrument[data-ready="true"] .instrumentCanvas { opacity: 1; transform: scale(1); filter: blur(0); }
 .instrumentFallback { position: absolute; top: 38%; left: 13%; width: 69%; aspect-ratio: 1.85; transform: rotate(-13deg) skewX(6deg); transition: opacity var(--dur-2, 460ms) var(--ease-swift, cubic-bezier(.16,.8,.3,1)), filter var(--dur-2, 460ms) var(--ease-swift, cubic-bezier(.16,.8,.3,1)); }

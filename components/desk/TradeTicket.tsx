@@ -405,7 +405,21 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
   const tapeTopic = getEducationTopic('the-tape');
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
   const backLabel = isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket';
-  const title = missing ? 'That record is no longer here.' : recorded ? filed!.heading : pending ? 'Getting your quotation.' : slipActive ? 'Your quotation.' : liveMode ? 'Draft an instruction.' : 'Draft a paper trade.';
+  /* The ticket speaks in the desk's own grammar: the title moves with the
+     conversation, so the paper always says what the room is doing. */
+  const title = missing
+    ? 'That record is no longer here.'
+    : recorded
+      ? filed!.heading
+      : pending
+        ? 'Hetty is pricing it.'
+        : slipActive
+          ? 'Read it twice. Then it’s yours.'
+          : live
+            ? 'Hetty has it. Keep talking.'
+            : liveMode
+              ? 'Say it. I’ll write it.'
+              : 'Say it. I’ll write it.';
 
   const share = () => {
     if (!instrument || !quote) return;
@@ -431,9 +445,24 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
-    {spokenLine && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
+    {/* The dictation rail: the ticket's voice, always at the head of the
+        paper. It shows the last words the desk heard — or invites the first. */}
+    {view === 'draft' && (
+      <p className={styles.dictationRail} data-active={isRecording ? 'true' : 'false'} role="status" aria-live="polite">
+        {isRecording
+          ? 'Listening… release when you’re done.'
+          : spokenLine
+            ? <>You said: <em>{spokenLine}</em></>
+            : dictationReadback
+              ? <>On the ticket: <em>{dictationReadback}</em></>
+              : 'Speak your instruction — “buy $25 of Apple” — or type below.'}
+      </p>
+    )}
+    {/* Draft already carries spoken/dictation copy in the rail — keep the
+        spoken-line family for review, live, and other non-draft states. */}
+    {spokenLine && view !== 'draft' && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
     {live && hettyLine && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{hettyLine}</em></p>}
-    {!live && dictationReadback && <p className={styles.spokenLine} role="status" aria-live="polite">On the ticket: <em>{dictationReadback}</em></p>}
+    {!live && dictationReadback && view !== 'draft' && <p className={styles.spokenLine} role="status" aria-live="polite">On the ticket: <em>{dictationReadback}</em></p>}
     {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
     {live && typing && view === 'draft' && <p className={styles.slipNotice} role="status">Typing — Hetty holds the line.</p>}
     {message && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{message}</p>}

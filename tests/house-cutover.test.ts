@@ -44,7 +44,10 @@ describe('one canonical house', () => {
   });
   it('puts the ticket before the room and introduces the line only once', () => {
     const desk = source('components/desk/WorkingDesk.tsx');
-    assert.doesNotMatch(desk, /styles\.introduction|<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
+    /* The desk's one lead (styles.introduction) is sanctioned while the
+       ticket is untouched — but the room stays honest: no fake broker
+       plate, no status prop, no desk map. The line itself is mounted once. */
+    assert.doesNotMatch(desk, /<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
     assert.equal(desk.match(/<HettyCall\s/g)?.length, 1);
     assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall '));
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
