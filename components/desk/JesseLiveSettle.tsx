@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JesseIntent, SolanaLiveProposal } from '@/lib/solana/contracts';
-import { JESSE_LIVE_CLIENT_ENABLED } from '@/lib/solana/flags';
 import {
   base64ToBytes,
   bytesToBase64,
@@ -12,7 +11,6 @@ import {
 import styles from './WorkingDesk.module.css';
 
 type LivePhase =
-  | 'off'
   | 'idle'
   | 'connecting'
   | 'preparing'
@@ -24,9 +22,9 @@ type LivePhase =
   | 'unknown';
 
 /**
- * Gated live settle — Jupiter order(taker) → wallet sign → execute.
- * Only mounts when NEXT_PUBLIC_JESSE_LIVE_ENABLED=true; server still requires
- * JESSE_LIVE_ENABLED=true. Paper filing remains separate.
+ * Live settle — Jupiter order(taker) → wallet sign → execute.
+ * Mounted when the desk is in live mode and the server reports live enabled.
+ * Paper filing stays a separate action on the ticket.
  */
 export function JesseLiveSettle({
   intent,
@@ -35,13 +33,12 @@ export function JesseLiveSettle({
   intent: JesseIntent | null;
   revision: number;
 }) {
-  const enabled = JESSE_LIVE_CLIENT_ENABLED;
   const wallet = useMemo<SolanaWalletPort | null>(
-    () => (enabled && typeof window !== 'undefined' ? createBrowserSolanaWallet() : null),
-    [enabled],
+    () => (typeof window !== 'undefined' ? createBrowserSolanaWallet() : null),
+    [],
   );
   const [account, setAccount] = useState<string | null>(null);
-  const [phase, setPhase] = useState<LivePhase>(enabled ? 'idle' : 'off');
+  const [phase, setPhase] = useState<LivePhase>('idle');
   const [proposal, setProposal] = useState<SolanaLiveProposal | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [solscanUrl, setSolscanUrl] = useState<string | null>(null);
@@ -152,15 +149,14 @@ export function JesseLiveSettle({
     }
   }, [wallet, proposal]);
 
-  if (!enabled) return null;
-
   return (
-    <section className={styles.marketEvidence} data-source="jesse-live" aria-labelledby="jesse-live-title">
+    <section className={styles.liveBox} data-source="jesse-live" aria-labelledby="jesse-live-title">
       <p className={styles.eyebrow}>LIVE · JUPITER · SOLANA</p>
       <h2 id="jesse-live-title">Settle on Solana.</h2>
-      <p className={styles.evidenceBody}>
-        Fresh Metis order with your wallet as taker, then you sign — Jupiter executes.
-        Paper filing stays separate. Demo live limit: 25 USDC buy / 0.1 scaled sell.
+      <p className={styles.liveMeta}>
+        Fresh Metis order with your wallet as taker — you sign, Jupiter executes.
+        Needs USDC (buys) or the xStock (sells) plus SOL for fees. Per-order cap: 250 USDC / 10 scaled.
+        Paper filing stays available below.
       </p>
       <div className={styles.slipActions}>
         {!account ? (
@@ -187,7 +183,7 @@ export function JesseLiveSettle({
         )}
       </div>
       {proposal && (phase === 'review' || phase === 'signing' || phase === 'submitting') && (
-        <p className={styles.evidenceBody} role="status">
+        <p className={styles.liveMeta} role="status">
           Spend {proposal.reviewedEstimate.inputAmount} {proposal.reviewedEstimate.inputSymbol}
           {' → '}
           about {proposal.reviewedEstimate.outputAmount} {proposal.reviewedEstimate.outputSymbol}
@@ -196,12 +192,12 @@ export function JesseLiveSettle({
       )}
       {note && <p className={styles.notice} role="status">{note}</p>}
       {solscanUrl && (
-        <p className={styles.evidenceMeta}>
+        <p className={styles.liveMeta}>
           <a href={solscanUrl} target="_blank" rel="noreferrer">View on Solscan</a>
         </p>
       )}
       {phase === 'unknown' && (
-        <p className={styles.evidenceMeta}>
+        <p className={styles.liveMeta}>
           If execute timed out, reconcile the same signature — never broadcast a different order automatically.
         </p>
       )}

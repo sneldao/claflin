@@ -40,7 +40,7 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Jesse',
     market: 'Solana',
     approach: 'Price action, timing, and disciplined speculation.',
-    access: 'Backed xStocks · Jupiter · Solana paper (+ gated live)',
+    access: 'Backed xStocks · Jupiter · Solana paper or live',
     status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({

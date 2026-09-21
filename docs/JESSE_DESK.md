@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) is off by default — both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` required. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
@@ -84,7 +84,7 @@ Implements build-plan §4.6 slice: prepare → review → `signTransaction` → 
 | `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` | Shows the settle UI; sets `DESK_CAPABILITIES.jesse.live` |
 | `JESSE_LIVE_ENABLED=true` | Server accepts prepare/submit/status |
 
-Neither flag alone enables real funds. Demo limits: **25 USDC** buy / **0.1** scaled sell. Paper filing stays separate. Execute timeout → `unknown` — reconcile the same signature; do not resign a different order. UI: [`JesseLiveSettle`](../components/desk/JesseLiveSettle.tsx). Wallet: Phantom/Solflare-shaped browser port ([`lib/solana/wallet.ts`](../lib/solana/wallet.ts)).
+Neither flag alone enables real funds. Per-order limits: **250 USDC** buy / **10** scaled sell. Paper filing stays the default option alongside live. Execute timeout → `unknown` — reconcile the same signature; do not resign a different order. UI: paper/live toggle on [`JesseTicket`](../components/desk/JesseTicket.tsx) + [`JesseLiveSettle`](../components/desk/JesseLiveSettle.tsx). Wallet: Phantom/Solflare-shaped browser port ([`lib/solana/wallet.ts`](../lib/solana/wallet.ts)). Capability probe: `GET /api/desk/jesse/live/status` (no `proposalId`).
 
 ```bash
 NEXT_PUBLIC_JESSE_LIVE_ENABLED=true

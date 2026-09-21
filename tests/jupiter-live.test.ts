@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseJupiterLiveOrder } from '../lib/solana/jupiter-live';
+import { mapJupiterLiveVenueError, parseJupiterLiveOrder } from '../lib/solana/jupiter-live';
 import { clearLiveProposalMemory } from '../lib/solana/live-store';
 
 const MINT_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -67,5 +67,12 @@ describe('jupiter live order parser', () => {
       amountRaw: '1000000',
       taker: '11111111111111111111111111111111',
     }));
+  });
+
+  it('maps insufficient funds distinctly from no_route', () => {
+    const funds = mapJupiterLiveVenueError('Insufficient funds');
+    assert.equal(funds.code, 'insufficient_funds');
+    const route = mapJupiterLiveVenueError('Failed to get quotes');
+    assert.equal(route.code, 'no_route');
   });
 });

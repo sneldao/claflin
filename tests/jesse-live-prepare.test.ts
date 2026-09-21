@@ -88,7 +88,7 @@ describe('jesse live prepare', () => {
   it('enforces live demo buy limit', async () => {
     await assert.rejects(
       () => prepareJesseLiveProposal({
-        intent: { instrumentId: AAPL, side: 'buy', unit: 'USDC', amount: '26' },
+        intent: { instrumentId: AAPL, side: 'buy', unit: 'USDC', amount: '251' },
         wallet: WALLET,
         revision: 1,
         readMint: async () => ({

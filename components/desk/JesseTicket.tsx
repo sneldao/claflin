@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
+import { JESSE_LIVE_CLIENT_ENABLED } from '@/lib/solana/flags';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { mintFirstJessePaperSlip } from '@/lib/trading/desk-slips';
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
@@ -44,12 +45,25 @@ export const JesseTicket = memo(function JesseTicket({
   const reviewNow = useReviewClock(foreground.kind === 'quotation');
   const reviewRef = useRef<HTMLHeadingElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [liveAvailable, setLiveAvailable] = useState(JESSE_LIVE_CLIENT_ENABLED);
+  const [liveMode, setLiveMode] = useState(false);
 
   const side = draft.side ?? 'buy';
   const unit = side === 'buy' ? 'USDC' : 'scaled-token';
   const quoteFresh = state.quote && state.quote.expiresAt > reviewNow;
   const secondsLeft = state.quote ? Math.max(0, Math.ceil((state.quote.expiresAt - reviewNow) / 1000)) : 0;
   const freezeSoon = secondsLeft > 0 && secondsLeft <= 5;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/desk/jesse/live/status')
+      .then(async (res) => {
+        const body = await res.json() as { enabled?: boolean };
+        if (!cancelled && body.enabled === true) setLiveAvailable(true);
+      })
+      .catch(() => { /* keep build-time flag */ });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (foreground.kind === 'quotation') reviewRef.current?.focus({ preventScroll: true });
@@ -82,7 +96,7 @@ export const JesseTicket = memo(function JesseTicket({
   if (foreground.kind === 'missing') {
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="missing">
-        <PaperChrome />
+        <PaperChrome liveMode={false} />
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <p className={styles.notice} role="status">This paper record is no longer in this browser.</p>
         <div className={styles.slipActions}>
@@ -97,7 +111,7 @@ export const JesseTicket = memo(function JesseTicket({
     const q = record?.quote ?? state.quote;
     return (
       <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={foreground.kind === 'receipt' ? 'true' : undefined}>
-        <PaperChrome />
+        <PaperChrome liveMode={false} />
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         {q && (
           <div className={styles.slipBody}>
@@ -119,33 +133,17 @@ export const JesseTicket = memo(function JesseTicket({
 
   if (foreground.kind === 'quotation' && state.quote) {
     const q = state.quote;
-    const instrument = state.presentedInstrument;
+    const instrument = SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId);
     return (
-      <section
-        id="instruction"
-        key={q.id}
-        className={`${styles.ticket} ${styles.quotationSlip}`}
-        aria-labelledby="instruction-title"
-        data-ticket-view="review"
-        data-slip="true"
-      >
-        <PaperChrome />
+      <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
+        <PaperChrome liveMode={liveMode && liveAvailable} />
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <div className={styles.slipBody}>
-          <p className={styles.reviewHeading}>
-            {q.intent.side.toUpperCase()} · {instrument?.symbol ?? q.outputSymbol}
-          </p>
-          <p>Spend <strong>{q.inputAmount} {q.inputSymbol}</strong> → receive about <strong>{q.outputAmount} {q.outputSymbol}</strong></p>
+          <p className={styles.reviewHeading}>{q.intent.side.toUpperCase()} · {instrument?.symbol ?? q.outputSymbol}</p>
+          <p>Spend {q.inputAmount} {q.inputSymbol} → about {q.outputAmount} {q.outputSymbol}</p>
           <p className={styles.product}>
-            Jupiter · Metis · Solana · Token-2022
-            {q.priceImpactPercent != null && <> · impact {q.priceImpactPercent}%</>}
-            {q.feeBps != null && <> · fee {q.feeBps} bps</>}
-          </p>
-          <p className={styles.product}>
-            Scaled UI multiplier {q.scaling.multiplier} (slot {q.scaling.observedSlot})
-            {q.scaling.nextEffectiveAt != null && (
-              <> · A corporate-action multiplier activates at {new Date(q.scaling.nextEffectiveAt).toLocaleTimeString()} — this estimate expires then.</>
-            )}
+            Multiplier {q.scaling.multiplier} · Jupiter Metis · Solana
+            {liveMode && liveAvailable ? ' · live settle available' : ' · paper estimate'}
           </p>
           {(instrument ?? state.presentedInstrument) && (
             <p className={styles.assumptions}>
@@ -164,6 +162,30 @@ export const JesseTicket = memo(function JesseTicket({
         {(localError || (lastResult && lastResult.status === 'rejected')) && (
           <p className={styles.notice} role="alert">{localError ?? lastResult?.spokenText}</p>
         )}
+
+        {liveAvailable && (
+          <div className={styles.liveBox}>
+            <label className={styles.liveRowLabel}>
+              <input
+                type="checkbox"
+                checked={liveMode}
+                onChange={() => setLiveMode(!liveMode)}
+                aria-label="Toggle live execution on Solana"
+              />
+              {' '}Live execution on Solana
+            </label>
+            <p className={styles.liveMeta}>
+              {liveMode
+                ? 'Real USDC and xStock will move when you sign. Paper filing stays available.'
+                : 'Paper estimate only — no funds move unless you switch on live execution.'}
+            </p>
+          </div>
+        )}
+
+        {liveMode && liveAvailable && (
+          <JesseLiveSettle intent={q.intent} revision={state.revision} />
+        )}
+
         <div className={styles.slipActions}>
           <button type="button" className={styles.primary} disabled={!quoteFresh} onClick={() => { void onFile(); }}>
             File paper record
@@ -174,7 +196,6 @@ export const JesseTicket = memo(function JesseTicket({
         </div>
         <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
         <VenueDuplexEvidence instrumentId={q.intent.instrumentId} />
-        <JesseLiveSettle intent={q.intent} revision={state.revision} />
         <PreStocksEvidence />
       </section>
     );
@@ -184,7 +205,7 @@ export const JesseTicket = memo(function JesseTicket({
   const liveIntent = intentFromDraft(draft);
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
-      <PaperChrome />
+      <PaperChrome liveMode={liveMode && liveAvailable} />
       <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
       <p className={styles.dictationRail} data-active={inFlight === 'quote' ? 'true' : 'false'} role="status" aria-live="polite">
         {inFlight === 'quote'
@@ -256,29 +277,60 @@ export const JesseTicket = memo(function JesseTicket({
             </button>
           ))}
         </div>
+
+        {liveAvailable && (
+          <div className={styles.liveBox}>
+            <label className={styles.liveRowLabel}>
+              <input
+                type="checkbox"
+                checked={liveMode}
+                onChange={() => setLiveMode(!liveMode)}
+                aria-label="Toggle live execution on Solana"
+              />
+              {' '}Live execution on Solana
+            </label>
+            <p className={styles.liveMeta}>
+              {liveMode
+                ? 'After the estimate, connect a wallet to prepare and sign a real Jupiter swap. Or stay on paper.'
+                : 'Default is paper — get an estimate and file a local record. Turn on live to settle on Solana.'}
+            </p>
+          </div>
+        )}
+
         <div className={styles.slipActions}>
           <button type="submit" className={styles.primary} disabled={inFlight === 'quote'}>
-            {inFlight === 'quote' ? 'Pricing…' : 'Get paper estimate'}
+            {inFlight === 'quote' ? 'Pricing…' : 'Get estimate'}
           </button>
           <button type="button" className={styles.secondary} disabled={!draft.instrumentId || inFlight === 'compare'} onClick={() => { void compare(); }}>
             Compare market
           </button>
         </div>
       </form>
+
+      {liveMode && liveAvailable && (
+        <JesseLiveSettle intent={liveIntent} revision={state.revision} />
+      )}
+
       <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
       <VenueDuplexEvidence instrumentId={draft.instrumentId} />
-      <JesseLiveSettle intent={liveIntent} revision={state.revision} />
       <PreStocksEvidence />
-      <p className={styles.paperFoot}>PAPER · SOLANA · TOKEN-2022 · LIVE SETTLE GATED</p>
+      <p className={styles.paperFoot}>
+        {liveMode && liveAvailable ? 'PAPER OR LIVE · SOLANA · TOKEN-2022' : 'PAPER · SOLANA · TOKEN-2022'}
+      </p>
     </section>
   );
 });
 
-function PaperChrome() {
+function PaperChrome({ liveMode }: { liveMode: boolean }) {
   return (
     <div className={styles.paperTop}>
       <HouseMark small />
-      <span>CLAFLIN &amp; CO.<small>JESSE · SOLANA DESK / PAPER INSTRUCTION</small></span>
+      <span>
+        CLAFLIN &amp; CO.
+        <small>
+          {liveMode ? 'JESSE · SOLANA DESK / LIVE INSTRUCTION' : 'JESSE · SOLANA DESK / PAPER INSTRUCTION'}
+        </small>
+      </span>
       <span className={styles.paperNumber}>SOL</span>
     </div>
   );

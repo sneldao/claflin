@@ -91,8 +91,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       : jesseLive
         ? (selected ? `${selected.symbol} · ON THE LINE` : 'JESSE · ON THE LINE')
         : selected
-          ? `${selected.symbol} · ${jesse.foreground.kind === 'pending' || jesse.inFlight === 'quote' ? 'REQUESTING ESTIMATE' : jesse.foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'PAPER TRADING / NO LIVE ORDERS'}`
-          : 'JESSE · SOLANA PAPER';
+          ? `${selected.symbol} · ${jesse.foreground.kind === 'pending' || jesse.inFlight === 'quote' ? 'REQUESTING ESTIMATE' : jesse.foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'SOLANA DESK / PAPER OR LIVE'}`
+          : 'JESSE · SOLANA DESK';
 
   const roomProjection = useMemo(() => projectJesseToRoom({
     stage: jesse.state.stage,

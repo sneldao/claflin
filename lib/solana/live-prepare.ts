@@ -20,10 +20,10 @@ import { saveLiveProposal } from './live-store';
 import { jesseLiveEnabled } from './flags';
 import { formatAmount, parseAmount, TradingError } from '../trading/domain';
 
-/** Tighter than paper — demo live sizes stay small. */
+/** Per-order live caps — aligned with Jesse amount chips; paper stays uncapped within paper limits. */
 export const JESSE_LIVE_LIMITS = {
-  buyMax: '25',
-  sellMax: '0.1',
+  buyMax: '250',
+  sellMax: '10',
   quoteDecimals: 6,
 } as const;
 
@@ -91,7 +91,7 @@ export async function prepareJesseLiveProposal(args: {
     if (spend > parseAmount(JESSE_LIVE_LIMITS.buyMax, SOLANA_USDC_DECIMALS)) {
       throw new TradingError(
         'demo_limit',
-        `Live demo limit: ${JESSE_LIVE_LIMITS.buyMax} USDC per buy or ${JESSE_LIVE_LIMITS.sellMax} tokens per sell.`,
+        `Live order limit: ${JESSE_LIVE_LIMITS.buyMax} USDC per buy or ${JESSE_LIVE_LIMITS.sellMax} scaled tokens per sell.`,
       );
     }
     amountInRaw = spend.toString();
@@ -99,7 +99,7 @@ export async function prepareJesseLiveProposal(args: {
     if (compareDecimals(intent.amount, JESSE_LIVE_LIMITS.sellMax) > 0) {
       throw new TradingError(
         'demo_limit',
-        `Live demo limit: ${JESSE_LIVE_LIMITS.buyMax} USDC per buy or ${JESSE_LIVE_LIMITS.sellMax} tokens per sell.`,
+        `Live order limit: ${JESSE_LIVE_LIMITS.buyMax} USDC per buy or ${JESSE_LIVE_LIMITS.sellMax} scaled tokens per sell.`,
       );
     }
     try {

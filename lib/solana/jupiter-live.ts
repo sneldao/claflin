@@ -45,6 +45,22 @@ function integerString(value: unknown): value is string {
   return typeof value === 'string' && /^\d+$/.test(value);
 }
 
+/** Map Jupiter Metis live errors to honest desk codes — never call a balance miss a route miss. */
+export function mapJupiterLiveVenueError(error: string): TradingError {
+  const normalized = error.trim().toLowerCase();
+  if (normalized.includes('insufficient funds') || normalized.includes('insufficient balance')) {
+    return new TradingError(
+      'insufficient_funds',
+      'That Solana wallet needs enough USDC (buy) or xStock (sell) plus SOL for fees before a live order can be prepared.',
+      422,
+    );
+  }
+  if (normalized.includes('failed to get quotes') || normalized.includes('no route') || normalized.includes('not enough')) {
+    return new TradingError('no_route', 'The venue found no live route for that pair and size.', 422);
+  }
+  return new TradingError('quote_unavailable', error.slice(0, 200) || 'The venue could not prepare a live order. Please retry.', 503);
+}
+
 const U64_MAX = 2n ** 64n - 1n;
 
 /**
@@ -139,9 +155,6 @@ export function createJupiterLiveOrderClient({
     if (res.status === 429) {
       throw new TradingError('rate_limited', 'The venue is busy — wait a few seconds, then retry.', 429);
     }
-    if (!res.ok) {
-      throw new TradingError('quote_unavailable', 'The venue could not prepare a live order. Please retry.', 503);
-    }
     let body: unknown;
     try {
       body = await res.json();
@@ -149,8 +162,14 @@ export function createJupiterLiveOrderClient({
       throw new TradingError('quote_unavailable', 'The venue returned an unreadable live order. Please retry.', 503);
     }
     const payload = body as Record<string, unknown> | null;
-    if (payload && typeof payload.error === 'string') {
-      throw new TradingError('no_route', 'The venue found no live route for that pair and size.', 422);
+    const venueError = payload && typeof payload.error === 'string' ? payload.error
+      : payload && typeof payload.errorMessage === 'string' ? payload.errorMessage
+        : null;
+    if (venueError) {
+      throw mapJupiterLiveVenueError(venueError);
+    }
+    if (!res.ok) {
+      throw new TradingError('quote_unavailable', 'The venue could not prepare a live order. Please retry.', 503);
     }
     return parseJupiterLiveOrder(body, request);
   };
