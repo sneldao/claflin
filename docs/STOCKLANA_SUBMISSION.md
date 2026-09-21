@@ -40,7 +40,7 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 - Env-gated live Solana settle: Jupiter order(taker) → wallet sign → execute (off unless both live flags are set)
 - House foyer so Claflin is the institution and open desks (Base vs Solana) are explicit market doors
 
-**Not claimed by default:** that live settle is on in production (flags default off), Pyth Pro numerical comparison (stays honest-unavailable without entitlement), or that `/night-desk?study=1` fixtures are live markets.
+**Not claimed by default:** that live settle is on in production (flags default off), or that `/night-desk?study=1` fixtures are live markets. Pyth Pro compare requires the Lazer daemon + Redis snapshots; when cold, the panel stays honest-unavailable.
 
 ## Demo script (~2–3 minutes)
 
@@ -48,7 +48,7 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 2. **Open Jesse.** Load `/?desk=jesse` (or `/?desk=jesse&view=room` for Room view). State: Claflin house, Jesse’s Solana desk, Backed xStocks. Room and Compact are the same work.
 3. **Voice-first.** Ring the line (or tap) “buy 100 USDC of AAPLx”. Show the slip: Jupiter · Token-2022 · mint · scaled multiplier.
 4. **Correct.** Tap or speak “make that 50 USDC of AAPLx”. New slip supersedes; old authority gone.
-5. **Evidence.** Show **venue duplex** (reference vs Jupiter venue) — labelled not arbitrage. Optionally PreStocks. If Pyth compare is unavailable, say so honestly.
+5. **Evidence.** Show **Pyth Pro** compare when available (equity vs xStock). Otherwise venue duplex / PreStocks — labelled not arbitrage. Never invent a Pyth number.
 6. **Live path (if flags on).** Connect wallet → prepare live order (tiny size) → sign → Solscan. Otherwise state paper-only for this deployment.
 7. **File + return.** File paper record → reload → record still there.
 8. **Refuse.** “buy DOGE on Solana” → clarify/refuse; catalog boundary holds.
