@@ -10,10 +10,12 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
   const [open, setOpen] = useState(false);
   const participation = getEducationTopic('participation');
   return <details className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary>The house</summary>
+    <summary>Desks</summary>
     <div className={styles.directoryPaper}>
       <p className={styles.directoryTitle}>Claflin &amp; Co.</p>
-      <p className={styles.directoryNote}>Ring the desk. Speak the instruction. Different markets behind each door.</p>
+      <p className={styles.directoryNote}>
+        Pick a market desk. Talk or type a trade. Review the estimate — paper by default, live when you choose.
+      </p>
       <ul>
         {HOUSE_DESKS.map(desk => <li key={desk.id}>
           <button
@@ -31,19 +33,21 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
             </div>
             <small>
               {isOpenDesk(desk.id)
-                ? desk.id === activeDeskId ? 'Here · paper' : 'Open · paper'
-                : desk.id === activeDeskId ? 'Here · planned' : 'Visit · planned'}
+                ? desk.id === activeDeskId ? 'Here' : 'Open'
+                : desk.id === activeDeskId ? 'Here · planned' : 'Planned'}
             </small>
           </button>
         </li>)}
       </ul>
       {participation && (
         <p className={styles.directoryFoot}>
-          Optional house note — not an introduction required to trade.{' '}
+          Optional house note — not required to trade.{' '}
           <EducationTopicTrigger topic={participation} label="Participation and access" />
         </p>
       )}
-      <p className={styles.directoryFoot}>Hetty&apos;s Base desk and Jesse&apos;s Solana desk quote and file paper. Visiting another room cannot carry an approval with you.</p>
+      <p className={styles.directoryFoot}>
+        Hetty quotes on Base. Jesse quotes on Solana and can settle live. Switching desks does not carry an approval with you.
+      </p>
     </div>
   </details>;
 }

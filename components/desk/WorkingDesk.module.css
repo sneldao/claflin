@@ -1178,14 +1178,14 @@
 .tickerStation .tapeItem { border-color: var(--desk-paper-rule); padding: 12px 20px; }
 .tickerStation .tapeItem:hover:not(:disabled) { background: var(--desk-paper-wash); transform: none; }
 .tickerStation .tapeItem:focus-visible { outline-color: var(--desk-paper-ink); }
-/* ————— Claflin foyer: house first, then open-desk doors ————— */
+/* ————— Claflin foyer: wedge + mini demo + desk doors ————— */
 .foyer {
   position: relative; z-index: 2;
-  width: min(720px, 100%);
-  margin: 48px auto 64px;
-  padding: 36px 32px 40px;
+  width: min(780px, 100%);
+  margin: 36px auto 56px;
+  padding: 28px 28px 36px;
   display: grid;
-  gap: 28px;
+  gap: 26px;
   animation: riseIn var(--dur-2) var(--ease-swift) both;
 }
 .foyerPending {
@@ -1193,38 +1193,176 @@
   text-align: center;
   color: var(--desk-muted);
 }
-.foyerMark { display: grid; gap: 10px; justify-items: start; }
+.foyerMark { display: grid; gap: 8px; justify-items: start; }
+.foyerWhisper {
+  margin: 0 !important;
+  font: 10px/1 var(--font-mono), monospace;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--desk-muted);
+}
 .foyerMark h1 {
   margin: 0 !important;
-  font: 400 clamp(36px, 5vw, 52px)/1.1 var(--font-display), serif !important;
+  max-width: 18ch;
+  font: 400 clamp(32px, 4.8vw, 48px)/1.12 var(--font-display), serif !important;
   letter-spacing: -.03em;
   color: var(--desk-ink);
 }
 .foyerPromise {
-  margin: 4px 0 0 !important;
-  font: 400 22px/1.35 var(--font-display), serif;
+  margin: 2px 0 0 !important;
+  max-width: 36ch;
+  font: 400 20px/1.4 var(--font-display), serif;
   color: var(--desk-brass);
 }
 .foyerNote {
   margin: 0 !important;
-  max-width: 42ch;
+  max-width: 46ch;
   font-size: 14px;
   line-height: 1.7;
   color: var(--desk-muted);
 }
+
+.foyerDemo {
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--desk-brass-dim);
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--desk-paper) 88%, #d4c4a0), color-mix(in srgb, var(--desk-paper) 70%, #c4b089));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 230, 0.55),
+    0 18px 40px var(--desk-occlusion);
+  color: #2c2618;
+}
+.foyerDemoLead {
+  margin: 0 !important;
+  font: 10px/1 var(--font-mono), monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #6a5c3e;
+}
+.foyerChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.foyerChip {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgba(90, 72, 40, 0.35);
+  background: rgba(255, 250, 235, 0.55);
+  color: #2c2618;
+  font: 13px/1.3 var(--font-body), sans-serif;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-swift), border-color var(--dur-1) var(--ease-swift);
+}
+.foyerChip:hover:not(:disabled),
+.foyerChip[aria-pressed='true'] {
+  background: rgba(255, 250, 235, 0.92);
+  border-color: rgba(90, 72, 40, 0.65);
+}
+.foyerChip:disabled { opacity: 0.65; cursor: wait; }
+.foyerBlotter {
+  min-height: 120px;
+  display: grid;
+  align-items: start;
+}
+.foyerBlotterIdle {
+  margin: 0 !important;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #5c5238;
+}
+.foyerSlip {
+  display: grid;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  background: linear-gradient(160deg, #f4ead0, #e8d8b4);
+  border: 1px solid rgba(120, 95, 55, 0.28);
+  box-shadow: 4px 6px 0 rgba(180, 160, 120, 0.35);
+  animation: foyerSlipIn var(--dur-2) var(--ease-swift) both;
+}
+@keyframes foyerSlipIn {
+  from { opacity: 0; transform: translateY(14px) rotate(0.5deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0deg); }
+}
+.foyerSlipKicker {
+  margin: 0 !important;
+  font: 9px/1.2 var(--font-mono), monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #7a6844;
+}
+.foyerSlipPhrase {
+  margin: 0 !important;
+  font: 400 18px/1.3 var(--font-display), serif;
+  color: #2a2416;
+}
+.foyerSlipLine {
+  margin: 0 !important;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3a3122;
+}
+.foyerSlipLine strong { font-weight: 600; }
+.foyerSlipMeta {
+  margin: 0 !important;
+  font: 10px/1.4 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6a5c3e;
+}
+.foyerSlipFine {
+  margin: 4px 0 0 !important;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #5c5238;
+}
+.foyerCta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: 4px;
+}
+.foyerPrimary {
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 1px solid #3a2f1a;
+  background: #2c2618;
+  color: #f2e8d0;
+  font: 500 14px/1.2 var(--font-body), sans-serif;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-swift), transform var(--dur-1) var(--ease-swift);
+}
+.foyerPrimary:hover { background: #3e3524; }
+.foyerPrimary:active { transform: translateY(1px); }
+.foyerSecondary {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4a3f28;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.foyerSecondary:hover { color: #2c2618; }
+
 .foyerDoors {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 .foyerDoor {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
   min-height: 44px;
-  padding: 18px 20px;
+  padding: 16px 18px;
   text-align: left;
   border: 1px solid var(--desk-brass-dim);
   background: color-mix(in srgb, var(--desk-room) 70%, transparent);
@@ -1236,13 +1374,16 @@
     background var(--dur-1) var(--ease-swift),
     transform var(--dur-1) var(--ease-swift);
 }
+.foyerDoor[data-featured='true'] {
+  border-color: color-mix(in srgb, var(--desk-brass) 70%, var(--desk-brass-dim));
+}
 .foyerDoor:hover {
   border-color: var(--desk-brass);
   background: color-mix(in srgb, var(--desk-brass) 10%, var(--desk-room));
 }
 .foyerDoor:active { transform: translateY(1px); }
 .foyerDoorName {
-  font: 400 26px/1.2 var(--font-display), serif;
+  font: 400 24px/1.2 var(--font-display), serif;
   letter-spacing: -.02em;
 }
 .foyerDoorMarket {
@@ -1256,7 +1397,7 @@
   line-height: 1.5;
   color: var(--desk-ink);
 }
-.foyerDoorApproach {
+.foyerDoorCapability {
   font-size: 12px;
   line-height: 1.55;
   color: var(--desk-muted);
@@ -1274,13 +1415,17 @@
   line-height: 1.6;
   color: var(--desk-muted);
 }
-@media (max-width: 760px) {
-  .foyer { margin: 24px auto 40px; padding: 24px 16px 28px; }
-  .foyerDoor { padding: 16px; }
+@media (max-width: 640px) {
+  .foyer { margin: 20px auto 36px; padding: 20px 14px 28px; }
+  .foyerDoor { padding: 14px; }
+  .foyerDemo { padding: 14px; }
+  .foyerCta { flex-direction: column; align-items: stretch; }
+  .foyerPrimary { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .foyer { animation: none; }
   .foyerDoor { transition: none; }
+  .foyerSlip { animation: none; }
 }
 
 .houseDirectory { position: relative; }

@@ -42,7 +42,8 @@ describe('one canonical house', () => {
     assert.match(desk, /The pit is/);
     assert.match(desk, /About Hetty/);
     assert.match(desk, /PAPER TRADING/);
-    assert.match(room, /Hear the floor/);
+    assert.match(room, /Sound/);
+    assert.doesNotMatch(room, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
   });
   it('puts the ticket before the room and introduces the line only once', () => {
@@ -106,7 +107,10 @@ describe('one canonical house', () => {
     assert.match(entry, /resolveHouseEntry/);
     assert.match(entry, /\?desk=/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /HOUSE\.promise/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /HOUSE\.headline/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /desk\.access/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /foyerDemo|EXAMPLE · PAPER ESTIMATE/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /Open Jesse/);
     assert.match(source('lib/trading/useTradingDesk.ts'), /entryPhase/);
     assert.match(source('components/desk/WorkingDesk.tsx'), /entryPhase === 'foyer'/);
   });

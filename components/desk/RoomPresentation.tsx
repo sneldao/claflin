@@ -49,7 +49,7 @@ export function RoomPresentation({
       <NightDeskScene view={view} stage={stage} />
 
       <header className={styles.roomViewHeader}>
-        <Link href="/" className={styles.brand} aria-label="Claflin, the office above the pit">
+        <Link href="/" className={styles.brand} aria-label="Claflin home">
           <HouseMark className={styles.houseMark} />
           <span>
             <strong>CLAFLIN</strong>

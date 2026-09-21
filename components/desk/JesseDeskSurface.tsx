@@ -175,8 +175,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       <p className={styles.eyebrow}>JESSE LIVERMORE · SOLANA</p>
       <h1>Before you trade, <span>read the tape.</span></h1>
       <p>
-        Ring the desk. Speak an xStock instruction — Backed Token-2022 mints on Solana, quoted through Jupiter.
-        Equity-versus-token tape via Pyth Pro. Room and Compact are the same work.
+        Say or type an xStock instruction — Backed Token-2022 mints on Solana, quoted through Jupiter.
+        Equity-versus-token tape via Pyth Pro. Paper by default; live settle when you choose. Room and Compact are the same work.
       </p>
       <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
         <span className={styles.voiceSayLead}>Say it — or tap it</span>

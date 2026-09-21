@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { HouseMark } from '@/components/desk/HouseMark';
 
-export const alt = 'Claflin — the office above the pit. Paper trading on Coinbase Tokenized Stocks on Base.';
+export const alt = 'Claflin — say a stock trade, see a real estimate. Paper by default; live on Solana when you choose.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 

@@ -101,7 +101,7 @@ export function DeskRoom({
         <div className={styles.tradeLamp} />
       </div>
       <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Claflin, the office above the pit">
+        <Link href="/" className={styles.brand} aria-label="Claflin home">
           <HouseMark className={styles.houseMark} />
           <span><strong>CLAFLIN</strong><small>{HOUSE.tagline.toUpperCase()}</small></span>
         </Link>
@@ -115,7 +115,7 @@ export function DeskRoom({
             onClick={() => tone.setEnabled(!tone.enabled)}
           >
             <span className={styles.soundBars} aria-hidden="true"><i /><i /><i /><i /></span>
-            {tone.enabled ? (lineLive ? 'Floor held' : 'Floor open') : 'Hear the floor'}
+            {tone.enabled ? (lineLive ? 'Sound paused' : 'Sound on') : 'Sound'}
           </button>
           {auth.enabled && (auth.authenticated ? (
             <span className={styles.authChip}>
@@ -161,7 +161,7 @@ export function DeskRoom({
         {children}
       </main>
       <footer className={styles.footer}>
-        <span>YOUR INSTRUCTION. YOUR DECISION.</span>
+        <span>Your instruction. Your decision.</span>
         <div ref={sealRef} className={styles.seal} data-drawn={sealDrawn ? 'true' : 'false'} aria-hidden="true">
           <svg width="36" height="36" viewBox="0 0 56 56" fill="none">
             <path className={styles.sealOuter} d="M28 4 50 17v22L28 52 6 39V17L28 4Z" stroke="currentColor" pathLength={1} />

@@ -8,10 +8,14 @@ import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
  */
 export const HOUSE = Object.freeze({
   name: 'Claflin',
-  title: 'Claflin — the office above the pit',
+  title: 'Claflin — say a stock trade, see a real estimate',
+  /** Quiet brand whisper — not the first product sentence. */
   tagline: 'The office above the pit',
-  description: 'The pit is downstairs. This desk is for deciding. Specialist desks, real market access, a paper record you can keep.',
-  promise: 'Ring the desk. Speak the instruction.',
+  /** First product sentence on the foyer — what a new visitor can do. */
+  headline: 'Say a stock trade. See a real estimate.',
+  promise: 'Paper by default — live on Solana when you choose.',
+  description:
+    'Talk or type an instruction to a specialist desk. Get a real venue estimate, review it, then file a paper record or settle live. Nothing moves without your say.',
   mode: 'paper' as const,
   /** Retained for legacy consumers; the desk flag is authoritative. */
   liveExecutionEnabled: LIVE_EXECUTION_ENABLED as boolean,
@@ -21,8 +25,8 @@ export const HOUSE = Object.freeze({
 export type DeskStatus = 'paper' | 'planned';
 
 /**
- * Desk doors carry mandate + access in one glance — not biographies.
- * `access` is the product/network the desk can actually quote; `approach` stays the editorial lens.
+ * Desk doors: plain capability first, market/access second.
+ * `approach` stays the editorial lens — secondary on the foyer.
  */
 export const HOUSE_DESKS = Object.freeze([
   Object.freeze({
@@ -31,7 +35,8 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Hetty',
     market: 'Base',
     approach: 'Independent judgment. Capital preservation. Deliberate decisions.',
-    access: 'Coinbase Tokenized Stocks · Base paper',
+    access: 'Tokenized stocks on Base · paper',
+    capability: 'Talk or type a buy. Get a Base estimate. File a paper record.',
     status: 'paper' as DeskStatus,
   }),
   Object.freeze({
@@ -40,7 +45,8 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Jesse',
     market: 'Solana',
     approach: 'Price action, timing, and disciplined speculation.',
-    access: 'Backed xStocks · Jupiter · Solana paper or live',
+    access: 'Backed xStocks on Solana · paper or live',
+    capability: 'Talk or type a buy. Get a Jupiter estimate. Paper or settle live.',
     status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
@@ -49,7 +55,8 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Isabel',
     market: 'Robinhood Chain',
     approach: 'Fundamental analysis and patient investigation.',
-    access: 'Planned — not open for quotation',
+    access: 'Planned — not open yet',
+    capability: 'Coming later.',
     status: 'planned' as DeskStatus,
   }),
   Object.freeze({
@@ -58,7 +65,8 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Jay',
     market: 'Arbitrum',
     approach: 'Building the rails that let everyone else move money.',
-    access: 'Planned — not open for quotation',
+    access: 'Planned — not open yet',
+    capability: 'Coming later.',
     status: 'planned' as DeskStatus,
   }),
 ]);
