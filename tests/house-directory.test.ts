@@ -13,7 +13,8 @@ function renderDirectoryInEnv(env: Record<string, string>) {
     require.extensions['.css'] = (m) => { m.exports = new Proxy({}, { get: (_t, k) => k === '__esModule' ? false : String(k) }); };
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { createElement } = await import('react');
-    const { HouseDirectory } = await import('./components/desk/HouseDirectory.tsx');
+    const directory = await import('./components/desk/HouseDirectory.tsx');
+    const HouseDirectory = directory.HouseDirectory ?? directory.default?.HouseDirectory;
     process.stdout.write(renderToStaticMarkup(createElement(HouseDirectory, { activeDeskId: 'jesse', onVisit: () => {} })));
   `;
   return execFileSync(

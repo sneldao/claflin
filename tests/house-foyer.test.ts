@@ -55,7 +55,8 @@ function renderFoyerInEnv(env: Record<string, string>) {
     require.extensions['.css'] = (m) => { m.exports = new Proxy({}, { get: (_t, k) => k === '__esModule' ? false : String(k) }); };
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { createElement } = await import('react');
-    const { HouseFoyer } = await import('./components/desk/HouseFoyer.tsx');
+    const foyer = await import('./components/desk/HouseFoyer.tsx');
+    const HouseFoyer = foyer.HouseFoyer ?? foyer.default?.HouseFoyer;
     process.stdout.write(renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} })));
   `;
   return execFileSync(
