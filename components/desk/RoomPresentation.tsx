@@ -1,18 +1,35 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BookOpen, FileText, LineChart } from 'lucide-react';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
-import type { HouseDesk } from '@/lib/house';
+import type { NightDeskAnchors } from '@/lib/night-desk-scene';
+import type { HouseDesk, HouseDeskId } from '@/lib/house';
 import { HouseDirectory } from './HouseDirectory';
 import { HouseMark } from './HouseMark';
-import { useHouseScene } from './HouseScene';
+import { useHouseScene, useHouseSceneAnchors } from './HouseScene';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
-import type { HouseDeskId } from '@/lib/house';
 import type { DeskPresentation } from '@/lib/desk-presentation';
 import styles from './WorkingDesk.module.css';
 import sceneStyles from '../night-desk/NightDesk.module.css';
+
+type RoomObject = {
+  view: Extract<NightDeskView, 'evidence' | 'review' | 'ledger'>;
+  label: string;
+};
+
+const JESSE_OBJECTS: RoomObject[] = [
+  { view: 'evidence', label: 'The two markets' },
+  { view: 'review', label: 'Your instruction' },
+  { view: 'ledger', label: 'The ledger' },
+];
+
+const HETTY_OBJECTS: RoomObject[] = [
+  { view: 'evidence', label: 'The working tray' },
+  { view: 'review', label: 'Your instruction' },
+  { view: 'ledger', label: 'The ledger' },
+];
 
 /**
  * Room view chrome — NightDeskScene plus HTML work overlays for the active desk.
@@ -39,14 +56,45 @@ export function RoomPresentation({
   navExtras?: ReactNode;
   children: ReactNode;
 }) {
-  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage });
+  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false });
   const mainRef = useRef<HTMLElement>(null);
+  const evidenceRef = useRef<HTMLButtonElement>(null);
+  const reviewRef = useRef<HTMLButtonElement>(null);
+  const ledgerRef = useRef<HTMLButtonElement>(null);
+  const activeViewRef = useRef(view);
+  useEffect(() => { activeViewRef.current = view; }, [view]);
+
+  const applyAnchors = useCallback((anchors: NightDeskAnchors) => {
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const targets = {
+      evidence: evidenceRef.current,
+      review: reviewRef.current,
+      ledger: ledgerRef.current,
+    } as const;
+    for (const [key, element] of Object.entries(targets) as Array<[keyof typeof targets, HTMLButtonElement | null]>) {
+      if (!element) continue;
+      const anchor = anchors[key];
+      if (mobile) {
+        element.style.left = '';
+        element.style.top = '';
+        element.style.visibility = '';
+        continue;
+      }
+      element.style.left = `${anchor.x}px`;
+      element.style.top = `${anchor.y}px`;
+      element.style.visibility = anchor.visible && key !== activeViewRef.current ? 'visible' : 'hidden';
+    }
+  }, []);
+  useHouseSceneAnchors(applyAnchors);
+
   useEffect(() => {
     const active = document.activeElement;
     if (active === document.body || !active?.isConnected) {
       mainRef.current?.focus({ preventScroll: true });
     }
   }, []);
+  const objects = desk.id === 'jesse' ? JESSE_OBJECTS : HETTY_OBJECTS;
+  const objectRefs = { evidence: evidenceRef, review: reviewRef, ledger: ledgerRef } as const;
   return (
     <div
       className={`${sceneStyles.study} ${styles.roomView}`}
@@ -56,7 +104,7 @@ export function RoomPresentation({
       data-stage={stage}
       data-view={view}
     >
-      {!sharedScene && <NightDeskScene view={view} stage={stage} />}
+      {!sharedScene && <NightDeskScene view={view} stage={stage} onAnchors={applyAnchors} />}
 
       <header className={styles.roomViewHeader}>
         <Link href="/" className={styles.brand} aria-label="Claflin home">
@@ -90,16 +138,22 @@ export function RoomPresentation({
         </nav>
       </header>
 
-      <nav className={sceneStyles.roomLabels} aria-label="Objects in the room">
-        <button type="button" className={sceneStyles.objectLabel} onClick={() => onView('evidence')}>
-          <LineChart size={13} />The two markets
-        </button>
-        <button type="button" className={sceneStyles.objectLabel} onClick={() => onView('review')}>
-          <FileText size={13} />Your instruction
-        </button>
-        <button type="button" className={sceneStyles.objectLabel} onClick={() => onView('ledger')}>
-          <BookOpen size={13} />The ledger
-        </button>
+      <nav className={sceneStyles.roomLabels} aria-label={`Objects in ${desk.name}'s room`}>
+        {objects.map(object => {
+          const Icon = object.view === 'evidence' ? LineChart : object.view === 'review' ? FileText : BookOpen;
+          return (
+            <button
+              key={object.view}
+              ref={objectRefs[object.view]}
+              type="button"
+              className={sceneStyles.objectLabel}
+              aria-pressed={view === object.view}
+              onClick={() => onView(object.view)}
+            >
+              <Icon size={13} />{object.label}
+            </button>
+          );
+        })}
       </nav>
 
       <main id="main-content" tabIndex={-1} ref={mainRef} className={styles.roomViewOverlay}>

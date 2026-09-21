@@ -198,6 +198,23 @@
   left: 35%;
 }
 
+.sceneHost[data-layout='compact'] .fallbackWindow {
+  left: 38%;
+  right: 4%;
+}
+
+.sceneHost[data-layout='compact'] .fallbackCity {
+  left: 39%;
+  right: 6%;
+}
+
+.sceneHost[data-layout='compact'] .fallbackDesk {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+}
+
 @media (max-width: 760px) {
   .sceneHost[data-layout='foyer'] .fallbackReceiver {
     right: 4%;
@@ -214,6 +231,12 @@
   .sceneHost[data-layout='foyer'] .fallbackWindow,
   .sceneHost[data-layout='foyer'] .fallbackCity {
     left: 9%;
+  }
+
+  .sceneHost[data-layout='compact'] .fallbackWindow,
+  .sceneHost[data-layout='compact'] .fallbackCity {
+    left: 8%;
+    right: 8%;
   }
 }
 

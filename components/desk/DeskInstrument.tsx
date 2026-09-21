@@ -6,13 +6,13 @@ import type { DeskInstrumentController, DeskInstrumentStage } from '@/lib/desk-i
 import { signalLine } from '@/lib/trading/line-signal';
 import styles from './DeskInstrument.module.css';
 
-function stageCaption(stage: DeskInstrumentStage) {
+function stageCaption(stage: DeskInstrumentStage, brokerName: string) {
   if (stage === 'confirmation') return 'REVIEW INSTRUCTION';
-  if (stage === 'conversation') return 'HETTY — ON THE LINE';
+  if (stage === 'conversation') return `${brokerName.toUpperCase()} — ON THE LINE`;
   return 'LIFT TO SPEAK';
 }
 
-export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS', eager = false, poster, reviewing = stage === 'confirmation' }: { stage: DeskInstrumentStage; label?: string; eager?: boolean; poster?: string; reviewing?: boolean }) {
+export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS', eager = false, poster, reviewing = stage === 'confirmation', brokerName = 'Hetty', lineTargetId = 'hetty' }: { stage: DeskInstrumentStage; label?: string; eager?: boolean; poster?: string; reviewing?: boolean; brokerName?: string; lineTargetId?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<DeskInstrumentController | null>(null);
@@ -27,17 +27,33 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
      (it renders beside the panel, not inside it). */
   const [line, setLine] = useState<'idle' | 'ringing' | 'live'>('idle');
   useEffect(() => {
-    const panel = document.getElementById('hetty');
-    if (!panel) return;
+    let panel: HTMLElement | null = null;
+    let panelObserver: MutationObserver | null = null;
     const read = () => {
-      const state = panel.getAttribute('data-call');
+      const state = panel?.getAttribute('data-call');
       setLine(state === 'connecting' ? 'ringing' : state && state !== 'idle' ? 'live' : 'idle');
     };
-    read();
-    const mo = new MutationObserver(read);
-    mo.observe(panel, { attributes: true, attributeFilter: ['data-call'] });
-    return () => mo.disconnect();
-  }, []);
+    const attach = () => {
+      const next = document.getElementById(lineTargetId);
+      if (next === panel) return;
+      panelObserver?.disconnect();
+      panel = next;
+      if (!panel) {
+        setLine('idle');
+        return;
+      }
+      panelObserver = new MutationObserver(read);
+      panelObserver.observe(panel, { attributes: true, attributeFilter: ['data-call'] });
+      read();
+    };
+    attach();
+    const treeObserver = new MutationObserver(attach);
+    treeObserver.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      panelObserver?.disconnect();
+      treeObserver.disconnect();
+    };
+  }, [lineTargetId]);
 
   useEffect(() => {
     stageRef.current = stage;
@@ -132,7 +148,6 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
     };
   // label is applied live via setLabel — recreating the scene per label
   // change would restart the instrument on every stock selection.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reducedMotion, allowScene]);
 
   return (
@@ -145,18 +160,18 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
       data-line={line}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
     >
-      {/* The receiver is the house's first interface: lift it and Hetty
-          answers — or hangs up. The call panel owns the session; this is
+      {/* The receiver is the house's first interface: lift it and the active
+          broker answers — or hangs up. The call panel owns the session; this is
           simply its most physical hand. */}
       <button
         type="button"
         className={styles.receiverLift}
         aria-label={
           line === 'live'
-            ? 'Hang up the line with Hetty'
+            ? `Hang up the line with ${brokerName}`
             : line === 'ringing'
               ? 'Cancel the ring'
-              : 'Lift the receiver — talk with Hetty'
+              : `Lift the receiver — talk with ${brokerName}`
         }
         onClick={() => signalLine()}
       >
@@ -166,7 +181,7 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
             <span className={styles.fallbackDisplay}>
               CLAFLIN
               <br />
-              <strong>{line === 'ringing' ? 'RINGING' : stageCaption(stage)}</strong>
+              <strong>{line === 'ringing' ? 'RINGING' : stageCaption(stage, brokerName)}</strong>
               <small>{label}</small>
             </span>
             <span className={styles.fallbackDial} />

@@ -78,7 +78,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
     : phase === 'writing'
       ? 'conversation'
       : priorAmount !== null ? 'revised' : 'quote';
-  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage });
+  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage, still: false });
 
   const primaryDesk: HouseDesk | undefined = openDesks.find(d => d.id === 'jesse') ?? openDesks[0];
   const alternateDesk: HouseDesk | undefined = openDesks.find(d => d.id !== primaryDesk?.id);

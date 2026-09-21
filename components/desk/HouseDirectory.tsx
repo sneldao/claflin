@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
+import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { getEducationTopic } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
 import styles from './WorkingDesk.module.css';
@@ -9,6 +9,7 @@ import styles from './WorkingDesk.module.css';
 export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void }) {
   const [open, setOpen] = useState(false);
   const participation = getEducationTopic('participation');
+  const jesseLive = isOpenDesk('jesse') && DESK_CAPABILITIES.jesse.live;
   return <details className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Desks</summary>
     <div className={styles.directoryPaper}>
@@ -46,7 +47,7 @@ export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseD
         </p>
       )}
       <p className={styles.directoryFoot}>
-        Hetty quotes on Base. Jesse quotes on Solana and can settle live. Switching desks does not carry an approval with you.
+        Hetty quotes on Base. Jesse quotes on Solana{jesseLive ? ' and can settle live when you choose' : ' for paper records'}. Switching desks does not carry an approval with you.
       </p>
     </div>
   </details>;

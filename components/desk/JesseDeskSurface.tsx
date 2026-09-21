@@ -227,7 +227,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           {!roomView && (
             <div className={styles.instrumentShell} data-stage={instrumentStage}>
               <div className={styles.instrument} data-stage={instrumentStage}>
-                <DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} />
+                <DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} brokerName="Jesse" lineTargetId="jesse-line" />
               </div>
               {!jesseLive && (
                 <p className={styles.receiverCue}>

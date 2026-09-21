@@ -88,7 +88,8 @@ describe('one canonical house', () => {
   it('lets the house directory visit a desk without making planned desks trade', () => {
     const directory = source('components/desk/HouseDirectory.tsx');
     assert.match(directory, /HOUSE_DESKS/);
-    assert.match(directory, /Visit · planned/);
+    assert.match(directory, /desk\.id === activeDeskId \? 'Here · planned' : 'Planned'/);
+    assert.match(directory, /DESK_CAPABILITIES\.jesse\.live/);
     assert.match(directory, /onVisit/);
     assert.match(directory, /<button/);
     assert.match(directory, /desk\.access/);

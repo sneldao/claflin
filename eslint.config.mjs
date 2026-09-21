@@ -1,8 +1,12 @@
 import next from 'eslint-config-next/core-web-vitals';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 const config = [
   ...next,
   {
+    plugins: {
+      'react-hooks': reactHooks,
+    },
     rules: {
       'react/no-unescaped-entities': 'off',
       // The legacy voice/wallet hooks that remain trip the new react-hooks 7.x rules.

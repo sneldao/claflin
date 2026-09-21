@@ -130,6 +130,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
   const [sharedLoaded, setSharedLoaded] = useState(false);
+  const [roomFocus, setRoomFocus] = useState<{ foreground: typeof foreground.kind; view: NightDeskView } | null>(null);
   const roomView = presentation === 'room';
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -216,6 +217,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const setMode = useCallback((mode: DeskPresentation) => {
     setPresentation(mode);
+    if (mode === 'compact') setRoomFocus(null);
     if (typeof window !== 'undefined') saveDeskPresentation(window.localStorage, 'hetty', mode);
     syncViewQuery(mode);
   }, []);
@@ -225,8 +227,12 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     foregroundKind: foreground.kind,
     reviewing: reviewActive,
   }), [desk.state.stage, foreground.kind, reviewActive]);
+  const roomSceneView = roomProjection.view === 'desk' && roomFocus?.foreground === foreground.kind
+    ? roomFocus.view
+    : roomProjection.view;
 
   const onRoomView = (view: NightDeskView) => {
+    setRoomFocus({ foreground: foreground.kind, view });
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const behavior = reduceMotion ? 'auto' : 'smooth';
     if (view === 'review') {
@@ -291,7 +297,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           {!roomView && (
             <div className={styles.instrumentShell} data-stage={instrumentStage}>
               <div className={styles.instrument} data-stage={instrumentStage}>
-                <DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} />
+                <DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} brokerName="Hetty" lineTargetId="hetty" />
               </div>
               {!hettyLive && (
                 <p className={styles.receiverCue}>
@@ -340,7 +346,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       <RoomPresentation
         desk={desk.activeDesk}
         stage={roomProjection.stage}
-        view={roomProjection.view}
+        view={roomSceneView}
         onView={onRoomView}
         presentation={presentation}
         onPresentation={setMode}

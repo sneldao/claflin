@@ -8,7 +8,7 @@ import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
  */
 export const HOUSE = Object.freeze({
   name: 'Claflin',
-  title: 'Claflin — say a stock trade, see a real estimate',
+  title: 'Claflin — the office above the pit',
   /** Quiet brand whisper — not the first product sentence. */
   tagline: 'The office above the pit',
   /** First product sentence on the foyer — what a new visitor can do. */

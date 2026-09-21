@@ -40,7 +40,7 @@ export function DeskRoom({
 }) {
   const auth = useDeskAuth();
   const tone = useRoomTone(lineLive);
-  useHouseScene({ visible: false, layout: 'room', view: 'desk', stage: 'arrival' });
+  const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true });
 
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -91,25 +91,29 @@ export function DeskRoom({
   return (
     <div
       className={styles.workspace}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
+      onPointerMove={sharedScene ? undefined : handlePointerMove}
+      onPointerLeave={sharedScene ? undefined : handlePointerLeave}
       data-live={lineLive ? 'true' : 'false'}
       data-desk-stage={deskStage}
       data-desk={deskId}
       data-desk-open={open ? 'true' : 'false'}
+      data-presentation="compact"
+      data-shared-still={sharedScene ? 'true' : undefined}
     >
-      <div className={styles.room} aria-hidden="true">
-        <div className={styles.window}>
-          <i /><i /><i />
-          <div className={styles.street}><b /><b /><b /><b /><b /><b /></div>
-          <div className={styles.pitGlow} />
+      {!sharedScene && (
+        <div className={styles.room} aria-hidden="true">
+          <div className={styles.window}>
+            <i /><i /><i />
+            <div className={styles.street}><b /><b /><b /><b /><b /><b /></div>
+            <div className={styles.pitGlow} />
+          </div>
+          <BrokerageRoom />
+          <div className={styles.wallPanels} />
+          <div className={styles.lightShaft} />
+          <div className={styles.lightPool} />
+          <div className={styles.tradeLamp} />
         </div>
-        <BrokerageRoom />
-        <div className={styles.wallPanels} />
-        <div className={styles.lightShaft} />
-        <div className={styles.lightPool} />
-        <div className={styles.tradeLamp} />
-      </div>
+      )}
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Claflin home">
           <HouseMark className={styles.houseMark} />

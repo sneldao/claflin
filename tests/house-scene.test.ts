@@ -6,17 +6,21 @@ import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { HouseSceneProvider, useHouseScene, type HouseSceneState } from '../components/desk/HouseScene';
+import { DeskRoom } from '../components/desk/DeskRoom';
 import { HouseFoyer } from '../components/desk/HouseFoyer';
+import { HOUSE_DESKS } from '../lib/house';
 import { NightDeskScene } from '../components/night-desk/NightDeskScene';
 import { resetContainer, getRootElement } from './jsdom-setup';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const originalMatchMedia = window.matchMedia;
+const originalRequestAnimationFrame = (globalThis as any).requestAnimationFrame;
+const originalCancelAnimationFrame = (globalThis as any).cancelAnimationFrame;
 
-const FOYER: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival' };
-const ROOM: HouseSceneState = { visible: true, layout: 'room', view: 'desk', stage: 'arrival' };
-const COMPACT: HouseSceneState = { visible: false, layout: 'room', view: 'desk', stage: 'arrival' };
+const FOYER: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false };
+const ROOM: HouseSceneState = { visible: true, layout: 'room', view: 'desk', stage: 'arrival', still: false };
+const COMPACT: HouseSceneState = { visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true };
 
 type MediaControl = { setReduced(reduced: boolean): void };
 
@@ -48,11 +52,17 @@ function Consumer({ state }: { state: HouseSceneState }) {
 describe('shared house scene', () => {
   let root: Root | null = null;
 
-  beforeEach(() => resetContainer());
+  beforeEach(() => {
+    resetContainer();
+    (globalThis as any).requestAnimationFrame = window.requestAnimationFrame.bind(window);
+    (globalThis as any).cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
+  });
 
   afterEach(async () => {
     if (root) { await act(async () => root!.unmount()); root = null; }
     (window as any).matchMedia = originalMatchMedia;
+    (globalThis as any).requestAnimationFrame = originalRequestAnimationFrame;
+    (globalThis as any).cancelAnimationFrame = originalCancelAnimationFrame;
   });
 
   it('keeps one scene host across foyer → room → compact → room and removes it on provider unmount', async () => {
@@ -86,7 +96,10 @@ describe('shared house scene', () => {
     await act(render);
     assert.equal(sceneHosts().length, 1, 'scene stays mounted in compact');
     assert.equal(sceneHosts()[0], sceneNode);
-    assert.equal((sceneLayer as HTMLElement).hasAttribute('hidden'), true, 'compact hides the shared layer');
+    assert.equal(sceneNode.getAttribute('data-layout'), 'compact');
+    assert.equal(sceneNode.getAttribute('data-motion'), 'still');
+    assert.equal(sceneNode.querySelectorAll('canvas').length, 0, 'compact still mode never mounts WebGL');
+    assert.equal((sceneLayer as HTMLElement).hasAttribute('hidden'), false, 'compact shows the static room layer');
 
     state = ROOM;
     await act(render);
@@ -96,6 +109,30 @@ describe('shared house scene', () => {
     await act(async () => root!.unmount());
     root = null;
     assert.equal(container.querySelectorAll('.sceneHost').length, 0, 'scene leaves only with the provider');
+  });
+
+  it('DeskRoom uses the shared compact still instead of the old parallax room', async () => {
+    root = createRoot(getRootElement());
+    const desk = HOUSE_DESKS.find(entry => entry.id === 'hetty')!;
+    await act(async () => root!.render(
+      createElement(HouseSceneProvider, null,
+        createElement(DeskRoom, {
+          deskId: 'hetty',
+          activeDesk: desk,
+          open: true,
+          onSwitchDesk: () => {},
+        }, createElement('div', { id: 'instruction' })),
+      ),
+    ));
+
+    const workspace = getRootElement().querySelector('.workspace');
+    const scene = getRootElement().querySelector('.sceneHost');
+    assert.equal(workspace?.getAttribute('data-presentation'), 'compact');
+    assert.equal(workspace?.getAttribute('data-shared-still'), 'true');
+    assert.equal(workspace?.querySelector('.room'), null, 'old compact room is not composited under the still scene');
+    assert.equal(scene?.getAttribute('data-layout'), 'compact');
+    assert.equal(scene?.getAttribute('data-motion'), 'still');
+    assert.equal(scene?.querySelectorAll('canvas').length, 0);
   });
 
   it('consumers outside the provider get no shared scene and mount a local one', async () => {
@@ -114,7 +151,7 @@ describe('shared house scene', () => {
 
   it('scene controller exposes a layout channel separate from view', () => {
     const scene = source('lib/night-desk-scene.ts');
-    assert.match(scene, /export type NightDeskLayout = 'foyer' \| 'room'/);
+    assert.match(scene, /export type NightDeskLayout = 'foyer' \| 'room' \| 'compact'/);
     assert.match(scene, /setLayout\(layout: NightDeskLayout\): void/);
     assert.match(scene, /initialLayout: NightDeskLayout = 'room'/);
     assert.match(scene, /layout === 'foyer'/);
@@ -123,6 +160,14 @@ describe('shared house scene', () => {
     assert.match(component, /data-layout=\{layout\}/);
     const provider = source('components/desk/HouseScene.tsx');
     assert.match(provider, /data-house-scene=\{scene\.layout\}/);
+    assert.match(provider, /subscribeAnchors/);
+    assert.match(provider, /onAnchors=\{emitAnchors\}/);
+    const room = source('components/desk/RoomPresentation.tsx');
+    assert.match(room, /useHouseSceneAnchors\(applyAnchors\)/);
+    assert.match(room, /<NightDeskScene[\s\S]*onAnchors=\{applyAnchors\}/);
+    const compact = source('components/desk/DeskRoom.tsx');
+    assert.match(compact, /layout: 'compact'/);
+    assert.match(compact, /still: true/);
   });
 });
 
@@ -171,5 +216,18 @@ describe('night desk scene mount', () => {
     assert.match(foyer, /desk-receiver\.webp/);
     const room = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', layout: 'room' }));
     assert.doesNotMatch(room, /desk-receiver\.webp/);
+  });
+
+  it('still mode is a complete static scene and never exposes a canvas slot', () => {
+    const markup = renderToStaticMarkup(createElement(NightDeskScene, {
+      view: 'desk',
+      stage: 'arrival',
+      layout: 'compact',
+      still: true,
+    }));
+    assert.match(markup, /data-motion="still"/);
+    assert.match(markup, /data-layout="compact"/);
+    assert.doesNotMatch(markup, /<canvas/);
+    assert.match(markup, /fallbackDesk/);
   });
 });

@@ -9,7 +9,7 @@ export interface NightDeskAnchors {
   ledger: { x: number; y: number; visible: boolean };
 }
 
-export type NightDeskLayout = 'foyer' | 'room';
+export type NightDeskLayout = 'foyer' | 'room' | 'compact';
 
 export interface NightDeskSceneController {
   setView(view: NightDeskView): void;

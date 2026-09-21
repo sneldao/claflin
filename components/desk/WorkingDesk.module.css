@@ -44,6 +44,10 @@
   font-family: var(--font-body), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+.workspace[data-shared-still="true"] {
+  --desk-room: var(--claflin-night-room, #0d1218);
+  background: transparent;
+}
 .workspace *, .workspace *::before, .workspace *::after { box-sizing: border-box; }
 .workspace :is(button, input, select, textarea) { font-family: inherit; }
 .workspace button, .workspace summary { cursor: pointer; }
