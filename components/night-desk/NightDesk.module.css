@@ -176,6 +176,47 @@
   box-shadow: inset 0 8px 0 rgba(179, 144, 90, 0.3);
 }
 
+.fallbackReceiver {
+  position: absolute;
+  z-index: 2;
+  right: 8%;
+  bottom: 14%;
+  width: min(560px, 44%);
+  height: auto;
+  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.45));
+}
+
+.sceneHost[data-layout='foyer'] .fallbackDesk {
+  left: 30%;
+}
+
+.sceneHost[data-layout='foyer'] .fallbackWindow {
+  left: 34%;
+}
+
+.sceneHost[data-layout='foyer'] .fallbackCity {
+  left: 35%;
+}
+
+@media (max-width: 760px) {
+  .sceneHost[data-layout='foyer'] .fallbackReceiver {
+    right: 4%;
+    bottom: 8%;
+    width: min(440px, 80%);
+  }
+
+  .sceneHost[data-layout='foyer'] .fallbackDesk,
+  .sceneHost[data-layout='foyer'] .fallbackWindow,
+  .sceneHost[data-layout='foyer'] .fallbackCity {
+    left: 4%;
+  }
+
+  .sceneHost[data-layout='foyer'] .fallbackWindow,
+  .sceneHost[data-layout='foyer'] .fallbackCity {
+    left: 9%;
+  }
+}
+
 .masthead {
   position: fixed;
   top: 0;

@@ -8,6 +8,7 @@ import { useRoomTone } from '@/lib/desk-tone';
 import { HouseMark } from './HouseMark';
 import { BrokerageRoom } from './BrokerageRoom';
 import { HouseDirectory } from './HouseDirectory';
+import { useHouseScene } from './HouseScene';
 import styles from './WorkingDesk.module.css';
 
 export function DeskRoom({
@@ -39,6 +40,15 @@ export function DeskRoom({
 }) {
   const auth = useDeskAuth();
   const tone = useRoomTone(lineLive);
+  useHouseScene({ visible: false, layout: 'room', view: 'desk', stage: 'arrival' });
+
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active === document.body || !active?.isConnected) {
+      mainRef.current?.focus({ preventScroll: true });
+    }
+  }, []);
 
   const [sealDrawn, setSealDrawn] = useState(false);
   const sealRef = useRef<HTMLDivElement>(null);
@@ -157,7 +167,7 @@ export function DeskRoom({
           ))}
         </nav>
       </header>
-      <main id="main-content" className={styles.main}>
+      <main id="main-content" tabIndex={-1} ref={mainRef} className={styles.main}>
         {children}
       </main>
       <footer className={styles.footer}>

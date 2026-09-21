@@ -715,6 +715,9 @@
   color: var(--desk-ink);
   background: var(--claflin-night-room, #0d1218);
 }
+.roomView[data-shared-scene='true'] {
+  background: transparent;
+}
 .roomViewHeader {
   position: relative;
   z-index: 4;

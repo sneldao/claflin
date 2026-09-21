@@ -1,12 +1,13 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BookOpen, FileText, LineChart } from 'lucide-react';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
 import type { HouseDesk } from '@/lib/house';
 import { HouseDirectory } from './HouseDirectory';
 import { HouseMark } from './HouseMark';
+import { useHouseScene } from './HouseScene';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import type { HouseDeskId } from '@/lib/house';
 import type { DeskPresentation } from '@/lib/desk-presentation';
@@ -38,15 +39,24 @@ export function RoomPresentation({
   navExtras?: ReactNode;
   children: ReactNode;
 }) {
+  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage });
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active === document.body || !active?.isConnected) {
+      mainRef.current?.focus({ preventScroll: true });
+    }
+  }, []);
   return (
     <div
       className={`${sceneStyles.study} ${styles.roomView}`}
       data-desk={desk.id}
       data-presentation="room"
+      data-shared-scene={sharedScene ? 'true' : undefined}
       data-stage={stage}
       data-view={view}
     >
-      <NightDeskScene view={view} stage={stage} />
+      {!sharedScene && <NightDeskScene view={view} stage={stage} />}
 
       <header className={styles.roomViewHeader}>
         <Link href="/" className={styles.brand} aria-label="Claflin home">
@@ -92,12 +102,12 @@ export function RoomPresentation({
         </button>
       </nav>
 
-      <div className={styles.roomViewOverlay}>
+      <main id="main-content" tabIndex={-1} ref={mainRef} className={styles.roomViewOverlay}>
         <p className={styles.roomViewKicker} role="status">
           Same paper and line · layout only
         </p>
         {children}
-      </div>
+      </main>
     </div>
   );
 }

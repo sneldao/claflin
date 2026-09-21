@@ -1,44 +1,32 @@
 'use client';
 
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
-import { OPEN_DESK_ID, getHouseDesk } from '@/lib/house';
 import { DeskObjects } from './BrokerageRoom';
 import { ClosedDesk } from './ClosedDesk';
 import { DeskRoom } from './DeskRoom';
 import { HettyDeskSurface } from './HettyDeskSurface';
 import { JesseDeskSurface } from './JesseDeskSurface';
 import { HouseFoyer } from './HouseFoyer';
+import { HouseSceneProvider } from './HouseScene';
 import styles from './WorkingDesk.module.css';
 
 export function WorkingDesk() {
+  return (
+    <HouseSceneProvider>
+      <WorkingDeskContent />
+    </HouseSceneProvider>
+  );
+}
+
+function WorkingDeskContent() {
   const desk = useTradingDesk();
 
   if (desk.entryPhase === 'pending') {
-    return (
-      <DeskRoom
-        deskId={OPEN_DESK_ID}
-        activeDesk={getHouseDesk(OPEN_DESK_ID)!}
-        open={false}
-        onSwitchDesk={desk.switchDesk}
-      >
-        <div className={styles.foyerPending} aria-busy="true" aria-label="Opening the house">
-          <p className={styles.eyebrow}>CLAFLIN &amp; CO.</p>
-        </div>
-      </DeskRoom>
-    );
+    return <HouseFoyer onEnter={desk.enterDesk} />;
   }
 
   if (desk.entryPhase === 'foyer') {
-    return (
-      <DeskRoom
-        deskId={OPEN_DESK_ID}
-        activeDesk={getHouseDesk(OPEN_DESK_ID)!}
-        open={false}
-        onSwitchDesk={desk.enterDesk}
-      >
-        <HouseFoyer onEnter={desk.enterDesk} />
-      </DeskRoom>
-    );
+    return <HouseFoyer onEnter={desk.enterDesk} />;
   }
 
   if (desk.deskId === 'hetty' && desk.open) {

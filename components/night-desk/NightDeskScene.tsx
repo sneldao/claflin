@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
-import type { NightDeskAnchors, NightDeskSceneController } from '@/lib/night-desk-scene';
+import type { NightDeskAnchors, NightDeskLayout, NightDeskSceneController } from '@/lib/night-desk-scene';
 import styles from './NightDesk.module.css';
 
 /**
@@ -12,10 +13,12 @@ import styles from './NightDesk.module.css';
 export function NightDeskScene({
   view,
   stage,
+  layout = 'room',
   onAnchors,
 }: {
   view: NightDeskView;
   stage: NightDeskStage;
+  layout?: NightDeskLayout;
   onAnchors?: (anchors: NightDeskAnchors) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -23,17 +26,16 @@ export function NightDeskScene({
   const controllerRef = useRef<NightDeskSceneController | null>(null);
   const viewRef = useRef(view);
   const stageRef = useRef(stage);
+  const layoutRef = useRef(layout);
   const anchorsRef = useRef(onAnchors);
   const [ready, setReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(() => (
-    typeof window !== 'undefined'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ));
+  const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
 
   useEffect(() => {
     viewRef.current = view;
     stageRef.current = stage;
+    layoutRef.current = layout;
     anchorsRef.current = onAnchors;
   });
 
@@ -48,7 +50,7 @@ export function NightDeskScene({
   useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
-    if (!host || !canvas || reducedMotion) {
+    if (!host || !canvas || reducedMotion !== false) {
       controllerRef.current?.dispose();
       controllerRef.current = null;
       setReady(false);
@@ -56,6 +58,7 @@ export function NightDeskScene({
     }
     let cancelled = false;
     let controller: NightDeskSceneController | null = null;
+    setUnavailable(false);
     import('@/lib/night-desk-scene')
       .then(module => {
         if (cancelled) return;
@@ -66,10 +69,12 @@ export function NightDeskScene({
           () => { if (!cancelled) setReady(true); },
           () => { if (!cancelled) setUnavailable(true); },
           anchors => anchorsRef.current?.(anchors),
+          layoutRef.current,
         );
         controllerRef.current = controller;
         controller.setView(viewRef.current);
         controller.setStage(stageRef.current);
+        controller.setLayout(layoutRef.current);
       })
       .catch(() => { if (!cancelled) setUnavailable(true); });
     return () => {
@@ -88,14 +93,29 @@ export function NightDeskScene({
     controllerRef.current?.setStage(stage);
   }, [stage]);
 
+  useEffect(() => {
+    controllerRef.current?.setLayout(layout);
+  }, [layout]);
+
   return (
     <div
       ref={hostRef}
       className={styles.sceneHost}
-      data-scene={ready && !unavailable && !reducedMotion ? 'live' : 'static'}
-      data-motion={reducedMotion ? 'reduce' : 'full'}
+      data-scene={ready && !unavailable && reducedMotion === false ? 'live' : 'static'}
+      data-motion={reducedMotion === null ? 'pending' : reducedMotion ? 'reduce' : 'full'}
+      data-layout={layout}
     >
       <div className={styles.fallbackRoom} aria-hidden="true">
+        {layout === 'foyer' && (
+          <Image
+            className={styles.fallbackReceiver}
+            src="/desk-receiver.webp"
+            alt=""
+            width={960}
+            height={540}
+            sizes="(max-width: 760px) 80vw, 44vw"
+          />
+        )}
         <div className={styles.fallbackWindow}><i /><i /><i /><i /><i /><i /></div>
         <div className={styles.fallbackCity}><i /><i /><i /><i /><i /><i /><i /><i /></div>
         <div className={styles.fallbackDesk}>
@@ -106,7 +126,7 @@ export function NightDeskScene({
           <i className={styles.fallbackBlotter} />
         </div>
       </div>
-      {!reducedMotion && <canvas ref={canvasRef} className={styles.sceneCanvas} aria-hidden="true" />}
+      {reducedMotion === false && <canvas ref={canvasRef} className={styles.sceneCanvas} aria-hidden="true" />}
     </div>
   );
 }

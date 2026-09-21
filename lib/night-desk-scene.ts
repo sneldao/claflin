@@ -9,9 +9,12 @@ export interface NightDeskAnchors {
   ledger: { x: number; y: number; visible: boolean };
 }
 
+export type NightDeskLayout = 'foyer' | 'room';
+
 export interface NightDeskSceneController {
   setView(view: NightDeskView): void;
   setStage(stage: NightDeskStage): void;
+  setLayout(layout: NightDeskLayout): void;
   dispose(): void;
 }
 
@@ -96,13 +99,14 @@ export function createNightDeskScene(
   onReady: () => void,
   onUnavailable: () => void,
   onAnchors?: (anchors: NightDeskAnchors) => void,
+  initialLayout: NightDeskLayout = 'room',
 ): NightDeskSceneController {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
   } catch {
     onUnavailable();
-    return { setView() {}, setStage() {}, dispose() {} };
+    return { setView() {}, setStage() {}, setLayout() {}, dispose() {} };
   }
   renderer.setClearColor(0x0d1218, 1);
   const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
@@ -537,6 +541,7 @@ export function createNightDeskScene(
 
   let stage: NightDeskStage = 'arrival';
   let view: NightDeskView = initialView;
+  let layout: NightDeskLayout = initialLayout;
   let disposed = false;
   let lost = false;
   let visible = true;
@@ -587,13 +592,24 @@ export function createNightDeskScene(
     }
     if (stage === 'quote' || stage === 'revised' || stage === 'filed') paperSlip.visible = true;
   }
+  const framingOffset = new THREE.Vector3();
   function applyView() {
-    posGoal.copy(VIEWS[view].position);
-    targetGoal.copy(VIEWS[view].target);
+    const pose = VIEWS[view];
+    posGoal.copy(pose.position);
+    targetGoal.copy(pose.target);
+    if (layout === 'foyer' && host.clientWidth > 760) {
+      framingOffset.subVectors(pose.target, pose.position).cross(camera.up).normalize().multiplyScalar(-2.6);
+      posGoal.add(framingOffset);
+      targetGoal.add(framingOffset);
+    }
+    camera.fov = layout === 'foyer' ? (host.clientWidth <= 760 ? 48 : 40) : 36;
+    camera.updateProjectionMatrix();
     ledgerTarget = view === 'ledger' ? 0.65 : 0;
   }
   applyStage();
   applyView();
+  camPos.copy(posGoal);
+  camTarget.copy(targetGoal);
   if (reducedMotion.matches) {
     camPos.copy(posGoal);
     camTarget.copy(targetGoal);
@@ -654,11 +670,11 @@ export function createNightDeskScene(
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    applyView();
     schedule();
   }
 
-  const pointerSource = host.parentElement ?? host;
+  const pointerSource: HTMLElement = host.closest<HTMLElement>('[data-house-scene]') ?? host.parentElement ?? host;
   function pointerMove(event: PointerEvent) {
     if (reducedMotion.matches || !finePointer.matches) return;
     const bounds = host.getBoundingClientRect();
@@ -720,6 +736,11 @@ export function createNightDeskScene(
     setStage(nextStage) {
       stage = nextStage;
       applyStage();
+      schedule();
+    },
+    setLayout(nextLayout) {
+      layout = nextLayout;
+      applyView();
       schedule();
     },
     dispose() {
