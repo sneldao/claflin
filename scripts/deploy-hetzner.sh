@@ -64,12 +64,25 @@ rsync -az --delete --no-perms --no-owner --no-group \
   "$REMOTE_HOST:$RELEASE_PATH/"
 
 echo ""
+echo "=== Step 4b: Bundle Jesse Pyth daemon ==="
+mkdir -p "$LOCAL_DIR/.deploy"
+npx --yes esbuild@0.25.0 "$LOCAL_DIR/scripts/jesse-pyth-feed.ts" \
+  --bundle --platform=node --format=cjs \
+  --outfile="$LOCAL_DIR/.deploy/jesse-pyth-feed.cjs"
+rsync -az --no-perms --no-owner --no-group \
+  "$LOCAL_DIR/.deploy/jesse-pyth-feed.cjs" \
+  "$REMOTE_HOST:$REMOTE_DIR/jesse-pyth-feed.cjs"
+rsync -az --no-perms --no-owner --no-group \
+  "$LOCAL_DIR/ecosystem.config.js" \
+  "$REMOTE_HOST:$REMOTE_DIR/ecosystem.config.js"
+
+echo ""
 echo "=== Step 5: Atomic symlink swap ==="
 ssh "$REMOTE_HOST" "ln -sfn $RELEASE_PATH $REMOTE_DIR/current"
 
 echo ""
 echo "=== Step 6: Restart PM2 ==="
-ssh "$REMOTE_HOST" "pm2 delete claflin 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
+ssh "$REMOTE_HOST" "pm2 delete claflin 2>/dev/null || true; pm2 delete claflin-pyth 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
 
 echo ""
 echo "=== Step 7: Health check ==="

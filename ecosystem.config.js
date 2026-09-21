@@ -97,6 +97,11 @@ module.exports = {
         NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS: env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS || '',
         NEXT_PUBLIC_PLATFORM_ADDRESS: env.NEXT_PUBLIC_PLATFORM_ADDRESS || '',
 
+        // Jesse live settle (dual-flag; client flag also baked on Vercel)
+        JESSE_LIVE_ENABLED: env.JESSE_LIVE_ENABLED || 'false',
+        NEXT_PUBLIC_JESSE_LIVE_ENABLED: env.NEXT_PUBLIC_JESSE_LIVE_ENABLED || 'false',
+        SOLANA_RPC_URL: env.SOLANA_RPC_URL || '',
+
         // Feature flags
         NEXT_PUBLIC_DEMO_MODE: env.NEXT_PUBLIC_DEMO_MODE || 'false',
         NEXT_PUBLIC_PAYMENTS_ENABLED: env.NEXT_PUBLIC_PAYMENTS_ENABLED || 'true',
@@ -115,6 +120,29 @@ module.exports = {
       min_instances: 1,
       max_restarts: 10,
       source_map_support: true,
+    },
+    {
+      name: 'claflin-pyth',
+      script: '/opt/claflin/jesse-pyth-feed.cjs',
+      cwd: '/opt/claflin',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PYTH_PRO_API_KEY: env.PYTH_PRO_API_KEY || '',
+        UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL || '',
+        UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN || '',
+        UPSTASH_REDIS_URL: env.UPSTASH_REDIS_URL || env.UPSTASH_REDIS_REST_URL || '',
+        UPSTASH_REDIS_TOKEN: env.UPSTASH_REDIS_TOKEN || env.UPSTASH_REDIS_REST_TOKEN || '',
+      },
+      error_file: '/opt/claflin/logs/pm2-pyth-err.log',
+      out_file: '/opt/claflin/logs/pm2-pyth-out.log',
+      time: true,
+      autorestart: true,
+      max_memory_restart: '400M',
+      watch: false,
+      restart_delay: 5000,
+      max_restarts: 20,
     },
   ],
 };

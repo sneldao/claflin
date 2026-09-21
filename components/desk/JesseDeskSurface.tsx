@@ -176,7 +176,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       <h1>Before you trade, <span>read the tape.</span></h1>
       <p>
         Ring the desk. Speak an xStock instruction — Backed Token-2022 mints on Solana, quoted through Jupiter.
-        Free venue duplex on the ticket; live settle when both live flags are on. Room and Compact are the same work.
+        Equity-versus-token tape via Pyth Pro. Room and Compact are the same work.
       </p>
       <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
         <span className={styles.voiceSayLead}>Say it — or tap it</span>
@@ -200,7 +200,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             <button type="button" className={styles.presentationButton} aria-pressed={true} onClick={() => setMode('compact')}>Compact</button>
           </div>
         )}
-        <span className={styles.modeMarket}>XSTOCKS · SOLANA · JUPITER</span>
+        <span className={styles.modeMarket}>XSTOCKS · SOLANA · JUPITER · PYTH</span>
       </div>
       {lead}
       <div

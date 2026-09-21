@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Venue duplex** (Backed/Jupiter stock reference vs Jupiter venue USD) and **PreStocks** duplex on the ticket. Pyth comparison stays honest-unavailable without Pro entitlement + unit basis. **Live settle** (Jupiter order → wallet sign → execute) is implemented but **off by default** — both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` required. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) is off by default — both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` required. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
@@ -45,7 +45,7 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 ## Ports
 
 - Quote: `GET /api/desk/jesse/quote` → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
-- Compare (Pyth): `GET /api/desk/jesse/comparison` → returns `unavailable` with reason codes until Pyth Pro + unit basis are verified — never a synthetic number
+- Compare (Pyth Pro): `GET /api/desk/jesse/comparison?instrumentId=sol:…` → Redis snapshots from the Lazer daemon; normalizes raw-token prices by mint multiplier; honest `unavailable` when feeds/multiplier missing
 - Venue duplex (free): `GET /api/desk/jesse/venue-duplex?instrumentId=sol:…` → Backed public `price-data` when present, else Jupiter Price v3 `stockData`, versus Jupiter venue `usdPrice` — evidence only, never labelled Pyth
 - PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
 - Live prepare: `POST /api/desk/jesse/live/prepare` → fresh Metis `/order` with `taker` (both live flags required)
@@ -71,8 +71,8 @@ Missing amounts never inherit. Unknown tickers never resolve to the catalog. Liv
 
 ## Evidence honesty
 
-- **Pyth panel:** every feed mapping currently has `tokenUnitBasis: null`. The comparison panel shows reason sentences without inventing basis points. Filing does not wait on evidence.
-- **Venue duplex:** free Backed/Jupiter reference vs Jupiter venue USD. Reference difference is labelled as a reading, not profit or arbitrage. When Backed `quote` is null, Jupiter `stockData` may stand in with an explicit source label.
+- **Pyth panel:** equity vs xStock from Pro/Lazer snapshots. Token basis is `usd-per-raw-token` (verified 2026-09-21). Filing does not wait on evidence. Quiet Pyth Pro credit on the panel.
+- **Venue duplex:** free Backed/Jupiter reference vs Jupiter venue USD when Pyth snapshots are cold.
 - **PreStocks:** SPV issuer mark vs issuer token price — secondary bounty track only.
 
 ## Live settle (gated)
@@ -110,7 +110,7 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 ## Known limits
 
 - No Jesse mark adapter / tape
-- Pyth Pro duplex awaits entitlement / unit basis; comparison stays honest-unavailable
+- Pyth numerical compare needs the Lazer daemon writing Redis (`PYTH_PRO_API_KEY` + Upstash) — without snapshots the panel stays honest-unavailable
 - Venue duplex is free evidence, not Pyth Pro quality or an exchange print
 - PreStocks is evidence-only — not filed as xStock paper
 - Live settle requires both flags; instruction-allowlist / wallet challenge auth from the full R2 plan are not yet complete
@@ -127,4 +127,7 @@ NEXT_PUBLIC_JESSE_PAPER_ENABLED=false
 # Enable live Jupiter settle (both required)
 NEXT_PUBLIC_JESSE_LIVE_ENABLED=true
 JESSE_LIVE_ENABLED=true
+
+# Pyth Pro Lazer daemon (server)
+PYTH_PRO_API_KEY=
 ```

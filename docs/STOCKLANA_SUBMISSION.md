@@ -1,7 +1,7 @@
 # Stocklana submission pack
 
 **Deadline:** Friday 25 September 2026, 16:00 ET.  
-**Primary track:** Stocklana main. Secondary: PreStocks bounty (evidence duplex). Free venue duplex covers the equity/reference-vs-token story without Pyth Pro. Pyth bounty only if Pro entitlement + unit basis land.
+**Primary track:** Stocklana main. Secondary: PreStocks bounty (evidence duplex) and Pyth Pro equity-vs-xStock duplex (All Access trial; raw-token basis verified). Free venue duplex remains as fallback evidence.
 
 ## Deep link judges must open
 
@@ -34,7 +34,8 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 - Jupiter Swap v2 Metis paper estimates and v2 local paper records
 - Jesse ElevenLabs ConvAI line + deterministic speech grammar (same path as typed commands)
 - Room/Compact live views of the same controller (`NightDeskScene` overlays for Room; seated grid for Compact)
-- Free venue duplex: Backed issuer quote (or Jupiter xStocks stockData) vs Jupiter venue USD — honest labels, not Pyth Pro
+- Free venue duplex: Backed issuer quote (or Jupiter xStocks stockData) vs Jupiter venue USD — honest labels when Pyth is cold
+- Pyth Pro equity-vs-xStock evidence (Lazer→Redis; raw-token basis verified 2026-09-21 under All Access trial)
 - PreStocks issuer-mark vs token-price duplex (evidence only; honest unavailable degradation)
 - Env-gated live Solana settle: Jupiter order(taker) → wallet sign → execute (off unless both live flags are set)
 - House foyer so Claflin is the institution and open desks (Base vs Solana) are explicit market doors

@@ -3,6 +3,8 @@ import { isSolanaInstrumentId } from '@/lib/solana/contracts';
 import { feedMappingFor } from '@/lib/solana/market/feeds';
 import { readJesseComparison } from '@/lib/solana/market/reader';
 import type { SnapshotStore } from '@/lib/solana/market/snapshots';
+import { createMintReader } from '@/lib/solana/mint';
+import { getSolanaInstrument } from '@/lib/solana/catalog';
 import { busyResponse, requestBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
@@ -13,16 +15,12 @@ const comparisonBudget = requestBudget(40);
  * GET /api/desk/jesse/comparison?instrumentId=sol:<mint>
  *
  * The desk's market evidence for one allowlisted xStock. `unavailable` is
- * data, not an error: with no Pyth entitlement or an unverified unit
- * basis the route answers 200 with status `unavailable` — never a
- * synthetic success (plan §4.4 rule 7). Unknown instruments are 404;
- * malformed ids are 400.
+ * data, not an error: missing snapshots or policy failure answers 200 with
+ * status `unavailable` — never a synthetic success (plan §4.4 rule 7).
+ * Unknown instruments are 404; malformed ids are 400.
  *
- * No multiplier reader is wired yet: every mapped basis is currently
- * unverified, so the policy short-circuits before one is needed. If a
- * basis is ever verified as usd-per-raw-token, wire the mint reader
- * (lib/solana/mint.ts) here — until then an omitted reader fails closed
- * as `multiplier-unavailable`.
+ * Token feeds are verified usd-per-raw-token; the mint scaled-UI multiplier
+ * effective at the token generation time normalizes before bps.
  */
 
 /** A store whose every read fails honestly → snapshots read as missing. */
@@ -43,6 +41,10 @@ function storeForRequest(): SnapshotStore {
   }
 }
 
+const readMint = createMintReader({
+  rpcUrl: process.env.SOLANA_RPC_URL ?? 'https://solana-rpc.publicnode.com',
+});
+
 export async function GET(req: Request): Promise<Response> {
   if (!comparisonBudget()) return busyResponse();
   const instrumentId = new URL(req.url).searchParams.get('instrumentId');
@@ -56,6 +58,15 @@ export async function GET(req: Request): Promise<Response> {
     instrumentId,
     now: Date.now(),
     store: storeForRequest(),
+    readMultiplier: async ({ instrumentId: id }) => {
+      try {
+        const instrument = getSolanaInstrument(id);
+        const mint = await readMint(instrument.mint);
+        return mint.multiplier;
+      } catch {
+        return null;
+      }
+    },
   });
   if (comparison === null) {
     return Response.json({ error: 'unknown_instrument' }, { status: 404 });

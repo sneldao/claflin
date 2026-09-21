@@ -13,8 +13,9 @@ const T0 = 1_900_000_000_000;
 const aaplx = SOLANA_INSTRUMENTS.find(i => i.symbol === 'AAPLx')!;
 const baseMapping = feedMappingFor(aaplx.id)!;
 
-const scaledMapping: JesseFeedMapping = { ...baseMapping, tokenUnitBasis: 'usd-per-scaled-token' };
+const scaledMapping: JesseFeedMapping = { ...baseMapping, tokenUnitBasis: 'usd-per-scaled-token', basisVerifiedAt: null };
 const rawMapping: JesseFeedMapping = { ...baseMapping, tokenUnitBasis: 'usd-per-raw-token' };
+const unverifiedMapping: JesseFeedMapping = { ...baseMapping, tokenUnitBasis: null, basisVerifiedAt: null };
 
 function snap(feed: 'token' | 'equity', overrides: Partial<FeedSnapshot> = {}): FeedSnapshot {
   const ref = feed === 'token' ? baseMapping.token : baseMapping.equity;
@@ -71,11 +72,15 @@ describe('jesse comparison policy — plan arithmetic fixtures (§4.4)', () => {
 });
 
 describe('jesse comparison policy — basis and availability', () => {
-  it('unverified unit basis (the shipped mapping) → unavailable, number suppressed', () => {
-    const c = compare({ mapping: baseMapping });
+  it('unverified unit basis → unavailable, number suppressed', () => {
+    const c = compare({ mapping: unverifiedMapping });
     assert.equal(c.status, 'unavailable');
     assert.equal(c.referenceDifferenceBps, null);
     assert.ok(c.reasonCodes.includes('unverified-unit-basis'));
+  });
+
+  it('shipped mapping uses verified raw-token basis', () => {
+    assert.equal(baseMapping.tokenUnitBasis, 'usd-per-raw-token');
   });
 
   it('missing token snapshot → unavailable', () => {

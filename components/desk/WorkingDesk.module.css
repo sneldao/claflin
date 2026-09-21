@@ -1573,6 +1573,23 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 .evidenceObs { margin: 0 0 6px !important; color: var(--desk-paper-ink); }
 .evidenceBps { margin: 10px 0 6px !important; color: var(--desk-paper-ink); }
 .evidenceMeta { margin: 8px 0 0 !important; font: 10px/1.5 var(--font-mono), monospace; letter-spacing: .04em; }
+.pythCredit {
+  margin: 12px 0 0 !important;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--desk-paper-rule) 70%, transparent);
+  font: 10px/1.55 var(--font-mono), monospace;
+  letter-spacing: .03em;
+  color: var(--desk-paper-muted);
+}
+.pythCredit a {
+  color: var(--desk-brass);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--desk-brass) 45%, transparent);
+}
+.pythCredit a:hover,
+.pythCredit a:focus-visible {
+  border-bottom-color: var(--desk-brass);
+}
 .amountChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
 .amountChips button { padding: 6px 10px; border: 1px solid var(--desk-paper-rule); background: transparent; color: var(--desk-paper-ink); font: 11px/1 var(--font-mono), monospace; cursor: pointer; }
 .amountChips button:hover { border-color: var(--desk-brass); }

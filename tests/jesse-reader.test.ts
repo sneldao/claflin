@@ -44,11 +44,24 @@ describe('jesse comparison reader', () => {
     assert.equal(result, null);
   });
 
-  it('reports unavailable (never synthetic) while the unit basis is unverified', async () => {
+  it('computes a comparable reading when raw basis + multiplier are present', async () => {
+    const store = storeWith({ [mapping.token.feedId]: snap('token'), [mapping.equity.feedId]: snap('equity') });
+    const c = await readJesseComparison({
+      instrumentId: aaplx.id,
+      now: T0,
+      store,
+      readMultiplier: async () => '1',
+    });
+    assert.equal(c?.status, 'comparable');
+    assert.equal(c?.referenceDifferenceBps, '100.0');
+    assert.equal(c?.multiplier, '1');
+  });
+
+  it('fails closed as multiplier-unavailable when raw basis lacks a multiplier', async () => {
     const store = storeWith({ [mapping.token.feedId]: snap('token'), [mapping.equity.feedId]: snap('equity') });
     const c = await readJesseComparison({ instrumentId: aaplx.id, now: T0, store });
     assert.equal(c?.status, 'unavailable');
-    assert.ok(c?.reasonCodes.includes('unverified-unit-basis'));
+    assert.ok(c?.reasonCodes.includes('multiplier-unavailable'));
     assert.equal(c?.referenceDifferenceBps, null);
   });
 
@@ -70,19 +83,19 @@ describe('jesse comparison reader', () => {
 
   it('evidence ids are immutable: same snapshots, same id; new tape, new id', async () => {
     const store = storeWith({ [mapping.token.feedId]: snap('token'), [mapping.equity.feedId]: snap('equity') });
-    const a = await readJesseComparison({ instrumentId: aaplx.id, now: T0, store });
-    const b = await readJesseComparison({ instrumentId: aaplx.id, now: T0 + 4000, store });
-    assert.equal(a?.id, b?.id); // cache reads and clock movement never rename evidence
+    const a = await readJesseComparison({ instrumentId: aaplx.id, now: T0, store, readMultiplier: async () => '1' });
+    const b = await readJesseComparison({ instrumentId: aaplx.id, now: T0 + 4000, store, readMultiplier: async () => '1' });
+    assert.equal(a?.id, b?.id);
 
     const newer = storeWith({
       [mapping.token.feedId]: snap('token', { generatedAt: T0 }),
       [mapping.equity.feedId]: snap('equity'),
     });
-    const c = await readJesseComparison({ instrumentId: aaplx.id, now: T0, store: newer });
+    const c = await readJesseComparison({ instrumentId: aaplx.id, now: T0, store: newer, readMultiplier: async () => '1' });
     assert.notEqual(c?.id, a?.id);
   });
 
-  it('never reads the multiplier while the basis is scaled or unverified', async () => {
+  it('reads the multiplier when the verified basis is usd-per-raw-token', async () => {
     let multiplierReads = 0;
     const store = storeWith({ [mapping.token.feedId]: snap('token'), [mapping.equity.feedId]: snap('equity') });
     await readJesseComparison({
@@ -91,6 +104,6 @@ describe('jesse comparison reader', () => {
       store,
       readMultiplier: async () => { multiplierReads += 1; return '1.003270125'; },
     });
-    assert.equal(multiplierReads, 0);
+    assert.equal(multiplierReads, 1);
   });
 });

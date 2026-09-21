@@ -5,6 +5,7 @@ import {
   allJesseFeedIds,
   feedMappingFor,
   feedMappingsAreCatalogBound,
+  feedSymbolForId,
 } from '../lib/solana/market/feeds.ts';
 import { SOLANA_INSTRUMENTS } from '../lib/solana/catalog.ts';
 
@@ -43,12 +44,14 @@ describe('jesse pyth feed mapping (E2 item 1)', () => {
     }
   });
 
-  it('keeps the token unit basis unverified until the daemon proves it', () => {
-    // §4.4 rule 1: an unverified basis makes the comparison unavailable;
-    // the mapping must never ship a guessed basis.
+  it('locks the token unit basis to usd-per-raw-token after Lazer verification', () => {
     for (const mapping of JESSE_FEED_MAPPINGS) {
-      assert.equal(mapping.tokenUnitBasis, null);
+      assert.equal(mapping.tokenUnitBasis, 'usd-per-raw-token');
+      assert.equal(mapping.basisVerifiedAt, '2026-09-21');
+      assert.match(mapping.basisSource, /Pt≈Pe×R/);
     }
+    assert.equal(feedSymbolForId(922), 'Equity.US.AAPL/USD');
+    assert.equal(feedSymbolForId(1792), 'Crypto.AAPLX/USD');
   });
 
   it('lists every feed id for the daemon subscription, deduplicated', () => {

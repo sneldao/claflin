@@ -18,22 +18,24 @@ export function MarketEvidence({
 }) {
   if (loading && !comparison) {
     return (
-      <section className={styles.marketEvidence} aria-labelledby="evidence-title" aria-busy="true">
-        <p className={styles.eyebrow}>MARKET EVIDENCE</p>
+      <section className={styles.marketEvidence} data-source="pyth-pro" aria-labelledby="evidence-title" aria-busy="true">
+        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
         <h2 id="evidence-title">Checking the tape.</h2>
-        <p className={styles.evidenceBody}>Reading Pyth observations when they are available. Filing does not wait on this panel.</p>
+        <p className={styles.evidenceBody}>Reading Pyth Pro observations when they are available. Filing does not wait on this panel.</p>
+        <PythCredit />
       </section>
     );
   }
 
   if (!comparison) {
     return (
-      <section className={styles.marketEvidence} aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>MARKET EVIDENCE</p>
+      <section className={styles.marketEvidence} data-source="pyth-pro" aria-labelledby="evidence-title">
+        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
         <h2 id="evidence-title">No evidence on the desk.</h2>
         <p className={styles.evidenceBody}>
           Ask Jesse to compare an xStock, or request a quote first. A missing comparison never blocks a paper filing.
         </p>
+        <PythCredit />
       </section>
     );
   }
@@ -42,8 +44,8 @@ export function MarketEvidence({
 
   if (comparison.status === 'unavailable') {
     return (
-      <section className={styles.marketEvidence} data-status="unavailable" aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>MARKET EVIDENCE</p>
+      <section className={styles.marketEvidence} data-source="pyth-pro" data-status="unavailable" aria-labelledby="evidence-title">
+        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
         <h2 id="evidence-title">Comparison unavailable.</h2>
         <ul className={styles.evidenceReasons}>
           {comparison.reasonCodes.map(code => (
@@ -51,14 +53,15 @@ export function MarketEvidence({
           ))}
         </ul>
         <p className={styles.evidenceMeta}>Observed {observed}. No numerical difference is shown.</p>
+        <PythCredit />
       </section>
     );
   }
 
   if (comparison.status === 'last-observation') {
     return (
-      <section className={styles.marketEvidence} data-status="last-observation" aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>MARKET EVIDENCE</p>
+      <section className={styles.marketEvidence} data-source="pyth-pro" data-status="last-observation" aria-labelledby="evidence-title">
+        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
         <h2 id="evidence-title">Last observation.</h2>
         <p className={styles.evidenceBody} role="status">
           The equity market is not in regular session, so this is a labelled last observation — not a live comparison.
@@ -71,13 +74,14 @@ export function MarketEvidence({
           </p>
         )}
         <p className={styles.evidenceMeta}>Observed {observed}.</p>
+        <PythCredit />
       </section>
     );
   }
 
   return (
-    <section className={styles.marketEvidence} data-status="comparable" aria-labelledby="evidence-title">
-      <p className={styles.eyebrow}>MARKET EVIDENCE</p>
+    <section className={styles.marketEvidence} data-source="pyth-pro" data-status="comparable" aria-labelledby="evidence-title">
+      <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
       <h2 id="evidence-title">Comparable reading.</h2>
       <ObservationRow label="Token" observation={comparison.token} />
       <ObservationRow label="Equity" observation={comparison.equity} />
@@ -89,6 +93,7 @@ export function MarketEvidence({
         <p className={styles.evidenceBody}>The feeds are comparable, but no basis-point difference is available.</p>
       )}
       <p className={styles.evidenceMeta}>Observed {observed}.</p>
+      <PythCredit />
     </section>
   );
 }
@@ -112,6 +117,19 @@ function ObservationRow({
       {observation.generatedAt != null && (
         <> · gen {new Date(observation.generatedAt).toLocaleString()}</>
       )}
+    </p>
+  );
+}
+
+/** Quiet thank-you for Pyth Pro — provenance, not a promo sticker. */
+function PythCredit() {
+  return (
+    <p className={styles.pythCredit}>
+      Equity and xStock reference tape via{' '}
+      <a href="https://www.pyth.network/" target="_blank" rel="noreferrer">
+        Pyth Pro
+      </a>
+      . With thanks to the Pyth team for Stocklana trial access.
     </p>
   );
 }
