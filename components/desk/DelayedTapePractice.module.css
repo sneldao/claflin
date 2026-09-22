@@ -1,18 +1,5 @@
 .shell {
-  --desk-ink: #e8e6d9;
-  --desk-muted: #aeb9aa;
-  --desk-room: #15251f;
-  --desk-deep: #0c1814;
-  --desk-brass: #c5ac78;
-  --desk-brass-dim: #82724f;
-  --desk-paper: #e7dfc9;
-  --desk-paper-light: #f0eadb;
-  --desk-paper-ink: #27362b;
-  --desk-paper-muted: #59614d;
-  --desk-paper-edge: #b6a985;
-  --desk-paper-rule: #27362b33;
-  --desk-paper-wash: #27362b08;
-  --desk-shadow: #030b0873;
+  /* shared --desk-* palette comes from :root (styles/desk-craft.css) */
   min-height: 100svh;
   color: var(--desk-ink);
   background:

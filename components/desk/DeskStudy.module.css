@@ -1,19 +1,7 @@
 .study {
-  --desk-ink: #e8e6d9;
-  --desk-muted: #aeb9aa;
+  /* shared --desk-* palette comes from :root (styles/desk-craft.css) */
   --desk-dim: #819487;
-  --desk-room: #15251f;
-  --desk-deep: #0c1814;
-  --desk-enamel: #203c31;
-  --desk-brass: #c5ac78;
-  --desk-brass-dim: #82724f;
-  --desk-paper: #e7dfc9;
-  --desk-paper-light: #f0eadb;
-  --desk-paper-ink: #27362b;
-  --desk-paper-muted: #59614d;
   --desk-error: #863928;
-  --desk-line: #b3bca326;
-  --desk-shadow: #030b0873;
   --desk-focus: #e5c788;
   --desk-ease: cubic-bezier(.22,.68,0,1);
   position: relative;

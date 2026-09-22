@@ -1,6 +1,6 @@
 /**
  * Shared Claflin craft tokens — one motion/material dialect for Direct and Night.
- * Imported globally; desk CSS modules alias these under .workspace / .study.
+ * Imported globally; every desk surface inherits the --desk-* palette from here.
  */
 :root {
   --claflin-dur-1: 240ms;
@@ -20,4 +20,41 @@
   --claflin-deep: #0c1814;
   --claflin-room: #15251f;
   --claflin-night-room: #0d1218;
+
+  /* Desk material palette — one source for every surface root
+     (.workspace, .roomView, study/shell). A var() left undefined here
+     silently invalidates whole declarations (e.g. paper backgrounds). */
+  --desk-ink: var(--claflin-ink, #e8e6d9);
+  --desk-muted: var(--claflin-muted, #aeb9aa);
+  --desk-room: var(--claflin-room, #15251f);
+  --desk-deep: var(--claflin-deep, #0c1814);
+  --desk-enamel: #203c31;
+  --desk-brass: var(--claflin-brass, #c5ac78);
+  --desk-brass-dim: var(--claflin-brass-dim, #82724f);
+  --desk-paper: var(--claflin-paper, #e7dfc9);
+  --desk-paper-light: #f0eadb;
+  --desk-paper-ink: var(--claflin-paper-ink, #27362b);
+  --desk-paper-muted: #59614d;
+  --desk-line: #b3bca326;
+  --desk-shadow: #030b0873;
+  --desk-walnut: #261e16;
+  --desk-walnut-edge: #624930;
+  --desk-felt: #243e33;
+  --desk-felt-lit: #365344;
+  --desk-stitch: #72816a55;
+  --desk-glass: #80917c;
+  --desk-glass-light: #c0c6a5;
+  --desk-metal-light: #e2d0a0;
+  --desk-paper-rule: #27362b33;
+  --desk-paper-edge: #b6a985;
+  --desk-paper-wash: #27362b08;
+  --desk-occlusion: #02090799;
+  --desk-luster: #e4d3a820;
+  --desk-window-line: #101e15aa;
+  --desk-leather: #322823;
+  --desk-leather-edge: #7c6244;
+  --desk-file-paper: #bcb092;
+  --desk-file-shadow: #84775e;
+  --desk-cabinet-back: #100e0b;
+  --desk-patina: #806c44;
 }
