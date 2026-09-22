@@ -4,7 +4,7 @@ import { createJupiterClient, parseJupiterOrder } from '../lib/solana/jupiter';
 import { createMintReader, parseScaledMintAccount } from '../lib/solana/mint';
 import { createJupiterQuoteAdapter, SOLANA_PAPER_ASSUMPTIONS } from '../lib/trading/adapters/jupiter';
 import { SOLANA_INSTRUMENTS, SOLANA_USDC_MINT } from '../lib/solana/catalog';
-import { isSolanaEstimate } from '../lib/solana/contracts';
+import { isSolanaEstimate } from '../lib/desk/estimates';
 import { compareDecimals } from '../lib/solana/amounts';
 import { AAPLX_FIXTURE } from '../lib/solana/fixtures';
 

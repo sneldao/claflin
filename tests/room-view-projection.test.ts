@@ -7,7 +7,7 @@ import {
   parseViewQuery,
   saveDeskPresentation,
 } from '../lib/desk-presentation.ts';
-import { normalizeDeskPresentation } from '../lib/solana/contracts.ts';
+import { normalizeDeskPresentation } from '../lib/desk/contracts.ts';
 
 function memoryStorage(): Pick<Storage, 'getItem' | 'setItem'> & { removeItem(key: string): void } {
   const map = new Map<string, string>();

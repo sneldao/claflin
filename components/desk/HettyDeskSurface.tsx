@@ -328,7 +328,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         <>
           <div className={styles.tickerStation}>
             <TapeMachine />
-            <TickerTape marks={marks.result?.marks ?? NO_MARKS} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'loading'} />
+            <TickerTape marks={marks.result?.marks ?? NO_MARKS} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'quoting'} />
           </div>
           <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} /></div>
         </>

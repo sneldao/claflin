@@ -286,7 +286,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
     const d = deskRef.current;
     const refusal = foregroundGuard(d.foreground);
     if (refusal) return refusal;
-    if (d.state.stage === 'loading') return 'An estimate is already on its way.';
+    if (d.state.stage === 'quoting') return 'An estimate is already on its way.';
     const before = d.state.quote?.id;
     await d.requestQuote();
     await waitFor(x => x.state.stage === 'review' || x.state.stage === 'draft', 4000);
@@ -345,7 +345,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
   /* Reviewed catalog only — same material as the screen. Hold while an
      estimate is in flight; during review, answer if the caller asks. */
   useConversationClientTool<HettyTools>('explain_concept', async (p) => {
-    if (deskRef.current.state.stage === 'loading') {
+    if (deskRef.current.state.stage === 'quoting') {
       return 'Hold the explanation — an estimate is coming in. Ask again in a moment.';
     }
     return explainConceptResult(String(p.topic ?? ''));
@@ -733,7 +733,7 @@ function HettyCallInner({ desk, liveMode, captions, onCaption, saveState, onSave
 
   /* Truthful line states — only what real SDK or desk events support.
      Not speaking does not mean listening, especially muted or waiting. */
-  const estimating = desk.state.stage === 'loading' || desk.foreground.kind === 'pending';
+  const estimating = desk.state.stage === 'quoting' || desk.foreground.kind === 'pending';
   const inReview = desk.foreground.kind === 'quotation';
   const speaking = live && conversation.isSpeaking;
   const statusKey = ringing ? 'connecting' : !live ? 'idle' : estimating ? 'estimating' : speaking ? 'speaking' : inReview ? 'review' : conversation.isMuted ? 'muted' : 'on';

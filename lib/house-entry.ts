@@ -2,22 +2,33 @@
  * House entry — foyer vs desk, `?desk=` deep links, last-open preference.
  *
  * OPEN_DESK_ID remains Hetty (Base document owner). Entry preference is separate:
- * first visit with no query and no saved preference shows the Claflin foyer;
- * Stocklana / judges use `/?desk=jesse`.
+ * first visit with no query and no saved preference shows the Claflin foyer.
+ * Deep links may carry `?offering=` when the catalog declares the desk eligible.
  */
 import { getHouseDesk, isOpenDesk, type HouseDeskId } from './house';
+import { offeringCoversDesk, offeringForId } from './desk/offerings';
 
 export const HOUSE_DESK_PREFERENCE_KEY = 'claflin.desk.v1.last';
 
 export type HouseEntry =
   | { kind: 'foyer' }
-  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference' };
+  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null };
 
 /** Parse `?desk=` — only known house ids; open desks enter, planned visit closed rooms. */
 export function parseDeskQuery(raw: string | null | undefined): HouseDeskId | null {
   if (!raw) return null;
   const id = raw.trim().toLowerCase();
   return getHouseDesk(id) ? (id as HouseDeskId) : null;
+}
+
+/**
+ * Parse `?offering=` as catalog context for a desk entry. An offering is only
+ * meaningful when the selected desk is one of its declared eligible desks.
+ */
+export function parseOfferingQuery(raw: string | null | undefined, deskId: HouseDeskId): string | null {
+  if (!raw) return null;
+  const offering = offeringForId(raw.trim());
+  return offering && offeringCoversDesk(offering, deskId) ? offering.offeringId : null;
 }
 
 export function loadLastDesk(storage: Pick<Storage, 'getItem'>): HouseDeskId | null {
@@ -46,22 +57,43 @@ export function saveLastDesk(storage: Pick<Storage, 'setItem'>, deskId: HouseDes
 export function resolveHouseEntry(
   deskQuery: string | null | undefined,
   storage: Pick<Storage, 'getItem'>,
+  offeringQuery?: string | null,
 ): HouseEntry {
   const fromQuery = parseDeskQuery(deskQuery);
-  if (fromQuery) return { kind: 'desk', deskId: fromQuery, source: 'query' };
+  if (fromQuery) {
+    return {
+      kind: 'desk',
+      deskId: fromQuery,
+      source: 'query',
+      offeringId: parseOfferingQuery(offeringQuery, fromQuery),
+    };
+  }
 
   const last = loadLastDesk(storage);
-  if (last && isOpenDesk(last)) return { kind: 'desk', deskId: last, source: 'preference' };
+  if (last && isOpenDesk(last)) {
+    return {
+      kind: 'desk',
+      deskId: last,
+      source: 'preference',
+      offeringId: null,
+    };
+  }
 
   return { kind: 'foyer' };
 }
 
 /** Keep the address bar honest without creating a history entry per switch. */
-export function syncDeskQuery(deskId: HouseDeskId): void {
+export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null): void {
   if (typeof window === 'undefined') return;
   try {
     const url = new URL(window.location.href);
     url.searchParams.set('desk', deskId);
+    const offering = offeringId ? offeringForId(offeringId) : null;
+    if (offering && offeringCoversDesk(offering, deskId)) {
+      url.searchParams.set('offering', offering.offeringId);
+    } else {
+      url.searchParams.delete('offering');
+    }
     window.history.replaceState({}, '', url.toString());
   } catch {
     /* URL sync is optional */

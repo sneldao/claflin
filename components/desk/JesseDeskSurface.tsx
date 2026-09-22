@@ -10,9 +10,11 @@ import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
-import type { DeskPresentation } from '@/lib/solana/contracts';
+import type { DeskPresentation } from '@/lib/desk/contracts';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
+import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
+import type { SolanaInstrumentId } from '@/lib/solana/contracts';
 import { bindFilePaperCommand, parseJesseSpeech } from '@/lib/jesse/speech';
 import { projectJesseToRoom } from '@/lib/room-view-projection';
 import {
@@ -48,6 +50,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
   const viewQueryApplied = useRef(false);
+  const offeringApplied = useRef<string | null>(null);
 
   const presentationMode = jesse.state.presentation.mode;
   const roomView = presentationMode === 'room';
@@ -72,6 +75,24 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     viewQueryApplied.current = true;
     syncViewQuery(presentationMode);
   }, [jesse, presentationMode]);
+
+  const entryOffering = desk.entryOfferingId ? offeringForId(desk.entryOfferingId) : null;
+  const entryInstrumentId = entryOffering
+    && offeringCoversDesk(entryOffering, 'jesse')
+    && SOLANA_INSTRUMENTS.some(instrument => instrument.id === entryOffering.instrumentId)
+    ? entryOffering.instrumentId as SolanaInstrumentId
+    : null;
+
+  useEffect(() => {
+    if (!entryInstrumentId) {
+      offeringApplied.current = null;
+      return;
+    }
+    if (!jesse.historyReady || offeringApplied.current === entryInstrumentId) return;
+    offeringApplied.current = entryInstrumentId;
+    if (jesse.state.draft.instrumentId === entryInstrumentId) return;
+    void jesse.edit({ instrumentId: entryInstrumentId }, 'instrument');
+  }, [entryInstrumentId, jesse]);
 
   const reviewActive = jesse.foreground.kind === 'quotation'
     || jesse.foreground.kind === 'receipt'

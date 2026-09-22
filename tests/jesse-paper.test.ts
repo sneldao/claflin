@@ -15,7 +15,7 @@ import {
   type JessePaperRecord,
 } from '../lib/solana/paper.ts';
 import { loadPaperRecords, type PaperStorage } from '../lib/trading/paper-records.ts';
-import { supportsAccountSync } from '../lib/house.ts';
+import { supportsAccountSync } from '../lib/desk/registry.ts';
 import { SOLANA_INSTRUMENTS } from '../lib/solana/catalog.ts';
 import type { JesseDraft, MarketComparison, SolanaInstrument, SolanaPaperEstimate } from '../lib/solana/contracts.ts';
 

@@ -31,6 +31,7 @@ import {
   isSolanaInstrumentId,
   normalizeDeskPresentation,
   type CommandResult,
+  type DeskLifecycleStage,
   type DeskPresentation,
   type DeskPresentationState,
   type DeskRevision,
@@ -163,7 +164,7 @@ function saveJesseWatches(
 
 /* state */
 
-export type JesseDeskStage = 'draft' | 'quoting' | 'review' | 'saved' | 'cancelled';
+export type JesseDeskStage = DeskLifecycleStage;
 
 export interface JesseDeskState {
   readonly revision: number;

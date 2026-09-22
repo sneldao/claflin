@@ -3,31 +3,28 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowRight } from 'lucide-react';
-import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDesk, type HouseDeskId } from '@/lib/house';
+import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { NIGHT_DESK_FIXTURES, type NightDeskAmount, type NightDeskStage } from '@/lib/night-desk-fixtures';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
+import { HouseOfferings } from './HouseOfferings';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
 
 type DemoPhase = 'idle' | 'writing' | 'ready';
 
 /** Illustrative foyer loop — labeled example, not a live venue quote. */
-const EXAMPLE_QUOTES = NIGHT_DESK_FIXTURES.quotes;
+const EXAMPLE_QUOTES = {
+  '100': { ...NIGHT_DESK_FIXTURES.quotes['100'], receive: '0.490 Apple units', route: 'Illustrative house quotation' },
+  '50': { ...NIGHT_DESK_FIXTURES.quotes['50'], receive: '0.245 Apple units', route: 'Illustrative house quotation' },
+} as const;
 
 /**
  * Claflin foyer — Sylva-shaped: one composition, a touchable central subject
- * (mini slip demo), plain product sentence, Jesse-primary conversion.
+ * (mini slip demo), plain product sentence, and catalog-led desk entry.
  */
-export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) {
-  const openDesks = HOUSE_DESKS
-    .filter(desk => isOpenDesk(desk.id))
-    .slice()
-    .sort((a, b) => {
-      if (a.id === 'jesse') return -1;
-      if (b.id === 'jesse') return 1;
-      return 0;
-    });
+export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string) => void }) {
+  const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
 
   const [phase, setPhase] = useState<DemoPhase>('idle');
@@ -80,9 +77,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
       : priorAmount !== null ? 'revised' : 'quote';
   const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage, still: false });
 
-  const primaryDesk: HouseDesk | undefined = openDesks.find(d => d.id === 'jesse') ?? openDesks[0];
-  const alternateDesk: HouseDesk | undefined = openDesks.find(d => d.id !== primaryDesk?.id);
-  const liveAvailable = isOpenDesk('jesse') && DESK_CAPABILITIES.jesse.live;
+  const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
 
   const enter = (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -124,7 +119,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
               <div className={foyerStyles.deskMenuList}>
                 {openDesks.map(desk => (
                   <a key={desk.id} href={`/?desk=${desk.id}`} onClick={enter(desk.id)}>
-                    {desk.shortName} · {desk.market}
+                    {desk.shortName} · {desk.access}
                   </a>
                 ))}
               </div>
@@ -142,20 +137,15 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
               Before you trade.
             </h1>
             <p className={foyerStyles.lede}>
-              Talk or type a tokenized-stock instruction. Get a real venue estimate.
-              Review it before you decide.
+              Talk or type a tokenized-stock instruction. Compare the verified
+              offerings, choose the desk that can carry yours, and review a real
+              venue estimate before you decide.
             </p>
             <div className={foyerStyles.actions}>
-              {primaryDesk && (
-                <a
-                  href={`/?desk=${primaryDesk.id}`}
-                  className={foyerStyles.primary}
-                  onClick={enter(primaryDesk.id)}
-                >
-                  Open {primaryDesk.shortName}’s desk
-                  <ArrowRight size={16} aria-hidden="true" />
-                </a>
-              )}
+              <a href="#house-offerings" className={foyerStyles.primary}>
+                Choose an offering
+                <ArrowRight size={16} aria-hidden="true" />
+              </a>
               <button
                 type="button"
                 className={foyerStyles.tryExample}
@@ -165,19 +155,10 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
               >
                 Try an example
               </button>
-              {alternateDesk && (
-                <a
-                  href={`/?desk=${alternateDesk.id}`}
-                  className={foyerStyles.alternate}
-                  onClick={enter(alternateDesk.id)}
-                >
-                  {alternateDesk.shortName} · {alternateDesk.market}
-                </a>
-              )}
             </div>
             <p className={foyerStyles.reassurance}>
               Paper by default. Nothing moves without your approval.
-              {liveAvailable ? ' Live settle is available on Jesse’s desk when you choose it.' : ''}
+              {liveAvailable ? ' Live settle appears only where the selected desk supports it.' : ''}
             </p>
           </div>
 
@@ -193,7 +174,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
                 <div className={foyerStyles.exampleIdle}>
                   <p>Try an instruction. Watch the desk write it down.</p>
                   <button type="button" onClick={() => runDemo('100')} disabled={writing}>
-                    Quote 100 USDC of AAPLx
+                    Quote 100 USDC of Apple
                   </button>
                 </div>
               )}
@@ -212,9 +193,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
                       <p className={foyerStyles.slipWriting}>Writing the estimate…</p>
                     ) : (
                       <>
-                        <p className={foyerStyles.slipInstrument}>
-                          {NIGHT_DESK_FIXTURES.instrument.symbol} — {NIGHT_DESK_FIXTURES.instrument.name}
-                        </p>
+                        <p className={foyerStyles.slipInstrument}>Apple — illustrative exposure</p>
                         <dl className={foyerStyles.slipBody}>
                           <div>
                             <dt>Spend</dt>
@@ -258,6 +237,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
           </div>
         </section>
 
+        <HouseOfferings onEnter={onEnter} />
+
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
           <h2 id="house-method-title">Your instruction. Your decision.</h2>
           <div className={foyerStyles.methodRows}>
@@ -280,7 +261,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId) => void }) 
               <div>
                 <h3>Nothing moves without you.</h3>
                 <p>Review the paper first. {liveAvailable
-                  ? 'File a paper record, or choose live settlement on Solana — only with your approval.'
+                  ? 'File a paper record, or choose live settlement where the selected desk supports it — only with your approval.'
                   : 'File a paper record only when you choose. No real funds move.'}</p>
               </div>
             </div>

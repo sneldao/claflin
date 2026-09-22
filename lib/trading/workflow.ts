@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { getDeskInstrument, resolveDeskAlias } from './catalog';
 import { formatAmount, intentSchema, LIVE_ASSUMPTIONS, PAPER_ASSUMPTIONS, parseAmount, parseIntent, type BaseQuoteEstimate, type QuoteEstimate, type TradeIntent } from './domain';
+import type { DeskLifecycleStage } from '../desk/contracts';
 
 const positiveRaw = z.string().max(78).regex(/^[1-9]\d*$/);
 const decimal = z.string().max(180).regex(/^\d+(\.\d+)?$/);
 const estimateSchema = z.object({
   id: z.string().min(1).max(100).regex(/^[\w-]+$/), kind: z.literal('estimate'), mode: z.literal('paper'), liveExecutionEnabled: z.literal(false),
+  deskId: z.literal('hetty').optional(), mandateId: z.literal('coinbase-tokenized-stocks').optional(), offeringId: z.string().min(1).max(180).optional(), instrumentId: z.string().min(1).max(80).optional(),
   intent: intentSchema, chainId: z.number().int().positive(), venue: z.string().min(1).max(40), poolAddress: z.string(), instrumentAddress: z.string(), instrumentName: z.string().max(100),
   inputSymbol: z.string().max(20), outputSymbol: z.string().max(20), amountInRaw: positiveRaw, amountOutRaw: positiveRaw,
   inputAmount: decimal, outputAmount: decimal, tokenDecimals: z.number().int().min(0).max(18), multiplierRaw: positiveRaw, shareEquivalent: decimal,
@@ -18,6 +20,10 @@ const estimateSchema = z.object({
  *  rather than being rebound to Hetty's desk. */
 export function parseEstimate(input: unknown): BaseQuoteEstimate {
   const q = estimateSchema.parse(input);
+  if ((q.instrumentId && q.instrumentId !== q.intent.instrumentId) ||
+    (q.offeringId && q.mandateId && !q.offeringId.startsWith(`${q.mandateId}:`))) {
+    throw new Error('Invalid estimate binding.');
+  }
   const stock = getDeskInstrument(q.intent.instrumentId);
   const decimals = q.intent.side === 'buy' ? 6 : q.tokenDecimals;
   const outputDecimals = q.intent.side === 'buy' ? q.tokenDecimals : 6;
@@ -42,7 +48,7 @@ export function estimateUsable(q: QuoteEstimate, now: number): boolean {
    * it; Jesse's desk gets its own controller over the shared contracts. */
 export interface DeskState {
   draft: TradeIntent;
-  stage: 'draft' | 'loading' | 'review' | 'saved' | 'cancelled';
+  stage: DeskLifecycleStage;
   requestId: string | null;
   quote: BaseQuoteEstimate | null;
   message: string | null;
@@ -63,9 +69,9 @@ export function initialDesk(draft: TradeIntent): DeskState {
 export function deskReducer(state: DeskState, action: DeskAction): DeskState {
   switch (action.type) {
     case 'edit': return initialDesk(action.draft);
-    case 'request': return { ...state, stage: 'loading', requestId: action.requestId, quote: null, message: null };
+    case 'request': return { ...state, stage: 'quoting', requestId: action.requestId, quote: null, message: null };
     case 'quoted':
-      if (state.stage !== 'loading' || state.requestId !== action.requestId || !sameIntent(state.draft, action.quote.intent)) return state;
+      if (state.stage !== 'quoting' || state.requestId !== action.requestId || !sameIntent(state.draft, action.quote.intent)) return state;
       return { ...state, stage: 'review', quote: action.quote, requestId: null };
     case 'failed':
       if (state.requestId !== action.requestId) return state;

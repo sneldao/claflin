@@ -82,6 +82,9 @@ const estimateSchema = z.object({
   mode: z.literal('paper'),
   liveExecutionEnabled: z.literal(false),
   deskId: z.literal('jesse'),
+  mandateId: z.literal('backed-xstocks').optional(),
+  offeringId: z.string().min(1).max(180).optional(),
+  instrumentId: instrumentId.optional(),
   network: z.literal('solana:mainnet'),
   venue: z.literal('jupiter'),
   intent: jesseIntentSchema,
@@ -165,6 +168,10 @@ const recordSchema = z.object({
  */
 export function parseJesseEstimate(input: unknown): SolanaPaperEstimate {
   const q = estimateSchema.parse(input);
+  if ((q.instrumentId && q.instrumentId !== q.intent.instrumentId) ||
+    (q.offeringId && q.mandateId && !q.offeringId.startsWith(`${q.mandateId}:`))) {
+    throw new Error('Invalid estimate binding.');
+  }
   if (q.intent.instrumentId !== `sol:${q.instrumentAddress}`) throw new Error('Invalid estimate binding.');
   if (q.inputMint === q.outputMint) throw new Error('Invalid estimate binding.');
   if (q.intent.side === 'buy') {

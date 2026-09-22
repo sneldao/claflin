@@ -4,14 +4,9 @@
  */
 import type { JesseDeskState } from './controller';
 import type { JessePaperRecord } from './paper';
+import type { DeskForeground } from '../desk/contracts';
 
-export type JesseForeground =
-  | { kind: 'draft' }
-  | { kind: 'pending' }
-  | { kind: 'quotation'; quoteId: string }
-  | { kind: 'receipt'; recordId: string }
-  | { kind: 'archive'; recordId: string }
-  | { kind: 'missing'; recordId: string };
+export type JesseForeground = DeskForeground;
 
 export function jesseForeground(
   state: JesseDeskState,

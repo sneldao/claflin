@@ -16,9 +16,14 @@ import type { QuoteAdapter } from '../adapters';
  */
 /* The numeric chain id stays on this adapter itself — it moved off the
  * shared QuoteAdapter interface so non-EVM venues never fake one. */
-export const aerodromeQuoteAdapter: QuoteAdapter & { readonly chainId: number } = {
+export const aerodromeQuoteAdapter: QuoteAdapter & {
+  readonly chainId: number;
+  canQuote(instrument: DeskInstrument): boolean;
+} = {
   venue: AERODROME_VENUE,
   chainId: BASE_CHAIN_ID,
+  /* Venue-specific instrument support stays on the concrete EVM adapter; it
+   *  is not a requirement imposed on non-EVM QuoteAdapter implementations. */
   canQuote(instrument: DeskInstrument): boolean {
     return instrument.quoteSupported
       && instrument.venuePairs.some(pair => pair.venue === AERODROME_VENUE && pair.chainId === BASE_CHAIN_ID);

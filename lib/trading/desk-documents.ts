@@ -4,6 +4,7 @@ import { DESK_INSTRUMENTS } from './catalog';
 import { parseIntent, type TradeIntent } from './domain';
 import type { PaperRecord } from './paper-records';
 import type { DeskState } from './workflow';
+import type { DeskForegroundKind, DeskForegroundDocument } from '../desk/contracts';
 
 export const DRAFT_STORAGE_KEY = 'claflin.draft.v1';
 export const DRAFT_META_KEY = 'claflin.draft-meta.v1';
@@ -211,16 +212,8 @@ export function ledgerPreview(records: PaperRecord[], focusedId: string | null =
   return [...head.slice(0, Math.max(0, limit - 1)), focused];
 }
 
-export type ForegroundKind = 'draft' | 'pending' | 'quotation' | 'receipt' | 'archive' | 'missing';
-
-export type ForegroundDocument = {
-  kind: ForegroundKind;
-  quoteId: string | null;
-  recordId: string | null;
-  instrumentId: string | null;
-  actionable: boolean;
-  readonly: boolean;
-};
+export type ForegroundKind = DeskForegroundKind;
+export type ForegroundDocument = DeskForegroundDocument;
 
 /** Looking at a filed record that is not the instruction currently in hand. */
 export function browsingArchive(state: DeskState, viewedRecordId: string | null): boolean {
@@ -243,7 +236,7 @@ export function foregroundDocument(state: DeskState, viewedRecordId: string | nu
   if (browsingArchive(state, viewedRecordId)) {
     return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId: documentInstrument(state, viewed), actionable: false, readonly: true };
   }
-  if (state.stage === 'loading') {
+  if (state.stage === 'quoting') {
     return { kind: 'pending', quoteId: null, recordId: null, instrumentId: documentInstrument(state, undefined), actionable: false, readonly: false };
   }
   if (state.stage === 'review' && state.quote) {

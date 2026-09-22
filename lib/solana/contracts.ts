@@ -1,15 +1,24 @@
 /**
- * Solana desk contracts — the frozen shared shapes from the Stocklana build
- * plan (§4.1, §4.2, §4.4, §4.5, §4.7). Client-safe: no server imports, no
- * env access, no dependencies. Engineers 2–4 build against these types;
- * only the contract owner edits them.
+ * Solana desk contracts — the rail/mandate implementation for Jesse's xStock
+ * desk (§4.1, §4.2, §4.4, §4.5, §4.7). Shared desk vocabulary lives in
+ * lib/desk/contracts.ts and is re-exported here for compatibility.
+ * Client-safe: no server imports, no env access, no dependencies.
  *
  * Every raw quantity and price is a serialized string — no floats cross this
  * boundary. Base instrument ids and stored raw amounts stay byte-identical;
  * Solana mint ids keep their exact mixed case.
  */
 
-import type { QuoteEstimate } from '../trading/domain';
+import type { DeskRevision as SharedDeskRevision } from '../desk/contracts';
+
+export type {
+  CommandResult,
+  DeskCapabilities,
+  DeskLifecycleStage,
+  DeskPresentation,
+  DeskPresentationState,
+} from '../desk/contracts';
+export { normalizeDeskPresentation } from '../desk/contracts';
 
 // §4.1 — instruments, intent, capabilities.
 
@@ -36,13 +45,6 @@ export interface SolanaInstrument {
   quoteSupported: boolean;
 }
 
-export interface DeskCapabilities {
-  quote: boolean;
-  paper: boolean;
-  voice: 'elevenlabs-convai' | 'assemblyai-streaming' | null;
-  live: boolean;
-}
-
 // §4.2 — Jupiter paper estimate.
 
 export interface SolanaPaperEstimate {
@@ -52,6 +54,9 @@ export interface SolanaPaperEstimate {
   mode: 'paper';
   liveExecutionEnabled: false;
   deskId: 'jesse';
+  mandateId?: 'backed-xstocks';
+  offeringId?: string;
+  instrumentId?: SolanaInstrumentId;
   network: SolanaNetwork;
   venue: 'jupiter';
   intent: JesseIntent;
@@ -169,11 +174,7 @@ export interface MarketComparison {
 
 // §4.5 — voice/controller.
 
-export interface DeskRevision {
-  deskId: 'jesse';
-  revision: number;
-  sessionGeneration: number;
-}
+export type DeskRevision = SharedDeskRevision<'jesse'>;
 export interface JesseDraft {
   instrumentId: SolanaInstrumentId | null;
   side: 'buy' | 'sell' | null;
@@ -190,30 +191,10 @@ export type JesseCommand =
   | { type: 'cancel' }
   | { type: 'file-paper'; quoteId: string }
   | { type: 'clarify'; draft: JesseDraft; field: 'instrument' | 'side' | 'amount' | 'units'; question: string };
-export type CommandResult = {
-  status: 'applied' | 'clarify' | 'rejected' | 'stale';
-  revision: number;
-  quoteId: string | null;
-  evidenceId: string | null;
-  spokenText: string;
-};
-
 // §4.7 — presentation and continuity boundary.
 
-export type DeskPresentation = 'room' | 'compact';
-
-/** Map legacy night/direct tokens onto the canonical room/compact view axis. */
-export function normalizeDeskPresentation(raw: unknown): DeskPresentation | null {
-  if (raw === 'room' || raw === 'night') return 'room';
-  if (raw === 'compact' || raw === 'direct') return 'compact';
-  return null;
-}
-
-export interface DeskPresentationState {
-  mode: DeskPresentation;
-  focus: 'desk' | 'evidence' | 'instruction' | 'record';
-  objectId: string | null;
-}
+/* Shared presentation and command contracts are re-exported above from
+   lib/desk/contracts.ts; Solana-specific contracts remain below. */
 
 /* Type guards and zod-free validators — the desk/mint boundary checks the
    catalog, these guards check only shape. Amount grammar mirrors the legacy
@@ -227,10 +208,15 @@ export function isSolanaInstrumentId(id: unknown): id is SolanaInstrumentId {
   return typeof id === 'string' && id.startsWith('sol:') && id.length > 4;
 }
 
-/** Narrow the shared QuoteEstimate union — `network` exists only on the
- *  Solana branch, so its literal discriminates without touching Base. */
-export function isSolanaEstimate(quote: QuoteEstimate): quote is SolanaPaperEstimate {
-  return (quote as SolanaPaperEstimate).network === 'solana:mainnet';
+/** Register Jesse's rail intent and estimate with the shared domain without
+ *  making lib/trading import this Solana module. */
+declare module '../desk/contracts' {
+  interface DeskIntentRegistry {
+    jesse: JesseIntent;
+  }
+  interface QuoteEstimateRegistry {
+    solana: SolanaPaperEstimate;
+  }
 }
 
 /** Shape check for a complete Jesse intent — buy spends USDC, sell quantities

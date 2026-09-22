@@ -111,7 +111,13 @@ describe('one canonical house', () => {
     assert.match(source('components/desk/HouseFoyer.tsx'), /Before you trade\./);
     assert.match(source('components/desk/HouseFoyer.tsx'), /\/\?desk=/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /ILLUSTRATIVE EXAMPLE/);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /find\(d => d\.id === 'jesse'\)/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /HouseOfferings/);
+    assert.match(source('components/desk/HouseOfferings.tsx'), /offeringGroupsForInstruction/);
+    assert.match(source('components/desk/HouseOfferings.tsx'), /openDesksForOffering/);
+    assert.match(source('components/desk/HouseOfferings.tsx'), /\/\?desk=/);
+    assert.doesNotMatch(source('components/desk/HouseFoyer.tsx'), /find\(d => d\.id === 'jesse'\)/);
+    assert.match(source('lib/trading/useTradingDesk.ts'), /entryOfferingId/);
+    assert.match(source('lib/house-entry.ts'), /parseOfferingQuery/);
     assert.match(source('lib/trading/useTradingDesk.ts'), /entryPhase/);
     assert.match(source('components/desk/WorkingDesk.tsx'), /entryPhase === 'foyer'/);
   });

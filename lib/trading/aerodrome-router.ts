@@ -2,7 +2,7 @@ import { encodeFunctionData, parseAbi, type Address, type Hex } from 'viem';
 import { AERODROME_SWAP_ROUTER, BASE_CHAIN_ID, BASE_USDC } from '../base-chain';
 import { getInstrumentAndPairByPoolAddress } from './catalog';
 import type { QuoteEstimate } from './domain';
-import { isSolanaEstimate } from '../solana/contracts';
+import { isSolanaEstimate } from '../desk/estimates';
 
 /**
  * Aerodrome SlipStream Swap Router call builder.

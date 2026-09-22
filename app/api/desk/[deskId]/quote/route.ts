@@ -1,4 +1,5 @@
 import { quoteAdapterFor } from '@/lib/trading/adapters';
+import { deskRuntimeFor } from '@/lib/desk/registry';
 import { createQuoteHandler, quoteBudget } from '@/lib/trading/http';
 import { TradingError } from '@/lib/trading/domain';
 
@@ -19,8 +20,9 @@ function handlerFor(deskId: string): Handler {
   const key = deskId.toLowerCase();
   let handler = handlers.get(key);
   if (!handler) {
-    const adapter = quoteAdapterFor(key); // throws desk_unavailable for planned desks
-    handler = createQuoteHandler((input) => adapter.quote(input), quoteBudget());
+    const runtime = deskRuntimeFor(key);
+    if (!runtime?.capabilities.quote) quoteAdapterFor(key); // throws desk_unavailable for planned desks
+    handler = createQuoteHandler((input) => quoteAdapterFor(key, input).quote(input), quoteBudget());
     handlers.set(key, handler);
   }
   return handler;

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { HOUSE_DESKS, getHouseDesk, isOpenDesk, OPEN_DESK_ID, usesLegacyDeskDocuments } from '../lib/house';
+import { HOUSE_DESKS, getHouseDesk, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
+import { usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 import { deskNoteOfTheDay } from '../lib/desk-notes';
 import { fetchJson } from '../lib/api-client';

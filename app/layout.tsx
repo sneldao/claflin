@@ -67,7 +67,7 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Claflin — say a stock trade, see a real estimate. Paper by default; live on Solana when you choose.',
+        alt: 'Claflin — say a stock trade, see a real estimate. Paper by default; live where supported when you choose.',
         type: 'image/png',
       },
     ],

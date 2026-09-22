@@ -1,11 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID, usesLegacyDeskDocuments } from '../lib/house';
+import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
+import { usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
 import { quoteAdapterFor } from '../lib/trading/adapters';
-import { isJesseIntent, isSolanaEstimate, isSolanaInstrumentId } from '../lib/solana/contracts';
+import { isJesseIntent, isSolanaInstrumentId } from '../lib/solana/contracts';
+import { isSolanaEstimate } from '../lib/desk/estimates';
 import { decodeBase58, getSolanaInstrument, instrumentsForSolanaDesk, parseSolanaInstrumentId, SOLANA_INSTRUMENTS, SOLANA_USDC_DECIMALS, SOLANA_USDC_MINT } from '../lib/solana/catalog';
 import { displayedToRaw, effectiveDisplayed, rawToDisplayed } from '../lib/solana/amounts';
 import { AAPLX_FIXTURE, JESSE_BUY_INTENT, JESSE_SELL_INTENT, SOLANA_PAPER_ESTIMATE_FIXTURE } from '../lib/solana/fixtures';

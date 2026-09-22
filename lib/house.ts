@@ -1,5 +1,5 @@
 import { LIVE_EXECUTION_ENABLED } from './trading/domain';
-import type { DeskCapabilities } from './solana/contracts';
+import type { DeskCapabilities } from './desk/contracts';
 import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
 
 /**
@@ -13,7 +13,7 @@ export const HOUSE = Object.freeze({
   tagline: 'The office above the pit',
   /** First product sentence on the foyer — what a new visitor can do. */
   headline: 'Say a stock trade. See a real estimate.',
-  promise: 'Paper by default — live on Solana when you choose.',
+  promise: 'Paper by default — live where the desk supports it, when you choose.',
   description:
     'Talk or type an instruction to a specialist desk. Get a real venue estimate, review it, then file a paper record or settle live. Nothing moves without your say.',
   mode: 'paper' as const,
@@ -107,26 +107,6 @@ export function getHouseDesk(id: string): HouseDesk | undefined {
 export function isOpenDesk(id: string): id is HouseDeskId {
   const capabilities = DESK_CAPABILITIES[id as HouseDeskId];
   return Boolean(capabilities && capabilities.quote && capabilities.paper);
-}
-
-/**
- * Legacy Base document owner — v1 paper records, Base drafts, Base watches,
- * Aerodrome estimates. Independent of isOpenDesk so opening Jesse never makes
- * useTradingDesk treat Solana as a Hetty session.
- */
-export function usesLegacyDeskDocuments(id: string): id is typeof OPEN_DESK_ID {
-  return id === OPEN_DESK_ID;
-}
-
-/**
- * Optional account sync stays Hetty-only for this release (plan §5, E1
- * item 5). Jesse records are browser-local: there is no server schema for
- * them, no import UI, and no sync traffic — this is not a claim of cloud
- * backup. The gate exists so callers cannot accidentally run Hetty's
- * /api/paper flows for another desk.
- */
-export function supportsAccountSync(deskId: string): boolean {
-  return deskId === OPEN_DESK_ID;
 }
 
 export const RETIRED_CLIENT_PATHS = Object.freeze([

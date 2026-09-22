@@ -2,10 +2,9 @@ import { getSolanaInstrument, SOLANA_USDC_DECIMALS, SOLANA_USDC_MINT } from '../
 import { compareDecimals, displayedToRaw, effectiveDisplayed, rawToDisplayed } from '../../solana/amounts';
 import { createJupiterClient, JUPITER_SLIPPAGE_BPS, type JupiterOrder } from '../../solana/jupiter';
 import { createMintReader, type ScaledMintObservation } from '../../solana/mint';
-import { isJesseIntent, isSolanaInstrumentId, type SolanaInstrument, type SolanaPaperEstimate } from '../../solana/contracts';
+import { isJesseIntent, type SolanaPaperEstimate } from '../../solana/contracts';
 import { deskQuoteLimits, type DeskQuoteLimits } from '../desk-mandate';
 import { formatAmount, parseAmount, TradingError, type QuoteEstimate } from '../domain';
-import type { DeskInstrument } from '../catalog';
 import type { QuoteAdapter } from '../adapters';
 
 /**
@@ -44,12 +43,6 @@ export function createJupiterQuoteAdapter({
 }): QuoteAdapter {
   return {
     venue: 'jupiter',
-    canQuote(instrument: DeskInstrument | SolanaInstrument): boolean {
-      return isSolanaInstrumentId(instrument.id)
-        && 'tokenProgram' in instrument
-        && instrument.tokenProgram === 'spl-token-2022'
-        && instrument.quoteSupported;
-    },
     async quote(input: unknown): Promise<QuoteEstimate> {
       if (!isJesseIntent(input)) {
         throw new TradingError('invalid_intent', 'Use a supported Solana instrument, buy with a USDC spend, or sell a scaled token quantity. Enter a positive decimal amount.');

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
-import { supportsAccountSync } from '@/lib/house';
+import { supportsAccountSync } from '@/lib/desk/registry';
 import {
   mergePulledRecords,
   paperOwnerOf,

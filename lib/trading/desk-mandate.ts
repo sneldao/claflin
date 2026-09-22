@@ -1,4 +1,5 @@
-import { OPEN_DESK_ID, usesLegacyDeskDocuments, type HouseDeskId } from '@/lib/house';
+import { OPEN_DESK_ID, type HouseDeskId } from '@/lib/house';
+import { usesLegacyDeskDocuments } from '../desk/registry';
 import type { BaseQuoteEstimate, TradeIntent } from './domain';
 import { initialDesk, type DeskState } from './workflow';
 
@@ -77,7 +78,7 @@ export function enterDesk(
 
 /** Park durable work only. An in-flight estimate is not a resumable network operation. */
 export function parkDeskWork(session: ParkedDesk): ParkedDesk {
-  if (session.state.stage !== 'loading') return session;
+  if (session.state.stage !== 'quoting') return session;
   return {
     ...session,
     viewedRecordId: null,

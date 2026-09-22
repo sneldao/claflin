@@ -16,7 +16,7 @@ export const HettyStatus = memo(function HettyStatus({ desk }: { desk: ReturnTyp
 
   let line: string;
   switch (state.stage) {
-    case 'loading':
+    case 'quoting':
       line = 'Preparing your estimate…';
       break;
     case 'review':

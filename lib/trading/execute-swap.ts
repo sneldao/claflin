@@ -3,7 +3,7 @@ import { base } from 'viem/chains';
 import { buildAerodromeSwapTx, buildErc20ApproveTx } from './aerodrome-router';
 import { AERODROME_SWAP_ROUTER, BASE_RPC_URL, BASE_USDC, BASE_USDC_DECIMALS } from '../base-chain';
 import { TradingError, type BaseQuoteEstimate, type QuoteEstimate } from './domain';
-import { isSolanaEstimate } from '../solana/contracts';
+import { isSolanaEstimate } from '../desk/estimates';
 
 /** Base live execution speaks EVM only — a Jesse/Solana estimate is refused
  *  at this boundary, never passed to wallet signing or RPC hooks. */

@@ -3,7 +3,8 @@
  * Scene is view-only — never invents quotes or files paper.
  */
 import type { NightDeskStage, NightDeskView } from './night-desk-fixtures';
-import type { DeskPresentationState } from './solana/contracts';
+import type { DeskPresentationState, LegacyDeskLifecycleStage } from './desk/contracts';
+import { normalizeDeskStage } from './desk/contracts';
 import type { JesseForeground } from './solana/desk-documents';
 import type { JesseDeskStage } from './solana/controller';
 
@@ -52,20 +53,21 @@ export function projectJesseToRoom(input: JesseLike): RoomViewProjection {
 }
 
 type HettyLike = {
-  stage: string;
+  stage: LegacyDeskLifecycleStage;
   foregroundKind: string;
   reviewing: boolean;
 };
 
 /** Hetty has no duplex evidence stage — map review/file onto the room. */
 export function projectHettyToRoom(input: HettyLike): RoomViewProjection {
-  if (input.foregroundKind === 'receipt' || input.stage === 'saved') {
+  const stage = normalizeDeskStage(input.stage);
+  if (input.foregroundKind === 'receipt' || stage === 'saved') {
     return { stage: 'filed', view: 'ledger' };
   }
-  if (input.reviewing || input.stage === 'review') {
+  if (input.reviewing || stage === 'review') {
     return { stage: 'quote', view: 'review' };
   }
-  if (input.stage === 'loading') {
+  if (stage === 'quoting') {
     return { stage: 'conversation', view: 'desk' };
   }
   return { stage: 'arrival', view: 'desk' };

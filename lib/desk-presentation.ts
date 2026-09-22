@@ -6,17 +6,19 @@
  * without remounting finance (§4.7).
  */
 import { z } from 'zod';
-import type { DeskPresentation } from './solana/contracts';
-import { normalizeDeskPresentation } from './solana/contracts';
+import type { DeskPresentation } from './desk/contracts';
+import { normalizeDeskPresentation } from './desk/contracts';
 import type { HouseDeskId } from './house';
+import { deskRuntimeFor } from './desk/registry';
 
 export type { DeskPresentation };
 
 export const DEFAULT_DESK_PRESENTATION: DeskPresentation = 'compact';
 
-/** Jesse defaults to room on capable desktops; constrained devices prefer Compact. */
+/** Presentation defaults come from the desk runtime; constrained devices still
+ *  prefer Compact when no preference is stored. */
 export function defaultPresentationForDesk(deskId: HouseDeskId): DeskPresentation {
-  return deskId === 'jesse' ? 'room' : 'compact';
+  return deskRuntimeFor(deskId)?.presentationDefault ?? DEFAULT_DESK_PRESENTATION;
 }
 
 /** Coarse pointer or reduced-motion — prefer Compact for first paint when no preference is stored. */

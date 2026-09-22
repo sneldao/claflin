@@ -391,7 +391,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     const focusKey = `${state.stage}:${viewedRecordId ?? ''}:${foreground.kind}`;
     if (previousFocus.current === focusKey) return;
     previousFocus.current = focusKey;
-    const target = openedRecord || missing || state.stage === 'review' || state.stage === 'saved' || state.stage === 'loading'
+    const target = openedRecord || missing || state.stage === 'review' || state.stage === 'saved' || state.stage === 'quoting'
       ? review.current
       : document.getElementById('amount');
     target?.focus({ preventScroll: true });

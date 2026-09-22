@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { JesseIntent, SolanaPaperEstimate } from '../solana/contracts';
+import type { DeskIntent as SharedDeskIntent, QuoteEstimate as SharedQuoteEstimate } from '../desk/contracts';
 
 export class TradingError extends Error {
   constructor(public code: string, message: string, public status = 400) {
@@ -16,10 +16,6 @@ export const intentSchema = z.discriminatedUnion('side', [
 ]);
 export type TradeIntent = z.infer<typeof intentSchema>;
 
-/** Shared intent union — the Base schema stays the legacy branch. Desk/mint
- *  validation, not shape alone, decides which branch is valid: `scaled-token`
- *  sells are Jesse-only, raw `token` sells are Hetty-only. */
-export type DeskIntent = TradeIntent | JesseIntent;
 
 export function parseIntent(input: unknown): TradeIntent {
   const parsed = intentSchema.safeParse(input);
@@ -61,6 +57,11 @@ export interface BaseQuoteEstimate {
   kind: 'estimate';
   mode: 'paper';
   liveExecutionEnabled: false;
+  /** New estimates carry explicit house context; legacy rows may omit it. */
+  deskId?: 'hetty';
+  mandateId?: 'coinbase-tokenized-stocks';
+  offeringId?: string;
+  instrumentId?: string;
   intent: TradeIntent;
   /** Settlement chain id — 8453 today; per-venue later. */
   chainId: number;
@@ -86,11 +87,22 @@ export interface BaseQuoteEstimate {
   assumptions: string;
 }
 
-/** The shared paper-estimate union (plan §4.2). Narrow with
- *  `isSolanaEstimate` / `network === 'solana:mainnet'` before touching
- *  Base-only fields — never invent an EVM chain id, pool, block, or
- *  multiplier to fit a Jupiter route. */
-export type QuoteEstimate = BaseQuoteEstimate | SolanaPaperEstimate;
+/** Register the Base branch with the shared desk contract registry. Other
+ *  rails augment the same registry without this domain importing them. */
+declare module '../desk/contracts' {
+  interface DeskIntentRegistry {
+    base: TradeIntent;
+  }
+  interface QuoteEstimateRegistry {
+    base: BaseQuoteEstimate;
+  }
+}
+
+/** Shared unions are owned by lib/desk/contracts. Narrow with rail guards
+ *  before touching protocol evidence — never invent an EVM chain id, pool,
+ *  block, or multiplier to fit a non-EVM route. */
+export type DeskIntent = SharedDeskIntent;
+export type QuoteEstimate = SharedQuoteEstimate;
 
 export const PAPER_ASSUMPTIONS = 'Simulated fill at the quoted output, including pool swap fees. No additional slippage, gas, platform or call charges are applied. No wallet, holdings, eligibility or transaction authorization is verified. This is a local paper record, not a live order or position.';
 
