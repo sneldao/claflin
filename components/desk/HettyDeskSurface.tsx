@@ -23,6 +23,7 @@ import type { DeskPresentation } from '@/lib/desk-presentation';
 import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
+import { carriedIntentNote } from '@/lib/desk/carried-note';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { TradeTicket } from './TradeTicket';
@@ -119,7 +120,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get('intent');
     if (!raw) return;
-    window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+    /* Consume only the shared-instruction params — ?desk=/?view= stay honest. */
+    const url = new URL(window.location.href);
+    for (const key of ['intent', 'side', 'amount']) url.searchParams.delete(key);
+    window.history.replaceState(null, '', url.toString());
     const instrument = resolveDeskAlias(raw);
     if (!desk.open || !instrument?.quoteSupported) return;
     const side = params.get('side') === 'sell' ? 'sell' : 'buy';
@@ -141,6 +145,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     scrollToDeskTarget('instruction');
   }, [hettyLive, foreground.kind]);
 
+  const carriedNote = carriedIntentNote(desk.entryIntent, desk.state.draft);
   const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
   const reviewActive = foreground.kind === 'quotation' || foreground.kind === 'receipt' || foreground.kind === 'archive';
   const instrumentStage = hettyLive
@@ -252,7 +257,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             <DeskObjects />
           </>
         )}
-        <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} />
+        <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} carriedNote={carriedNote} />
         <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
         <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />

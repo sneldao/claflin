@@ -19,6 +19,7 @@ import { projectJesseToRoom } from '@/lib/room-view-projection';
 import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
+import { carriedIntentNote } from '@/lib/desk/carried-note';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MODE_HINTS } from '@/lib/desk/ui-copy';
@@ -82,6 +83,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
   }, [entryInstrumentId, entryIntent, jesse]);
 
+  const carriedNote = carriedIntentNote(entryIntent, jesse.state.draft);
   const reviewActive = jesse.foreground.kind === 'quotation'
     || jesse.foreground.kind === 'receipt'
     || jesse.foreground.kind === 'archive';
@@ -200,7 +202,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             <DeskObjects />
           </>
         )}
-        <JesseTicket jesse={jesse} spokenLine={spoken} />
+        <JesseTicket jesse={jesse} spokenLine={spoken} carriedNote={carriedNote} />
         <JesseLedger jesse={jesse} />
         <aside className={styles.support} aria-label="Jesse’s desk">
           <JesseCall jesse={jesse} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />

@@ -285,7 +285,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff, onLiveJournalChange }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean; onLiveJournalChange?: () => void }) {
+export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff, onLiveJournalChange, carriedNote }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean; onLiveJournalChange?: () => void; carriedNote?: string | null }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -444,6 +444,7 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
       <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
+    {view === 'draft' && carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
     {/* The dictation rail: the ticket's voice, always at the head of the
         paper. It shows the last words the desk heard — or invites the first. */}

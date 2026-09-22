@@ -4,6 +4,7 @@ import {
   HOUSE_DESK_PREFERENCE_KEY,
   loadLastDesk,
   parseDeskQuery,
+  parseEntryIntent,
   parseOfferingQuery,
   resolveHouseEntry,
   saveLastDesk,
@@ -39,6 +40,7 @@ describe('house entry', () => {
       deskId: 'jesse',
       source: 'query',
       offeringId: null,
+      intent: null,
     });
   });
 
@@ -51,6 +53,7 @@ describe('house entry', () => {
       deskId: 'jesse',
       source: 'preference',
       offeringId: null,
+      intent: null,
     });
   });
 
@@ -78,12 +81,35 @@ describe('house entry', () => {
       deskId: 'jesse',
       source: 'query',
       offeringId: solana.offeringId,
+      intent: null,
     });
     assert.deepEqual(resolveHouseEntry('jesse', memoryStorage(), base.offeringId), {
       kind: 'desk',
       deskId: 'jesse',
       source: 'query',
       offeringId: null,
+      intent: null,
+    });
+  });
+
+  it('parses ?side=&amount= into a carried intent and rejects junk', () => {
+    assert.deepEqual(parseEntryIntent('buy', '100'), { side: 'buy', amount: '100' });
+    assert.deepEqual(parseEntryIntent('sell', '2.5'), { side: 'sell', amount: '2.5' });
+    assert.deepEqual(parseEntryIntent('buy', null), { side: 'buy', amount: null });
+    assert.deepEqual(parseEntryIntent(null, '50'), { side: null, amount: '50' });
+    assert.deepEqual(parseEntryIntent('hold', '100'), { side: null, amount: '100' });
+    assert.equal(parseEntryIntent(null, null), null);
+    assert.equal(parseEntryIntent('hold', 'abc'), null);
+    assert.deepEqual(parseEntryIntent('buy', '1e5'), { side: 'buy', amount: null });
+    assert.deepEqual(parseEntryIntent('buy', '0.5'), { side: 'buy', amount: '0.5' });
+    assert.deepEqual(parseEntryIntent('buy', '-10'), { side: 'buy', amount: null });
+    assert.deepEqual(parseEntryIntent('buy', 'abc'), { side: 'buy', amount: null });
+    assert.deepEqual(resolveHouseEntry('hetty', memoryStorage(), null, { side: 'buy', amount: '25' }), {
+      kind: 'desk',
+      deskId: 'hetty',
+      source: 'query',
+      offeringId: null,
+      intent: { side: 'buy', amount: '25' },
     });
   });
 });

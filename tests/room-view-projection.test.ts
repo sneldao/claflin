@@ -54,9 +54,13 @@ describe('room view projection', () => {
 });
 
 describe('house desk view preference', () => {
-  it('defaults Jesse to room and Hetty to compact', () => {
+  it('defaults every desk to room; compact is the constrained-device fallback', () => {
     assert.equal(defaultPresentationForDesk('jesse'), 'room');
-    assert.equal(defaultPresentationForDesk('hetty'), 'compact');
+    assert.equal(defaultPresentationForDesk('hetty'), 'room');
+    assert.equal(defaultPresentationForDesk('isabel'), 'room');
+    assert.equal(defaultPresentationForDesk('arbitrum'), 'room');
+    assert.equal(loadDeskPresentation(memoryStorage(), 'hetty', { preferCompactWhenUnset: true }), 'compact');
+    assert.equal(loadDeskPresentation(memoryStorage(), 'hetty'), 'room');
   });
 
   it('parses canonical and legacy view query tokens', () => {

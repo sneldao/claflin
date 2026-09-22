@@ -38,7 +38,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
       }),
     ]),
     storage: Object.freeze({ scope: 'account-sync' as const, legacyDocuments: true, historyLimit: 100 }),
-    presentationDefault: 'compact' as const,
+    presentationDefault: 'room' as const,
     surface: 'hetty' as const,
   }),
   jesse: Object.freeze({
@@ -62,7 +62,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
       }),
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, legacyDocuments: false, historyLimit: 100 }),
-    presentationDefault: 'compact' as const,
+    presentationDefault: 'room' as const,
     surface: null,
   }),
   arbitrum: Object.freeze({
@@ -74,7 +74,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
       }),
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, legacyDocuments: false, historyLimit: 100 }),
-    presentationDefault: 'compact' as const,
+    presentationDefault: 'room' as const,
     surface: null,
   }),
 });

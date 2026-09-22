@@ -12,10 +12,25 @@ export const HOUSE_DESK_PREFERENCE_KEY = 'claflin.desk.v1.last';
 
 export type HouseEntry =
   | { kind: 'foyer' }
-  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null };
+  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null; intent: EntryIntent | null };
 
 /** The part of a foyer instruction that survives entry: side and amount. */
 export type EntryIntent = { side: 'buy' | 'sell' | null; amount: string | null };
+
+const INTENT_AMOUNT_PATTERN = /^(0|[1-9]\d*)(\.\d+)?$/;
+
+/**
+ * Parse `?side=&amount=` — the carried instruction encoded in a deep link.
+ * Invalid or absent fields drop away; a wholly absent intent stays null.
+ */
+export function parseEntryIntent(
+  sideRaw: string | null | undefined,
+  amountRaw: string | null | undefined,
+): EntryIntent | null {
+  const side = sideRaw === 'buy' || sideRaw === 'sell' ? sideRaw : null;
+  const amount = amountRaw && INTENT_AMOUNT_PATTERN.test(amountRaw.trim()) ? amountRaw.trim() : null;
+  return side || amount ? { side, amount } : null;
+}
 
 /** Parse `?desk=` — only known house ids; open desks enter, planned visit closed rooms. */
 export function parseDeskQuery(raw: string | null | undefined): HouseDeskId | null {
@@ -61,6 +76,7 @@ export function resolveHouseEntry(
   deskQuery: string | null | undefined,
   storage: Pick<Storage, 'getItem'>,
   offeringQuery?: string | null,
+  intent: EntryIntent | null = null,
 ): HouseEntry {
   const fromQuery = parseDeskQuery(deskQuery);
   if (fromQuery) {
@@ -69,6 +85,7 @@ export function resolveHouseEntry(
       deskId: fromQuery,
       source: 'query',
       offeringId: parseOfferingQuery(offeringQuery, fromQuery),
+      intent,
     };
   }
 
@@ -79,6 +96,7 @@ export function resolveHouseEntry(
       deskId: last,
       source: 'preference',
       offeringId: null,
+      intent: null,
     };
   }
 
@@ -106,7 +124,12 @@ export function clearDeskQuery(historyMode: HistoryMode = 'replace'): void {
  * Keep the address bar honest. `push` only for foyer → desk arrivals so Back
  * steps out to the foyer; desk → desk switches stay `replace` (tabs, not places).
  */
-export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null, historyMode: HistoryMode = 'replace'): void {
+export function syncDeskQuery(
+  deskId: HouseDeskId,
+  offeringId?: string | null,
+  historyMode: HistoryMode = 'replace',
+  intent?: EntryIntent | null,
+): void {
   if (typeof window === 'undefined') return;
   try {
     const url = new URL(window.location.href);
@@ -117,6 +140,12 @@ export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null, h
     } else {
       url.searchParams.delete('offering');
     }
+    /* `?intent=` (shared-instruction instrument) is left alone — the desk
+       surface consumes it on mount. side/amount are ours to keep honest. */
+    if (intent?.side) url.searchParams.set('side', intent.side);
+    else url.searchParams.delete('side');
+    if (intent?.amount) url.searchParams.set('amount', intent.amount);
+    else url.searchParams.delete('amount');
     if (historyMode === 'push') window.history.pushState({}, '', url.toString());
     else window.history.replaceState({}, '', url.toString());
   } catch {

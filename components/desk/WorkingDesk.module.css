@@ -1512,6 +1512,7 @@
 /* The dictation rail: a permanent brass-ruled line at the head of the paper,
    so the ticket's voice is always where the eye lands first. It shares the
    spoken-line dialect — one family, heard and read. */
+.carriedNote { margin: 0 0 8px; font: 8px/1 var(--font-mono), monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--desk-brass); }
 .dictationRail { margin: 0 0 18px !important; padding: 12px 14px; border: 1px dashed var(--desk-paper-rule); border-left: 2px solid var(--desk-brass); color: var(--desk-paper-muted); font-size: 12.5px; line-height: 1.6; transition: border-color var(--dur-1) var(--ease-swift); }
 .dictationRail em { color: var(--desk-paper-ink); font-style: italic; }
 .dictationRail[data-active="true"] { border-left-color: var(--desk-brass); border-style: solid; color: var(--desk-paper-ink); }

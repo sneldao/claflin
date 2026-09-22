@@ -42,9 +42,11 @@ function intentFromDraft(draft: {
 export const JesseTicket = memo(function JesseTicket({
   jesse,
   spokenLine = null,
+  carriedNote = null,
 }: {
   jesse: JesseDesk;
   spokenLine?: string | null;
+  carriedNote?: string | null;
 }) {
   const { state, foreground, inFlight, lastResult, edit, quote, compare, cancel, dismissRecord } = jesse;
   const draft = state.draft;
@@ -220,6 +222,7 @@ export const JesseTicket = memo(function JesseTicket({
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome liveMode={liveMode && liveAvailable} />
+      {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
       <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
       <p className={styles.dictationRail} data-active={inFlight === 'quote' ? 'true' : 'false'} role="status" aria-live="polite">
         {inFlight === 'quote'

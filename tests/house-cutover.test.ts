@@ -131,7 +131,7 @@ describe('one canonical house', () => {
     const desk = source('lib/trading/useTradingDesk.ts');
     assert.match(desk, /leaveDesk/);
     assert.match(desk, /popstate/);
-    assert.match(desk, /syncDeskQuery\(id, selectedOfferingId, 'push'\)/);
+    assert.match(desk, /syncDeskQuery\(id, selectedOfferingId, 'push', intent \?\? null\)/);
     assert.match(desk, /clearDeskQuery\('push'\)/);
     const room = source('components/desk/DeskRoom.tsx');
     assert.match(room, /onLeaveDesk/);
@@ -152,6 +152,14 @@ describe('one canonical house', () => {
     assert.match(desk, /entryIntent/);
     assert.match(desk, /intent\?: EntryIntent/);
     assert.match(source('components/desk/JesseDeskSurface.tsx'), /desk\.entryIntent/);
+    /* The carried instruction stays visible on the ticket while it holds. */
+    assert.match(source('lib/desk/carried-note.ts'), /carriedIntentNote/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /carriedNote/);
+    assert.match(source('components/desk/JesseTicket.tsx'), /carriedNote/);
+    /* And survives a reload: side and amount ride in the desk URL. */
+    const entry = source('lib/house-entry.ts');
+    assert.match(entry, /parseEntryIntent/);
+    assert.match(entry, /url\.searchParams\.set\('side'/);
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');

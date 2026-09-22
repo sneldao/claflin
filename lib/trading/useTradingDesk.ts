@@ -5,7 +5,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { usesLegacyDeskDocuments } from '@/lib/desk/registry';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
-import { clearDeskQuery, loadLastDesk, parseDeskQuery, parseOfferingQuery, resolveHouseEntry, saveLastDesk, syncDeskQuery, type EntryIntent } from '@/lib/house-entry';
+import { clearDeskQuery, loadLastDesk, parseDeskQuery, parseEntryIntent, parseOfferingQuery, resolveHouseEntry, saveLastDesk, syncDeskQuery, type EntryIntent } from '@/lib/house-entry';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
@@ -108,7 +108,12 @@ export function useTradingDesk() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const entry = resolveHouseEntry(params.get('desk'), window.localStorage, params.get('offering'));
+    const entry = resolveHouseEntry(
+      params.get('desk'),
+      window.localStorage,
+      params.get('offering'),
+      parseEntryIntent(params.get('side'), params.get('amount')),
+    );
     if (entry.kind === 'foyer') {
       setEntryOfferingId(null);
       setEntryPhase('foyer');
@@ -116,11 +121,11 @@ export function useTradingDesk() {
       setDeskReady(true);
       return () => { request.current?.abort(); };
     }
-    hydrateDesk(entry.deskId, entry.offeringId);
+    hydrateDesk(entry.deskId, entry.offeringId, entry.intent);
     if (entry.source === 'query' || !loadLastDesk(window.localStorage)) {
       saveLastDesk(window.localStorage, entry.deskId);
     }
-    syncDeskQuery(entry.deskId, entry.offeringId);
+    syncDeskQuery(entry.deskId, entry.offeringId, 'replace', entry.intent);
     setEntryPhase('desk');
     setDeskReady(true);
     return () => { request.current?.abort(); };
@@ -146,7 +151,11 @@ export function useTradingDesk() {
         setEntryPhase('foyer');
         return;
       }
-      hydrateDesk(desk, parseOfferingQuery(params.get('offering'), desk));
+      hydrateDesk(
+        desk,
+        parseOfferingQuery(params.get('offering'), desk),
+        parseEntryIntent(params.get('side'), params.get('amount')),
+      );
       saveLastDesk(window.localStorage, desk);
       setEntryPhase('desk');
     };
@@ -300,7 +309,7 @@ export function useTradingDesk() {
     sessions.current = {};
     hydrateDesk(id, selectedOfferingId, intent);
     saveLastDesk(window.localStorage, id);
-    syncDeskQuery(id, selectedOfferingId, 'push');
+    syncDeskQuery(id, selectedOfferingId, 'push', intent ?? null);
     setEntryPhase('desk');
   }, [hydrateDesk]);
 
@@ -340,7 +349,7 @@ export function useTradingDesk() {
     setViewedRecordId(entered.viewedRecordId);
     setError(entered.error);
     saveLastDesk(window.localStorage, entered.deskId);
-    syncDeskQuery(entered.deskId, null);
+    syncDeskQuery(entered.deskId, null, 'replace', null);
     setEntryOfferingId(null);
     setEntryIntent(null);
     try {
