@@ -43,6 +43,7 @@ function WorkingDeskContent() {
       activeDesk={desk.activeDesk}
       open={false}
       onSwitchDesk={desk.switchDesk}
+      onLeaveDesk={desk.leaveDesk}
     >
       <div className={styles.mode}>
         <strong>PLANNED DESK</strong>

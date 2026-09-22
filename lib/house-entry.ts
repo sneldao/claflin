@@ -82,6 +82,20 @@ export function resolveHouseEntry(
   return { kind: 'foyer' };
 }
 
+/** Strip desk deep-link params when the client steps back into the foyer. */
+export function clearDeskQuery(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('desk');
+    url.searchParams.delete('offering');
+    url.searchParams.delete('view');
+    window.history.replaceState({}, '', url.toString());
+  } catch {
+    /* URL sync is optional */
+  }
+}
+
 /** Keep the address bar honest without creating a history entry per switch. */
 export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null): void {
   if (typeof window === 'undefined') return;

@@ -6,18 +6,36 @@ import { getEducationTopic } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
 import styles from './WorkingDesk.module.css';
 
-export function HouseDirectory({ activeDeskId, onVisit }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void }) {
+export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void; onHome?: () => void }) {
   const [open, setOpen] = useState(false);
   const participation = getEducationTopic('participation');
   const jesseLive = isOpenDesk('jesse') && DESK_CAPABILITIES.jesse.live;
   return <details className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary>Desks</summary>
+    <summary>The house</summary>
     <div className={styles.directoryPaper}>
       <p className={styles.directoryTitle}>Claflin &amp; Co.</p>
       <p className={styles.directoryNote}>
         Pick a market desk. Talk or type a trade. Review the estimate — paper by default, live when you choose.
       </p>
       <ul>
+        {onHome && (
+          <li>
+            <button
+              type="button"
+              className={styles.directoryDesk}
+              onClick={() => {
+                onHome();
+                setOpen(false);
+              }}
+            >
+              <div>
+                <strong>The foyer</strong>
+                <span>Offerings · the house method</span>
+              </div>
+              <small>Home</small>
+            </button>
+          </li>
+        )}
         {HOUSE_DESKS.map(desk => <li key={desk.id}>
           <button
             type="button"

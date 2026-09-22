@@ -5,7 +5,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { usesLegacyDeskDocuments } from '@/lib/desk/registry';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
-import { loadLastDesk, resolveHouseEntry, saveLastDesk, syncDeskQuery } from '@/lib/house-entry';
+import { clearDeskQuery, loadLastDesk, resolveHouseEntry, saveLastDesk, syncDeskQuery } from '@/lib/house-entry';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
@@ -267,6 +267,14 @@ export function useTradingDesk() {
     setEntryPhase('desk');
   }, [hydrateDesk]);
 
+  const leaveDesk = useCallback(() => {
+    request.current?.abort();
+    requestGen.current += 1;
+    setEntryOfferingId(null);
+    setEntryPhase('foyer');
+    clearDeskQuery();
+  }, []);
+
   const switchDesk = useCallback((id: HouseDeskId) => {
     if (id === deskId || !getHouseDesk(id)) return;
     if (entryPhase === 'foyer') {
@@ -314,12 +322,12 @@ export function useTradingDesk() {
 
   return useMemo(
     () => ({
-      entryPhase, enterDesk, entryOfferingId,
+      entryPhase, enterDesk, leaveDesk, entryOfferingId,
       deskId, activeDesk, open, switchDesk, foreground,
       state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
       loadHistory, removeRecord, watched, watch, unwatch,
       viewedRecordId, focusedRecordId, openRecord, dismissRecord,
     }),
-    [entryPhase, enterDesk, entryOfferingId, deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
+    [entryPhase, enterDesk, leaveDesk, entryOfferingId, deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

@@ -250,14 +250,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     }
   };
 
-  const navExtras = (
-    <>
-      <a href="#instruction">Your ticket</a>
-      <a href="#hetty">The line</a>
-      <a href="#paper-ledger">Your record</a>
-    </>
-  );
-
   const work = (
     <>
       <ModeStamp
@@ -359,7 +351,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         presentation={presentation}
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}
-        navExtras={navExtras}
+        onLeaveDesk={desk.leaveDesk}
       >
         {work}
       </RoomPresentation>
@@ -378,7 +370,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       anonymousCount={anonymousCount}
       importStatus={importStatus}
       onImportAnonymous={() => { void importAnonymousRecords(); }}
-      navExtras={navExtras}
+      onLeaveDesk={desk.leaveDesk}
     >
       {work}
     </DeskRoom>

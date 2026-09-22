@@ -183,16 +183,6 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     void jesse.run({ type: 'focus', target: 'desk', objectId: null });
   };
 
-  const navExtras = (
-    <>
-      <a href="#instruction">Your ticket</a>
-      <a href="#jesse-line">The line</a>
-      <a href="#paper-ledger">Your record</a>
-      <a href="#venue-duplex-title">Venue duplex</a>
-      <a href="#prestocks-title">PreStocks</a>
-    </>
-  );
-
   const lead: ReactNode = jesse.state.stage === 'draft' && !jesse.state.draft.instrumentId ? (
     <div className={styles.introduction} id="introduction-lead">
       <p className={styles.eyebrow}>JESSE LIVERMORE · SOLANA</p>
@@ -277,7 +267,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         presentation={presentationMode}
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}
-        navExtras={navExtras}
+        onLeaveDesk={desk.leaveDesk}
       >
         {work}
       </RoomPresentation>
@@ -292,7 +282,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       lineLive={jesseLive}
       deskStage={jesse.state.stage}
       onSwitchDesk={desk.switchDesk}
-      navExtras={navExtras}
+      onLeaveDesk={desk.leaveDesk}
     >
       {work}
     </DeskRoom>

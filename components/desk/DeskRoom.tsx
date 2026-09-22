@@ -18,11 +18,11 @@ export function DeskRoom({
   lineLive = false,
   deskStage,
   onSwitchDesk,
+  onLeaveDesk,
   showPaperImport = false,
   anonymousCount = 0,
   importStatus = 'idle',
   onImportAnonymous,
-  navExtras,
   children,
 }: {
   deskId: HouseDeskId;
@@ -31,11 +31,11 @@ export function DeskRoom({
   lineLive?: boolean;
   deskStage?: string;
   onSwitchDesk: (id: HouseDeskId) => void;
+  onLeaveDesk: () => void;
   showPaperImport?: boolean;
   anonymousCount?: number;
   importStatus?: 'idle' | 'pending' | 'done' | 'failed';
   onImportAnonymous?: () => void;
-  navExtras?: ReactNode;
   children: ReactNode;
 }) {
   const auth = useDeskAuth();
@@ -115,13 +115,21 @@ export function DeskRoom({
         </div>
       )}
       <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="Claflin home">
+        <Link
+          href="/"
+          className={styles.brand}
+          aria-label="Claflin home"
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            onLeaveDesk();
+          }}
+        >
           <HouseMark className={styles.houseMark} />
           <span><strong>CLAFLIN</strong><small>{HOUSE.tagline.toUpperCase()}</small></span>
         </Link>
         <nav aria-label="Desk navigation">
-          <HouseDirectory activeDeskId={deskId} onVisit={onSwitchDesk} />
-          {navExtras}
+          <HouseDirectory activeDeskId={deskId} onVisit={onSwitchDesk} onHome={onLeaveDesk} />
           <button
             type="button"
             className={styles.toneToggle}

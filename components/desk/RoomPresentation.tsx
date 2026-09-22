@@ -43,7 +43,7 @@ export function RoomPresentation({
   presentation,
   onPresentation,
   onSwitchDesk,
-  navExtras,
+  onLeaveDesk,
   children,
 }: {
   desk: HouseDesk;
@@ -53,7 +53,7 @@ export function RoomPresentation({
   presentation: DeskPresentation;
   onPresentation: (mode: DeskPresentation) => void;
   onSwitchDesk: (id: HouseDeskId) => void;
-  navExtras?: ReactNode;
+  onLeaveDesk: () => void;
   children: ReactNode;
 }) {
   const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false });
@@ -107,7 +107,16 @@ export function RoomPresentation({
       {!sharedScene && <NightDeskScene view={view} stage={stage} onAnchors={applyAnchors} />}
 
       <header className={styles.roomViewHeader}>
-        <Link href="/" className={styles.brand} aria-label="Claflin home">
+        <Link
+          href="/"
+          className={styles.brand}
+          aria-label="Claflin home"
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            onLeaveDesk();
+          }}
+        >
           <HouseMark className={styles.houseMark} />
           <span>
             <strong>CLAFLIN</strong>
@@ -115,8 +124,7 @@ export function RoomPresentation({
           </span>
         </Link>
         <nav aria-label="Desk navigation" className={styles.roomViewNav}>
-          <HouseDirectory activeDeskId={desk.id} onVisit={onSwitchDesk} />
-          {navExtras}
+          <HouseDirectory activeDeskId={desk.id} onVisit={onSwitchDesk} onHome={onLeaveDesk} />
           <div className={styles.presentationToggle} role="group" aria-label="Desk view">
             <button
               type="button"
