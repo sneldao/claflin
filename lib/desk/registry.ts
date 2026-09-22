@@ -13,6 +13,7 @@ import { offeringForId, offeringForInstrument } from './offerings';
 import type {
   DeskCoverage,
   DeskDocumentEngine,
+  DeskDocumentSession,
   DeskId,
   DeskRuntime,
   InstrumentOffering,
@@ -138,6 +139,19 @@ export function documentEngineFor(id: string): DeskDocumentEngine {
 export function usesLegacyDeskDocuments(id: string): boolean {
   return documentEngineFor(id) === 'legacy-reducer';
 }
+
+/** A desk with no document engine still answers the session contract:
+ *  nothing on the ticket, nothing behind it, nothing to act on. */
+const NOOP_SESSION_VERB = () => {};
+export const EMPTY_DOCUMENT_SESSION: DeskDocumentSession = Object.freeze({
+  foreground: Object.freeze({ kind: 'draft' as const, quoteId: null, recordId: null, instrumentId: null, actionable: false, readonly: true }),
+  historyReady: true,
+  storageError: null,
+  viewedRecordId: null,
+  openRecord: NOOP_SESSION_VERB,
+  dismissRecord: NOOP_SESSION_VERB,
+  removeRecord: NOOP_SESSION_VERB,
+});
 
 /** Account sync is a declared runtime capability; browser-local desks never
  *  run account paper flows by default. */

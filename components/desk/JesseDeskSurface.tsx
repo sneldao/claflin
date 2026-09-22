@@ -9,7 +9,6 @@ import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
-import { useJesseDesk } from '@/lib/solana/useJesseDesk';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
@@ -20,7 +19,6 @@ import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
-import { useRecordUrl } from '@/lib/desk/use-record-url';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MODE_HINTS } from '@/lib/desk/ui-copy';
@@ -45,7 +43,9 @@ const HEARABLE = {
  * Jesse's Solana desk — one controller; Room and Compact are views only (§4.7).
  */
 export function JesseDeskSurface({ desk }: { desk: Desk }) {
-  const jesse = useJesseDesk();
+  /* The conductor owns the controller session — the surface only sees the
+     desk object, never which engine sits underneath. */
+  const jesse = desk.jesse;
   const [spoken, setSpoken] = useState<string | null>(null);
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
@@ -84,16 +84,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
   }, [entryInstrumentId, entryIntent, jesse]);
 
-  /* ?record= applies once per URL entry — open what the link asks for, or
-     dismiss a lingering view when the entry carries none. */
-  const appliedEntryGen = useRef(-1);
-  useEffect(() => {
-    if (!jesse.historyReady || appliedEntryGen.current === desk.entryGen) return;
-    appliedEntryGen.current = desk.entryGen;
-    if (desk.entryRecordId) jesse.openRecord(desk.entryRecordId);
-    else if (jesse.viewedRecordId) jesse.dismissRecord();
-  }, [desk.entryGen, desk.entryRecordId, jesse]);
-  useRecordUrl(jesse.viewedRecordId);
+  /* ?record= application and the record↔URL sync live in the conductor —
+     the same code path serves every document engine. */
 
   const carriedNote = carriedIntentNote(entryIntent, jesse.state.draft);
   const reviewActive = jesse.foreground.kind === 'quotation'

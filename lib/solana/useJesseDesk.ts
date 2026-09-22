@@ -104,6 +104,18 @@ const SSR_STATE: JesseDeskState = {
   watches: [],
 };
 
+/** Snapshot before the session mounts — a stable identity so memoized
+ *  consumers do not see a fresh object every render. */
+const SSR_SNAPSHOT = Object.freeze({
+  state: SSR_STATE,
+  inFlight: null as JesseInFlight,
+  lastResult: null as CommandResult | null,
+  records: [] as JessePaperRecord[],
+  historyReady: false,
+  storageError: null as string | null,
+  viewedRecordId: null as string | null,
+});
+
 /** Testable session — the React hook is a thin subscription over this. */
 export function createJesseDeskSession(opts: {
   storage: Storage;
@@ -327,7 +339,7 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
   });
 
   const [session, setSession] = useState<JesseDeskSession | null>(null);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const next = createJesseDeskSession({
@@ -346,15 +358,14 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     };
   }, []);
 
-  const snapshot = session?.getSnapshot() ?? {
-    state: SSR_STATE,
-    inFlight: null as JesseInFlight,
-    lastResult: null,
-    records: [] as JessePaperRecord[],
-    historyReady: false,
-    storageError: null,
-    viewedRecordId: null,
-  };
+  /* The tick is the session's own invalidation signal — reading it keys the
+     memo to notifies so the snapshot keeps a stable identity between them
+     and memoized consumers (the conductor's desk object, memo'd ticket
+     children) are not churned by every render. */
+  const snapshot = useMemo(() => {
+    void tick;
+    return session?.getSnapshot() ?? SSR_SNAPSHOT;
+  }, [session, tick]);
 
   const foreground = useMemo(
     () => jesseForeground(snapshot.state, snapshot.viewedRecordId, snapshot.historyReady ? snapshot.records : undefined),
@@ -415,7 +426,7 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     return session.setPresentationMode(mode);
   }, [session]);
 
-  return {
+  return useMemo((): JesseDesk => ({
     state: snapshot.state,
     inFlight: snapshot.inFlight,
     lastResult: snapshot.lastResult,
@@ -435,5 +446,5 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     removeRecord,
     setPresentationMode,
     run,
-  };
+  }), [snapshot, foreground, edit, quote, compare, file, cancel, watch, openRecord, dismissRecord, removeRecord, setPresentationMode, run]);
 }

@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useTradingDesk } from '../lib/trading/useTradingDesk';
-import { useRecordUrl } from '../lib/desk/use-record-url';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { resetContainer, getRootElement } from './jsdom-setup';
@@ -42,7 +41,6 @@ describe('desk entry and history behavior', () => {
   function Harness() {
     const d = useTradingDesk();
     desk = d;
-    useRecordUrl(d.viewedRecordId);
     return null;
   }
 
@@ -181,6 +179,42 @@ describe('desk entry and history behavior', () => {
     assert.equal(params.get('desk'), 'hetty');
     assert.equal(params.get('side'), 'buy', 'unrelated params must survive a record dismissal');
     assert.equal(params.get('amount'), '50');
+  });
+
+  it('resolves the active engine session under one document contract', async () => {
+    seedRecord('deep-6', 'hetty');
+    window.history.replaceState({}, '', '/?desk=hetty&record=deep-6');
+    await render();
+
+    assert.notEqual(desk!.documentSession, desk!.jesse, 'Hetty runs the reducer session, not the controller');
+    assert.equal(desk!.documentSession.foreground, desk!.foreground, 'shared fields resolve through the session');
+    assert.equal(desk!.documentSession.viewedRecordId, desk!.viewedRecordId);
+    assert.equal(desk!.foreground.kind, 'archive');
+  });
+
+  it('applies ?record= to the controller engine the same way as the reducer', async () => {
+    window.history.replaceState({}, '', '/?desk=jesse&record=ghost-9');
+    await render();
+
+    assert.equal(desk!.deskId, 'jesse');
+    assert.equal(desk!.documentSession, desk!.jesse, 'the session contract resolves to the controller engine');
+    assert.equal(desk!.viewedRecordId, 'ghost-9', 'the polymorphic record view reads the controller session');
+    assert.equal(desk!.foreground.kind, 'missing', 'an unknown record stays honest on the controller engine');
+    assert.match(window.location.search, /record=ghost-9/);
+  });
+
+  it('opens and dismisses records through the controller session URL contract', async () => {
+    window.history.replaceState({}, '', '/?desk=jesse');
+    await render();
+    assert.equal(desk!.deskId, 'jesse');
+
+    await act(async () => desk!.openRecord('q-open-1'));
+    await act(async () => {});
+    assert.equal(desk!.viewedRecordId, 'q-open-1');
+    assert.match(window.location.search, /record=q-open-1/, 'opening a controller record should write ?record=');
+
+    await popTo('/?desk=jesse');
+    assert.equal(desk!.viewedRecordId, null, 'Back dismisses the controller record through popstate');
   });
 
   it('switchDesk replaces rather than pushes and clears the record context', async () => {
