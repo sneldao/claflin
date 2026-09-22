@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { coverageForOffering, deskRuntimeFor, deskRuntimeForEstimate, MARKET_MANDATES, supportsAccountSync, usesLegacyDeskDocuments } from '../lib/desk/registry';
+import { coverageForOffering, deskRuntimeFor, deskRuntimeForEstimate, documentEngineFor, MARKET_MANDATES, supportsAccountSync, usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { estimateDeskId, estimateEnvelope, estimateRail, isSolanaEstimate, withEstimateContext } from '../lib/desk/estimates';
 import { normalizeDeskStage, type DeskInstruction, type DeskRuntime } from '../lib/desk/contracts';
 import { INSTRUMENT_OFFERINGS, offeringForInstrument, offeringsForProduct } from '../lib/desk/offerings';
@@ -74,6 +74,14 @@ describe('rail-neutral desk architecture', () => {
     assert.deepEqual(jesse?.coverages[0].mandate.rails, [{ kind: 'solana', network: 'solana:mainnet' }]);
     assert.equal(jesse?.coverages[0].adapters.quote, 'jupiter');
     assert.equal(jesse?.storage.scope, 'browser-local');
+    assert.equal(hetty?.storage.engine, 'legacy-reducer');
+    assert.equal(jesse?.storage.engine, 'controller');
+    assert.equal(documentEngineFor('hetty'), 'legacy-reducer');
+    assert.equal(documentEngineFor('jesse'), 'controller');
+    assert.equal(documentEngineFor('isabel'), 'none');
+    assert.equal(documentEngineFor('arbitrum'), 'none');
+    assert.equal(documentEngineFor('nope'), 'none');
+    /* The legacy helper stays as a predicate over the declared engine. */
     assert.equal(usesLegacyDeskDocuments('hetty'), true);
     assert.equal(usesLegacyDeskDocuments('jesse'), false);
     assert.equal(supportsAccountSync('hetty'), true);

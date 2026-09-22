@@ -12,6 +12,7 @@ import { MARKET_MANDATES } from './mandates';
 import { offeringForId, offeringForInstrument } from './offerings';
 import type {
   DeskCoverage,
+  DeskDocumentEngine,
   DeskId,
   DeskRuntime,
   InstrumentOffering,
@@ -37,7 +38,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
         adapters: Object.freeze({ quote: 'aerodrome', marks: 'chainlink', execution: 'evm-swap', voice: 'elevenlabs-convai' }),
       }),
     ]),
-    storage: Object.freeze({ scope: 'account-sync' as const, legacyDocuments: true, historyLimit: 100 }),
+    storage: Object.freeze({ scope: 'account-sync' as const, engine: 'legacy-reducer' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
     surface: 'hetty' as const,
   }),
@@ -49,7 +50,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
         adapters: Object.freeze({ quote: 'jupiter', marks: null, execution: 'jupiter-live', voice: 'elevenlabs-convai' }),
       }),
     ]),
-    storage: Object.freeze({ scope: 'browser-local' as const, legacyDocuments: false, historyLimit: 100 }),
+    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
     surface: 'jesse' as const,
   }),
@@ -61,7 +62,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
         adapters: Object.freeze({ quote: null, marks: null, execution: null, voice: null }),
       }),
     ]),
-    storage: Object.freeze({ scope: 'browser-local' as const, legacyDocuments: false, historyLimit: 100 }),
+    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'none' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
     surface: null,
   }),
@@ -73,7 +74,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
         adapters: Object.freeze({ quote: null, marks: null, execution: null, voice: null }),
       }),
     ]),
-    storage: Object.freeze({ scope: 'browser-local' as const, legacyDocuments: false, historyLimit: 100 }),
+    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'none' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
     surface: null,
   }),
@@ -127,10 +128,15 @@ export function coverageForOffering(runtime: DeskRuntime, offering: InstrumentOf
     (!offering.venue || candidate.adapters.quote === offering.venue)) ?? null;
 }
 
-/** v1 paper/draft/watch storage is a runtime storage policy, not an identity
- *  inferred from the currently open desk. */
+/** The desk's declared document engine — a runtime storage policy, not an
+ *  identity inferred from the currently open desk. */
+export function documentEngineFor(id: string): DeskDocumentEngine {
+  return deskRuntimeFor(id)?.storage.engine ?? 'none';
+}
+
+/** v1 paper/draft/watch storage runs only on the legacy reducer engine. */
 export function usesLegacyDeskDocuments(id: string): boolean {
-  return deskRuntimeFor(id)?.storage.legacyDocuments === true;
+  return documentEngineFor(id) === 'legacy-reducer';
 }
 
 /** Account sync is a declared runtime capability; browser-local desks never

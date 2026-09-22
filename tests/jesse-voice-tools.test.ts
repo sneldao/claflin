@@ -34,9 +34,13 @@ describe('jesse voice tools', () => {
   });
 
   it('guards archive and missing foregrounds', () => {
-    assert.match(jesseForegroundGuard({ kind: 'archive', recordId: 'x' }) ?? '', /reading/);
-    assert.match(jesseForegroundGuard({ kind: 'missing', recordId: 'x' }) ?? '', /no longer/);
-    assert.equal(jesseForegroundGuard({ kind: 'draft' }), null);
+    const doc = (kind: 'archive' | 'missing' | 'draft') => ({
+      kind, quoteId: kind === 'draft' ? null : 'x', recordId: kind === 'draft' ? null : 'x',
+      instrumentId: null, actionable: kind === 'draft', readonly: kind !== 'draft',
+    });
+    assert.match(jesseForegroundGuard(doc('archive')) ?? '', /reading/);
+    assert.match(jesseForegroundGuard(doc('missing')) ?? '', /no longer/);
+    assert.equal(jesseForegroundGuard(doc('draft')), null);
   });
 
   it('clears amount on side flip', () => {

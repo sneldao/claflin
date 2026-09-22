@@ -116,10 +116,15 @@ export interface InstrumentOffering {
   status: 'active' | 'planned';
 }
 
+/** The engine that owns a desk's working paper. `legacy-reducer` is the v1
+ *  Base document pipeline; `controller` is a serialized command session;
+ *  `none` means the desk has no document engine yet (planned desks). */
+export type DeskDocumentEngine = 'legacy-reducer' | 'controller' | 'none';
+
 export interface DeskStoragePolicy {
   scope: 'browser-local' | 'account-sync';
-  /** v1 rows predate the desk registry and remain Base-only compatibility. */
-  legacyDocuments: boolean;
+  /** Which document engine owns this desk's drafts, quotes, and records. */
+  engine: DeskDocumentEngine;
   historyLimit: number;
 }
 
@@ -189,6 +194,21 @@ export interface DeskForegroundDocument {
   instrumentId: string | null;
   actionable: boolean;
   readonly: boolean;
+}
+
+/** The document-session contract every open desk honors. Shared furniture —
+ *  record URLs, entry context, ledger opening — reads only this surface;
+ *  the engine underneath (legacy reducer, command controller) stays free to
+ *  differ. Record payloads remain desk-specific and never enter the contract. */
+export interface DeskDocumentSession {
+  /** The one document under shared attention on the ticket. */
+  readonly foreground: DeskForegroundDocument;
+  readonly historyReady: boolean;
+  readonly storageError: string | null;
+  readonly viewedRecordId: string | null;
+  openRecord(id: string): void;
+  dismissRecord(): void;
+  removeRecord(id: string): void;
 }
 
 /** Shared estimate envelope. `evidence` remains a discriminated rail payload —

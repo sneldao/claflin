@@ -31,13 +31,16 @@ import {
   type JessePaperRecord,
 } from './paper';
 import type { PaperStorage } from '../trading/paper-records';
+import type { DeskDocumentSession } from '../desk/contracts';
 
 export type JesseInFlight = 'quote' | 'compare' | null;
 export type { JesseForeground };
 
 type ClarifyField = Extract<JesseCommand, { type: 'clarify' }>['field'];
 
-export interface JesseDesk {
+/** Jesse's session honors the shared document-session contract — the engine
+ *  (a serialized command controller) differs; the lifecycle does not. */
+export interface JesseDesk extends DeskDocumentSession {
   state: JesseDeskState;
   inFlight: JesseInFlight;
   lastResult: CommandResult | null;

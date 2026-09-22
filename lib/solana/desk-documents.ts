@@ -4,32 +4,42 @@
  */
 import type { JesseDeskState } from './controller';
 import type { JessePaperRecord } from './paper';
-import type { DeskForeground } from '../desk/contracts';
+import type { DeskForegroundDocument } from '../desk/contracts';
 
-export type JesseForeground = DeskForeground;
+export type JesseForeground = DeskForegroundDocument;
 
+/**
+ * The one document under shared attention — the same DeskForegroundDocument
+ * contract as every desk engine, over JesseDeskState and v2 paper records.
+ */
 export function jesseForeground(
   state: JesseDeskState,
   viewedRecordId: string | null,
   records: JessePaperRecord[] | undefined,
 ): JesseForeground {
+  const viewed = viewedRecordId ? records?.find(r => r.id === viewedRecordId) : undefined;
+  const instrumentId = viewed?.quote.intent.instrumentId
+    ?? state.quote?.intent.instrumentId
+    ?? state.draft.instrumentId
+    ?? null;
   if (viewedRecordId) {
-    if (!records) return { kind: 'archive', recordId: viewedRecordId };
-    const found = records.find(r => r.id === viewedRecordId);
-    if (!found) return { kind: 'missing', recordId: viewedRecordId };
+    if (!records) return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId, actionable: false, readonly: true };
+    if (!viewed) return { kind: 'missing', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId: null, actionable: false, readonly: true };
     if (state.stage === 'saved' && state.quote?.id === viewedRecordId) {
-      return { kind: 'receipt', recordId: viewedRecordId };
+      return { kind: 'receipt', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId, actionable: false, readonly: true };
     }
-    return { kind: 'archive', recordId: viewedRecordId };
+    return { kind: 'archive', quoteId: viewedRecordId, recordId: viewedRecordId, instrumentId, actionable: false, readonly: true };
   }
-  if (state.stage === 'quoting') return { kind: 'pending' };
+  if (state.stage === 'quoting') {
+    return { kind: 'pending', quoteId: null, recordId: null, instrumentId, actionable: false, readonly: false };
+  }
   if (state.stage === 'review' && state.quote) {
-    return { kind: 'quotation', quoteId: state.quote.id };
+    return { kind: 'quotation', quoteId: state.quote.id, recordId: null, instrumentId, actionable: true, readonly: false };
   }
   if (state.stage === 'saved' && state.quote) {
-    return { kind: 'receipt', recordId: state.quote.id };
+    return { kind: 'receipt', quoteId: state.quote.id, recordId: state.quote.id, instrumentId, actionable: false, readonly: true };
   }
-  return { kind: 'draft' };
+  return { kind: 'draft', quoteId: null, recordId: null, instrumentId, actionable: true, readonly: false };
 }
 
 export function compactJesseEntry(record: JessePaperRecord): {

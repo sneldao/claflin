@@ -4,14 +4,36 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Mut
 import type { HouseDeskId } from '@/lib/house';
 import type { EntryIntent } from '@/lib/house-entry';
 import { usesLegacyDeskDocuments } from '@/lib/desk/registry';
+import type { DeskDocumentSession } from '@/lib/desk/contracts';
 import { fetchJson } from '../api-client';
 import { parseIntent, type TradeIntent } from './domain';
-import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
+import { deskReducer, estimateUsable, initialDesk, parseEstimate, type DeskState } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
 import { mintFirstPaperSlip } from './desk-slips';
-import { canFileForeground, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
+import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, type ParkedDesk } from './desk-mandate';
+
+/** The legacy reducer engine's document session — the shared contract plus
+ *  the v1 document pipeline's own verbs and fields. */
+export interface LegacyDeskDocuments extends DeskDocumentSession {
+  state: DeskState;
+  records: PaperRecord[];
+  error: string | null;
+  watched: string[];
+  knownRecords: PaperRecord[] | undefined;
+  focusedRecordId: string | null;
+  hydrate: (id: HouseDeskId, instrumentId: string | null, intent: EntryIntent | null, recordId: string | null) => void;
+  restore: (id: HouseDeskId, parked: ParkedDesk) => void;
+  markHistoryReady: () => void;
+  loadHistory: () => void;
+  edit: (draft: TradeIntent) => void;
+  requestQuote: () => Promise<void>;
+  save: () => void;
+  cancel: () => void;
+  watch: (instrumentId: string) => void;
+  unwatch: (instrumentId: string) => void;
+}
 
 const WATCH_MAX = 12;
 const HISTORY_ERROR = 'Your paper history could not be read. Nothing has been changed. Check browser storage before saving.';
@@ -262,9 +284,16 @@ export function useDeskDocuments({
     });
   }, [deskId]);
 
-  return useMemo(() => ({
+  /* The session self-describes: the foreground document and the record under
+     attention are derived here, so the conductor and surfaces read the same
+     contract the controller engines expose. */
+  const foreground = foregroundDocument(state, viewedRecordId, knownRecords);
+  const focusedRecordId = activeRecordId(state, viewedRecordId);
+
+  return useMemo((): LegacyDeskDocuments => ({
     state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords,
+    foreground, focusedRecordId,
     hydrate, restore, markHistoryReady, loadHistory,
     edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch,
-  }), [state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords, hydrate, restore, markHistoryReady, loadHistory, edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch]);
+  }), [state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords, foreground, focusedRecordId, hydrate, restore, markHistoryReady, loadHistory, edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch]);
 }

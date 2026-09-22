@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
-import { usesLegacyDeskDocuments } from '../lib/desk/registry';
+import { documentEngineFor, usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
@@ -52,7 +52,10 @@ describe('desk capabilities drive openness', () => {
     assert.equal(isOpenDesk('hetty'), true);
     assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
     for (const deskId of ['isabel', 'arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
-    /* Legacy Base documents stay Hetty-owned regardless of Jesse's flag. */
+    /* Document engines are declared per desk; the legacy predicate reads them. */
+    assert.equal(documentEngineFor('hetty'), 'legacy-reducer');
+    assert.equal(documentEngineFor('jesse'), 'controller');
+    assert.equal(documentEngineFor('isabel'), 'none');
     assert.equal(usesLegacyDeskDocuments('hetty'), true);
     assert.equal(usesLegacyDeskDocuments('jesse'), false);
     assert.equal(usesLegacyDeskDocuments('isabel'), false);

@@ -6,7 +6,7 @@ import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/
 import { usesLegacyDeskDocuments } from '@/lib/desk/registry';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
 import { clearDeskQuery, loadLastDesk, parseDeskQuery, parseEntryIntent, parseOfferingQuery, parseRecordQuery, resolveHouseEntry, saveLastDesk, syncDeskQuery, type EntryIntent } from '@/lib/house-entry';
-import { activeRecordId, foregroundDocument, readRestorableDraft, writePersistedDraft } from './desk-documents';
+import { readRestorableDraft, writePersistedDraft } from './desk-documents';
 import { emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 import { initialDesk } from './workflow';
 import { useDeskEntry } from './useDeskEntry';
@@ -38,6 +38,7 @@ export function useTradingDesk() {
   const { deskId, deskIdRef, sessions, setDesk, resetSessions, parkSessions } = useDeskSession();
   const {
     state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords,
+    foreground, focusedRecordId,
     hydrate: hydrateDocuments, restore: restoreDocuments, markHistoryReady, loadHistory,
     edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch,
   } = useDeskDocuments({
@@ -163,8 +164,6 @@ export function useTradingDesk() {
     clearEntry();
   }, [deskId, enterDesk, entryPhase, state, viewedRecordId, error, sessions, setDesk, restoreDocuments, clearEntry, abortInFlight, parkSessions]);
 
-  const focusedRecordId = activeRecordId(state, viewedRecordId);
-  const foreground = foregroundDocument(state, viewedRecordId, knownRecords);
   const activeDesk = getHouseDesk(deskId) ?? getHouseDesk(OPEN_DESK_ID)!;
   const open = isOpenDesk(deskId);
 
