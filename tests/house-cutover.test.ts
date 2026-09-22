@@ -229,7 +229,7 @@ describe('one canonical house', () => {
     assert.match(marksHook, /fetchJson<MarksResult>\(`\/api\/desk\/\$\{deskId\}\/marks`\)/);
     const tape = source('components/desk/TickerTape.tsx');
     assert.doesNotMatch(tape, /fetchJson|fetch\(/, 'the tape consumes the shared marks fetch rather than fetching its own');
-    const desk = source('lib/trading/useTradingDesk.ts');
+    const desk = source('lib/trading/useDeskDocuments.ts');
     assert.match(desk, /fetchJson<unknown>\(`\/api\/desk\/\$\{deskId\}\/quote/);
     const proxy = source('proxy.ts');
     assert.match(proxy, /not_found/);
