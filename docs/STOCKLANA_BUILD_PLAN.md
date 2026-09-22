@@ -1,14 +1,14 @@
 # Stocklana: Jesse's Solana Desk — Four-Engineer Build Plan
 
-**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — Claflin foyer + `?desk=` entry, seated Jesse paper desk, ConvAI line, live Room/Compact presentations (NightDeskScene bound to controller), Hetty presentation parity, PreStocks duplex on the ticket review path. **Status:** approved integration brief; `/night-desk` redirects to `/?desk=jesse&view=room` (fixture study via `?study=1`); seated R1 paper path is in product; Stocklana submission pack in `docs/STOCKLANA_SUBMISSION.md`; Pyth Pro entitlement + unit basis, Redis daemon, and R2 live execution remain.
+**Prepared:** 2026-09-16. **Updated:** 2026-09-20 — Claflin foyer + `?desk=` entry, seated Jesse paper desk, ConvAI line, live Room/Compact presentations (NightDeskScene bound to controller), Hetty presentation parity, PreStocks duplex on the ticket review path. **Status:** historical execution brief retained for team context. Current behavior is now offering-led and rail-neutral: `/` opens the house book on a fresh visit, `?desk=` remains a valid deep link, `?offering=` carries only catalog-covered selections, and Jesse's live settle path is implemented behind dual env flags. Current architecture, remaining limits and submission instructions live in [AGENTIC_ARCHITECTURE.md](AGENTIC_ARCHITECTURE.md), [JESSE_DESK.md](JESSE_DESK.md), and [STOCKLANA_SUBMISSION.md](STOCKLANA_SUBMISSION.md).
 
 **Product owner:** project lead. **Integration/release captain:** Engineer 4. **Contract owner:** Engineer 1. Assign actual people to these roles before work starts.
 
 ## Team start here
 
-Start from `decace0` or a descendant on `main`. Canonical Room view is `/?desk=jesse&view=room` (`/night-desk` redirects; fixtures at `?study=1`). The Jesse paper desk is open from the house directory on `/` with Room/Compact presentations and a PreStocks evidence duplex. Homepage still defaults to Hetty after the foyer. Do not replace that homepage or port Hetty's provider stack. Product surface notes: [Jesse desk](JESSE_DESK.md).
+This brief was written for the `decace0` baseline and remains useful as an execution record, not as the current homepage contract. Canonical Room view is `/?desk=jesse&view=room` (`/night-desk` redirects; fixtures at `?study=1`). The Jesse desk is open through the offering book or `?desk=jesse` with Room/Compact presentations and a PreStocks evidence duplex. `/` no longer defaults to Hetty after a fresh foyer visit; it presents concrete offerings and eligible desks. Do not port Hetty's provider stack. Current product surface notes: [Jesse desk](JESSE_DESK.md).
 
-Read this brief in order: §2 (what exists), §3 (approved experience), §4 (contracts), then your §5 work package. Read [Product Direction](PRODUCT_DIRECTION.md#night-desk-progression-and-presentation) for the governing progression decision. Engineer 1 lands the shared contracts first; Engineers 2–4 start against those fixtures in parallel. No one independently changes shared types or the lockfile.
+For historical planning context, read this brief in order: §2 (what existed), §3 (approved experience), §4 (contracts), then the §5 work package. Read [Product Direction](PRODUCT_DIRECTION.md#desk-views-room--compact) for the governing progression decision. Engineer 1 landed the shared contracts first; Engineers 2–4 worked against those fixtures in parallel. Shared types and the lockfile still require a single owner.
 
 | Engineer | First deliverable | Additional experience responsibility |
 |---|---|---|
@@ -91,7 +91,7 @@ The working tree contains existing modified docs, deleted `out/` artifacts, and 
 
 ### Primary journey
 
-1. Today, `/night-desk` is the public fixture study and `/` is Hetty/Base. Build the integrated Jesse experience behind the agreed release gates; promote `/night-desk` to it only after G3 and lead approval. Its default presentation is Night Desk, with an always-available direct view (`/night-desk?view=compact`). Preserve `/?desk=jesse` as a supported desk entry once Jesse is operational. These are target entries, not claims that those query switches work today. Keep the homepage on Hetty until a separate decision changes it.
+1. At the `decace0` planning baseline, `/night-desk` was the public fixture study and `/` was Hetty/Base. The integrated Jesse experience is now live behind the current entry model: `/night-desk` redirects to `/?desk=jesse&view=room`, `/?desk=jesse` remains a supported deep link, and `/` opens the offering-led foyer rather than defaulting to Hetty. The rest of this subsection is the historical experience contract.
 2. Start with no default instrument or amount. Support Apple/AAPLx first, then NVIDIA/NVDAx and Tesla/TSLAx **only after each mint, multiplier, quote route, and feed mapping passes validation**. A one-instrument completed flow beats three guessed integrations; two verified instruments are the coverage target.
 3. “Talk with Jesse” requests microphone consent. Also provide keyboard/manual controls and a typed command input using the same controller. No wallet or sign-in prerequisite for quotes or paper.
 4. “Compare Apple.” Bring the duplex instrument and its readable evidence folio into focus: underlying reference, token observation, their own timestamps/session/units, and only a valid comparison. Jupiter's size-specific quotation remains a third, distinct slip. The room participates in the work rather than surrounding a conventional price-card dashboard.
@@ -503,7 +503,7 @@ Work order:
 
 ### Return handoff required from each engineer
 
-Provide your branch/commit, owned files, implemented contracts, exact test commands/results, provider versus fixture evidence, setup variables by name only, and open blockers. Include first-visit/return and failure cases for your surface. E4 assembles one integrated branch and a concise handoff for the project lead's review; no one independently enables R2, replaces the homepage, or changes the financial thresholds. Keep incompleteness visible rather than marking the whole stream done because its happy path works.
+Provide your branch/commit, owned files, implemented contracts, exact test commands/results, provider versus fixture evidence, setup variables by name only, and open blockers. Include first-visit/return and failure cases for your surface. E4 assembles one integrated branch and a concise handoff for the project lead's review; no one independently enables live settlement, changes the entry contract, or changes the financial thresholds. Keep incompleteness visible rather than marking the whole stream done because its happy path works.
 
 ### Dependency graph
 

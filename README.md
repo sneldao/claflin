@@ -2,42 +2,43 @@
 
 **Claflin is the voice-first trading desk for global investors who want to trade tokenized US stocks onchain.**
 
-The product spans Hetty / Base and Jesse / Solana. Implementation status below describes this checkout: Base has wallet-authorized execution; Jesse’s paper desk (Jupiter quotes, local v2 records) opens from the house directory with live Room/Compact views — `/night-desk` redirects to `/?desk=jesse&view=room`. It does not establish the status of other branches or deployments.
+The product spans multiple desks, mandates, venues, and settlement rails. Implementation status below describes this checkout: the foyer resolves a visitor instruction into concrete offerings, then opens only desks eligible for the selected product/rail/venue combination. Hetty covers Coinbase Tokenized Stocks on Base; Jesse covers Backed xStocks on Solana. Base has an env-gated wallet-authorized execution path; Jesse has paper filing plus a dual-env-gated live settle path. `/night-desk` redirects to `/?desk=jesse&view=room`. It does not establish the status of other branches or deployments.
 
 **A voice-first trading product expressed as a Deco-futurist brokerage house — the office above the pit.** Clients give an instruction to a house that keeps a record. Voice, research, publications and personalization support that job.
 
-Claflin is the institution. Hetty / Base is the first relationship, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace. Hetty's Base desk supports real onchain trades when live execution is enabled; Jesse’s Solana desk quotes and files paper from the house directory (homepage stays Hetty). Isabel and Arbitrum remain planned. The first broker is not the brand.
+Claflin is the institution. A desk combines a broker, mandate, settlement rail, venue, and capability policy; these are curated relationships, not an open marketplace. The house does not ask visitors to prefer a chain: an instruction resolves to concrete offerings, similar exposures on different rails remain distinct, and only eligible desks can open each offering. Hetty currently covers Coinbase Tokenized Stocks on Base; Jesse covers Backed xStocks on Solana; Isabel and Jay remain planned.
 
 ## Desk views and Stocklana team handoff
 
-[The public Room view](https://claflin.trustfall.xyz/?desk=jesse&view=room) is the live Jesse spatial layout (same controller as Compact). Fixture study: [`/night-desk?study=1`](https://claflin.trustfall.xyz/night-desk?study=1). The **integrated Jesse paper desk** opens on `/` via the house directory — real Jupiter quotes, v2 local paper, Room/Compact views, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` still defaults to Hetty/Base after the foyer.
+[The public Room view](https://claflin.trustfall.xyz/?desk=jesse&view=room) is the live Jesse spatial layout (same controller as Compact). Fixture study: [`/night-desk?study=1`](https://claflin.trustfall.xyz/night-desk?study=1). The **integrated Jesse desk** opens from the house book or `/?desk=jesse` — real Jupiter quotes, v2 local paper, Room/Compact views, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` shows the foyer on a fresh visit and restores only a remembered open desk.
 
-**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) owns remaining Pyth Pro entitlement/daemon and R2 live gates. [Product Direction](docs/PRODUCT_DIRECTION.md#desk-views-room--compact) records Room/Compact as view choices over the same work.
+**Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) is the historical execution brief; [Jesse desk](docs/JESSE_DESK.md) owns current Jesse capabilities and remaining Pyth/live-release limits. [Product Direction](docs/PRODUCT_DIRECTION.md#desk-views-room--compact) records Room/Compact as view choices over the same work.
 
 ## One front door
 
-`/` is Claflin's desk. The ticket or the line is first; the room is around it. No welcome wizard, directory, personality questionnaire, house explainer, broker-as-heading, free-call funnel, automatic microphone request, wallet bootstrapping, ratings or streaks precede the work.
+`/` is Claflin's front door. A fresh visit opens the foyer and house book; a chosen or remembered desk then puts the ticket or the line first, with the room around it. No welcome wizard, broker questionnaire, ratings, automatic microphone request, wallet bootstrapping, or chain picker precedes the work.
 
-The current release supports **real onchain trading on Base and paper trading, both using live venue estimates**. Live execution is enabled with `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`; with the flag off or unset, the desk is paper-only.
+The current release supports **paper estimates on Base and Solana**, an env-gated Base execution path, and Jesse's dual-env-gated Solana live path. Paper remains the default; live settlement appears only where the selected desk supports it.
 
-1. Choose a supported Coinbase tokenized stock on Base.
-2. Specify a USDC spend to buy, or a token quantity to sell.
-3. Review a verified, time-limited Aerodrome estimate.
-4. For a real trade, sign in and connect a funded wallet on Base, review slippage, approve the input token if needed, then explicitly choose **Execute on Base** and authorize the swap in the wallet. Approval and execution are separate actions; after approval the ticket requests a fresh estimate.
-5. Alternatively, explicitly record a paper trade. Recording always saves a simulation, even when live execution is enabled.
-6. Return to Your record for paper records and live transaction history, pin a mark to the desk, or use a record as a new draft.
+1. Give the house an instruction, or choose a verified offering from the house book.
+2. Compare the concrete product terms — issuer, mandate, settlement rail, venue, quote asset, and desk coverage. Similar exposures on different rails are separate offerings, never silent substitutions.
+3. Open an eligible desk. The selected offering travels in `?offering=` and seeds that desk's own draft context without borrowing another desk's state.
+4. Specify the supported side and amount, then review a verified, time-limited venue estimate.
+5. For live settlement where the selected desk supports it, connect the appropriate wallet and explicitly authorize the rail-specific transaction. Live review and authorization remain separate from paper filing.
+6. Alternatively, explicitly record a paper trade. Recording always saves a simulation, even when live execution is enabled.
+7. Return to Your record for paper records and live transaction history, pin a mark to the desk, or use a record as a new draft.
 
-The live path builds Aerodrome router transactions, submits them through the client's Privy wallet integration, and checks transaction receipts. Swap hashes are saved locally after submission returns; pending or unknown entries can be reconciled after reload without resubmitting. Live history is transaction evidence, not a holdings view. A successful receipt, not a quote or a submitted hash alone, establishes the displayed fill outcome.
+The Base live path builds Aerodrome router transactions, submits them through the client's Privy wallet integration, and checks transaction receipts. Jesse's live path prepares a fresh wallet-bound Jupiter order, verifies the signed message against the proposal, submits it, and reconciles the result. Base swap hashes are saved locally after submission returns; Jesse proposal status and signatures live in the short-lived server-side proposal store (Redis, with memory fallback). Pending or unknown entries can be reconciled without resubmitting. Live history is transaction evidence, not a holdings view. A successful receipt or confirmed signature, not a quote or submitted operation alone, establishes the displayed outcome.
 
-No stock or amount is preselected. Paper records are simulations, not fills, submissions, wallet positions, or call receipts. They live in this browser first. Visiting Isabel or Arbitrum from the house directory is a closed room — an approval from one desk cannot come with you. Jesse’s Solana paper desk is open; its records stay browser-local (no account sync). When an optional account is configured and the client is signed in on Hetty, new Base records are also copied to that account (best-effort; local storage stays authoritative; deletes are local-only and can reappear from the account copy). Records are visible to anyone using that browser profile.
+A selected offering may preselect the instrument, but it never preselects an amount or authorization. Paper records are simulations, not fills, submissions, wallet positions, or call receipts. They live in this browser first. Visiting Isabel or Arbitrum is a closed room — an approval from one desk cannot come with you. Jesse’s records stay browser-local (no account sync). When an optional account is configured and the client is signed in on Hetty, new Base records are also copied to that account (best-effort; local storage stays authoritative; deletes are local-only and can reappear from the account copy). Records are visible to anyone using that browser profile.
 
 **Voice & Dictation:** 
 - **AssemblyAI Dictation (Input / Audit Trail):** Dictation on the trading ticket uses AssemblyAI's synchronous Dictation API (`POST /api/dictation` routing to `dictation.assemblyai.com/transcribe`). Spoken instructions (e.g., *"Buy 100 USDC of NVDA"*) have disfluencies (*"ums"*, *"ahs"*) stripped at the speech model level, outputting a clean, auditable transcript that automatically structures the order ticket draft. See [docs/DICTATION.md](docs/DICTATION.md).
-- **ElevenLabs ConvAI (Output / Broker Persona):** “Ring Hetty,” lifting the desk receiver, or pressing `H` (outside form fields) opens the same live ElevenLabs ConvAI voice session (`POST /api/hetty/session` mints a short-lived signed URL; the API key and agent id stay server-side). The call button, receiver, and key share one line signal; session lifecycle stays in the call panel. Hetty’s tool calls are *client tools* that execute against the desk in the caller’s browser — she can choose the instrument, set the instruction and amount, request an estimate, describe the desk, pin a watched mark, share the desk's note of the day, and record a paper trade only on explicit confirmation. She cannot sign, submit or reconcile transactions herself. Real trades require the caller's explicit Execute action on the ticket and wallet authorization; voice recording remains paper-only. The provisioned agent is `ELEVENLABS_AGENT_HETTY` (see `scripts/create-hetty-agent.mjs`). If the voice session is not configured, the rest of the desk is unaffected.
+- **ElevenLabs ConvAI (Output / Broker Persona):** “Ring Hetty,” lifting the desk receiver, or pressing `H` (outside form fields) opens the selected desk's live ElevenLabs ConvAI session (`POST /api/hetty/session` for Hetty; `POST /api/desk/jesse/session` for Jesse; API keys and agent ids stay server-side). The call button, receiver, and key share one line signal; session lifecycle stays in the call panel. Tool calls are *client tools* that execute against the selected desk controller in the caller's browser — they can choose the covered instrument, set the instruction and amount, request an estimate, describe the desk, pin a watched mark, share the desk's note of the day, and record paper only on explicit confirmation. Voice cannot sign, submit or reconcile transactions. Real trades require the caller's explicit live action on the ticket and wallet authorization; voice recording remains paper-only. Hetty's provisioned agent is `ELEVENLABS_AGENT_HETTY` (see `scripts/create-hetty-agent.mjs`); Jesse's setup is documented in [Jesse desk](docs/JESSE_DESK.md). If a voice session is not configured, the rest of the desk is unaffected.
 
-**Account and wallet:** `NEXT_PUBLIC_PRIVY_APP_ID` enables Privy sign-in; `NEXT_PUBLIC_PRIVY_CLIENT_ID` is optional. Sign-in never gates the tape, estimates, paper records or ringing Hetty. An account supports best-effort paper backup and write-only transcript storage. Live Base execution additionally requires a connected wallet, input tokens, ETH for gas and explicit wallet authorization. Sign-in alone neither authorizes spending nor proves eligibility.
+**Account and wallet:** `NEXT_PUBLIC_PRIVY_APP_ID` enables Privy sign-in; `NEXT_PUBLIC_PRIVY_CLIENT_ID` is optional. Sign-in never gates the tape, estimates, paper records or ringing a desk. An account supports best-effort Base paper backup and write-only transcript storage. Live Base execution additionally requires a connected wallet, input tokens, ETH for gas and explicit wallet authorization. Jesse live uses a Solana wallet under its own flags. Sign-in alone neither authorizes spending nor proves eligibility.
 
-**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. The desk initially selects live mode when this flag is on; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. Jesse’s desk is paper-only; Solana live execution remains gated (R2). Night presentation never grants spending authority. Paper trading never grants spending authority.
+**Live execution boundary:** Base transaction preparation, wallet signing, submission and receipt reconciliation are implemented, gated by `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true`. Jesse’s Solana live path is implemented behind both `NEXT_PUBLIC_JESSE_LIVE_ENABLED` and `JESSE_LIVE_ENABLED`. Each desk initially selects live mode only when its live capability is enabled; paper recording remains available. See [Live Base Execution](docs/LIVE_BASE_SPRINT.md) for the previously recorded mainnet smoke-test result and setup. The read-only Coinbase Verifications check (`/api/eligibility`) is separate and is not enforced by the current ticket execution path; do not describe the implemented flow as verified eligibility gating. Funding, allowances, product access policy and outcome verification remain distinct concerns. Night presentation never grants spending authority. Paper trading never grants spending authority.
 
 ## Local development
 
@@ -46,7 +47,7 @@ pnpm install
 pnpm dev
 ```
 
-Open `/`. Wallet, ElevenLabs, Privy and Redis setup are not prerequisites for the current paper desk. The read-only quote service uses Base's public RPC by default; configure `BASE_RPC_URL` for an appropriate production provider. Production hosts: frontend `https://claflin.trustfall.xyz`, API `https://api.claflin.trustfall.xyz`. Set `NEXT_PUBLIC_APP_URL` for deployment metadata. Do not expose provider credentials through public environment variables.
+Open `/`. Wallet, ElevenLabs, Privy and Redis setup are not prerequisites for the current paper desks. The Base quote service uses Base's public RPC by default; configure `BASE_RPC_URL` for an appropriate production provider. Jesse's Jupiter quotes work keyless by default; configure `JUPITER_API_KEY` only for higher provider limits. Production hosts: frontend `https://claflin.trustfall.xyz`, API `https://api.claflin.trustfall.xyz`. Set `NEXT_PUBLIC_APP_URL` for deployment metadata. Do not expose provider credentials through public environment variables.
 
 The old client routes—including `/desk`, `/marketplace`, `/demo`, `/profile`, `/dashboard`, `/list-your-broker`, broker profiles and the old admin pages—redirect to `/`. `/desk-study` and `/widget-probe` are development-only references, absent from client navigation and unavailable in production.
 
@@ -56,29 +57,34 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 
 | Responsibility | Source |
 |---|---|
-| House identity, desk sequence and capability labels | `lib/house.ts` |
+| House identity and desk directory | `lib/house.ts` |
+| Mandates, concrete offerings, desk coverage and estimate envelopes | `lib/desk/contracts.ts`, `lib/desk/mandates.ts`, `lib/desk/offerings.ts`, `lib/desk/registry.ts`, `lib/desk/estimates.ts` |
+| Entry parsing, saved desk preference and `?offering=` validation | `lib/house-entry.ts` |
 | Period desk notes and words of the house (one note or term of the day, never advice) | `lib/desk-notes.ts` |
 | Sourced education catalog, broker examination methods, delayed-tape practice | `lib/education/`, `components/desk/EducationTopic.tsx`, `app/practice/delayed-tape/` |
-| Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
+| Root document, foyer and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/HouseFoyer.tsx`, `components/desk/HouseOfferings.tsx`, `components/desk/WorkingDesk.tsx` |
 | Room view + fixture study | `/?desk=jesse&view=room`; `app/night-desk/page.tsx` (redirect / `?study=1`); `components/night-desk/` (scene + study); `components/desk/RoomPresentation.tsx`; `lib/room-view-projection.ts`; `lib/desk-presentation.ts`; `styles/desk-craft.css` |
-| Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
+| Intent, estimate, offering hydration and paper-record interaction | `lib/trading/useTradingDesk.ts` |
 | Ticket, board, tape and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperLedger.tsx`, `components/desk/DeskBoard.tsx`, `components/desk/TickerTape.tsx`, `components/desk/PaperHistory.tsx` |
 | House mark and desk instrument | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
-| Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
+| Offering presentation, instruction matching and desk eligibility | `lib/desk/offerings-presentation.ts`, `components/desk/HouseOfferings.tsx` |
+| Base estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
+| Desk adapter resolution and quote route | `lib/trading/adapters.ts`, `app/api/desk/[deskId]/quote/route.ts` |
 | Thin HTTP boundary | `lib/trading/http.ts`, `lib/api-client.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
 | Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts` |
+| Solana instruments, estimates, paper and live evidence | `lib/solana/` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Live execution journal (approvals, submitted/confirmed swaps) | `lib/trading/live-journal.ts`, `lib/trading/useLiveJournal.ts`, `lib/trading/useDeskExecution.ts` |
 | Desk slips (commemorative first-paper / first-live keepsakes) | `lib/trading/desk-slips.ts`, [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md) |
 | Delight: spoken-line caption, since-last-visit tray deltas, ledger export | `lib/trading/tray-deltas.ts`, `lib/trading/ledger-export.ts` (wired in `WorkingDesk.tsx`, `DeskBoard.tsx`, `TradeTicket.tsx`, `PaperLedger.tsx`) |
 | Optional account, paper backup, transcript write | `components/auth/AuthProvider.tsx`, `lib/auth.ts`, `lib/trading/usePaperSync.ts`, `app/api/paper/route.ts`, `app/api/hetty/transcript/route.ts` |
 | Voice dictation input (AssemblyAI) | `app/api/dictation/route.ts`, `lib/dictation/useDictation.ts`, `lib/trading/dictation-parser.ts`, `components/desk/TradeTicket.tsx`, [docs/DICTATION.md](docs/DICTATION.md) |
-| Voice session (ElevenLabs) | `components/desk/HettyCall.tsx`, `lib/trading/voice-tools.ts`, `lib/desk-notes.ts`, `lib/education/`, `app/api/hetty/session/route.ts` |
+| Desk voice sessions (ElevenLabs) | `components/desk/HettyCall.tsx`, `components/desk/JesseCall.tsx`, `lib/trading/voice-tools.ts`, `lib/desk-notes.ts`, `lib/education/`, `app/api/hetty/session/route.ts`, `app/api/desk/jesse/session/route.ts` |
 | Eligibility check (source only; not a paper-desk surface) | `lib/eligibility.ts`, `app/api/eligibility/route.ts` |
 | Shareable paper-intent links | `lib/share.ts` |
 
-Trading uses decimal strings and integer base units. The service verifies chain, pool/factory, token order, decimals and output at a recent block. Estimates are never called executable orders. Reference observations have explicit freshness and uncertainty labels.
+Trading uses decimal strings and integer base units. The Base service verifies chain, pool/factory, token order, decimals and output at a recent block; Solana estimates preserve mint identity, amount units and Jupiter route evidence. Estimates are never called executable orders. Reference observations have explicit freshness and uncertainty labels.
 
 Older voice, billing, registry and webhook modules remain implementation scaffolding, not the client-facing identity system. They are not mounted by the root layout. Arbitrum billing and identity configuration are independent of Base trading. Retained settlement is not a stock execution adapter.
 
@@ -87,14 +93,14 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - `pnpm test` — domain, quote, paper-record, route-cutover and retained infrastructure tests.
 - `pnpm typecheck` — TypeScript verification.
 - `pnpm exec next build --webpack` — production compilation without the repository's destructive standalone postbuild cleanup. Deployment packaging is a separate operation.
-- `pnpm lint` has an existing ESLint 9 / legacy `.eslintrc.json` configuration mismatch; do not change security or tooling policies to mask failures.
+- `pnpm lint` — ESLint; currently reports warnings but no errors.
 - Current cutover checks use source contracts and HTTP responses, not a browser automation session. Earlier paper-desk browser checks do not establish visual acceptance of every subsequent change.
 
 ## Product rules
 
 - The old approach is retired, not a compatibility target. There are no existing-user or collaborator constraints requiring it to remain in the product.
 - Preserve useful implementation capabilities selectively; do not preserve the old discovery, onboarding or billing-led experience.
-- Give the client one coherent place to work. The first semantic thing is the ticket or the line. Do not list page inventory as the product, and do not make the first broker the house identity.
+- Give the client one coherent place to work. At the house, the first semantic thing is the instruction and concrete offerings; inside a desk, it is the ticket or the line. Do not list page inventory as the product, make the first broker the house identity, or present the settlement rail as the strategy.
 - Explain permissions and terms at the relevant action rather than build a prerequisite tour or a house-strategy grid.
 - Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline. Say paper mode once.
 - A provider configuration or historical token listing is not evidence of operational readiness.

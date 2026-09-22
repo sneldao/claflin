@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer on first visit; seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer and offering book on first visit; Jesse opens through an eligible Backed xStock offering or the direct `/?desk=jesse` deep link. Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`; offering-aware entry may include `?offering=<solanaOfferingId>`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
@@ -9,25 +9,27 @@ Jesse is a first-class Claflin desk: same room craft as Hetty, real Jupiter Meti
 ## House model
 
 ```text
-Foyer → choose desk (Hetty / Jesse / …)
-         └─ one controller per desk
-              ├─ view=compact → seated composition
-              └─ view=room  → NightDeskScene + HTML work overlays
+Foyer → visitor instruction → concrete offering
+         └─ eligible desk (Jesse for Backed xStocks / Solana)
+              └─ one controller per desk
+                   ├─ view=compact → seated composition
+                   └─ view=room  → NightDeskScene + HTML work overlays
 ```
 
-Desk chooses broker + market. Room and Compact are presentations of the same work — never remount finance, never invent quotes.
+The offering chooses the concrete product/mandate/rail/venue. Desk eligibility comes from catalog coverage; Room and Compact are presentations of the same work — never remount finance, never invent quotes.
 
 ## Entry
 
-- Fresh visit → Claflin foyer (house wordmark + open-desk doors). Choose Jesse or Hetty.
-- Deep link: `/?desk=jesse` (Stocklana submission URL) or `/?desk=hetty`
+- Fresh visit → Claflin foyer and house book. An instruction resolves to concrete offerings; a Jesse-covered Backed xStock offering can then open Jesse.
+- Deep link: `/?desk=jesse` (Stocklana submission URL) or `/?desk=hetty`. A deep link remains valid without an offering.
+- Offering context: `/?desk=jesse&offering=<solanaOfferingId>` preselects that instrument through Jesse's controller only when the catalog offering explicitly covers Jesse; mismatched offering parameters are removed.
 - Presentation: `?view=room` or `?view=compact` (per-desk preference in `claflin.presentation.v1.<deskId>`)
 - Canonical Room view: `/?desk=jesse&view=room` (also reached via `/night-desk`)
 - Last open desk remembered in `claflin.desk.v1.last`
 - House directory → switch desks without losing parked work
 - Surface: [`components/desk/JesseDeskSurface.tsx`](../components/desk/JesseDeskSurface.tsx)
 - Authority: [`createJesseController`](../lib/solana/controller.ts) via [`useJesseDesk`](../lib/solana/useJesseDesk.ts)
-- Hetty’s Base documents never load for Jesse (`usesLegacyDeskDocuments` in [`lib/house.ts`](../lib/house.ts))
+- Hetty’s Base documents never load for Jesse (`usesLegacyDeskDocuments` in [`lib/desk/registry.ts`](../lib/desk/registry.ts))
 - Submission pack: [`docs/STOCKLANA_SUBMISSION.md`](STOCKLANA_SUBMISSION.md)
 
 ## Storage keys
@@ -44,7 +46,7 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 
 ## Ports
 
-- Quote: `GET /api/desk/jesse/quote` → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
+- Quote: `GET /api/desk/jesse/quote` → Jesse runtime coverage → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
 - Compare (Pyth Pro): `GET /api/desk/jesse/comparison?instrumentId=sol:…` → Redis snapshots from the Lazer daemon; normalizes raw-token prices by mint multiplier; honest `unavailable` when feeds/multiplier missing
 - Venue duplex (free): `GET /api/desk/jesse/venue-duplex?instrumentId=sol:…` → Backed public `price-data` when present, else Jupiter Price v3 `stockData`, versus Jupiter venue `usdPrice` — evidence only, never labelled Pyth
 - PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
