@@ -1,13 +1,6 @@
 .workspace {
-  /* ———— Motion language — shared with Night via styles/desk-craft.css ————
-     Palette (--desk-*) lives on :root in styles/desk-craft.css. */
-  --dur-1: var(--claflin-dur-1, 240ms);
-  --dur-2: var(--claflin-dur-2, 460ms);
-  --dur-3: var(--claflin-dur-3, 700ms);
-  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
-  --ease-overshoot: var(--claflin-ease-overshoot, cubic-bezier(.2, 1.1, .35, 1));
-  --ease-in-out-c: var(--claflin-ease-in-out, cubic-bezier(.4, 0, .2, 1));
-  --stagger: var(--claflin-stagger, 110ms);
+  /* Palette (--desk-*) and motion aliases (--dur-*, --ease-*, --stagger)
+     live on :root in styles/desk-craft.css. */
   position: relative;
   isolation: isolate;
   min-height: 100svh;
@@ -660,9 +653,6 @@
 .deskSurface > span {
   transition: letter-spacing var(--dur-2) var(--ease-swift), opacity var(--dur-2) var(--ease-swift);
 }
-.grid[data-presentation="room"] {
-  --desk-night-veil: color-mix(in srgb, #0c1218 12%, transparent);
-}
 .grid[data-presentation="room"] .deskSurface {
   opacity: 0.88;
   filter: saturate(0.82) brightness(0.94);
@@ -678,10 +668,6 @@
 
 /* ———— Room view (NightDeskScene + HTML work overlays) ———— */
 .roomView {
-  --dur-1: var(--claflin-dur-1, 240ms);
-  --dur-2: var(--claflin-dur-2, 460ms);
-  --dur-3: var(--claflin-dur-3, 700ms);
-  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
   color: var(--desk-ink);
   background: var(--claflin-night-room, #0d1218);
 }

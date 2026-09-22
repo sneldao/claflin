@@ -11,6 +11,15 @@
   --claflin-ease-in-out: cubic-bezier(.4, 0, .2, 1);
   --claflin-stagger: 110ms;
 
+  /* Motion aliases — every surface consumes these; none re-declares them. */
+  --dur-1: var(--claflin-dur-1);
+  --dur-2: var(--claflin-dur-2);
+  --dur-3: var(--claflin-dur-3);
+  --ease-swift: var(--claflin-ease-swift);
+  --ease-overshoot: var(--claflin-ease-overshoot);
+  --ease-in-out-c: var(--claflin-ease-in-out);
+  --stagger: var(--claflin-stagger);
+
   --claflin-ink: #e8e6d9;
   --claflin-muted: #aeb9aa;
   --claflin-brass: #c5ac78;
@@ -57,4 +66,8 @@
   --desk-file-shadow: #84775e;
   --desk-cabinet-back: #100e0b;
   --desk-patina: #806c44;
+  --desk-dim: #819487;
+  --desk-error: #863928;
+  --desk-focus: #e5c788;
+  --desk-ease: cubic-bezier(.22,.68,0,1);
 }

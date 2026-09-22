@@ -1,9 +1,6 @@
 .study {
-  /* shared --desk-* palette comes from :root (styles/desk-craft.css) */
-  --desk-dim: #819487;
-  --desk-error: #863928;
-  --desk-focus: #e5c788;
-  --desk-ease: cubic-bezier(.22,.68,0,1);
+  /* shared --desk-* palette and motion aliases come from :root
+     (styles/desk-craft.css) */
   position: relative;
   isolation: isolate;
   min-height: 100svh;

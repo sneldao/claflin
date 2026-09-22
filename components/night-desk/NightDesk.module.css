@@ -5,10 +5,6 @@
   color: var(--claflin-ink, #e8ddc2);
   font-family: var(--font-body), 'IBM Plex Sans', sans-serif;
   background: var(--claflin-night-room, #0d1218);
-  --dur-1: var(--claflin-dur-1, 240ms);
-  --dur-2: var(--claflin-dur-2, 460ms);
-  --dur-3: var(--claflin-dur-3, 700ms);
-  --ease-swift: var(--claflin-ease-swift, cubic-bezier(.16, .8, .3, 1));
 }
 
 .study::after {
