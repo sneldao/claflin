@@ -76,7 +76,7 @@ describe('one canonical house', () => {
       });
       return classes;
     };
-    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape', 'ModeStamp', 'EvidencePanel', 'DeskNotice']) {
+    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape', 'ModeStamp', 'EvidencePanel', 'DeskNotice', 'HettyCallSession']) {
       const src = source(`components/desk/${component}.tsx`);
       for (const imp of src.matchAll(/import\s+(\w+)\s+from\s+['"](\.\/[\w-]+\.module\.css)['"]/g)) {
         const [, binding, specifier] = imp;
@@ -197,10 +197,37 @@ describe('one canonical house', () => {
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);
     assert.match(source('components/desk/PaperLedger.tsx'), /The archive/);
     assert.match(source('components/desk/PaperLedger.tsx'), /ledgerPreview/);
-    assert.match(source('components/desk/HettyCall.tsx'), /watchTarget\(d\.foreground/);
+    assert.match(source('components/desk/HettyCallSession.tsx'), /watchTarget\(d\.foreground/);
     assert.match(source('lib/trading/voice-tools.ts'), /foreground\.instrumentId/);
     assert.doesNotMatch(source('components/desk/TradeTicket.tsx'), /scrollIntoView/);
     assert.match(source('components/desk/PaperHistory.tsx'), /Open this record/);
+  });
+  it('stamps every filed slip and turns each document state like fresh paper', () => {
+    const jesseTicket = source('components/desk/JesseTicket.tsx');
+    /* Filing parity: Jesse's receipt carries the same stamp furniture as
+       Hetty's — a filed slip is stamped, on either desk. */
+    assert.match(jesseTicket, /styles\.stamp/);
+    assert.match(jesseTicket, />FILED</);
+    assert.match(jesseTicket, /data-acknowledged=\{record \? 'true' : 'false'\}/);
+    /* The document lifecycle replays its landing on every view change —
+       keyed surfaces remount so draft → review → receipt each settle once. */
+    const jesseViews = [...jesseTicket.matchAll(/key="(missing|receipt|review|draft)"/g)].map(m => m[1]).sort();
+    assert.deepEqual(jesseViews, ['draft', 'missing', 'receipt', 'review']);
+    assert.match(jesseTicket, /className=\{styles\.ticketSurface\}/);
+    const ticket = source('components/desk/TradeTicket.tsx');
+    assert.match(ticket, /key=\{view\} className=\{styles\.ticketSurface\}/);
+    const css = source('components/desk/WorkingDesk.module.css');
+    assert.match(css, /@keyframes exchangeDocument/);
+    assert.match(css, /prefers-reduced-motion: reduce\) \{ \.ticketSurface \{ animation: none; \} \}/);
+  });
+  it("keeps Hetty's socket lifecycle in a session the shell can remount", () => {
+    const call = source('components/desk/HettyCall.tsx');
+    const session = source('components/desk/HettyCallSession.tsx');
+    assert.match(call, /<ConversationProvider key=\{sessionKey\}>/);
+    assert.match(call, /<HettyCallSession/);
+    assert.doesNotMatch(call, /useConversation\b|ConversationClientTool|startSession/);
+    assert.match(session, /useConversation\(/);
+    assert.match(session, /useConversationClientTool<HettyTools>/);
   });
   it('can present a quotation slip while the voice line remains connected', () => {
     const receiver = source('components/desk/DeskInstrument.tsx');
@@ -212,7 +239,7 @@ describe('one canonical house', () => {
     assert.match(renderer, /slipTarget = reviewing \? 1 : 0/);
   });
   it('keeps the voice tool surface in step between the browser and the agent config', () => {
-    const call = source('components/desk/HettyCall.tsx');
+    const call = source('components/desk/HettyCallSession.tsx');
     const config = source('scripts/hetty-agent-config.mjs');
     const browserTools = [...call.matchAll(/useConversationClientTool<HettyTools>\('([a-z_]+)'/g)].map(m => m[1]);
     const configTools = [...config.matchAll(/name: '([a-z_]+)',\n\s+description:/g)].map(m => m[1]);
@@ -222,7 +249,7 @@ describe('one canonical house', () => {
     assert.match(config, /never embellish it/);
   });
   it('never surfaces a raw parse error from the ring button or the tape', () => {
-    const call = source('components/desk/HettyCall.tsx');
+    const call = source('components/desk/HettyCallSession.tsx');
     assert.match(call, /fetchJson<\{ signedUrl\?: string \}>\('\/api\/hetty\/session'/);
     assert.doesNotMatch(call, /await response\.json\(\)/);
     const marksHook = source('lib/trading/useReferenceMarks.ts');
@@ -236,7 +263,7 @@ describe('one canonical house', () => {
     assert.match(source('lib/trading/marks-cache.ts'), /X-Marks-Stale/);
   });
   it('keeps the receiver down until a real voice connection exists', () => {
-    const call = source('components/desk/HettyCall.tsx');
+    const call = source('components/desk/HettyCallSession.tsx');
     assert.match(call, /onLiveChange\(live\)/);
     assert.doesNotMatch(call, /onLiveChange\(live \|\| connecting\)/);
     const desk = source('components/desk/HettyDeskSurface.tsx');

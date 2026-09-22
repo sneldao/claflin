@@ -106,10 +106,12 @@ export const JesseTicket = memo(function JesseTicket({
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="missing">
         <PaperChrome liveMode={false} />
+        <div className={styles.ticketSurface} key="missing">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <p className={styles.notice} role="status">This paper record is no longer in this browser.</p>
         <div className={styles.slipActions}>
           <button type="button" className={styles.secondary} onClick={dismissRecord}>Back to your instruction</button>
+        </div>
         </div>
       </section>
     );
@@ -119,8 +121,10 @@ export const JesseTicket = memo(function JesseTicket({
     const record = jesse.records.find(r => r.id === (foreground.kind === 'receipt' ? foreground.recordId : foreground.recordId));
     const q = record?.quote ?? state.quote;
     return (
-      <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={foreground.kind === 'receipt' ? 'true' : undefined}>
+      <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={record ? 'true' : 'false'}>
         <PaperChrome liveMode={false} />
+        {record && <span className={styles.stamp} aria-hidden="true"><span>FILED</span><small>PAPER · SOLANA</small></span>}
+        <div className={styles.ticketSurface} key="receipt">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         {q && (
           <div className={styles.slipBody}>
@@ -141,6 +145,7 @@ export const JesseTicket = memo(function JesseTicket({
             <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
           </>
         )}
+        </div>
       </section>
     );
   }
@@ -151,6 +156,7 @@ export const JesseTicket = memo(function JesseTicket({
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
         <PaperChrome liveMode={liveMode && liveAvailable} />
+        <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <div className={styles.slipBody}>
           <p className={styles.reviewHeading}>{q.intent.side.toUpperCase()} · {instrument?.symbol ?? q.outputSymbol}</p>
@@ -213,6 +219,7 @@ export const JesseTicket = memo(function JesseTicket({
           onCompare={() => { void compare(); }}
           compareDisabled={inFlight === 'compare'}
         />
+        </div>
       </section>
     );
   }
@@ -223,6 +230,7 @@ export const JesseTicket = memo(function JesseTicket({
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome liveMode={liveMode && liveAvailable} />
+      <div className={styles.ticketSurface} key="draft">
       {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
       <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
       <p className={styles.dictationRail} data-active={inFlight === 'quote' ? 'true' : 'false'} role="status" aria-live="polite">
@@ -331,6 +339,7 @@ export const JesseTicket = memo(function JesseTicket({
         onCompare={() => { void compare(); }}
         compareDisabled={!draft.instrumentId || inFlight === 'compare'}
       />
+      </div>
     </section>
   );
 });

@@ -1096,6 +1096,7 @@
 .ticket[data-ticket-view] { min-block-size: 516px; display: flex; flex-direction: column; }
 .ticketSurface { display: flex; flex-direction: column; flex: 1; min-width: 0; animation: exchangeDocument 200ms var(--ease-swift) both; }
 @keyframes exchangeDocument { from { opacity: .4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ticketSurface { animation: none; } }
 .ticket h1:focus-visible { outline-color: var(--desk-paper-ink); }
 .slipHeading { align-items: flex-start; gap: 12px; padding-bottom: 12px; }
 .slipHeading::after { bottom: 0; background: var(--desk-paper-muted); opacity: .5; }
