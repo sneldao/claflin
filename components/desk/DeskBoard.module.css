@@ -1,0 +1,31 @@
+/* DeskBoard — extracted from WorkingDesk.module.css (Phase 2 split).
+   Shared paper/ticket/ledger primitives stay in WorkingDesk.module.css. */
+.board { margin: 28px 0 8px; padding-top: 22px; border-top: 1px solid var(--desk-line); }
+/* Empty board — a pinboard card, not a disclaimer. The pin is a drawn
+   brass-headed tack; the suggestion button pins a real instrument so the
+   surface is never inert. */
+.boardEmpty { position: relative; color: var(--desk-muted); font-size: 13px; line-height: 1.7; margin: 0 !important; padding: 26px 20px 20px 46px; border: 1px dashed var(--desk-line); border-radius: 2px; background: #101f1a55; }
+.boardEmpty p { margin: 0 0 14px !important; }
+.boardPin { position: absolute; left: 18px; top: 26px; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e6d6a4, var(--desk-brass) 62%, #7a6234); box-shadow: 0 1px 2px #0006, 0 6px 0 -3px var(--desk-brass-dim); }
+.boardEmpty button { border: 1px solid var(--desk-brass-dim); color: var(--desk-brass); background: transparent; padding: 10px 14px; min-height: 44px; font: 11px/1 var(--font-mono), monospace; letter-spacing: .08em; transition: border-color var(--dur-1, 240ms), background var(--dur-1, 240ms); }
+.boardEmpty button:hover { border-color: var(--desk-brass); background: #c5ac7812; }
+.boardList { list-style: none; padding: 0; margin: 0; }
+.boardList li { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--desk-line); }
+.boardTag { font: 9px/1 var(--font-mono), monospace; letter-spacing: .14em; color: var(--desk-brass); }
+.boardList strong { font: 16px/1.35 var(--font-display), serif; font-weight: 400; color: var(--desk-ink); overflow-wrap: anywhere; }
+.boardList button { justify-self: start; border: 1px solid var(--desk-brass-dim); color: var(--desk-brass); background: transparent; padding: 10px 12px; min-height: 44px; font-size: 12px; }
+.boardActions { display: inline-flex; gap: 8px; }
+.boardActions button + button { opacity: .7; }
+.board { margin-top: 28px; }
+.boardList { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.board { margin-top: 64px; }
+.boardList li { border: 1px solid var(--desk-line); padding: 20px; background: var(--desk-room); box-shadow: inset 0 3px 12px var(--desk-occlusion), 0 3px 0 var(--desk-walnut-edge); }
+/* ————— Working tray: since-you-last-sat-down deltas ————— */
+.boardSince { margin: 10px 0 0 !important; color: var(--desk-muted); font-size: 11px; line-height: 1.6; }
+.boardRef { color: var(--desk-paper-muted); font-size: 11px; line-height: 1.5; }
+.boardDelta { font: 11px/1.4 var(--font-mono), monospace; letter-spacing: .04em; }
+.boardDelta[data-direction="up"] { color: #8fae8a; }
+.boardDelta[data-direction="down"] { color: #c98f7a; }
+.boardFoot { margin: 12px 0 0 !important; color: var(--desk-file-paper); font-size: 11px; line-height: 1.6; max-width: 48ch; }
+@media (max-width: 760px) {
+  .boardList { grid-template-columns: minmax(0, 1fr); gap: 0; } }

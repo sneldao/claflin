@@ -12,7 +12,7 @@ export const HOUSE_DESK_PREFERENCE_KEY = 'claflin.desk.v1.last';
 
 export type HouseEntry =
   | { kind: 'foyer' }
-  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null; intent: EntryIntent | null };
+  | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null; intent: EntryIntent | null; recordId: string | null };
 
 /** The part of a foyer instruction that survives entry: side and amount. */
 export type EntryIntent = { side: 'buy' | 'sell' | null; amount: string | null };
@@ -30,6 +30,15 @@ export function parseEntryIntent(
   const side = sideRaw === 'buy' || sideRaw === 'sell' ? sideRaw : null;
   const amount = amountRaw && INTENT_AMOUNT_PATTERN.test(amountRaw.trim()) ? amountRaw.trim() : null;
   return side || amount ? { side, amount } : null;
+}
+
+const RECORD_ID_PATTERN = /^[\w-]{1,100}$/;
+
+/** Parse `?record=` — a filed paper record's address on its desk. */
+export function parseRecordQuery(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const id = raw.trim();
+  return RECORD_ID_PATTERN.test(id) ? id : null;
 }
 
 /** Parse `?desk=` — only known house ids; open desks enter, planned visit closed rooms. */
@@ -77,6 +86,7 @@ export function resolveHouseEntry(
   storage: Pick<Storage, 'getItem'>,
   offeringQuery?: string | null,
   intent: EntryIntent | null = null,
+  recordId: string | null = null,
 ): HouseEntry {
   const fromQuery = parseDeskQuery(deskQuery);
   if (fromQuery) {
@@ -86,6 +96,7 @@ export function resolveHouseEntry(
       source: 'query',
       offeringId: parseOfferingQuery(offeringQuery, fromQuery),
       intent,
+      recordId: parseRecordQuery(recordId),
     };
   }
 
@@ -97,6 +108,7 @@ export function resolveHouseEntry(
       source: 'preference',
       offeringId: null,
       intent: null,
+      recordId: null,
     };
   }
 
@@ -110,7 +122,7 @@ export function clearDeskQuery(historyMode: HistoryMode = 'replace'): void {
   if (typeof window === 'undefined') return;
   try {
     const url = new URL(window.location.href);
-    for (const key of ['desk', 'offering', 'view', 'intent', 'side', 'amount']) {
+    for (const key of ['desk', 'offering', 'view', 'intent', 'side', 'amount', 'record']) {
       url.searchParams.delete(key);
     }
     if (historyMode === 'push') window.history.pushState({}, '', url.toString());
@@ -129,6 +141,7 @@ export function syncDeskQuery(
   offeringId?: string | null,
   historyMode: HistoryMode = 'replace',
   intent?: EntryIntent | null,
+  recordId?: string | null,
 ): void {
   if (typeof window === 'undefined') return;
   try {
@@ -146,6 +159,23 @@ export function syncDeskQuery(
     else url.searchParams.delete('side');
     if (intent?.amount) url.searchParams.set('amount', intent.amount);
     else url.searchParams.delete('amount');
+    if (recordId) url.searchParams.set('record', recordId);
+    else url.searchParams.delete('record');
+    if (historyMode === 'push') window.history.pushState({}, '', url.toString());
+    else window.history.replaceState({}, '', url.toString());
+  } catch {
+    /* URL sync is optional */
+  }
+}
+
+/** Keep `?record=` honest while a record is open on the ticket — the only
+   param that changes without a desk transition. */
+export function syncRecordQuery(recordId: string | null, historyMode: HistoryMode = 'replace'): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const url = new URL(window.location.href);
+    if (recordId) url.searchParams.set('record', recordId);
+    else url.searchParams.delete('record');
     if (historyMode === 'push') window.history.pushState({}, '', url.toString());
     else window.history.replaceState({}, '', url.toString());
   } catch {

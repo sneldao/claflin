@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
-import styles from './WorkingDesk.module.css';
+import styles from './DeskTicker.module.css';
 
 /**
  * The house tape — indicative Chainlink reference marks for the

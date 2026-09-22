@@ -24,6 +24,7 @@ import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
+import { useRecordUrl } from '@/lib/desk/use-record-url';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { TradeTicket } from './TradeTicket';
@@ -34,6 +35,7 @@ import { DeskInstrument } from './DeskInstrument';
 import { DeskObjects, TapeMachine } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import styles from './WorkingDesk.module.css';
+import ticker from "./DeskTicker.module.css";
 
 const NO_MARKS: DeskMark[] = [];
 
@@ -144,6 +146,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     if (!hettyLive || foreground.kind !== 'quotation' || prev === 'quotation') return;
     scrollToDeskTarget('instruction');
   }, [hettyLive, foreground.kind]);
+
+  /* ?record= rides the same URL contract as ?desk= — opening pushes so
+     Back closes the receipt; entry/popstate hydrate it directly. */
+  useRecordUrl(desk.viewedRecordId);
 
   const carriedNote = carriedIntentNote(desk.entryIntent, desk.state.draft);
   const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
@@ -293,7 +299,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       </div>
       {!roomView && (
         <>
-          <div className={styles.tickerStation}>
+          <div className={ticker.tickerStation}>
             <TapeMachine />
             <TickerTape marks={marks.result?.marks ?? NO_MARKS} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'quoting'} />
           </div>

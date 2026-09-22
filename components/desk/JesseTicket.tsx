@@ -17,6 +17,7 @@ import type { JesseIntent, MarketComparison } from '@/lib/solana/contracts';
 import { getEducationTopic } from '@/lib/education';
 import { EVIDENCE_DISCLAIMER } from '@/lib/desk/ui-copy';
 import styles from '../desk/WorkingDesk.module.css';
+import evidence from "./EvidencePanel.module.css";
 
 const AMOUNT_CHIPS = { buy: ['25', '100', '250'], sell: ['1', '5', '10'] } as const;
 
@@ -137,7 +138,7 @@ export const JesseTicket = memo(function JesseTicket({
         {record?.comparison && (
           <>
             <MarketEvidence comparison={record.comparison} />
-            <p className={styles.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
+            <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
           </>
         )}
       </section>
@@ -362,7 +363,7 @@ function EvidenceModule({
       />
       <VenueDuplexEvidence instrumentId={instrumentId} />
       <PreStocksEvidence />
-      <p className={styles.evidenceCaveat}>
+      <p className={evidence.evidenceCaveat}>
         {EVIDENCE_DISCLAIMER}
         {TAPE_TOPIC && <EducationTopicTrigger topic={TAPE_TOPIC} label="About the tape" />}
       </p>

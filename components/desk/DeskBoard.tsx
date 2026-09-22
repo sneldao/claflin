@@ -8,6 +8,7 @@ import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { readSeenSnapshot, writeSeenSnapshot, trayDeltas, deltaLine, seenDayLabel, marksToPoints } from '@/lib/trading/tray-deltas';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import styles from './WorkingDesk.module.css';
+import board from "./DeskBoard.module.css";
 
 /**
  * The working tray: watched marks with what the Chainlink reference did since
@@ -43,14 +44,14 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
 
   if (watched.length === 0) {
     return (
-      <section className={styles.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
+      <section className={board.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
         <div className={styles.boardHead}>
           <p className={styles.eyebrow}>WORKING TRAY</p>
           <span className={styles.boardTally}>CLEAR</span>
         </div>
         <h2 id="board-title" className={styles.boardTitle}>Watched marks.</h2>
-        <div className={styles.boardEmpty}>
-          <span className={styles.boardPin} aria-hidden="true" />
+        <div className={board.boardEmpty}>
+          <span className={board.boardPin} aria-hidden="true" />
           <p>Nothing pinned — tap any tape mark to load it, or pin one to keep it here.</p>
         </div>
       </section>
@@ -78,19 +79,19 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
   };
 
   return (
-    <section className={styles.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
+    <section className={board.board} aria-labelledby="board-title" data-foreground={foreground.kind}>
       <div className={styles.boardHead}>
         <p className={styles.eyebrow}>WORKING TRAY</p>
         <span className={styles.boardTally}>{watched.length === 1 ? '1 WATCHING' : `${watched.length} WATCHING`}</span>
       </div>
       <h2 id="board-title" className={styles.boardTitle}>Watched marks.</h2>
       {hasStale && asOf && (
-        <p className={styles.boardSince} role="status">Reference marks are stale — last known {formatMarkAge(asOf)} ago.</p>
+        <p className={board.boardSince} role="status">Reference marks are stale — last known {formatMarkAge(asOf)} ago.</p>
       )}
       {showDeltas && (
-        <p className={styles.boardSince} role="status">Reference movement since you last sat down ({dayLabel}):</p>
+        <p className={board.boardSince} role="status">Reference movement since you last sat down ({dayLabel}):</p>
       )}
-      <ul className={styles.boardList}>
+      <ul className={board.boardList}>
         {watched.map(id => {
           const stock = DESK_INSTRUMENTS.find(s => s.id === id);
           if (!stock) return null;
@@ -98,11 +99,11 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
           const mark = marks.find(m => m.instrumentId === id);
           return (
             <li key={id}>
-              <span className={styles.boardTag}>WATCHING</span>
+              <span className={board.boardTag}>WATCHING</span>
               <strong>{stock.symbol} · {stock.name}</strong>
-              {mark ? <span className={styles.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span> : <span className={styles.boardRef}>Reference unavailable</span>}
-              {showDeltas && delta && <span className={styles.boardDelta} data-direction={delta.direction}>{deltaLine(delta, dayLabel)}</span>}
-              <span className={styles.boardActions}>
+              {mark ? <span className={board.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span> : <span className={board.boardRef}>Reference unavailable</span>}
+              {showDeltas && delta && <span className={board.boardDelta} data-direction={delta.direction}>{deltaLine(delta, dayLabel)}</span>}
+              <span className={board.boardActions}>
                 <button
                   type="button"
                   onClick={() => quoteIt(id)}
@@ -115,7 +116,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
           );
         })}
       </ul>
-      <p className={styles.boardFoot}>Chainlink reference marks on Base. Movement is context, not advice.</p>
+      <p className={board.boardFoot}>Chainlink reference marks on Base. Movement is context, not advice.</p>
     </section>
   );
 });

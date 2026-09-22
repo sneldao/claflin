@@ -1,0 +1,21 @@
+/* HouseDirectory — extracted from WorkingDesk.module.css (Phase 2 split).
+   Shared paper/ticket/ledger primitives stay in WorkingDesk.module.css. */
+.houseDirectory { position: relative; }
+.houseDirectory > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; list-style: none; }
+.houseDirectory > summary::-webkit-details-marker { display: none; }
+.houseDirectory > summary::after { content: '+'; font: 14px/1 var(--font-mono), monospace; color: var(--desk-brass); }
+.houseDirectory[open] > summary::after { content: '−'; }
+.directoryPaper { position: absolute; top: calc(100% + 8px); left: 0; width: min(360px, calc(100vw - 32px)); padding: 24px; background: var(--desk-paper-light); color: var(--desk-paper-ink); border: 1px solid var(--desk-paper-edge); box-shadow: 2px 4px 0 var(--desk-paper-edge), 0 16px 48px var(--desk-occlusion); z-index: 20; }
+.directoryTitle { font: 26px/1.2 var(--font-display), serif; }
+.directoryNote { margin-top: 6px !important; font-size: 12px; color: var(--desk-paper-muted); }
+.directoryPaper ul { list-style: none; padding: 0; margin: 18px 0; }
+.directoryPaper li { border-block-start: 1px solid var(--desk-paper-rule); }
+.directoryDesk { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 13px 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; }
+.directoryDesk:hover strong { color: var(--desk-paper-ink); }
+.directoryDesk[aria-current="true"] { box-shadow: inset 3px 0 0 var(--desk-brass); padding-left: 10px; }
+.directoryPaper li strong { display: block; font: 16px/1.3 var(--font-display), serif; }
+.directoryPaper li span { display: block; font-size: 11px; color: var(--desk-paper-muted); margin-top: 3px; max-width: 220px; }
+.directoryPaper li small { font: 9px/1.5 var(--font-mono), monospace; color: var(--desk-paper-muted); white-space: nowrap; }
+.directoryFoot { font-size: 11px; line-height: 1.7; color: var(--desk-paper-muted); }
+@media (max-width: 374px) {
+  .directoryPaper { padding: 18px; } }

@@ -6,6 +6,9 @@
 
 export function shareUrl(intent: { instrumentId: string; side: 'buy' | 'sell'; amount: string }, symbol: string): string {
   const url = new URL('/', window.location.origin);
+  /* The link must name its desk — otherwise it lands wherever the
+     recipient's saved preference points and the instruction never loads. */
+  url.searchParams.set('desk', 'hetty');
   url.searchParams.set('intent', symbol.toLowerCase());
   url.searchParams.set('side', intent.side);
   if (intent.amount) url.searchParams.set('amount', intent.amount);

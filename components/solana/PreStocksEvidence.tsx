@@ -8,6 +8,7 @@ import {
 import { PRESTOCKS_ABOUT } from '@/lib/desk/ui-copy';
 import { EvidencePanel, EvidenceRow, EvidenceDelta } from '../desk/EvidencePanel';
 import styles from '../desk/WorkingDesk.module.css';
+import evidence from "../desk/EvidencePanel.module.css";
 
 type ListItem = { symbol: string; name: string; mint: string; externalUrl: string | null };
 
@@ -99,14 +100,14 @@ export function PreStocksEvidence() {
             <EvidenceRow label="Issuer token" value={duplex.tokenPrice ? `${duplex.tokenPrice} USD` : 'price unavailable'} />
             <EvidenceDelta bps={duplex.referenceDifferenceBps} />
             {duplex.externalUrl && (
-              <p className={styles.evidenceMeta}>
+              <p className={evidence.evidenceMeta}>
                 <a href={duplex.externalUrl} target="_blank" rel="noopener noreferrer">Issuer page</a>
                 {' · '}mint <code>{duplex.mint.slice(0, 8)}…</code>
               </p>
             )}
           </>
         ) : duplex?.status === 'unavailable' ? (
-          <ul className={styles.evidenceReasons}>
+          <ul className={evidence.evidenceReasons}>
             {duplex.reasonCodes.map(code => (
               <li key={code}>{prestockReasonSentence(code)}</li>
             ))}
@@ -115,9 +116,9 @@ export function PreStocksEvidence() {
       }
       meta={
         duplex === null && errorNote
-          ? <p className={styles.evidenceMeta} role="status">{errorNote}</p>
+          ? <p className={evidence.evidenceMeta} role="status">{errorNote}</p>
           : duplex?.status === 'comparable'
-            ? <p className={styles.evidenceMeta}>{duplex.symbol} · observed {new Date(duplex.observedAt).toLocaleString()}</p>
+            ? <p className={evidence.evidenceMeta}>{duplex.symbol} · observed {new Date(duplex.observedAt).toLocaleString()}</p>
             : undefined
       }
     />

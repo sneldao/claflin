@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import styles from './WorkingDesk.module.css';
+import styles from './DeskScene.module.css';
 
 export const BrokerageRoom = memo(function BrokerageRoom() {
   return <div className={styles.officeArchitecture} aria-hidden="true">

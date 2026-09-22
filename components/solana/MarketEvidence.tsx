@@ -5,6 +5,7 @@ import { reasonCodeSentence } from '@/lib/solana/market/reasons';
 import { MARKET_EMPTY_HINT, PYTH_PRO_ABOUT } from '@/lib/desk/ui-copy';
 import { EvidencePanel, EvidenceRow, EvidenceDelta } from '../desk/EvidencePanel';
 import styles from '../desk/WorkingDesk.module.css';
+import evidence from "../desk/EvidencePanel.module.css";
 
 /**
  * Jesse's Pyth Pro market-evidence panel. Always mounted as a collapsible
@@ -44,7 +45,7 @@ export function MarketEvidence({
         body={
           !loading && onCompare ? (
             <>
-              <p className={styles.evidenceMeta}>{MARKET_EMPTY_HINT}</p>
+              <p className={evidence.evidenceMeta}>{MARKET_EMPTY_HINT}</p>
               <button
                 type="button"
                 className={styles.secondary}
@@ -71,13 +72,13 @@ export function MarketEvidence({
         status="unavailable"
         about={about}
         body={
-          <ul className={styles.evidenceReasons}>
+          <ul className={evidence.evidenceReasons}>
             {comparison.reasonCodes.map(code => (
               <li key={code}>{reasonCodeSentence(code)}</li>
             ))}
           </ul>
         }
-        meta={<p className={styles.evidenceMeta}>Observed {observed}. No numerical difference is shown.</p>}
+        meta={<p className={evidence.evidenceMeta}>Observed {observed}. No numerical difference is shown.</p>}
       />
     );
   }
@@ -93,7 +94,7 @@ export function MarketEvidence({
       body={
         <>
           {lastObservation && (
-            <p className={styles.evidenceMeta} role="status">
+            <p className={evidence.evidenceMeta} role="status">
               Equity market out of regular session — labelled last observation, not live.
             </p>
           )}
@@ -102,7 +103,7 @@ export function MarketEvidence({
           <EvidenceDelta bps={comparison.referenceDifferenceBps} />
         </>
       }
-      meta={<p className={styles.evidenceMeta}>Observed {observed}.</p>}
+      meta={<p className={evidence.evidenceMeta}>Observed {observed}.</p>}
     />
   );
 }

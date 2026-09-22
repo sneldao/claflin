@@ -1,0 +1,89 @@
+/* EvidencePanel — extracted from WorkingDesk.module.css (Phase 2 split).
+   Shared paper/ticket/ledger primitives stay in WorkingDesk.module.css. */
+.marketEvidence { margin: 18px 0 0; padding: 14px 16px; border: 1px dashed var(--desk-paper-rule); border-left: 2px solid var(--desk-brass); color: var(--desk-paper-muted); font-size: 12.5px; line-height: 1.6; }
+.marketEvidence h2 { margin: 6px 0 10px !important; font: 400 18px/1.25 var(--font-display), serif; color: var(--desk-paper-ink); letter-spacing: -.02em; }
+.evidenceReasons { margin: 0 0 8px; padding-left: 18px; }
+.evidenceReasons li { margin: 0 0 4px; }
+.evidenceObs { margin: 0 0 6px !important; color: var(--desk-paper-ink); }
+.evidenceBps { margin: 10px 0 6px !important; color: var(--desk-paper-ink); }
+.evidenceMeta { margin: 8px 0 0 !important; font: 10px/1.5 var(--font-mono), monospace; letter-spacing: .04em; }
+/* ————— Shared evidence panel (EvidencePanel) —————
+   Collapsed to one line by default: eyebrow, title, status. The body expands
+   on demand, and a finished reading opens itself once so the numbers show. */
+.marketEvidence[data-quiet="true"] { padding: 10px 12px; }
+.marketEvidence:not([open]) { padding-top: 10px; padding-bottom: 10px; }
+.evidenceSummary {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  cursor: pointer;
+}
+.evidenceSummary::-webkit-details-marker { display: none; }
+.evidenceSummary .eyebrow { flex-basis: 100%; margin: 0; }
+.marketEvidence > .evidenceSummary h2 { margin: 0 !important; font-size: 16px; }
+.evidenceChevron {
+  color: var(--desk-brass);
+  font-size: 10px;
+  line-height: 1;
+  transition: transform var(--dur-1) var(--ease-swift);
+}
+.evidenceChevron::before { content: '▸'; display: inline-block; }
+.marketEvidence[open] > .evidenceSummary .evidenceChevron { transform: rotate(90deg); }
+.evidenceCardBody { margin-top: 10px; }
+.evidenceStatus {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 9px/1.4 var(--font-mono), monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--desk-paper-muted);
+}
+.evidenceStatus i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.evidenceStatus[data-status='ready'] { color: #7ea67a; }
+.evidenceStatus[data-status='unavailable'] { color: #c98f7a; }
+.evidenceStatus[data-status='loading'] i { animation: evidencePulse 1.2s ease-in-out infinite; }
+.evidenceAbout { margin-top: 10px; font-size: 11px; }
+.evidenceAbout summary {
+  min-height: 32px;
+  padding: 6px 0;
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+  font: 9px/1.4 var(--font-mono), monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.evidenceAbout summary::-webkit-details-marker { display: none; }
+.evidenceAbout summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform var(--dur-1) var(--ease-swift);
+}
+.evidenceAbout[open] summary::before { transform: rotate(90deg); }
+.evidenceAboutBody p { margin: 6px 0 0 !important; line-height: 1.6; }
+.evidenceCaveat {
+  margin: 10px 0 0 !important;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--desk-paper-rule) 60%, transparent);
+  font: 9px/1.5 var(--font-mono), monospace;
+  letter-spacing: .03em;
+  color: var(--desk-paper-muted);
+}
+/* The education trigger inherits this 9px rule; lift it back to a readable step. */
+.evidenceCaveat button { font-size: 10px; }
+.evidenceDelta {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--desk-brass);
+  font-size: 10px;
+}
+.evidenceDelta[data-direction='down'] { color: #c98f7a; }
+.evidenceDelta[data-direction='flat'] { color: var(--desk-paper-muted); }
+@media (prefers-reduced-motion: reduce) { .evidenceStatus[data-status='loading'] i { animation: none; } }
+@keyframes evidencePulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }

@@ -20,6 +20,7 @@ import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
+import { useRecordUrl } from '@/lib/desk/use-record-url';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MODE_HINTS } from '@/lib/desk/ui-copy';
@@ -82,6 +83,17 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     if (Object.keys(partial).length === 0) return;
     void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
   }, [entryInstrumentId, entryIntent, jesse]);
+
+  /* ?record= applies once per URL entry — open what the link asks for, or
+     dismiss a lingering view when the entry carries none. */
+  const appliedEntryGen = useRef(-1);
+  useEffect(() => {
+    if (!jesse.historyReady || appliedEntryGen.current === desk.entryGen) return;
+    appliedEntryGen.current = desk.entryGen;
+    if (desk.entryRecordId) jesse.openRecord(desk.entryRecordId);
+    else if (jesse.viewedRecordId) jesse.dismissRecord();
+  }, [desk.entryGen, desk.entryRecordId, jesse]);
+  useRecordUrl(jesse.viewedRecordId);
 
   const carriedNote = carriedIntentNote(entryIntent, jesse.state.draft);
   const reviewActive = jesse.foreground.kind === 'quotation'

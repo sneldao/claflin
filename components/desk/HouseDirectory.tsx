@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { getEducationTopic } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
-import styles from './WorkingDesk.module.css';
+import styles from './HouseDirectory.module.css';
 
 export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void; onHome?: () => void }) {
   const [open, setOpen] = useState(false);

@@ -9,6 +9,7 @@ import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { VENUE_DUPLEX_ABOUT } from '@/lib/desk/ui-copy';
 import { EvidencePanel, EvidenceRow, EvidenceDelta } from '../desk/EvidencePanel';
 import styles from '../desk/WorkingDesk.module.css';
+import evidence from "../desk/EvidencePanel.module.css";
 
 /**
  * Free xStock duplex — Backed/Jupiter stock reference vs Jupiter venue USD.
@@ -73,7 +74,7 @@ export function VenueDuplexEvidence({ instrumentId }: { instrumentId: string | n
             <EvidenceDelta bps={duplex.referenceDifferenceBps} />
           </>
         ) : duplex?.status === 'unavailable' ? (
-          <ul className={styles.evidenceReasons}>
+          <ul className={evidence.evidenceReasons}>
             {duplex.reasonCodes.map(code => (
               <li key={code}>{venueDuplexReasonSentence(code)}</li>
             ))}
@@ -81,7 +82,7 @@ export function VenueDuplexEvidence({ instrumentId }: { instrumentId: string | n
         ) : undefined
       }
       meta={duplex?.status === 'comparable' ? (
-        <p className={styles.evidenceMeta}>
+        <p className={evidence.evidenceMeta}>
           {duplex.symbol} · observed {new Date(duplex.observedAt).toLocaleString()}
         </p>
       ) : undefined}

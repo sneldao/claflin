@@ -67,18 +67,27 @@ describe('one canonical house', () => {
     assert.match(source('components/desk/PaperLedger.tsx'), /No paper on file yet/);
     assert.match(source('components/desk/DeskBoard.tsx'), /Nothing pinned/);
   });
-  it('parses the desk stylesheet and resolves its component class references', () => {
-    const css = postcss.parse(source('components/desk/WorkingDesk.module.css'));
-    const classes = new Set<string>();
-    css.walkRules(rule => {
-      for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
-    });
-    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape', 'ModeStamp', 'EvidencePanel']) {
-      for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
-        assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
+  it('parses the desk stylesheets and resolves component class references per module', () => {
+    const classesFor = (modulePath: string) => {
+      const css = postcss.parse(source(`components/desk/${modulePath}`));
+      const classes = new Set<string>();
+      css.walkRules(rule => {
+        for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
+      });
+      return classes;
+    };
+    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape', 'ModeStamp', 'EvidencePanel', 'DeskNotice']) {
+      const src = source(`components/desk/${component}.tsx`);
+      for (const imp of src.matchAll(/import\s+(\w+)\s+from\s+['"](\.\/[\w-]+\.module\.css)['"]/g)) {
+        const [, binding, specifier] = imp;
+        const classes = classesFor(specifier.slice(2));
+        for (const match of src.matchAll(new RegExp(`\\b${binding}\\.(\\w+)`, 'g'))) {
+          assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]} in ${specifier}`);
+        }
       }
     }
-    css.walkRules(rule => {
+    const baseCss = postcss.parse(source('components/desk/WorkingDesk.module.css'));
+    baseCss.walkRules(rule => {
       if (!/\[data-ledger="true"\]/.test(rule.selector) || !/\.ticket/.test(rule.selector)) return;
       if (!rule.nodes?.some(node => node.type === 'decl' && node.prop === 'grid-column' && node.value === '2')) return;
       let at = rule.parent;

@@ -6,6 +6,7 @@ import {
   parseDeskQuery,
   parseEntryIntent,
   parseOfferingQuery,
+  parseRecordQuery,
   resolveHouseEntry,
   saveLastDesk,
 } from '../lib/house-entry.ts';
@@ -41,6 +42,7 @@ describe('house entry', () => {
       source: 'query',
       offeringId: null,
       intent: null,
+      recordId: null,
     });
   });
 
@@ -54,6 +56,7 @@ describe('house entry', () => {
       source: 'preference',
       offeringId: null,
       intent: null,
+      recordId: null,
     });
   });
 
@@ -82,6 +85,7 @@ describe('house entry', () => {
       source: 'query',
       offeringId: solana.offeringId,
       intent: null,
+      recordId: null,
     });
     assert.deepEqual(resolveHouseEntry('jesse', memoryStorage(), base.offeringId), {
       kind: 'desk',
@@ -89,6 +93,7 @@ describe('house entry', () => {
       source: 'query',
       offeringId: null,
       intent: null,
+      recordId: null,
     });
   });
 
@@ -110,6 +115,35 @@ describe('house entry', () => {
       source: 'query',
       offeringId: null,
       intent: { side: 'buy', amount: '25' },
+      recordId: null,
+    });
+  });
+
+  it('parses ?record= into a record deep link and rejects junk ids', () => {
+    assert.equal(parseRecordQuery('rec-123_abc'), 'rec-123_abc');
+    assert.equal(parseRecordQuery('plain'), 'plain');
+    assert.equal(parseRecordQuery(''), null);
+    assert.equal(parseRecordQuery(null), null);
+    assert.equal(parseRecordQuery('has spaces'), null);
+    assert.equal(parseRecordQuery('dots.bad'), null);
+    assert.equal(parseRecordQuery('a'.repeat(101)), null);
+
+    assert.deepEqual(resolveHouseEntry('hetty', memoryStorage(), null, null, 'rec-42'), {
+      kind: 'desk',
+      deskId: 'hetty',
+      source: 'query',
+      offeringId: null,
+      intent: null,
+      recordId: 'rec-42',
+    });
+    /* A junk record id must not poison an otherwise-valid desk entry. */
+    assert.deepEqual(resolveHouseEntry('jesse', memoryStorage(), null, null, 'bad id!'), {
+      kind: 'desk',
+      deskId: 'jesse',
+      source: 'query',
+      offeringId: null,
+      intent: null,
+      recordId: null,
     });
   });
 });

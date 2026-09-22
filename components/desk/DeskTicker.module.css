@@ -1,0 +1,130 @@
+/* DeskTicker — extracted from WorkingDesk.module.css (Phase 2 split).
+   Shared paper/ticket/ledger primitives stay in WorkingDesk.module.css. */
+
+.tape { animation: riseIn var(--dur-1) var(--ease-swift) calc(var(--stagger) * 2) backwards; }
+
+/* ————— The tape: indicative reference marks ————— */
+
+.tape { display: flex; align-items: stretch; gap: 0; border-top: 1px solid var(--desk-brass-dim); border-bottom: 1px solid var(--desk-brass-dim); min-height: 52px; position: relative; }
+
+.tapePrice { animation: tapeTick 300ms cubic-bezier(.2, .9, .3, 1.2) both; }
+
+.tape::before, .tape::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 4px; pointer-events: none;
+  background: radial-gradient(circle 1.6px at 8px 2px, var(--desk-brass-dim) 98%, transparent);
+  background-size: 26px 4px; opacity: .5;
+}
+
+.tape::before { top: 1px; }
+
+.tape::after { bottom: 1px; }
+
+.tapeLabel { align-self: center; flex-shrink: 0; margin-right: 18px; padding: 6px 9px; border: 1px solid var(--desk-brass-dim); font: 9px/1 var(--font-mono), monospace; letter-spacing: .18em; color: var(--desk-brass); cursor: help; }
+
+.tapeExplain {
+  align-self: center;
+  flex-shrink: 0;
+  margin-right: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 9px/1.2 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  color: var(--desk-brass-dim);
+  cursor: pointer;
+}
+
+.tapeNote { align-self: center; margin: 0; color: var(--desk-muted); font: 11px/1.6 var(--font-mono), monospace; }
+
+.tapeStaleInline { align-self: center; flex-shrink: 0; margin-right: 14px; font: 9px/1.2 var(--font-mono), monospace; letter-spacing: .1em; color: var(--desk-muted); cursor: help; white-space: nowrap; }
+
+.tapeWindow { flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: stretch; mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
+
+.tapeTrack { display: flex; width: max-content; animation: tapeRun 44s linear infinite; }
+
+.tapeWindow:hover .tapeTrack, .tapeWindow:focus-within .tapeTrack { animation-play-state: paused; }
+
+.tapeCopy { display: flex; align-items: stretch; }
+
+.tapeItem { display: flex; align-items: center; gap: 10px; padding: 10px 26px; background: transparent; border: 0; border-right: 1px solid var(--desk-line); color: var(--desk-ink); white-space: nowrap; transition: background 180ms, transform 120ms ease-out; }
+
+.tapeItem:hover:not(:disabled) { background: #c5ac7814; transform: translateY(-1px); }
+
+.tapeItem:active:not(:disabled) { transform: translateY(0); }
+
+.tapeItem:focus-visible { outline: 2px solid var(--desk-brass); outline-offset: -2px; }
+
+.tapeItem:disabled { color: var(--desk-muted); }
+
+.tapeSymbol { font: 11px/1 var(--font-mono), monospace; letter-spacing: .12em; color: var(--desk-brass); }
+
+.tapePrice { font: 13px/1 var(--font-mono), monospace; color: var(--desk-ink); }
+
+.tapeItem[data-stale="true"] .tapePrice { color: var(--desk-muted); }
+
+.tapeStale { font: 8px/1 var(--font-mono), monospace; letter-spacing: .1em; color: var(--desk-muted); }
+
+/* The room holds its breath while the line is open: the tape stops running
+   so the only thing moving is the conversation. */
+
+[data-live="true"] .tapeTrack { animation-play-state: paused; }
+
+.tape { min-height: 44px; border-color: var(--desk-line); }
+
+.tapeLabel { font-size: 8px; border: 0; padding-left: 0; }
+
+.tape::before, .tape::after { display: none; }
+
+.tapePrice { font-size: 11px; }
+
+.tapeSymbol { font-size: 10px; }
+
+.tickerStation { position: relative; z-index: 4; margin: 30px 0 0 120px; min-height: 60px; }
+
+.tickerStation .tape { color: var(--desk-paper-ink); background: var(--desk-paper); min-height: 48px; border-block: 1px solid var(--desk-paper-edge); box-shadow: 0 3px 0 var(--desk-file-shadow), 0 10px 15px var(--desk-shadow); }
+
+.tickerStation .tapeLabel { color: var(--desk-paper-muted); font-size: 8px; padding-left: 14px; margin-right: 12px; }
+
+.tickerStation .tapeExplain { color: var(--desk-paper-muted); font-size: 8px; margin-right: 10px; }
+
+.tickerStation .tapeNote { color: var(--desk-paper-muted); font-size: 10px; padding: 10px 12px 10px 0; }
+
+.tickerStation .tapeSymbol, .tickerStation .tapePrice { color: var(--desk-paper-ink); }
+
+.tickerStation .tapeStale { color: var(--desk-paper-muted); }
+
+.tickerStation .tapeItem { border-color: var(--desk-paper-rule); padding: 12px 20px; }
+
+.tickerStation .tapeItem:hover:not(:disabled) { background: var(--desk-paper-wash); transform: none; }
+
+.tickerStation .tapeItem:focus-visible { outline-color: var(--desk-paper-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tape { animation: none; } .tapePrice { animation: none; }
+  .tapeTrack { animation: none; } }
+
+@media (max-width: 760px) {
+  .tapeLabel { margin-right: 10px; }
+  .tapeItem { padding: 10px 18px; }
+  .tickerStation { margin: 24px 0 0 36px; }
+  .tickerStation .tapeLabel { padding-left: 8px; font-size: 7px; margin-right: 8px; }
+  .tickerStation .tapeNote { font-size: 9px; }
+  .tickerStation { margin: 16px 0 0 8px; }
+  .tickerStation .tapeWindow { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+  .tickerStation .tapeTrack { animation: none; }
+  .tickerStation .tapeItem { scroll-snap-align: start; } }
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tapeTick {
+  0% { transform: translateY(-6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes tapeRun { to { transform: translateX(-50%); } }

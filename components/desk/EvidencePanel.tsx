@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import styles from './WorkingDesk.module.css';
+import evidence from "./EvidencePanel.module.css";
 
 export type EvidenceStatus = 'empty' | 'loading' | 'ready' | 'unavailable';
 
@@ -57,35 +58,35 @@ export function EvidencePanel({
 
   return (
     <details
-      className={styles.marketEvidence}
+      className={evidence.marketEvidence}
       data-status={status}
       data-quiet={hasReading ? undefined : 'true'}
       open={open}
       onToggle={event => setOpen(event.currentTarget.open)}
       aria-labelledby={titleId}
     >
-      <summary className={styles.evidenceSummary}>
-        <span className={styles.eyebrow}>{eyebrow}</span>
-        <span className={styles.evidenceChevron} aria-hidden="true" />
+      <summary className={evidence.evidenceSummary}>
+        <span className={`${styles.eyebrow} ${evidence.eyebrow}`}>{eyebrow}</span>
+        <span className={evidence.evidenceChevron} aria-hidden="true" />
         <h2 id={titleId}>{title}</h2>
-        <span className={styles.evidenceStatus} data-status={status}>
+        <span className={evidence.evidenceStatus} data-status={status}>
           <i aria-hidden="true" />
           {STATUS_TEXT[status]}
         </span>
       </summary>
-      <div className={styles.evidenceCardBody}>
+      <div className={evidence.evidenceCardBody}>
         {body}
         {!body && status === 'loading' && (
-          <p className={styles.evidenceMeta} role="status">Reading…</p>
+          <p className={evidence.evidenceMeta} role="status">Reading…</p>
         )}
         {!body && status === 'empty' && (
-          <p className={styles.evidenceMeta}>No reading yet.</p>
+          <p className={evidence.evidenceMeta}>No reading yet.</p>
         )}
         {meta}
         {about && (
-          <details className={styles.evidenceAbout}>
+          <details className={evidence.evidenceAbout}>
             <summary>About this reading</summary>
-            <div className={styles.evidenceAboutBody}>{about}</div>
+            <div className={evidence.evidenceAboutBody}>{about}</div>
           </details>
         )}
       </div>
@@ -96,7 +97,7 @@ export function EvidencePanel({
 /** One labelled value row: "Reference · 189.42 USD · Backed issuer indicative". */
 export function EvidenceRow({ label, value, source }: { label: string; value: ReactNode; source?: string }) {
   return (
-    <p className={styles.evidenceObs}>
+    <p className={evidence.evidenceObs}>
       <strong>{label}</strong>
       {' · '}
       {value}
@@ -111,14 +112,14 @@ export function EvidenceRow({ label, value, source }: { label: string; value: Re
  */
 export function EvidenceDelta({ bps }: { bps: string | null }) {
   if (bps === null) {
-    return <p className={styles.evidenceMeta}>No basis-point difference available.</p>;
+    return <p className={evidence.evidenceMeta}>No basis-point difference available.</p>;
   }
   const negative = bps.startsWith('-');
   const zero = Number(bps) === 0;
   const direction = zero ? 'flat' : negative ? 'down' : 'up';
   return (
-    <p className={styles.evidenceBps}>
-      <span className={styles.evidenceDelta} data-direction={direction} aria-hidden="true">
+    <p className={evidence.evidenceBps}>
+      <span className={evidence.evidenceDelta} data-direction={direction} aria-hidden="true">
         {zero ? '·' : negative ? '▼' : '▲'}
       </span>
       {bps} bps
