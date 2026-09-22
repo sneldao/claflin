@@ -1,6 +1,7 @@
 'use client';
 
 import { useTradingDesk } from '@/lib/trading/useTradingDesk';
+import { HOUSE_DESKS, isOpenDesk } from '@/lib/house';
 import { DeskObjects } from './BrokerageRoom';
 import { ClosedDesk } from './ClosedDesk';
 import { DeskRoom } from './DeskRoom';
@@ -53,7 +54,14 @@ function WorkingDeskContent() {
       <div className={styles.grid}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        <ClosedDesk desk={desk.activeDesk} onReturn={() => desk.switchDesk('hetty')} />
+        <ClosedDesk desk={desk.activeDesk}
+          returnTo={HOUSE_DESKS.find(d => isOpenDesk(d.id)) ?? null}
+          onReturn={() => {
+            const fallback = HOUSE_DESKS.find(d => isOpenDesk(d.id));
+            if (fallback) desk.switchDesk(fallback.id);
+            else desk.leaveDesk();
+          }}
+        />
       </div>
     </DeskRoom>
   );

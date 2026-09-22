@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowRight } from 'lucide-react';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
+import type { EntryIntent } from '@/lib/house-entry';
 import { NIGHT_DESK_FIXTURES, type NightDeskAmount, type NightDeskStage } from '@/lib/night-desk-fixtures';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
@@ -23,9 +24,18 @@ const EXAMPLE_QUOTES = {
  * Claflin foyer — Sylva-shaped: one composition, a touchable central subject
  * (mini slip demo), plain product sentence, and catalog-led desk entry.
  */
-export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string) => void }) {
+export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void }) {
   const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
+
+  /* Same landing discipline as the desk rooms — focus the work, not the chrome. */
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active === document.body || !active?.isConnected) {
+      mainRef.current?.focus({ preventScroll: true });
+    }
+  }, []);
 
   const [phase, setPhase] = useState<DemoPhase>('idle');
   const [amount, setAmount] = useState<NightDeskAmount>('100');
@@ -128,7 +138,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
         </nav>
       </header>
 
-      <main id="main-content" tabIndex={-1} className={foyerStyles.main}>
+      <main id="main-content" tabIndex={-1} ref={mainRef} className={foyerStyles.main}>
         <section className={foyerStyles.hero} aria-labelledby="foyer-title">
           <div className={foyerStyles.copy}>
             <p className={foyerStyles.kicker}>A LITTLE DISTANCE FROM THE MARKET</p>

@@ -5,7 +5,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { OPEN_DESK_ID, getHouseDesk, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { usesLegacyDeskDocuments } from '@/lib/desk/registry';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
-import { clearDeskQuery, loadLastDesk, resolveHouseEntry, saveLastDesk, syncDeskQuery } from '@/lib/house-entry';
+import { clearDeskQuery, loadLastDesk, parseDeskQuery, parseOfferingQuery, resolveHouseEntry, saveLastDesk, syncDeskQuery, type EntryIntent } from '@/lib/house-entry';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
@@ -38,6 +38,7 @@ export function useTradingDesk() {
   const auth = useDeskAuth();
   const [entryPhase, setEntryPhase] = useState<HouseEntryPhase>('pending');
   const [entryOfferingId, setEntryOfferingId] = useState<string | null>(null);
+  const [entryIntent, setEntryIntent] = useState<EntryIntent | null>(null);
   const [deskId, setDeskId] = useState<HouseDeskId>(OPEN_DESK_ID);
   const [state, dispatch] = useReducer(deskReducer, emptyDraft(), initialDesk);
   const [records, setRecords] = useState<PaperRecord[]>([]);
@@ -52,9 +53,14 @@ export function useTradingDesk() {
   const saveLock = useRef(false);
   const sessions = useRef<Partial<Record<HouseDeskId, ParkedDesk>>>({});
   const deskIdRef = useRef(deskId);
-  deskIdRef.current = deskId;
   const userIdRef = useRef(auth.userId);
-  userIdRef.current = auth.userId;
+  /* Ref mirrors for async callbacks — synced in an effect, not during render.
+     hydrateDesk also stamps deskIdRef synchronously so an in-flight quote sees
+     the new desk before effects flush. */
+  useEffect(() => {
+    deskIdRef.current = deskId;
+    userIdRef.current = auth.userId;
+  });
 
   const loadHistory = useCallback(() => {
     try {
@@ -65,16 +71,24 @@ export function useTradingDesk() {
     catch { setHistoryReady(false); setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.'); }
   }, []);
 
-  const hydrateDesk = useCallback((id: HouseDeskId, offeringId?: string | null) => {
+  const hydrateDesk = useCallback((id: HouseDeskId, offeringId?: string | null, intent?: EntryIntent | null) => {
     const offering = offeringId ? offeringForId(offeringId) : null;
     const selectedInstrumentId = offering && offeringCoversDesk(offering, id) ? offering.instrumentId : null;
     setDeskId(id);
     deskIdRef.current = id;
     setEntryOfferingId(offering && selectedInstrumentId ? offering.offeringId : null);
+    setEntryIntent(intent ?? null);
     const persisted = usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft();
-    const draft = selectedInstrumentId && usesLegacyDeskDocuments(id)
+    let draft = selectedInstrumentId && usesLegacyDeskDocuments(id)
       ? { ...persisted, instrumentId: selectedInstrumentId }
       : persisted;
+    if (usesLegacyDeskDocuments(id) && intent) {
+      /* Carry the foyer's instruction onto the ticket — offering picks the
+         instrument, the instruction's side and amount come with it. */
+      if (intent.side === 'sell') draft = { ...draft, side: 'sell', unit: 'token' };
+      else if (intent.side === 'buy') draft = { ...draft, side: 'buy', unit: 'USDC' };
+      if (intent.amount) draft = { ...draft, amount: intent.amount };
+    }
     dispatch({ type: 'hydrate', state: initialDesk(draft) });
     setViewedRecordId(null);
     setError(null);
@@ -117,6 +131,29 @@ export function useTradingDesk() {
     window.addEventListener('storage', loadHistory);
     return () => window.removeEventListener('storage', loadHistory);
   }, [auth.userId, entryPhase, loadHistory]);
+  /* Back/Forward follow the address bar: `?desk=` lands on that desk, its
+     absence lands on the foyer — no last-desk preference on pop, the user
+     already chose where to stand. */
+  useEffect(() => {
+    const onPop = () => {
+      const params = new URLSearchParams(window.location.search);
+      const desk = parseDeskQuery(params.get('desk'));
+      request.current?.abort();
+      requestGen.current += 1;
+      if (!desk) {
+        setEntryOfferingId(null);
+        setEntryIntent(null);
+        setEntryPhase('foyer');
+        return;
+      }
+      hydrateDesk(desk, parseOfferingQuery(params.get('offering'), desk));
+      saveLastDesk(window.localStorage, desk);
+      setEntryPhase('desk');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [hydrateDesk]);
+
   useEffect(() => {
     if (!deskReady || entryPhase !== 'desk' || !usesLegacyDeskDocuments(deskId)) return;
     try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
@@ -254,16 +291,16 @@ export function useTradingDesk() {
     });
   }, [deskId]);
 
-  const enterDesk = useCallback((id: HouseDeskId, offeringId?: string | null) => {
+  const enterDesk = useCallback((id: HouseDeskId, offeringId?: string | null, intent?: EntryIntent | null) => {
     if (!getHouseDesk(id)) return;
     const offering = offeringId ? offeringForId(offeringId) : null;
     const selectedOfferingId = offering && offeringCoversDesk(offering, id) ? offering.offeringId : null;
     request.current?.abort();
     requestGen.current += 1;
     sessions.current = {};
-    hydrateDesk(id, selectedOfferingId);
+    hydrateDesk(id, selectedOfferingId, intent);
     saveLastDesk(window.localStorage, id);
-    syncDeskQuery(id, selectedOfferingId);
+    syncDeskQuery(id, selectedOfferingId, 'push');
     setEntryPhase('desk');
   }, [hydrateDesk]);
 
@@ -271,8 +308,9 @@ export function useTradingDesk() {
     request.current?.abort();
     requestGen.current += 1;
     setEntryOfferingId(null);
+    setEntryIntent(null);
     setEntryPhase('foyer');
-    clearDeskQuery();
+    clearDeskQuery('push');
   }, []);
 
   const switchDesk = useCallback((id: HouseDeskId) => {
@@ -304,6 +342,7 @@ export function useTradingDesk() {
     saveLastDesk(window.localStorage, entered.deskId);
     syncDeskQuery(entered.deskId, null);
     setEntryOfferingId(null);
+    setEntryIntent(null);
     try {
       setRecords(readHistory(entered.deskId, userIdRef.current));
       setWatched(loadWatched(window.localStorage, entered.deskId));
@@ -322,12 +361,12 @@ export function useTradingDesk() {
 
   return useMemo(
     () => ({
-      entryPhase, enterDesk, leaveDesk, entryOfferingId,
+      entryPhase, enterDesk, leaveDesk, entryOfferingId, entryIntent,
       deskId, activeDesk, open, switchDesk, foreground,
       state, records, historyReady, storageError, error, edit, requestQuote, save, cancel,
       loadHistory, removeRecord, watched, watch, unwatch,
       viewedRecordId, focusedRecordId, openRecord, dismissRecord,
     }),
-    [entryPhase, enterDesk, leaveDesk, entryOfferingId, deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
+    [entryPhase, enterDesk, leaveDesk, entryOfferingId, entryIntent, deskId, activeDesk, open, switchDesk, foreground, state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord, watched, watch, unwatch, viewedRecordId, focusedRecordId, openRecord, dismissRecord],
   );
 }

@@ -19,14 +19,10 @@ import { MODE_HINTS } from '@/lib/desk/ui-copy';
 import { ModeStamp } from './ModeStamp';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import type { HouseDeskId } from '@/lib/house';
-import {
-  loadDeskPresentation,
-  parseViewQuery,
-  saveDeskPresentation,
-  shouldPreferCompactView,
-  syncViewQuery,
-  type DeskPresentation,
-} from '@/lib/desk-presentation';
+import type { DeskPresentation } from '@/lib/desk-presentation';
+import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
+import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
+import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { TradeTicket } from './TradeTicket';
@@ -91,7 +87,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const [hettySaid, setHettySaid] = useState<string | null>(null);
   const [practiceReturn, setPracticeReturn] = useState(false);
   const [presentation, setPresentation] = useState<DeskPresentation>('compact');
-  const viewQueryApplied = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -100,22 +95,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     params.delete(PRACTICE_RETURN_PARAM);
     const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash || '#instruction'}`;
     window.history.replaceState({}, '', next);
-  }, []);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const fromQuery = parseViewQuery(new URLSearchParams(window.location.search).get('view'));
-    if (!viewQueryApplied.current && fromQuery) {
-      viewQueryApplied.current = true;
-      setPresentation(fromQuery);
-      saveDeskPresentation(window.localStorage, 'hetty', fromQuery);
-      syncViewQuery(fromQuery);
-      return;
-    }
-    const stored = loadDeskPresentation(window.localStorage, 'hetty', {
-      preferCompactWhenUnset: shouldPreferCompactView(),
-    });
-    setPresentation(stored);
-    syncViewQuery(stored);
   }, []);
   const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); } }, []);
   const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
@@ -150,7 +129,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       ? { instrumentId: instrument.id, side: 'sell', unit: 'token', amount: cleanAmount }
       : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
     setSharedLoaded(true);
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
+    scrollToDeskTarget('instruction');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -159,8 +138,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     const prev = prevForegroundRef.current;
     prevForegroundRef.current = foreground.kind;
     if (!hettyLive || foreground.kind !== 'quotation' || prev === 'quotation') return;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    scrollToDeskTarget('instruction');
   }, [hettyLive, foreground.kind]);
 
   const selected = DESK_INSTRUMENTS.find(s => s.id === (foreground.instrumentId ?? ''));
@@ -186,9 +164,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     } else {
       desk.edit({ instrumentId, side: 'buy', unit: 'USDC', amount: '' });
     }
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
-    document.getElementById('amount')?.focus({ preventScroll: true });
+    scrollToDeskTarget('instruction', { focusId: 'amount' });
   };
 
   const sayToDesk = useCallback((phrase: string) => {
@@ -197,32 +173,20 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       if (apple?.quoteSupported) {
         desk.edit({ instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '25' });
         handleUserSpoken(phrase);
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+        scrollToDeskTarget('instruction');
         return;
       }
     }
     signalLine();
   }, [desk, handleUserSpoken]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'h' && e.key !== 'H') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      signalLine();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useLineHotkey();
 
+  const applyPresentation = useDeskPresentation('hetty', setPresentation);
   const setMode = useCallback((mode: DeskPresentation) => {
-    setPresentation(mode);
     if (mode === 'compact') setRoomFocus(null);
-    if (typeof window !== 'undefined') saveDeskPresentation(window.localStorage, 'hetty', mode);
-    syncViewQuery(mode);
-  }, []);
+    applyPresentation(mode);
+  }, [applyPresentation]);
 
   const roomProjection = useMemo(() => projectHettyToRoom({
     stage: desk.state.stage,
@@ -235,18 +199,16 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const onRoomView = (view: NightDeskView) => {
     setRoomFocus({ foreground: foreground.kind, view });
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const behavior = reduceMotion ? 'auto' : 'smooth';
     if (view === 'review') {
-      document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior });
+      scrollToDeskTarget('instruction');
       return;
     }
     if (view === 'ledger') {
-      document.getElementById('paper-ledger')?.scrollIntoView({ block: 'start', behavior });
+      scrollToDeskTarget('paper-ledger');
       return;
     }
     if (view === 'evidence') {
-      document.getElementById('on-desk')?.scrollIntoView({ block: 'start', behavior });
+      scrollToDeskTarget('on-desk');
     }
   };
 

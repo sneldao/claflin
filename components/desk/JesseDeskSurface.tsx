@@ -10,19 +10,15 @@ import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
-import type { DeskPresentation } from '@/lib/desk/contracts';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
-import type { SolanaInstrumentId } from '@/lib/solana/contracts';
-import { bindFilePaperCommand, parseJesseSpeech } from '@/lib/jesse/speech';
+import type { JesseDraft, SolanaInstrumentId } from '@/lib/solana/contracts';
+import { parseJesseUtterance } from '@/lib/jesse/speech';
 import { projectJesseToRoom } from '@/lib/room-view-projection';
-import {
-  parseViewQuery,
-  presentationStorageKey,
-  shouldPreferCompactView,
-  syncViewQuery,
-} from '@/lib/desk-presentation';
+import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
+import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
+import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MODE_HINTS } from '@/lib/desk/ui-copy';
@@ -51,32 +47,14 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [spoken, setSpoken] = useState<string | null>(null);
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
-  const viewQueryApplied = useRef(false);
   const offeringApplied = useRef<string | null>(null);
 
   const presentationMode = jesse.state.presentation.mode;
   const roomView = presentationMode === 'room';
 
-  useEffect(() => {
-    if (viewQueryApplied.current) return;
-    if (typeof window === 'undefined') return;
-    const fromQuery = parseViewQuery(new URLSearchParams(window.location.search).get('view'));
-    if (fromQuery) {
-      viewQueryApplied.current = true;
-      jesse.setPresentationMode(fromQuery);
-      syncViewQuery(fromQuery);
-      return;
-    }
-    const stored = window.localStorage.getItem(presentationStorageKey('jesse'));
-    if (!stored && shouldPreferCompactView()) {
-      viewQueryApplied.current = true;
-      jesse.setPresentationMode('compact');
-      syncViewQuery('compact');
-      return;
-    }
-    viewQueryApplied.current = true;
-    syncViewQuery(presentationMode);
-  }, [jesse, presentationMode]);
+  /* ?view bootstrap waits on historyReady — the controller session exists
+     only after useJesseDesk's mount effect has run. */
+  const setMode = useDeskPresentation('jesse', mode => { jesse.setPresentationMode(mode); }, jesse.historyReady);
 
   const entryOffering = desk.entryOfferingId ? offeringForId(desk.entryOfferingId) : null;
   const entryInstrumentId = entryOffering
@@ -84,17 +62,25 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     && SOLANA_INSTRUMENTS.some(instrument => instrument.id === entryOffering.instrumentId)
     ? entryOffering.instrumentId as SolanaInstrumentId
     : null;
+  const entryIntent = desk.entryIntent;
 
+  /* Entry context lands once: the offering's instrument plus any side and
+     amount the instruction carried in from the foyer. */
   useEffect(() => {
-    if (!entryInstrumentId) {
+    const key = `${entryInstrumentId ?? ''}|${entryIntent?.side ?? ''}|${entryIntent?.amount ?? ''}`;
+    if (key === '||') {
       offeringApplied.current = null;
       return;
     }
-    if (!jesse.historyReady || offeringApplied.current === entryInstrumentId) return;
-    offeringApplied.current = entryInstrumentId;
-    if (jesse.state.draft.instrumentId === entryInstrumentId) return;
-    void jesse.edit({ instrumentId: entryInstrumentId }, 'instrument');
-  }, [entryInstrumentId, jesse]);
+    if (!jesse.historyReady || offeringApplied.current === key) return;
+    offeringApplied.current = key;
+    const partial: Partial<JesseDraft> = {};
+    if (entryInstrumentId && jesse.state.draft.instrumentId !== entryInstrumentId) partial.instrumentId = entryInstrumentId;
+    if (entryIntent?.side) partial.side = entryIntent.side;
+    if (entryIntent?.amount) partial.amount = entryIntent.amount;
+    if (Object.keys(partial).length === 0) return;
+    void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
+  }, [entryInstrumentId, entryIntent, jesse]);
 
   const reviewActive = jesse.foreground.kind === 'quotation'
     || jesse.foreground.kind === 'receipt'
@@ -125,23 +111,12 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     inFlight: jesse.inFlight,
   }), [jesse.state.stage, jesse.state.presentation, jesse.foreground, jesse.state.comparison, jesse.inFlight]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'h' && e.key !== 'H') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      signalLine();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useLineHotkey();
 
   const sayToDesk = useCallback(async (phrase: string) => {
     setSpoken(phrase);
     setHeardNote(null);
-    let parsed = parseJesseSpeech(phrase, jesse.state.draft);
-    parsed = bindFilePaperCommand(parsed, jesse.state.quote?.id ?? null);
+    const parsed = parseJesseUtterance(phrase, jesse.state.draft, jesse.state.quote?.id ?? null);
     if (!parsed.command) {
       setHeardNote('I didn’t catch a supported xStock instruction. Try “buy 100 USDC of AAPLx”.');
       signalLine();
@@ -149,14 +124,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     }
     const result = await jesse.run(parsed.command);
     setHeardNote(result.spokenText);
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+    scrollToDeskTarget('instruction');
   }, [jesse]);
-
-  const setMode = (mode: DeskPresentation) => {
-    jesse.setPresentationMode(mode);
-    syncViewQuery(mode);
-  };
 
   const onRoomView = (view: NightDeskView) => {
     if (view === 'evidence') {
@@ -172,12 +141,12 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     }
     if (view === 'review') {
       void jesse.run({ type: 'focus', target: 'instruction', objectId: jesse.state.quote?.id ?? null });
-      document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      scrollToDeskTarget('instruction');
       return;
     }
     if (view === 'ledger') {
       void jesse.run({ type: 'focus', target: 'record', objectId: null });
-      document.getElementById('paper-ledger')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      scrollToDeskTarget('paper-ledger');
       return;
     }
     void jesse.run({ type: 'focus', target: 'desk', objectId: null });

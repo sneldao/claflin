@@ -6,6 +6,7 @@ import type { DeskMark } from '@/lib/trading/marks-shared';
 import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { readSeenSnapshot, writeSeenSnapshot, trayDeltas, deltaLine, seenDayLabel, marksToPoints } from '@/lib/trading/tray-deltas';
+import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import styles from './WorkingDesk.module.css';
 
 /**
@@ -73,8 +74,7 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
     } else {
       edit({ instrumentId: id, side: 'buy', unit: 'USDC', amount: '' });
     }
-    document.getElementById('instruction')?.scrollIntoView({ block: 'start' });
-    document.getElementById('amount')?.focus({ preventScroll: true });
+    scrollToDeskTarget('instruction', { focusId: 'amount' });
   };
 
   return (

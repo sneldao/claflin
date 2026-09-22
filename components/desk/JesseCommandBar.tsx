@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
-import { bindFilePaperCommand, parseJesseSpeech } from '@/lib/jesse/speech';
+import { parseJesseUtterance } from '@/lib/jesse/speech';
 import styles from './WorkingDesk.module.css';
 
 /**
@@ -26,8 +26,7 @@ export function JesseCommandBar({
     setNote(null);
     onHeard?.(heard);
     try {
-      let parsed = parseJesseSpeech(heard, jesse.state.draft);
-      parsed = bindFilePaperCommand(parsed, jesse.state.quote?.id ?? null);
+      const parsed = parseJesseUtterance(heard, jesse.state.draft, jesse.state.quote?.id ?? null);
       if (!parsed.command) {
         setNote('I didn’t catch a supported instruction. Try “buy 100 USDC of AAPLx” or “compare NVIDIA xStock”.');
         return;

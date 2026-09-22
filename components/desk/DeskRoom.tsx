@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HOUSE, type HouseDesk, type HouseDeskId } from '@/lib/house';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useRoomTone } from '@/lib/desk-tone';
+import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { HouseMark } from './HouseMark';
 import { BrokerageRoom } from './BrokerageRoom';
 import { HouseDirectory } from './HouseDirectory';
@@ -197,9 +198,7 @@ export function DeskRoom({
             className={styles.footerCta}
             onClick={(e) => {
               e.preventDefault();
-              const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-              document.getElementById('instruction')?.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
-              document.getElementById('amount')?.focus({ preventScroll: true });
+              scrollToDeskTarget('instruction', { focusId: 'amount' });
             }}
           >
             Back to your ticket ↑

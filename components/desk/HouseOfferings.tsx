@@ -3,7 +3,9 @@
 import { useMemo, useState, type MouseEvent } from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { HouseDeskId } from '@/lib/house';
+import type { EntryIntent } from '@/lib/house-entry';
 import type { InstrumentOffering } from '@/lib/desk/contracts';
+import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
 import {
   mandateLabel,
   offeringCapabilityText,
@@ -22,7 +24,7 @@ function offeringHref(offering: InstrumentOffering, deskId: HouseDeskId): string
  * The house book: instruction first, then concrete offerings and only the
  * desks that can actually carry each product/rail/venue combination.
  */
-export function HouseOfferings({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string) => void }) {
+export function HouseOfferings({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void }) {
   const [instruction, setInstruction] = useState('');
   const groups = useMemo(() => offeringGroupsForInstruction(instruction), [instruction]);
 
@@ -30,7 +32,13 @@ export function HouseOfferings({ onEnter }: { onEnter: (id: HouseDeskId, offerin
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     window.scrollTo({ top: 0, behavior: 'instant' });
-    onEnter(deskId, offering.offeringId);
+    /* The instruction is not just a filter — its side and amount ride along
+       onto the ticket the desk opens with. */
+    const parsed = instruction.trim() ? parseDictatedTradeIntent(instruction) : null;
+    const intent: EntryIntent | null = parsed && (parsed.intent.side || parsed.intent.amount)
+      ? { side: parsed.intent.side ?? null, amount: parsed.intent.amount ?? null }
+      : null;
+    onEnter(deskId, offering.offeringId, intent);
   };
 
   return (

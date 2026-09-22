@@ -124,6 +124,35 @@ describe('one canonical house', () => {
     assert.match(source('lib/trading/useTradingDesk.ts'), /entryPhase/);
     assert.match(source('components/desk/WorkingDesk.tsx'), /entryPhase === 'foyer'/);
   });
+  it('keeps the foyer reachable and the header for wayfinding, not scrolling', () => {
+    const entry = source('lib/house-entry.ts');
+    assert.match(entry, /clearDeskQuery/);
+    assert.match(entry, /pushState/);
+    const desk = source('lib/trading/useTradingDesk.ts');
+    assert.match(desk, /leaveDesk/);
+    assert.match(desk, /popstate/);
+    assert.match(desk, /syncDeskQuery\(id, selectedOfferingId, 'push'\)/);
+    assert.match(desk, /clearDeskQuery\('push'\)/);
+    const room = source('components/desk/DeskRoom.tsx');
+    assert.match(room, /onLeaveDesk/);
+    assert.match(room, /onHome=\{onLeaveDesk\}/);
+    const directory = source('components/desk/HouseDirectory.tsx');
+    assert.match(directory, /The foyer/);
+    assert.match(directory, /onHome/);
+    assert.doesNotMatch(source('components/desk/JesseDeskSurface.tsx'), /navExtras|#venue-duplex-title|#prestocks-title/);
+    assert.doesNotMatch(source('components/desk/HettyDeskSurface.tsx'), /navExtras/);
+    assert.match(source('components/desk/ClosedDesk.tsx'), /returnTo/);
+    assert.doesNotMatch(source('components/desk/WorkingDesk.tsx'), /switchDesk\('hetty'\)/);
+  });
+  it('carries a foyer instruction onto the desk ticket', () => {
+    const offerings = source('components/desk/HouseOfferings.tsx');
+    assert.match(offerings, /parseDictatedTradeIntent/);
+    assert.match(offerings, /onEnter\(deskId, offering\.offeringId, intent\)/);
+    const desk = source('lib/trading/useTradingDesk.ts');
+    assert.match(desk, /entryIntent/);
+    assert.match(desk, /intent\?: EntryIntent/);
+    assert.match(source('components/desk/JesseDeskSurface.tsx'), /desk\.entryIntent/);
+  });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');
     assert.match(desk, /import \{ DeskInstrument \} from '\.\/DeskInstrument'/);

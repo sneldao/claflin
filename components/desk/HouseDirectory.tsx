@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { getEducationTopic } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
@@ -8,9 +8,31 @@ import styles from './WorkingDesk.module.css';
 
 export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId: HouseDeskId; onVisit: (id: HouseDeskId) => void; onHome?: () => void }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDetailsElement>(null);
+
+  /* <details> does not dismiss itself — Escape returns focus to the summary,
+     a tap outside folds the paper away. */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      rootRef.current?.querySelector('summary')?.focus();
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open]);
+
   const participation = getEducationTopic('participation');
   const jesseLive = isOpenDesk('jesse') && DESK_CAPABILITIES.jesse.live;
-  return <details className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details ref={rootRef} className={styles.houseDirectory} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>The house</summary>
     <div className={styles.directoryPaper}>
       <p className={styles.directoryTitle}>Claflin &amp; Co.</p>

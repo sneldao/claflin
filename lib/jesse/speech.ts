@@ -158,6 +158,18 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
   return { command: null, confidence: 'none', heard };
 }
 
+/**
+ * Transcript → bound command: parse the phrase, then attach file-paper to the
+ * quote under review. The one path spoken and typed input share.
+ */
+export function parseJesseUtterance(
+  transcript: string,
+  currentDraft: JesseDraft | null,
+  quoteId: string | null,
+): JesseSpeechParse {
+  return bindFilePaperCommand(parseJesseSpeech(transcript, currentDraft), quoteId);
+}
+
 /** Bind a file-paper parse to the quote currently under review. */
 export function bindFilePaperCommand(
   parse: JesseSpeechParse,

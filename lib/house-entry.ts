@@ -14,6 +14,9 @@ export type HouseEntry =
   | { kind: 'foyer' }
   | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null };
 
+/** The part of a foyer instruction that survives entry: side and amount. */
+export type EntryIntent = { side: 'buy' | 'sell' | null; amount: string | null };
+
 /** Parse `?desk=` — only known house ids; open desks enter, planned visit closed rooms. */
 export function parseDeskQuery(raw: string | null | undefined): HouseDeskId | null {
   if (!raw) return null;
@@ -82,22 +85,28 @@ export function resolveHouseEntry(
   return { kind: 'foyer' };
 }
 
+type HistoryMode = 'replace' | 'push';
+
 /** Strip desk deep-link params when the client steps back into the foyer. */
-export function clearDeskQuery(): void {
+export function clearDeskQuery(historyMode: HistoryMode = 'replace'): void {
   if (typeof window === 'undefined') return;
   try {
     const url = new URL(window.location.href);
-    url.searchParams.delete('desk');
-    url.searchParams.delete('offering');
-    url.searchParams.delete('view');
-    window.history.replaceState({}, '', url.toString());
+    for (const key of ['desk', 'offering', 'view', 'intent', 'side', 'amount']) {
+      url.searchParams.delete(key);
+    }
+    if (historyMode === 'push') window.history.pushState({}, '', url.toString());
+    else window.history.replaceState({}, '', url.toString());
   } catch {
     /* URL sync is optional */
   }
 }
 
-/** Keep the address bar honest without creating a history entry per switch. */
-export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null): void {
+/**
+ * Keep the address bar honest. `push` only for foyer → desk arrivals so Back
+ * steps out to the foyer; desk → desk switches stay `replace` (tabs, not places).
+ */
+export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null, historyMode: HistoryMode = 'replace'): void {
   if (typeof window === 'undefined') return;
   try {
     const url = new URL(window.location.href);
@@ -108,7 +117,8 @@ export function syncDeskQuery(deskId: HouseDeskId, offeringId?: string | null): 
     } else {
       url.searchParams.delete('offering');
     }
-    window.history.replaceState({}, '', url.toString());
+    if (historyMode === 'push') window.history.pushState({}, '', url.toString());
+    else window.history.replaceState({}, '', url.toString());
   } catch {
     /* URL sync is optional */
   }
