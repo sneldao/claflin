@@ -2,41 +2,61 @@
 
 import type { MarketComparison } from '@/lib/solana/contracts';
 import { reasonCodeSentence } from '@/lib/solana/market/reasons';
+import { MARKET_EMPTY_HINT, PYTH_PRO_ABOUT } from '@/lib/desk/ui-copy';
+import { EvidencePanel, EvidenceRow, EvidenceDelta } from '../desk/EvidencePanel';
 import styles from '../desk/WorkingDesk.module.css';
 
 /**
- * Jesse's market-evidence panel. Comparable, last-observation, and
- * unavailable are finished states — never a spinner waiting on a number
- * that may never arrive, and never a fabricated basis-point figure.
+ * Jesse's Pyth Pro market-evidence panel. Always mounted as a collapsible
+ * card so the desk shows every source at a glance; comparable,
+ * last-observation, and unavailable are finished states — never a spinner
+ * waiting on a number that may never arrive, and never a fabricated
+ * basis-point figure. The empty state carries an action when the ticket
+ * offers one, so it reports and invites rather than dead-ending.
  */
 export function MarketEvidence({
   comparison,
   loading = false,
+  onCompare,
+  compareDisabled = false,
 }: {
   comparison: MarketComparison | null;
   loading?: boolean;
+  /** Supplied by the ticket so the empty state can act, not just report. */
+  onCompare?: () => void;
+  compareDisabled?: boolean;
 }) {
-  if (loading && !comparison) {
-    return (
-      <section className={styles.marketEvidence} data-source="pyth-pro" aria-labelledby="evidence-title" aria-busy="true">
-        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
-        <h2 id="evidence-title">Checking the tape.</h2>
-        <p className={styles.evidenceBody}>Reading Pyth Pro observations when they are available. Filing does not wait on this panel.</p>
-        <PythCredit />
-      </section>
-    );
-  }
+  const about = (
+    <>
+      <p>{PYTH_PRO_ABOUT}</p>
+      <p>Ask Jesse to compare an xStock, or request a quote first. A missing comparison never blocks a paper filing.</p>
+    </>
+  );
 
   if (!comparison) {
     return (
-      <section className={styles.marketEvidence} data-source="pyth-pro" aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
-        <h2 id="evidence-title">No evidence on the desk.</h2>
-        <p className={styles.evidenceBody}>
-          Ask Jesse to compare an xStock, or request a quote first. A missing comparison never blocks a paper filing.
-        </p>
-        <PythCredit />
-      </section>
+      <EvidencePanel
+        titleId="evidence-title"
+        eyebrow="PYTH PRO · MARKET EVIDENCE"
+        title="Market evidence"
+        status={loading ? 'loading' : 'empty'}
+        about={about}
+        body={
+          !loading && onCompare ? (
+            <>
+              <p className={styles.evidenceMeta}>{MARKET_EMPTY_HINT}</p>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={onCompare}
+                disabled={compareDisabled}
+              >
+                Compare market
+              </button>
+            </>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -44,57 +64,46 @@ export function MarketEvidence({
 
   if (comparison.status === 'unavailable') {
     return (
-      <section className={styles.marketEvidence} data-source="pyth-pro" data-status="unavailable" aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
-        <h2 id="evidence-title">Comparison unavailable.</h2>
-        <ul className={styles.evidenceReasons}>
-          {comparison.reasonCodes.map(code => (
-            <li key={code}>{reasonCodeSentence(code)}</li>
-          ))}
-        </ul>
-        <p className={styles.evidenceMeta}>Observed {observed}. No numerical difference is shown.</p>
-        <PythCredit />
-      </section>
+      <EvidencePanel
+        titleId="evidence-title"
+        eyebrow="PYTH PRO · MARKET EVIDENCE"
+        title="Comparison unavailable"
+        status="unavailable"
+        about={about}
+        body={
+          <ul className={styles.evidenceReasons}>
+            {comparison.reasonCodes.map(code => (
+              <li key={code}>{reasonCodeSentence(code)}</li>
+            ))}
+          </ul>
+        }
+        meta={<p className={styles.evidenceMeta}>Observed {observed}. No numerical difference is shown.</p>}
+      />
     );
   }
 
-  if (comparison.status === 'last-observation') {
-    return (
-      <section className={styles.marketEvidence} data-source="pyth-pro" data-status="last-observation" aria-labelledby="evidence-title">
-        <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
-        <h2 id="evidence-title">Last observation.</h2>
-        <p className={styles.evidenceBody} role="status">
-          The equity market is not in regular session, so this is a labelled last observation — not a live comparison.
-        </p>
-        <ObservationRow label="Token" observation={comparison.token} />
-        <ObservationRow label="Equity" observation={comparison.equity} />
-        {comparison.referenceDifferenceBps !== null && (
-          <p className={styles.evidenceBps}>
-            Reference difference: {comparison.referenceDifferenceBps} bps — a reference reading, not profit, and not an executable arbitrage.
-          </p>
-        )}
-        <p className={styles.evidenceMeta}>Observed {observed}.</p>
-        <PythCredit />
-      </section>
-    );
-  }
-
+  const lastObservation = comparison.status === 'last-observation';
   return (
-    <section className={styles.marketEvidence} data-source="pyth-pro" data-status="comparable" aria-labelledby="evidence-title">
-      <p className={styles.eyebrow}>PYTH PRO · MARKET EVIDENCE</p>
-      <h2 id="evidence-title">Comparable reading.</h2>
-      <ObservationRow label="Token" observation={comparison.token} />
-      <ObservationRow label="Equity" observation={comparison.equity} />
-      {comparison.referenceDifferenceBps !== null ? (
-        <p className={styles.evidenceBps}>
-          Reference difference: <strong>{comparison.referenceDifferenceBps} bps</strong> — a reference reading, not profit, and not an executable arbitrage.
-        </p>
-      ) : (
-        <p className={styles.evidenceBody}>The feeds are comparable, but no basis-point difference is available.</p>
-      )}
-      <p className={styles.evidenceMeta}>Observed {observed}.</p>
-      <PythCredit />
-    </section>
+    <EvidencePanel
+      titleId="evidence-title"
+      eyebrow="PYTH PRO · MARKET EVIDENCE"
+      title={lastObservation ? 'Last observation' : 'Comparable reading'}
+      status="ready"
+      about={about}
+      body={
+        <>
+          {lastObservation && (
+            <p className={styles.evidenceMeta} role="status">
+              Equity market out of regular session — labelled last observation, not live.
+            </p>
+          )}
+          <ObservationRow label="Token" observation={comparison.token} />
+          <ObservationRow label="Equity" observation={comparison.equity} />
+          <EvidenceDelta bps={comparison.referenceDifferenceBps} />
+        </>
+      }
+      meta={<p className={styles.evidenceMeta}>Observed {observed}.</p>}
+    />
   );
 }
 
@@ -106,30 +115,10 @@ function ObservationRow({
   observation: MarketComparison['token'];
 }) {
   return (
-    <p className={styles.evidenceObs}>
-      <strong>{label}</strong>
-      {' · '}
-      {observation.price ? `$${observation.price}` : 'price unavailable'}
-      {' · '}
-      {observation.session}
-      {' · '}
-      {observation.status}
-      {observation.generatedAt != null && (
-        <> · gen {new Date(observation.generatedAt).toLocaleString()}</>
-      )}
-    </p>
-  );
-}
-
-/** Quiet thank-you for Pyth Pro — provenance, not a promo sticker. */
-function PythCredit() {
-  return (
-    <p className={styles.pythCredit}>
-      Equity and xStock reference tape via{' '}
-      <a href="https://www.pyth.network/" target="_blank" rel="noreferrer">
-        Pyth Pro
-      </a>
-      . With thanks to the Pyth team for Stocklana trial access.
-    </p>
+    <EvidenceRow
+      label={label}
+      value={observation.price ? `$${observation.price}` : 'price unavailable'}
+      source={`${observation.session} · ${observation.status}`}
+    />
   );
 }

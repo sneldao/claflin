@@ -8,14 +8,20 @@ import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { mintFirstJessePaperSlip } from '@/lib/trading/desk-slips';
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { HouseMark } from '../desk/HouseMark';
+import { EducationTopicTrigger } from './EducationTopic';
 import { MarketEvidence } from '../solana/MarketEvidence';
 import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
-import type { JesseIntent } from '@/lib/solana/contracts';
+import type { JesseIntent, MarketComparison } from '@/lib/solana/contracts';
+import { getEducationTopic } from '@/lib/education';
+import { EVIDENCE_DISCLAIMER } from '@/lib/desk/ui-copy';
 import styles from '../desk/WorkingDesk.module.css';
 
 const AMOUNT_CHIPS = { buy: ['25', '100', '250'], sell: ['1', '5', '10'] } as const;
+
+/** Reviewed catalog entry for the desk's "read the tape" education moment. */
+const TAPE_TOPIC = getEducationTopic('the-tape');
 
 function intentFromDraft(draft: {
   instrumentId: string | null;
@@ -126,7 +132,12 @@ export const JesseTicket = memo(function JesseTicket({
             {foreground.kind === 'receipt' ? 'Start another instruction' : 'Back to your instruction'}
           </button>
         </div>
-        {record?.comparison && <MarketEvidence comparison={record.comparison} />}
+        {record?.comparison && (
+          <>
+            <MarketEvidence comparison={record.comparison} />
+            <p className={styles.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
+          </>
+        )}
       </section>
     );
   }
@@ -147,9 +158,7 @@ export const JesseTicket = memo(function JesseTicket({
           </p>
           {(instrument ?? state.presentedInstrument) && (
             <p className={styles.assumptions}>
-              Mint {(instrument ?? state.presentedInstrument)!.mint} ·{' '}
-              {(instrument ?? state.presentedInstrument)!.issuer} ·{' '}
-              {(instrument ?? state.presentedInstrument)!.decimals} decimals · display units are scaled, not raw tokens
+              {(instrument ?? state.presentedInstrument)!.issuer} · {(instrument ?? state.presentedInstrument)!.decimals} decimals · scaled display units
             </p>
           )}
           <p role="status" className={styles.notice} data-urgent={freezeSoon ? 'true' : undefined}>
@@ -174,11 +183,11 @@ export const JesseTicket = memo(function JesseTicket({
               />
               {' '}Live execution on Solana
             </label>
-            <p className={styles.liveMeta}>
-              {liveMode
-                ? 'Real USDC and xStock will move when you sign. Paper filing stays available.'
-                : 'Paper estimate only — no funds move unless you switch on live execution.'}
-            </p>
+            {liveMode && (
+              <p className={styles.liveMeta}>
+                Real USDC and xStock move when you sign. Paper filing stays available.
+              </p>
+            )}
           </div>
         )}
 
@@ -194,15 +203,20 @@ export const JesseTicket = memo(function JesseTicket({
           <button type="button" className={styles.secondary} onClick={() => { void cancel(); }}>Set aside</button>
           <button type="button" className={styles.secondary} onClick={() => { void compare(); }}>Compare market</button>
         </div>
-        <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
-        <VenueDuplexEvidence instrumentId={q.intent.instrumentId} />
-        <PreStocksEvidence />
+        <EvidenceModule
+          comparison={state.comparison}
+          loading={inFlight === 'compare'}
+          instrumentId={q.intent.instrumentId}
+          onCompare={() => { void compare(); }}
+          compareDisabled={inFlight === 'compare'}
+        />
       </section>
     );
   }
 
   /* Draft / pending */
   const liveIntent = intentFromDraft(draft);
+  const selectedStock = draft.instrumentId ? SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId) : null;
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome liveMode={liveMode && liveAvailable} />
@@ -212,7 +226,7 @@ export const JesseTicket = memo(function JesseTicket({
           ? 'Getting a Jupiter paper estimate…'
           : spokenLine
             ? <>You said: <em>{spokenLine}</em></>
-            : 'Speak or type an instruction — “buy 100 USDC of AAPLx” — or fill the plaques below.'}
+            : 'Speak or type an instruction, e.g. “buy 100 USDC of AAPLx”.'}
       </p>
       {(localError || lastResult?.status === 'clarify' || lastResult?.status === 'rejected') && (
         <p className={styles.notice} role="alert">{localError ?? lastResult?.spokenText}</p>
@@ -235,14 +249,9 @@ export const JesseTicket = memo(function JesseTicket({
           ))}
         </fieldset>
         <p className={styles.product}>
-          {draft.instrumentId
-            ? (() => {
-                const stock = SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId);
-                return stock
-                  ? `${stock.symbol} · Token-2022 · ${stock.issuer} · mint ${stock.mint.slice(0, 8)}…`
-                  : 'Token-2022 xStock on Solana';
-              })()
-            : 'Verified Backed xStocks on Solana — Token-2022, scaled display units, Jupiter Metis routes.'}
+          {selectedStock
+            ? `${selectedStock.symbol} · ${selectedStock.issuer} · mint ${selectedStock.mint.slice(0, 8)}…`
+            : 'Backed xStocks on Solana · Token-2022 · Jupiter Metis routes'}
         </p>
         <div className={styles.row}>
           <label>
@@ -289,11 +298,11 @@ export const JesseTicket = memo(function JesseTicket({
               />
               {' '}Live execution on Solana
             </label>
-            <p className={styles.liveMeta}>
-              {liveMode
-                ? 'After the estimate, connect a wallet to prepare and sign a real Jupiter swap. Or stay on paper.'
-                : 'Default is paper — get an estimate and file a local record. Turn on live to settle on Solana.'}
-            </p>
+            {liveMode && (
+              <p className={styles.liveMeta}>
+                Real Jupiter settlement on Solana after signing. Paper stays available.
+              </p>
+            )}
           </div>
         )}
 
@@ -311,15 +320,52 @@ export const JesseTicket = memo(function JesseTicket({
         <JesseLiveSettle intent={liveIntent} revision={state.revision} />
       )}
 
-      <MarketEvidence comparison={state.comparison} loading={inFlight === 'compare'} />
-      <VenueDuplexEvidence instrumentId={draft.instrumentId} />
-      <PreStocksEvidence />
-      <p className={styles.paperFoot}>
-        {liveMode && liveAvailable ? 'PAPER OR LIVE · SOLANA · TOKEN-2022' : 'PAPER · SOLANA · TOKEN-2022'}
-      </p>
+      <EvidenceModule
+        comparison={state.comparison}
+        loading={inFlight === 'compare'}
+        instrumentId={draft.instrumentId}
+        onCompare={() => { void compare(); }}
+        compareDisabled={!draft.instrumentId || inFlight === 'compare'}
+      />
     </section>
   );
 });
+
+/**
+ * The three evidence sources as one module: collapsible source cards, then a
+ * single trust line (the caveat is stated once for the module, not once per
+ * source) with the house's on-demand tape explanation beside it.
+ */
+function EvidenceModule({
+  comparison,
+  loading,
+  instrumentId,
+  onCompare,
+  compareDisabled,
+}: {
+  comparison: MarketComparison | null;
+  loading: boolean;
+  instrumentId: string | null;
+  onCompare: () => void;
+  compareDisabled: boolean;
+}) {
+  return (
+    <>
+      <MarketEvidence
+        comparison={comparison}
+        loading={loading}
+        onCompare={onCompare}
+        compareDisabled={compareDisabled}
+      />
+      <VenueDuplexEvidence instrumentId={instrumentId} />
+      <PreStocksEvidence />
+      <p className={styles.evidenceCaveat}>
+        {EVIDENCE_DISCLAIMER}
+        {TAPE_TOPIC && <EducationTopicTrigger topic={TAPE_TOPIC} label="About the tape" />}
+      </p>
+    </>
+  );
+}
 
 function PaperChrome({ liveMode }: { liveMode: boolean }) {
   return (

@@ -25,6 +25,8 @@ import {
 } from '@/lib/desk-presentation';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
+import { MODE_HINTS } from '@/lib/desk/ui-copy';
+import { ModeStamp } from './ModeStamp';
 import styles from './WorkingDesk.module.css';
 
 const RoomPresentation = dynamic(
@@ -195,10 +197,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     <div className={styles.introduction} id="introduction-lead">
       <p className={styles.eyebrow}>JESSE LIVERMORE · SOLANA</p>
       <h1>Before you trade, <span>read the tape.</span></h1>
-      <p>
-        Say or type an xStock instruction — Backed Token-2022 mints on Solana, quoted through Jupiter.
-        Equity-versus-token tape via Pyth Pro. Paper by default; live settle when you choose. Room and Compact are the same work.
-      </p>
+      <p>Say or type an xStock instruction. Paper by default; live settle when you choose.</p>
       <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
         <span className={styles.voiceSayLead}>Say it — or tap it</span>
         <button type="button" onClick={() => { void sayToDesk(HEARABLE.quote); }}>“{HEARABLE.quote}”</button>
@@ -212,17 +211,19 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
 
   const work = (
     <>
-      <div className={styles.mode} data-presentation={presentationMode}>
-        <strong>PAPER TRADING</strong>
-        <span>Real Jupiter estimates, no real funds move. Kept in this browser.</span>
+      <ModeStamp
+        live={false}
+        presentation={presentationMode}
+        hint={MODE_HINTS.jessePaper}
+        market="XSTOCKS · SOLANA · JUPITER · PYTH"
+      >
         {!roomView && (
           <div className={styles.presentationToggle} role="group" aria-label="Desk presentation">
             <button type="button" className={styles.presentationButton} aria-pressed={false} onClick={() => setMode('room')}>Room</button>
             <button type="button" className={styles.presentationButton} aria-pressed={true} onClick={() => setMode('compact')}>Compact</button>
           </div>
         )}
-        <span className={styles.modeMarket}>XSTOCKS · SOLANA · JUPITER · PYTH</span>
-      </div>
+      </ModeStamp>
       {lead}
       <div
         className={styles.grid}

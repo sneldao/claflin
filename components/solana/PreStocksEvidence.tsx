@@ -5,6 +5,8 @@ import {
   prestockReasonSentence,
   type PreStockDuplex,
 } from '@/lib/solana/market/prestocks';
+import { PRESTOCKS_ABOUT } from '@/lib/desk/ui-copy';
+import { EvidencePanel, EvidenceRow, EvidenceDelta } from '../desk/EvidencePanel';
 import styles from '../desk/WorkingDesk.module.css';
 
 type ListItem = { symbol: string; name: string; mint: string; externalUrl: string | null };
@@ -60,61 +62,64 @@ export function PreStocksEvidence() {
     if (selected) void loadDuplex(selected);
   }, [selected, loadDuplex]);
 
+  const status = duplex === null
+    ? loading ? 'loading' : errorNote ? 'unavailable' : 'empty'
+    : duplex.status === 'comparable' ? 'ready' : 'unavailable';
+
   return (
-    <section className={styles.marketEvidence} data-source="prestocks" aria-labelledby="prestocks-title">
-      <p className={styles.eyebrow}>PRESTOCKS · REFERENCE VERSUS TOKEN</p>
-      <h2 id="prestocks-title">Issuer mark versus token.</h2>
-      <p className={styles.evidenceBody}>
-        Same duplex idea as an equity-versus-xStock comparison — here the issuer mark stands in for a public equity feed.
-        SPV-backed PreStocks only. Not an exchange price, not arbitrage, and not part of the xStock paper ticket you can file.
-      </p>
-      {items.length > 0 && (
-        <label className={styles.prestockPick}>
-          <span className={styles.voiceSayLead}>Product</span>
-          <select
-            value={selected}
-            onChange={e => setSelected(e.target.value)}
-            aria-label="Choose a PreStock"
-          >
-            {items.map(item => (
-              <option key={item.symbol} value={item.symbol}>{item.symbol} — {item.name}</option>
-            ))}
-          </select>
-        </label>
-      )}
-      {loading && !duplex && <p className={styles.evidenceMeta}>Reading the issuer list…</p>}
-      {errorNote && !duplex && <p className={styles.evidenceMeta} role="status">{errorNote}</p>}
-      {duplex && duplex.status === 'unavailable' && (
+    <EvidencePanel
+      titleId="prestocks-title"
+      eyebrow="PRESTOCKS · REFERENCE VS TOKEN"
+      title="Issuer mark vs token"
+      status={status}
+      about={
         <>
-          <h3 className={styles.evidenceSub}>Comparison unavailable.</h3>
+          <p>{PRESTOCKS_ABOUT}</p>
+          {duplex?.disclaimer && <p>{duplex.disclaimer}</p>}
+        </>
+      }
+      body={
+        duplex?.status === 'comparable' ? (
+          <>
+            {items.length > 0 && (
+              <label className={styles.prestockPick}>
+                <span className={styles.voiceSayLead}>Product</span>
+                <select
+                  value={selected}
+                  onChange={e => setSelected(e.target.value)}
+                  aria-label="Choose a PreStock"
+                >
+                  {items.map(item => (
+                    <option key={item.symbol} value={item.symbol}>{item.symbol} — {item.name}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <EvidenceRow label="Issuer mark" value={duplex.markPrice ? `${duplex.markPrice} USD` : 'price unavailable'} />
+            <EvidenceRow label="Issuer token" value={duplex.tokenPrice ? `${duplex.tokenPrice} USD` : 'price unavailable'} />
+            <EvidenceDelta bps={duplex.referenceDifferenceBps} />
+            {duplex.externalUrl && (
+              <p className={styles.evidenceMeta}>
+                <a href={duplex.externalUrl} target="_blank" rel="noopener noreferrer">Issuer page</a>
+                {' · '}mint <code>{duplex.mint.slice(0, 8)}…</code>
+              </p>
+            )}
+          </>
+        ) : duplex?.status === 'unavailable' ? (
           <ul className={styles.evidenceReasons}>
             {duplex.reasonCodes.map(code => (
               <li key={code}>{prestockReasonSentence(code)}</li>
             ))}
           </ul>
-        </>
-      )}
-      {duplex && duplex.status === 'comparable' && (
-        <>
-          <p className={styles.evidenceBody} role="status">
-            <strong>Issuer mark:</strong> {duplex.markPrice} USD
-            {' · '}
-            <strong>Issuer token:</strong> {duplex.tokenPrice} USD
-          </p>
-          {duplex.referenceDifferenceBps !== null && (
-            <p className={styles.evidenceBps}>
-              Reference difference: <strong>{duplex.referenceDifferenceBps} bps</strong> — issuer figures only, not profit, not executable.
-            </p>
-          )}
-          <p className={styles.evidenceMeta}>{duplex.disclaimer}</p>
-          {duplex.externalUrl && (
-            <p className={styles.evidenceMeta}>
-              <a href={duplex.externalUrl} target="_blank" rel="noopener noreferrer">Issuer page</a>
-              {' · '}mint <code>{duplex.mint.slice(0, 8)}…</code>
-            </p>
-          )}
-        </>
-      )}
-    </section>
+        ) : undefined
+      }
+      meta={
+        duplex === null && errorNote
+          ? <p className={styles.evidenceMeta} role="status">{errorNote}</p>
+          : duplex?.status === 'comparable'
+            ? <p className={styles.evidenceMeta}>{duplex.symbol} · observed {new Date(duplex.observedAt).toLocaleString()}</p>
+            : undefined
+      }
+    />
   );
 }

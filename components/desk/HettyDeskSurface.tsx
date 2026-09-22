@@ -15,6 +15,8 @@ import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
 import { rememberSlipDedication } from '@/lib/trading/desk-slips';
 import { signalLine } from '@/lib/trading/line-signal';
+import { MODE_HINTS } from '@/lib/desk/ui-copy';
+import { ModeStamp } from './ModeStamp';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import type { HouseDeskId } from '@/lib/house';
 import {
@@ -258,23 +260,29 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const work = (
     <>
-      <div className={styles.mode} data-presentation={presentation}>
-        {liveMode
-          ? <><strong data-live="true">LIVE EXECUTION</strong><span>Real tokens and real USDC will move.{auth.walletAddress ? ` Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : ' Sign in and link a wallet to trade.'}</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — your instruction is unchanged. Refresh an estimate before deciding.</span>}</>
-          : <><strong>PAPER TRADING</strong><span>Real estimates, no real funds move.</span>{sharedLoaded && <span role="status">Shared instruction loaded.</span>}{practiceReturn && <span role="status">Back from practice — instruction unchanged.</span>}</>}
+      <ModeStamp
+        live={liveMode}
+        presentation={presentation}
+        hint={liveMode ? MODE_HINTS.hettyLive : MODE_HINTS.hettyPaper}
+        market="COINBASE TOKENIZED STOCKS · BASE"
+      >
+        {liveMode && (
+          <span>{auth.walletAddress ? `Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : 'Sign in and link a wallet to trade.'}</span>
+        )}
+        {sharedLoaded && <span role="status">Shared instruction loaded.</span>}
+        {practiceReturn && <span role="status">Back from practice — instruction unchanged.</span>}
         {!roomView && (
           <div className={styles.presentationToggle} role="group" aria-label="Desk presentation">
             <button type="button" className={styles.presentationButton} aria-pressed={false} onClick={() => setMode('room')}>Room</button>
             <button type="button" className={styles.presentationButton} aria-pressed={true} onClick={() => setMode('compact')}>Compact</button>
           </div>
         )}
-        <span className={styles.modeMarket}>COINBASE TOKENIZED STOCKS · BASE</span>
-      </div>
+      </ModeStamp>
       {desk.state.stage === 'draft' && !desk.state.draft.instrumentId && (
         <div className={styles.introduction} id="introduction">
           <p className={styles.eyebrow}>THE OFFICE ABOVE THE PIT</p>
           <h1>The desk <span>hears you.</span></h1>
-          <p>No forms to learn. Say the trade — Hetty writes the slip, reads it back, and waits. Room and Compact are the same work; only the layout changes.</p>
+          <p>No forms to learn. Say the trade — Hetty writes the slip, reads it back, and waits.</p>
           <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
             <span className={styles.voiceSayLead}>Say it — or tap it</span>
             <button type="button" onClick={() => sayToDesk('buy $25 of Apple')}>“buy $25 of Apple”</button>

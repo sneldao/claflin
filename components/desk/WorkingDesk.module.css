@@ -1698,3 +1698,117 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 .jesseCommandBar label { display: grid; gap: 8px; font-size: 11px; color: var(--desk-muted); }
 .jesseCommandBar input { width: 100%; min-height: 44px; padding: 10px 12px; background: transparent; border: 1px solid var(--desk-brass-dim); color: var(--desk-paper-light); font: 13px/1.4 var(--font-body), sans-serif; }
 .jesseCommandBar button { margin-top: 8px; }
+
+/* ————— Compact mode stamp (ModeStamp) —————
+   The mode word stays; its explanation sits behind a small ⓘ disclosure
+   instead of a full sentence in the banner. */
+.modeStamp { cursor: help; }
+.modeDetails { display: inline-flex; align-items: center; position: relative; }
+.modeDetails summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  border: 1px solid var(--desk-brass-dim);
+  border-radius: 50%;
+  font: 9px/1 var(--font-mono), monospace;
+  color: var(--desk-brass);
+}
+.modeDetails summary::-webkit-details-marker { display: none; }
+.modeDetails[open] summary { background: color-mix(in srgb, var(--desk-brass) 18%, transparent); }
+.modeHint {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: min(320px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border: 1px solid var(--desk-line);
+  background: color-mix(in srgb, var(--desk-room) 96%, transparent);
+  color: var(--desk-muted);
+  font: 10px/1.5 var(--font-mono), monospace;
+  letter-spacing: .04em;
+  box-shadow: 0 10px 24px #00000066;
+}
+
+/* ————— Shared evidence panel (EvidencePanel) —————
+   Collapsed to one line by default: eyebrow, title, status. The body expands
+   on demand, and a finished reading opens itself once so the numbers show. */
+.marketEvidence[data-quiet="true"] { padding: 10px 12px; }
+.marketEvidence:not([open]) { padding-top: 10px; padding-bottom: 10px; }
+.evidenceSummary {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  cursor: pointer;
+}
+.evidenceSummary::-webkit-details-marker { display: none; }
+.evidenceSummary .eyebrow { flex-basis: 100%; margin: 0; }
+.marketEvidence > .evidenceSummary h2 { margin: 0 !important; font-size: 16px; }
+.evidenceChevron {
+  color: var(--desk-brass);
+  font-size: 10px;
+  line-height: 1;
+  transition: transform var(--dur-1) var(--ease-swift);
+}
+.evidenceChevron::before { content: '▸'; display: inline-block; }
+.marketEvidence[open] > .evidenceSummary .evidenceChevron { transform: rotate(90deg); }
+.evidenceCardBody { margin-top: 10px; }
+.evidenceStatus {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 9px/1.4 var(--font-mono), monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--desk-paper-muted);
+}
+.evidenceStatus i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.evidenceStatus[data-status='ready'] { color: #7ea67a; }
+.evidenceStatus[data-status='unavailable'] { color: #c98f7a; }
+.evidenceStatus[data-status='loading'] i { animation: evidencePulse 1.2s ease-in-out infinite; }
+@keyframes evidencePulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .evidenceStatus[data-status='loading'] i { animation: none; } }
+.evidenceAbout { margin-top: 10px; font-size: 11px; }
+.evidenceAbout summary {
+  min-height: 32px;
+  padding: 6px 0;
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+  font: 9px/1.4 var(--font-mono), monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.evidenceAbout summary::-webkit-details-marker { display: none; }
+.evidenceAbout summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform var(--dur-1) var(--ease-swift);
+}
+.evidenceAbout[open] summary::before { transform: rotate(90deg); }
+.evidenceAboutBody p { margin: 6px 0 0 !important; line-height: 1.6; }
+.evidenceCaveat {
+  margin: 10px 0 0 !important;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--desk-paper-rule) 60%, transparent);
+  font: 9px/1.5 var(--font-mono), monospace;
+  letter-spacing: .03em;
+  color: var(--desk-paper-muted);
+}
+/* The education trigger inherits this 9px rule; lift it back to a readable step. */
+.evidenceCaveat button { font-size: 10px; }
+.evidenceDelta {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--desk-brass);
+  font-size: 10px;
+}
+.evidenceDelta[data-direction='down'] { color: #c98f7a; }
+.evidenceDelta[data-direction='flat'] { color: var(--desk-paper-muted); }

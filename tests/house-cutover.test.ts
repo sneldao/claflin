@@ -41,7 +41,10 @@ describe('one canonical house', () => {
     assert.doesNotMatch(desk, /href="\/desk-study"|Broker directory|Exact instrument|token decimals|per minute|Start a free call|Live access|useEligibility|YOUR AI BROKER|WELCOME TO CLAFLIN|A CONSIDERED APPROACH/);
     assert.match(desk, /The pit is/);
     assert.match(desk, /About Hetty/);
-    assert.match(desk, /PAPER TRADING/);
+    assert.match(desk, /<ModeStamp/);
+    assert.match(source('components/desk/ModeStamp.tsx'), /MODE_LABELS/);
+    assert.match(source('lib/desk/ui-copy.ts'), /PAPER TRADING/);
+    assert.match(source('lib/desk/ui-copy.ts'), /LIVE EXECUTION/);
     assert.match(room, /Sound/);
     assert.doesNotMatch(room, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
@@ -70,7 +73,7 @@ describe('one canonical house', () => {
     css.walkRules(rule => {
       for (const match of rule.selector.matchAll(/\.([A-Za-z][\w-]*)/g)) classes.add(match[1]);
     });
-    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape']) {
+    for (const component of ['WorkingDesk', 'HettyDeskSurface', 'DeskRoom', 'JesseDeskSurface', 'HettyCall', 'TradeTicket', 'DeskBoard', 'PaperHistory', 'PaperLedger', 'HouseDirectory', 'HouseFoyer', 'ClosedDesk', 'BrokerageRoom', 'TickerTape', 'ModeStamp', 'EvidencePanel']) {
       for (const match of source(`components/desk/${component}.tsx`).matchAll(/styles\.(\w+)/g)) {
         assert.ok(classes.has(match[1]), `${component}: missing CSS class ${match[1]}`);
       }
