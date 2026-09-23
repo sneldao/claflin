@@ -38,7 +38,14 @@ export const BLANK_SLIP_TITLE = {
 export const BLANK_SLIP_NOTE =
   'Ring the line, or tap a line the desk hears. This slip stays blank until there is an instruction.';
 
-export const HAND_FORM_SUMMARY = 'Write it by hand';
+/** One action vocabulary for both desks' slips — same verbs, same order. */
+export const SLIP_ACTIONS = {
+  price: 'Price it',
+  fresh: 'Fresh price',
+  file: 'File paper record',
+  setAside: 'Set aside',
+  compare: 'Compare markets',
+} as const;
 
 /** One caveat line for the whole evidence module — rendered once, not per source. */
 export const EVIDENCE_DISCLAIMER =

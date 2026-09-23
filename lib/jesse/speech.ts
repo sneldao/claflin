@@ -10,6 +10,9 @@ export type JesseSpeechParse = {
   command: JesseCommand | null;
   confidence: 'full' | 'partial' | 'none';
   heard: string;
+  /** Literal matched substrings of `heard` (original casing) that set each
+   *  draft field — set only on draft/clarify parses. */
+  spans?: { instrument?: string; side?: string; amount?: string };
 };
 
 const ALIASES: Record<string, SolanaInstrumentId> = (() => {
@@ -29,31 +32,35 @@ const ALIASES: Record<string, SolanaInstrumentId> = (() => {
   return map;
 })();
 
-function resolveInstrument(text: string): SolanaInstrumentId | null {
-  const lower = text.toLowerCase();
+function matchInstrument(text: string): { id: SolanaInstrumentId; matched: string } | null {
   const ordered = Object.keys(ALIASES).sort((a, b) => b.length - a.length);
   for (const alias of ordered) {
-    if (new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lower)) {
-      return ALIASES[alias] ?? null;
-    }
+    const match = text.match(new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'));
+    if (match) return { id: ALIASES[alias]!, matched: match[0] };
   }
   return null;
 }
 
-function parseAmount(text: string): string | null {
-  const dollar = text.match(/\$\s*([0-9]+(?:\.[0-9]+)?)/);
-  if (dollar) return dollar[1];
-  const ofAmount = text.match(/\b([0-9]+(?:\.[0-9]+)?)\s*(?:usdc|dollars?|bucks)?\b/i);
-  if (ofAmount && !/scaled|unit|share|token/i.test(text.slice(Math.max(0, (ofAmount.index ?? 0) - 12), (ofAmount.index ?? 0)))) {
-    return ofAmount[1];
-  }
-  const bare = text.match(/\b([1-9]\d*(?:\.\d+)?)\b/);
-  return bare?.[1] ?? null;
+function resolveInstrument(text: string): SolanaInstrumentId | null {
+  return matchInstrument(text)?.id ?? null;
 }
 
-function detectSide(text: string): 'buy' | 'sell' | null {
-  if (/\bsell\b/i.test(text)) return 'sell';
-  if (/\bbuy\b|\bpurchase\b|\bget\b/i.test(text)) return 'buy';
+function parseAmount(text: string): { value: string; span: string } | null {
+  const dollar = text.match(/\$\s*([0-9]+(?:\.[0-9]+)?)/);
+  if (dollar) return { value: dollar[1], span: dollar[0].trim() };
+  const ofAmount = text.match(/\b([0-9]+(?:\.[0-9]+)?)\s*(?:usdc|dollars?|bucks)?\b/i);
+  if (ofAmount && !/scaled|unit|share|token/i.test(text.slice(Math.max(0, (ofAmount.index ?? 0) - 12), (ofAmount.index ?? 0)))) {
+    return { value: ofAmount[1], span: ofAmount[0].trim() };
+  }
+  const bare = text.match(/\b([1-9]\d*(?:\.\d+)?)\b/);
+  return bare ? { value: bare[1], span: bare[0] } : null;
+}
+
+function detectSide(text: string): { side: 'buy' | 'sell'; span: string } | null {
+  const sell = text.match(/\bsell\b/i);
+  if (sell) return { side: 'sell', span: sell[0] };
+  const buy = text.match(/\bbuy\b|\bpurchase\b|\bget\b/i);
+  if (buy) return { side: 'buy', span: buy[0] };
   return null;
 }
 
@@ -94,7 +101,8 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
     return { command: { type: 'explain', topic: 'paper-mode' }, confidence: 'full', heard };
   }
 
-  const instrumentId = resolveInstrument(heard);
+  const instrumentMatch = matchInstrument(heard);
+  const instrumentId = instrumentMatch?.id ?? null;
   if (/\bcompare\b|\bwhat'?s the (tape|difference|spread)\b/.test(lower)) {
     if (!instrumentId) {
       return {
@@ -115,11 +123,22 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
     return { command: { type: 'watch', instrumentId }, confidence: 'full', heard };
   }
 
-  const amount = parseAmount(heard);
-  const side = detectSide(heard)
+  const amountMatch = parseAmount(heard);
+  const amount = amountMatch?.value ?? null;
+  const sideMatch = detectSide(heard);
+  const side = sideMatch?.side
     ?? (/\b(make that|change (it|that) to|actually)\b/i.test(heard) && amount ? 'buy' : null);
   const reuseInstrument = instrumentId
     ?? (/\b(that|it|this|make that|change (it|that) to)\b/i.test(heard) ? currentDraft?.instrumentId ?? null : null);
+
+  /* Provenance spans: only the literal words that set each field, in the
+     speaker's casing. Reused/assumed values get no span so the slip can
+     label them kept or inferred instead of pretending they were said. */
+  const spans = {
+    ...(instrumentMatch ? { instrument: instrumentMatch.matched } : {}),
+    ...(sideMatch ? { side: sideMatch.span } : {}),
+    ...(amountMatch ? { amount: amountMatch.span } : {}),
+  };
 
   if (side && amount && reuseInstrument) {
     const intent: JesseIntent = side === 'buy'
@@ -132,6 +151,7 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
       command: { type: 'draft', intent, quote: true },
       confidence: 'full',
       heard,
+      spans,
     };
   }
 
@@ -152,6 +172,7 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
       command: { type: 'clarify', draft, field, question },
       confidence: 'partial',
       heard,
+      spans,
     };
   }
 

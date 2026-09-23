@@ -112,6 +112,6 @@ describe('deleted/missing receipt recovery', () => {
     assert.equal(desk!.foreground.kind, 'draft', 'foreground should be a draft after recovery');
     assert.ok(!container.textContent?.includes('Filed to your paper ledger'), 'stale receipt success must not reappear');
     assert.ok(container.querySelector('form'), 'draft controls should be visible');
-    assert.ok(Array.from(container.querySelectorAll('button')).some(b => /Review estimate/i.test(b.textContent ?? '')), 'draft should offer a new quote');
+    assert.ok(Array.from(container.querySelectorAll('button')).some(b => /Price it/i.test(b.textContent ?? '')), 'draft should offer a new quote');
   });
 });

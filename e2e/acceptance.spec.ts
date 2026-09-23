@@ -150,9 +150,9 @@ async function selectInstrument(page: Page) {
 async function filePaperRecord(page: Page) {
   await selectInstrument(page);
   await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
-  await page.getByRole('button', { name: 'Review estimate' }).click();
+  await page.getByRole('button', { name: 'Price it' }).click();
   await expect(page.getByText('0.02948502').first()).toBeVisible({ timeout: 30000 });
-  await page.getByRole('button', { name: 'Record paper trade' }).click();
+  await page.getByRole('button', { name: 'File paper record' }).click();
   await expect(page.getByText('Filed to your paper ledger')).toBeVisible({ timeout: 30000 });
   const justFiled = page.locator('[data-just-filed="true"]');
   await expect(justFiled).toBeVisible({ timeout: 30000 });
@@ -178,7 +178,7 @@ test.describe('desktop filing flow', () => {
 
     // Returning to draft clears the receipt and restores a clean ticket.
     await page.getByRole('button', { name: 'Start another instruction' }).click();
-    await expect(page.getByRole('button', { name: 'Review estimate' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Price it' })).toBeVisible();
     await expect(page.getByText('Filed to your paper ledger')).not.toBeVisible();
   });
 
@@ -191,7 +191,7 @@ test.describe('desktop filing flow', () => {
 
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
-    await page.getByRole('button', { name: 'Review estimate' }).click();
+    await page.getByRole('button', { name: 'Price it' }).click();
 
     await page.getByRole('button', { name: /Quote & product details/ }).click();
     const quoteDialog = page.getByRole('dialog', { name: 'Quote and product details' });
@@ -199,7 +199,7 @@ test.describe('desktop filing flow', () => {
     await page.getByRole('button', { name: 'Close quote and product details' }).click();
     await expect(quoteDialog).not.toBeVisible();
 
-    await page.getByRole('button', { name: 'Record paper trade' }).click();
+    await page.getByRole('button', { name: 'File paper record' }).click();
     await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
     const justFiled = page.locator('[data-just-filed="true"]');
     await expect(justFiled).toBeVisible();
@@ -250,7 +250,7 @@ test.describe('desktop filing flow', () => {
 
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
-    await page.getByRole('button', { name: 'Review estimate' }).click();
+    await page.getByRole('button', { name: 'Price it' }).click();
     await expect(page.getByText('0.02948502').first()).toBeVisible();
 
     const beforeQuote = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -349,7 +349,7 @@ test.describe('desktop filing flow', () => {
 
     await expect(page.getByText('That record is no longer here')).toBeVisible();
     await page.getByRole('button', { name: /Back to the ticket|Back to your instruction/ }).click();
-    await expect(page.getByRole('button', { name: 'Review estimate' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Price it' })).toBeVisible();
   });
 });
 
@@ -372,7 +372,7 @@ test.describe('mobile filing flow', () => {
 
     await selectInstrument(page);
     await page.getByRole('button', { name: 'Set amount to 10 USDC' }).click();
-    await page.getByRole('button', { name: 'Review estimate' }).click();
+    await page.getByRole('button', { name: 'Price it' }).click();
     await page.getByRole('button', { name: /Quote & product details/ }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Quote and product details' });

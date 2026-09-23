@@ -15,28 +15,81 @@ describe('house presence grammar', () => {
     assert.match(source('components/desk/RoomMarketClock.tsx'), /roomMarketClock/);
   });
 
-  it('puts the line first in Jesse Room when the slip is blank', () => {
+  it('keeps Jesse Room line-led beyond an empty draft', () => {
     const surface = source('components/desk/JesseDeskSurface.tsx');
-    assert.match(surface, /data-line-first=\{lineFirst/);
-    assert.match(surface, /blankSlip=\{lineFirst\}/);
+    assert.match(surface, /const lineLed = roomView && !reviewActive/);
+    assert.match(surface, /const blankSlip = lineLed && draftEmpty/);
+    assert.match(surface, /data-line-first=\{lineLed/);
+    assert.match(surface, /blankSlip=\{blankSlip\}/);
+    assert.match(surface, /quietEvidence=\{roomView\}/);
+    assert.match(surface, /Type instead/);
     assert.match(surface, /BlotterHearables/);
     assert.match(surface, /ReceiverShell/);
-    assert.ok(surface.indexOf('<JesseCall ') < surface.indexOf('<JesseTicket '), 'line mounts before the ticket');
+    assert.ok(
+      surface.indexOf('<JesseCall jesse=') < surface.indexOf('<JesseTicket'),
+      'line mounts before the ticket',
+    );
   });
 
-  it('puts the line first in Hetty Room when the slip is blank', () => {
+  it('keeps the Jesse slip written, provenance-marked, and slip-led in review', () => {
+    const surface = source('components/desk/JesseDeskSurface.tsx');
+    assert.match(surface, /const slipLed = roomView && reviewActive/);
+    assert.match(surface, /data-slip-led=\{slipLed/);
+    assert.match(surface, /RoomTape/);
+    assert.match(surface, /onLineApplied/);
+    assert.match(surface, /onParsed/);
+    assert.match(source('components/desk/JesseTicket.tsx'), /WrittenSlip/);
+  });
+
+  it('keeps Hetty Room line-led beyond an empty draft', () => {
     const surface = source('components/desk/HettyDeskSurface.tsx');
-    assert.match(surface, /data-line-first=\{lineFirst/);
-    assert.match(surface, /blankSlip=\{lineFirst\}/);
+    assert.match(surface, /const lineLed = roomView && !reviewActive/);
+    assert.match(surface, /const blankSlip = lineLed && draftEmpty/);
+    assert.match(surface, /data-line-first=\{lineLed/);
+    assert.match(surface, /blankSlip=\{blankSlip\}/);
     assert.match(surface, /BlotterHearables/);
     assert.match(surface, /ReceiverShell/);
-    assert.ok(surface.indexOf('<HettyCall ') < surface.indexOf('<TradeTicket'), 'line mounts before the ticket');
+    assert.ok(
+      surface.indexOf('<HettyCall desk=') < surface.indexOf('<TradeTicket'),
+      'line mounts before the ticket',
+    );
+  });
+
+  it('keeps the Hetty slip written, provenance-marked, and slip-led in review', () => {
+    const surface = source('components/desk/HettyDeskSurface.tsx');
+    assert.match(surface, /const slipLed = roomView && reviewActive/);
+    assert.match(surface, /data-slip-led=\{slipLed/);
+    assert.match(surface, /RoomTape/);
+    assert.match(surface, /onLineApplied/);
+    assert.match(surface, /onDictated/);
+    assert.match(surface, /provenanceFromFields/);
+    assert.match(surface, /trackSuperseded/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /WrittenSlip/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /HETTY_VOCAB/);
+  });
+
+  it('shares one slip action vocabulary across both desks', () => {
+    assert.match(source('lib/desk/ui-copy.ts'), /export const SLIP_ACTIONS/);
+    assert.match(source('components/desk/JesseTicket.tsx'), /SLIP_ACTIONS/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /SLIP_ACTIONS/);
+  });
+
+  it('collapses Solana evidence behind one Room drawer', () => {
+    const ticket = source('components/desk/JesseTicket.tsx');
+    assert.match(ticket, /quietEvidence/);
+    assert.match(ticket, /evidenceDrawer/);
+    assert.match(ticket, /The two markets/);
+  });
+
+  it('drops idle speak-your-instruction call notes', () => {
+    assert.doesNotMatch(source('components/desk/JesseCall.tsx'), /Speak your instruction/);
+    assert.doesNotMatch(source('components/desk/HettyCallSession.tsx'), /Speak your instruction/);
   });
 
   it('keeps blank blotter slips until there is intent', () => {
     assert.match(source('components/desk/JesseTicket.tsx'), /BLANK_SLIP_TITLE\.jesse/);
     assert.match(source('components/desk/TradeTicket.tsx'), /BLANK_SLIP_TITLE\.hetty/);
-    assert.match(source('components/desk/TradeTicket.tsx'), /HAND_FORM_SUMMARY/);
+    assert.match(source('components/desk/TradeTicket.tsx'), /WrittenSlip/);
   });
 
   it('says the line foot once from shared copy', () => {

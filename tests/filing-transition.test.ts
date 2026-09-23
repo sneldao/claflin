@@ -113,18 +113,18 @@ describe('mobile filing integration through actual buttons', () => {
     await act(async () => { tenChip!.click(); });
     await flush();
 
-    const review = getButton(/Review estimate/);
-    assert.ok(review, 'Review estimate button should exist');
+    const review = getButton(/Price it/);
+    assert.ok(review, 'Price it button should exist');
     await act(async () => { review!.click(); });
     await flush();
-    assert.equal(desk!.state.stage, 'review', 'clicking Review estimate should reach review');
+    assert.equal(desk!.state.stage, 'review', 'clicking Price it should reach review');
 
-    const record = getButton(/Record paper trade/);
-    assert.ok(record, 'Record paper trade button should exist');
+    const record = getButton(/File paper record/);
+    assert.ok(record, 'File paper record button should exist');
     await act(async () => { record!.click(); });
     await flush();
 
-    assert.equal(desk!.state.stage, 'saved', 'Record paper trade should file the record');
+    assert.equal(desk!.state.stage, 'saved', 'File paper record should file the record');
     assert.equal(desk!.records.length, 1, 'a record should be saved to local history');
     const ledger = container.querySelector('#paper-ledger');
     assert.ok(ledger, 'PaperLedger should appear after filing');

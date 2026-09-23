@@ -10,6 +10,11 @@ export interface DictatedIntentResult {
   multiLegs?: Array<{ intent: Partial<TradeIntent>; explanation: string }>;
   triggerPrice?: string;
   isWatch?: boolean;
+  /** The literal substrings of the transcript that wrote each field —
+      original casing, for the slip's "said" provenance marks. Omitted for
+      multi-leg parses and for branches where the span isn't cheaply
+      recoverable (e.g. CJK amounts). */
+  spans?: { instrument?: string; side?: string; amount?: string };
 }
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -95,6 +100,24 @@ function parseWordNumber(text: string): number | null {
   return total + current;
 }
 
+const WORD_TOKEN_RE = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|grand|uno|dos|tres|cuatro|cinco|diez|veinte|veinticinco|cincuenta|cien|mil|un|deux|trois|quatre|cinq|dix|vingt|cinquante|cent|mille|eins|zwei|drei|vier|fünf|zehn|zwanzig|fünfzig|hundert|tausend)\b/gi;
+const AMOUNT_UNIT_RE = /^\s*(dollars|bucks|usdc|tokens|shares|dólares|euros|acciones|aktien|株|美元)\b/i;
+
+/* The literal span of a spoken-word amount: first number word to last,
+   extended over a leading "a"/"an" ("a hundred") and a trailing unit word
+   ("twenty five dollars"). Latin branches only — CJK spans are omitted. */
+function wordNumberSpan(text: string): string | undefined {
+  const matches = [...text.matchAll(WORD_TOKEN_RE)];
+  if (matches.length === 0) return undefined;
+  let start = matches[0].index ?? 0;
+  let end = (matches[matches.length - 1].index ?? 0) + matches[matches.length - 1][0].length;
+  const lead = /\b(a|an)\s+$/.exec(text.slice(0, start));
+  if (lead) start -= lead[0].length;
+  const tail = AMOUNT_UNIT_RE.exec(text.slice(end));
+  if (tail) end += tail[0].length;
+  return text.slice(start, end);
+}
+
 /**
  * Normalizes speech input and extracts structured trade intent.
  * AssemblyAI Dictation provides clean transcripts across 18 languages
@@ -158,33 +181,43 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   const isWatch = /\b(watch|pin|track|monitor|observar|suivre|beobachten|監視|关注)\b/i.test(lower);
 
   // 1. Detect side across multiple languages (EN, ES, FR, DE, JA, ZH)
-  let side: 'buy' | 'sell' | undefined;
-  if (
-    /\b(buy|purchase|acquire|get|grab|pick up|long|bid|invest in)\b/i.test(lower) ||
-    /\b(comprar|compro|adquirir)\b/i.test(lower) || // Spanish
-    /\b(acheter|achète|acquérir)\b/i.test(lower) || // French
-    /\b(kaufen|kaufe|erwerben)\b/i.test(lower) ||   // German
-    /(買う|買います|購入|買い)/.test(text) ||          // Japanese
-    /(买|购买|买入|做多)/.test(text)                 // Chinese
-  ) {
-    side = 'buy';
-  } else if (
-    /\b(sell|dump|short|liquidate|dispose|unload|sell off)\b/i.test(lower) ||
-    /\b(vender|vendo|liquidar)\b/i.test(lower) ||    // Spanish
-    /\b(vendre|vends|liquider)\b/i.test(lower) ||    // French
-    /\b(verkaufen|verkaufe|abstoßen)\b/i.test(lower) || // German
-    /(売る|売ります|売却|売り)/.test(text) ||          // Japanese
-    /(卖|卖出|减持|做空)/.test(text)                 // Chinese
-  ) {
-    side = 'sell';
-  }
+  const BUY_RES = [
+    /\b(buy|purchase|acquire|get|grab|pick up|long|bid|invest in)\b/i,
+    /\b(comprar|compro|adquirir)\b/i, // Spanish
+    /\b(acheter|achète|acquérir)\b/i, // French
+    /\b(kaufen|kaufe|erwerben)\b/i,   // German
+    /(買う|買います|購入|買い)/,          // Japanese
+    /(买|购买|买入|做多)/,               // Chinese
+  ];
+  const SELL_RES = [
+    /\b(sell|dump|short|liquidate|dispose|unload|sell off)\b/i,
+    /\b(vender|vendo|liquidar)\b/i,    // Spanish
+    /\b(vendre|vends|liquider)\b/i,    // French
+    /\b(verkaufen|verkaufe|abstoßen)\b/i, // German
+    /(売る|売ります|売却|売り)/,          // Japanese
+    /(卖|卖出|减持|做空)/,               // Chinese
+  ];
+  const firstMatch = (res: RegExp[]): string | undefined => {
+    for (const re of res) {
+      const m = re.exec(text);
+      if (m) return m[0];
+    }
+    return undefined;
+  };
+  const buySpan = firstMatch(BUY_RES);
+  const sellSpan = buySpan ? undefined : firstMatch(SELL_RES);
+  const side: 'buy' | 'sell' | undefined = buySpan ? 'buy' : sellSpan ? 'sell' : undefined;
+  const sideSpan = buySpan ?? sellSpan;
 
-  // 2. Detect instrument
+  // 2. Detect instrument — keep the literal words as written for the mark.
+  let instrumentSpan: string | undefined;
   let matchedInstrument = DESK_INSTRUMENTS.find(inst => {
     const symbolClean = inst.symbol.toLowerCase().replace(/c$/, '');
     const symbolRegex = new RegExp(`\\b(${inst.symbol.toLowerCase()}|${symbolClean})\\b`, 'i');
     const nameRegex = new RegExp(`\\b${inst.name.toLowerCase()}\\b`, 'i');
-    return symbolRegex.test(lower) || nameRegex.test(lower);
+    const hit = symbolRegex.exec(text) ?? nameRegex.exec(text);
+    if (hit) instrumentSpan = hit[0];
+    return Boolean(hit);
   });
 
   if (!matchedInstrument) {
@@ -213,20 +246,26 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
     };
 
     for (const [alias, targetSymbol] of Object.entries(aliases)) {
-      if (text.toLowerCase().includes(alias.toLowerCase())) {
+      const idx = text.toLowerCase().indexOf(alias.toLowerCase());
+      if (idx >= 0) {
         matchedInstrument = DESK_INSTRUMENTS.find(s => s.symbol.toLowerCase() === targetSymbol.toLowerCase());
-        if (matchedInstrument) break;
+        if (matchedInstrument) {
+          instrumentSpan = text.slice(idx, idx + alias.length);
+          break;
+        }
       }
     }
   }
 
-  // 3. Detect amount
+  // 3. Detect amount — each branch keeps the literal span it consumed.
   let amount: string | undefined;
+  let amountSpan: string | undefined;
 
   // Spoken number words check
   const spokenNum = parseWordNumber(textForAmount);
   if (spokenNum !== null && spokenNum > 0) {
     amount = String(spokenNum);
+    amountSpan = wordNumberSpan(textForAmount);
   }
 
   // Numeric overrides / checks (e.g. "$100", "2k", "25.5")
@@ -234,13 +273,16 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   if (kMatch) {
     const num = parseFloat(kMatch[1]) * 1000;
     amount = String(num);
+    amountSpan = textForAmount.slice(kMatch.index ?? 0, (kMatch.index ?? 0) + kMatch[0].length);
   } else {
     const dollarMatch = textForAmount.match(/[\$¥€£]\s*(\d+(?:\.\d+)?)/i);
     const wordsMatch = textForAmount.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usdc|tokens|shares|dólares|euros|acciones|acties|aktien|株|美元)?/i);
     if (dollarMatch) {
       amount = dollarMatch[1];
+      amountSpan = dollarMatch[0].trim();
     } else if (wordsMatch && wordsMatch[1] && (!amount || wordsMatch[1].length > 0)) {
       amount = wordsMatch[1];
+      amountSpan = textForAmount.slice(wordsMatch.index ?? 0, (wordsMatch.index ?? 0) + wordsMatch[0].length).trim();
     }
   }
 
@@ -279,6 +321,7 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
     detectedLanguage,
     triggerPrice,
     isWatch,
+    spans: { instrument: instrumentSpan, side: sideSpan, amount: amountSpan },
   };
 }
 

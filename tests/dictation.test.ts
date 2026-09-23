@@ -114,6 +114,22 @@ describe('AssemblyAI Dictation Intent Parser', () => {
     assert.ok(watchRes.matchedInstrument?.symbol.includes('TSLA'));
   });
 
+  it('records the literal words that set each field as spans', () => {
+    const res = parseDictatedTradeIntent('buy $25 of Apple');
+    assert.equal(res.spans?.side, 'buy');
+    assert.equal(res.spans?.amount, '$25');
+    assert.equal(res.spans?.instrument, 'Apple');
+
+    const words = parseDictatedTradeIntent('buy twenty five dollars of apple');
+    assert.equal(words.spans?.amount, 'twenty five dollars');
+    assert.equal(words.spans?.side, 'buy');
+
+    const sell = parseDictatedTradeIntent('sell 5 tokens of google');
+    assert.equal(sell.spans?.side, 'sell');
+    assert.equal(sell.spans?.amount, '5 tokens');
+    assert.equal(sell.spans?.instrument, 'google');
+  });
+
   it('generates deterministic cryptographic provenance seals', () => {
     const prov1 = createDictationProvenance('Buy 100 USDC of NVDA', 'NVDAc', 'buy', '100', 1726000000000);
     const prov2 = createDictationProvenance('Buy 100 USDC of NVDA', 'NVDAc', 'buy', '100', 1726000000000);

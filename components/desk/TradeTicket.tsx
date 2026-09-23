@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
+import { memo, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { formatEther } from 'viem';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
@@ -17,10 +17,14 @@ import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
 import { getEducationTopic } from '@/lib/education';
-import { useDictation } from '@/lib/dictation/useDictation';
+import { useDictation, type ParsedDictation } from '@/lib/dictation/useDictation';
 import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
-import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, HAND_FORM_SUMMARY } from '@/lib/desk/ui-copy';
+import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
+import { WrittenSlip } from './WrittenSlip';
+import { HETTY_VOCAB, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
+import type { SlipProvenance } from '@/lib/desk/slip-provenance';
+import type { SupersededSlip } from '@/lib/desk/superseded';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -151,6 +155,15 @@ function Drawer({ className, trigger, title, testId, children }: {
 }
 
 const SLIPPAGE_OPTIONS = [50, 100, 200] as const;
+
+/** What an inline or form edit may touch — Hetty's draft stores '' for
+    empty, so nulls here mean "cleared" and normalize down. */
+type SlipEditPartial = {
+  instrumentId?: string | null;
+  side?: 'buy' | 'sell' | null;
+  amount?: string | null;
+  unit?: string | null;
+};
 
 function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: {
   quote: QuoteEstimate;
@@ -298,6 +311,12 @@ export const TradeTicket = memo(function TradeTicket({
   onLiveJournalChange,
   carriedNote,
   blankSlip = false,
+  roomView = false,
+  provenance = {},
+  superseded = [],
+  onHandEdit,
+  onSlipEdit,
+  onDictated,
 }: {
   desk: ReturnType<typeof useTradingDesk>;
   liveMode: boolean;
@@ -311,6 +330,17 @@ export const TradeTicket = memo(function TradeTicket({
   carriedNote?: string | null;
   /** Room first paint: blank blotter until the line puts work on it. */
   blankSlip?: boolean;
+  /** Room: the written sentence leads; Compact keeps the HettyDraftForm. */
+  roomView?: boolean;
+  /** Where each written value came from — said, kept, assumed, the line, hand, foyer. */
+  provenance?: SlipProvenance;
+  superseded?: SupersededSlip[];
+  /** Plain hand edits (Compact form, ticker) — edit plus hand provenance. */
+  onHandEdit?: (partial: SlipEditPartial, field: 'instrument' | 'side' | 'amount' | 'units') => void;
+  /** Inline edits on the written slip — re-prices a complete instruction. */
+  onSlipEdit?: (partial: SlipEditPartial, field: 'instrument' | 'side' | 'amount' | 'units') => void;
+  /** Dictation resolved — the surface records said/kept/inferred marks. */
+  onDictated?: (parsed: ParsedDictation, transcript: string, priorDraft: TradeIntent) => void;
 }) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
@@ -355,13 +385,15 @@ export const TradeTicket = memo(function TradeTicket({
   const [flash, setFlash] = useState<'instrument' | 'side' | 'amount' | null>(null);
   /* After closing a house explanation during review, remind that reading is not a refresh. */
   const [termsReminder, setTermsReminder] = useState(false);
-  const [provenance, setProvenance] = useState<DictationProvenance | null>(null);
+  const [dictationProvenance, setDictationProvenance] = useState<DictationProvenance | null>(null);
   const [dictationReadback, setDictationReadback] = useState<string | null>(null);
   const remindAfterEducation = () => {
     if (state.stage === 'review') setTermsReminder(true);
   };
   const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
-    onIntentParsed: (parsedIntent, cleanTranscript) => {
+    onIntentParsed: (parsedIntent, cleanTranscript, parsed) => {
+      const priorDraft = state.draft;
+      onDictated?.(parsed, cleanTranscript, priorDraft);
       // Dictation never inherits a stale amount: if the parser heard no
       // amount, the amount box is cleared so a previous figure can never be
       // announced back as if the caller said it.
@@ -380,7 +412,7 @@ export const TradeTicket = memo(function TradeTicket({
 
       if (nextInstrumentId) {
         const prov = createDictationProvenance(cleanTranscript, symbol, nextSide, nextAmount || '—');
-        setProvenance(prov);
+        setDictationProvenance(prov);
         setDictationReadback(dictationTicketLine(nextSide, nextAmount, nextUnit, symbol));
         if (!nextAmount) {
           // Put the cursor where the missing piece goes.
@@ -410,9 +442,10 @@ export const TradeTicket = memo(function TradeTicket({
   }, [quote?.id, state.stage]);
   /* eslint-enable react-hooks/set-state-in-effect */
   /* Freshness of the review window, 1 → just quoted, 0 → expired. Drives the
-     draining brass rule on the slip header. Hidden once the trade is recorded. */
+     draining brass rule at the top of the slip. Hidden once recorded. */
   const reviewFresh = quote ? Math.max(0, Math.min(1, (quote.expiresAt - now) / 30000)) : 1;
-  const slipStyle = { '--review-fresh': reviewFresh } as CSSProperties;
+  /* One validity rule for both desks — filing is only open in the window. */
+  const validity = quote && !recorded ? slipValidity(quote.expiresAt, now) : null;
   useEffect(() => {
     const focusKey = `${state.stage}:${viewedRecordId ?? ''}:${foreground.kind}`;
     if (previousFocus.current === focusKey) return;
@@ -456,6 +489,59 @@ export const TradeTicket = memo(function TradeTicket({
 
   const showBlank = blankSlip && view === 'draft' && !state.draft.instrumentId;
 
+  /* Hand edits through the Compact form mark only the touched field. */
+  const formEdit = (draft: TradeIntent, field?: 'instrument' | 'side' | 'amount' | 'units') => {
+    if (field && onHandEdit) onHandEdit(draft, field);
+    else edit(draft);
+  };
+
+  const slipInstruments = DESK_INSTRUMENTS.filter(s => s.quoteSupported);
+
+  /* The estimate's fine print — same drawer in review and on the receipt. */
+  const quoteDrawer = quote ? (
+    <Drawer
+      className={styles.quoteDetails}
+      trigger="Quote &amp; product details"
+      title="Quote and product details"
+      testId="quote-details-panel"
+    >
+      <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
+      <p>{liveMode
+        ? 'This live estimate includes pool swap fees. Slippage, gas and wallet authorization apply when you execute — funds move from the connected wallet on Base.'
+        : 'This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.'}</p>
+      <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
+      <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}. {tapeTopic && <EducationTopicTrigger topic={tapeTopic} label="Tape vs estimate" onDismiss={remindAfterEducation} />}</p>
+      {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
+      <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
+      <p>{liveMode ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS}</p>
+      <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
+      <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
+    </Drawer>
+  ) : null;
+
+  /* The pending slip's first line is the written sentence — not a form row. */
+  const pendingSentence = slipSentence(state.draft, instrument ?? null, null, HETTY_VOCAB);
+  const pendingLine = [
+    pendingSentence.sideWord,
+    pendingSentence.sideWord ? 'for your account' : null,
+    [pendingSentence.amount, pendingSentence.amountUnit].filter(Boolean).join(' ') || null,
+    pendingSentence.sideWord || pendingSentence.amount ? 'of' : null,
+    pendingSentence.instrumentLabel,
+  ].filter(Boolean).join(' ');
+  const dictationControl = (
+    <DictationControl
+      isRecording={isRecording}
+      isTranscribing={isTranscribing}
+      holdMode={holdMode}
+      setHoldMode={setHoldMode}
+      holdReleaseRef={holdReleaseRef}
+      startRecording={startRecording}
+      stopRecording={stopRecording}
+      dictState={dictState}
+      provenance={dictationProvenance}
+    />
+  );
+
   return <section
     id="instruction"
     className={`${styles.ticket}${slipActive ? ` ${styles.quotationSlip}` : ''}${recorded ? ` ${styles.ticketRecorded}` : ''}${showBlank ? ` ${styles.blankSlip}` : ''}`}
@@ -477,7 +563,7 @@ export const TradeTicket = memo(function TradeTicket({
     {showBlank && <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>}
     {/* The dictation rail: the ticket's voice, always at the head of the
         paper. It shows the last words the desk heard — or invites the first. */}
-    {view === 'draft' && !showBlank && (
+    {view === 'draft' && !showBlank && !roomView && (
       <p className={styles.dictationRail} data-active={isRecording ? 'true' : 'false'} role="status" aria-live="polite">
         {isRecording
           ? 'Listening… release when you’re done.'
@@ -488,14 +574,13 @@ export const TradeTicket = memo(function TradeTicket({
               : 'Speak your instruction — “buy $25 of Apple” — or type below.'}
       </p>
     )}
-    {showBlank && spokenLine && (
-      <p className={styles.dictationRail} role="status" aria-live="polite">
-        You said: <em>{spokenLine}</em>
+    {/* Room draft shows the caller's words verbatim on the slip itself; the
+        rail only reports listening state there. */}
+    {view === 'draft' && roomView && isRecording && (
+      <p className={styles.dictationRail} data-active="true" role="status" aria-live="polite">
+        Listening… release when you’re done.
       </p>
     )}
-    {/* Draft already carries spoken/dictation copy in the rail — keep the
-        spoken-line family for review, live, and other non-draft states. */}
-    {spokenLine && view !== 'draft' && <p className={styles.spokenLine} role="status" aria-live="polite">You said: <em>{spokenLine}</em></p>}
     {live && hettyLine && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">Hetty: <em>{hettyLine}</em></p>}
     {!live && dictationReadback && view !== 'draft' && <p className={styles.spokenLine} role="status" aria-live="polite">On the ticket: <em>{dictationReadback}</em></p>}
     {live && applied && <p className={styles.spokenLine} data-voice="hetty" role="status" aria-live="polite">On the ticket: <em>{applied.replace(/^On the ticket:\s*/, '')}</em></p>}
@@ -509,120 +594,132 @@ export const TradeTicket = memo(function TradeTicket({
     <div key={view} className={styles.ticketSurface}>
       {missing ? <div className={styles.pendingSlip}>
         <p className={styles.quoteBoundary} role="status">This paper record is no longer in this browser.<span>It may have been deleted in another tab, or storage could not be read. Nothing else on this desk was changed.</span></p>
-      </div> : view === 'draft' ? <>
-        {showBlank ? (
-          <details className={styles.handForm}>
-            <summary>{HAND_FORM_SUMMARY}</summary>
-            <HettyDraftForm
-              state={state}
-              instrument={instrument}
-              flash={flash}
-              edit={edit}
-              requestQuote={requestQuote}
-              isRecording={isRecording}
-              isTranscribing={isTranscribing}
-              holdMode={holdMode}
-              setHoldMode={setHoldMode}
-              holdReleaseRef={holdReleaseRef}
-              startRecording={startRecording}
-              stopRecording={stopRecording}
-              dictState={dictState}
-              provenance={provenance}
-              setTyping={setTyping}
-              liveMode={liveMode}
-              remindAfterEducation={remindAfterEducation}
-            />
-          </details>
-        ) : (
-          <HettyDraftForm
-            state={state}
-            instrument={instrument}
-            flash={flash}
-            edit={edit}
-            requestQuote={requestQuote}
-            isRecording={isRecording}
-            isTranscribing={isTranscribing}
-            holdMode={holdMode}
-            setHoldMode={setHoldMode}
-            holdReleaseRef={holdReleaseRef}
-            startRecording={startRecording}
-            stopRecording={stopRecording}
-            dictState={dictState}
-            provenance={provenance}
-            setTyping={setTyping}
-            liveMode={liveMode}
-            remindAfterEducation={remindAfterEducation}
-          />
-        )}
-      </> : pending ? <div className={styles.pendingSlip}>
-        <p className={styles.quoteInstrument}>{state.draft.side === 'buy' ? 'Buy' : 'Sell'} {instrument?.symbol}<span>{instrument?.name}</span></p>
-        <p className={styles.pendingAmount}>{state.draft.amount} <span>{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol ?? ''} tokens to sell`}</span></p>
+      </div> : view === 'draft' ? (roomView ? <>
+        {/* Room draft: the written sentence leads — the same slip grammar as
+            Jesse's, in Hetty's own vocabulary. */}
+        <WrittenSlip
+          mode={showBlank ? 'blank' : 'draft'}
+          draft={state.draft}
+          vocab={HETTY_VOCAB}
+          instruments={slipInstruments}
+          instrument={instrument ?? null}
+          spokenLine={spokenLine ?? null}
+          provenance={provenance}
+          superseded={superseded}
+          instrumentBlankLabel="Choose stock"
+          actions={draftComplete(state.draft) ? (
+            <button type="button" className={styles.primary} onClick={() => { void requestQuote(); }}>{SLIP_ACTIONS.price}<span aria-hidden="true">→</span></button>
+          ) : null}
+          onEdit={onSlipEdit}
+        />
+        {dictationControl}
+      </> : (
+        <HettyDraftForm
+          state={state}
+          instrument={instrument}
+          flash={flash}
+          edit={formEdit}
+          requestQuote={requestQuote}
+          isRecording={isRecording}
+          isTranscribing={isTranscribing}
+          holdMode={holdMode}
+          setHoldMode={setHoldMode}
+          holdReleaseRef={holdReleaseRef}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
+          dictState={dictState}
+          provenance={dictationProvenance}
+          setTyping={setTyping}
+          liveMode={liveMode}
+          remindAfterEducation={remindAfterEducation}
+        />
+      )) : pending ? <div className={styles.pendingSlip}>
+        <p className={styles.slipSentence}>{pendingLine}</p>
         <div className={styles.pendingRule} aria-hidden="true"><i /></div>
         <p role="status" className={styles.pendingStatus}>Requesting a venue estimate…</p>
         <p className={styles.quoteMeta}><span>Aerodrome · Base</span><span aria-live="off">{quoteElapsed.toFixed(1)}s elapsed</span></p>
         <p className={styles.quoteBoundary}>Nothing to approve yet. No funds move.</p>
         <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>
-      </div> : quote && <>
-        <div className={`${styles.reviewHeading} ${styles.slipHeading}`} style={slipStyle} data-expired={!recorded && expired}>
-          <p className={styles.quoteInstrument}>{quote.intent.side === 'buy' ? 'Buy' : 'Sell'} {instrument?.symbol}<span>{quote.instrumentName} · Coinbase-issued token</span></p>
-          {!recorded && <span className={styles.quoteValidity} aria-live="off">{expired ? 'Expired' : `${Math.max(0, Math.ceil((quote.expiresAt - now) / 1000))}s to review`}</span>}
-        </div>
-        <dl className={styles.quoteExchange}>
-          <div><dt>{recorded ? 'Simulated spend' : 'You would spend'}</dt><dd>{quote.inputAmount} <span>{quote.inputSymbol}</span></dd></div>
-          <div><dt>{recorded ? 'Simulated receipt' : 'You would receive'}</dt><dd>{quote.outputAmount} <span>{quote.outputSymbol}</span></dd></div>
-        </dl>
-        <p className={styles.quoteMeta}>
-          <span>Aerodrome · Base</span>
-          <time dateTime={new Date(quote.quotedAt).toISOString()} title={date(quote.quotedAt)}>Quoted {new Date(quote.quotedAt).toLocaleTimeString()}</time>
-          {filedRecord && <time dateTime={new Date(filedRecord.createdAt).toISOString()}>Recorded {formatRecordedTime(filedRecord.createdAt)}</time>}
-        </p>
-        {recorded ? <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p> : <>
+      </div> : quote && recorded ? (
+        <WrittenSlip
+          mode="receipt"
+          draft={state.draft}
+          vocab={HETTY_VOCAB}
+          instruments={slipInstruments}
+          quote={quote}
+          instrument={instrument ?? null}
+          terms={<>
+            Aerodrome · Base{instrument ? ` · ${instrument.name} · Coinbase-issued token` : ''} · quoted {new Date(quote.quotedAt).toLocaleTimeString()}
+            {filedRecord && <> · Recorded {formatRecordedTime(filedRecord.createdAt)}</>}
+          </>}
+          filedAt={filedRecord?.createdAt ?? null}
+          receiptExtra={<>
+            <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p>
+            {quoteDrawer}
+          </>}
+          actions={<>
+            {!browsing && (
+              <button type="button" className={styles.secondary} onClick={() => edit({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' })}>Start another instruction</button>
+            )}
+            <details className={styles.receiptTools}>
+              <summary>Keep or share</summary>
+              <div>
+                <button type="button" className={styles.secondary} onClick={share}>Share this paper trade</button>
+                {instrument && <button type="button" className={styles.secondary} onClick={() => watched.includes(instrument.id) ? unwatch(instrument.id) : watch(instrument.id)}>{watched.includes(instrument.id) ? 'Stop watching' : 'Watch'} {instrument.symbol}</button>}
+                {!browsing && <button type="button" className={styles.secondary} onClick={() => edit(quote.intent)}>Re-quote {instrument?.symbol ?? 'this mark'}</button>}
+                {shareNote && <p role="status" className={styles.shareFeedback}>{shareNote}</p>}
+              </div>
+            </details>
+          </>}
+        />
+      ) : quote ? (
+        <WrittenSlip
+          mode="review"
+          draft={state.draft}
+          vocab={HETTY_VOCAB}
+          instruments={slipInstruments}
+          quote={quote}
+          instrument={instrument ?? null}
+          spokenLine={spokenLine ?? null}
+          provenance={provenance}
+          superseded={superseded}
+          now={now}
+          freshness={reviewFresh}
+          instrumentBlankLabel="Choose stock"
+          terms={<>Aerodrome · Base{instrument ? ` · ${instrument.name} · Coinbase-issued token` : ''} · quoted {new Date(quote.quotedAt).toLocaleTimeString()}</>}
+          actions={validity && <>
+            {validity.state === 'lapsed'
+              ? <button type="button" className={styles.primary} onClick={() => void requestQuote()}>{SLIP_ACTIONS.fresh}<span aria-hidden="true">↻</span></button>
+              : <>
+                  <button
+                    type="button"
+                    className={styles.primary}
+                    disabled={!historyReady || validity.state !== 'open'}
+                    title={validity.state === 'closing' ? 'The estimate is expiring — refresh for fresh terms' : undefined}
+                    onClick={save}
+                  >{SLIP_ACTIONS.file}<span aria-hidden="true">→</span></button>
+                  <button type="button" className={styles.secondary} onClick={() => void requestQuote()}>{SLIP_ACTIONS.fresh}<span aria-hidden="true">↻</span></button>
+                </>}
+            <div className={styles.slipActions}>
+              {expired
+                ? <button type="button" className={styles.secondary} onClick={() => { edit(state.draft); document.getElementById('amount')?.focus({ preventScroll: true }); }}>Adjust amount</button>
+                : <button type="button" className={styles.secondary} title="Editing clears this estimate" onClick={() => edit(state.draft)}>Edit instruction</button>}
+              <button type="button" className={styles.secondary} onClick={cancel}>Cancel instruction</button>
+            </div>
+          </>}
+          onEdit={onSlipEdit}
+        >
           {liveMode ? (
             <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet. Pool fees, gas and <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> apply.</span></p>
           ) : (
             <p className={styles.quoteBoundary}>Paper only. No funds move.<span>Pool fees included; gas and additional <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> excluded.</span></p>
           )}
-          {expired && <p role="status" className={styles.slipNotice}>This estimate expired. Refresh to review new terms.</p>}
-          {termsReminder && !expired && <p role="status" className={styles.slipNotice}>Explanation closed. Reading does not refresh terms — use Refresh estimate if the window is short or unclear.</p>}
+          {termsReminder && !expired && <p role="status" className={styles.slipNotice}>Explanation closed. Reading does not refresh terms — use {SLIP_ACTIONS.fresh} if the window is short or unclear.</p>}
           {educationHandoff && <p role="status" className={styles.slipNotice}>Back from practice. This instruction was not changed. Refresh an estimate before deciding.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
-        </>}
-        <Drawer
-          className={styles.quoteDetails}
-          trigger="Quote &amp; product details"
-          title="Quote and product details"
-          testId="quote-details-panel"
-        >
-          <p>Estimate as of {date(quote.blockTimestamp * 1000)}. {recorded ? 'This record preserves the estimate you reviewed.' : `Review expires ${date(quote.expiresAt)}.`}</p>
-          <p>{liveMode
-            ? 'This live estimate includes pool swap fees. Slippage, gas and wallet authorization apply when you execute — funds move from the connected wallet on Base.'
-            : 'This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.'}</p>
-          <p>Underlying-share equivalent: {quote.shareEquivalent}. Token quantities are adjusted using the current corporate-action multiplier; a token does not permanently equal one share.</p>
-          <p>Chainlink reference valuation: {quote.reference.priceUsdPerToken ? `$${quote.reference.priceUsdPerToken} per token` : 'unavailable'} · {quote.reference.status}. {tapeTopic && <EducationTopicTrigger topic={tapeTopic} label="Tape vs estimate" onDismiss={remindAfterEducation} />}</p>
-          {quote.reference.updatedAt && <p>Reference updated: {date(quote.reference.updatedAt * 1000)}</p>}
-          <p>This is a token valuation, not an underlying-stock quote or current offer. Market session and oracle pause status are unverified. Older observations may reflect off-hours or a pause.</p>
-          <p>{liveMode ? LIVE_ASSUMPTIONS : PAPER_ASSUMPTIONS}</p>
-          <p>Base block {quote.blockNumber}<br />Token: <code>{quote.instrumentAddress}</code><br />Pool: <code>{quote.poolAddress}</code></p>
-          <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
-        </Drawer>
-        <div className={styles.slipDecision}>
-          {recorded ? <>
-            <div className={styles.slipActions}>
-              {!browsing && (
-                <button type="button" className={styles.secondary} onClick={() => edit({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' })}>Start another instruction</button>
-              )}
-              <details className={styles.receiptTools}>
-                <summary>Keep or share</summary>
-                <div>
-                  <button type="button" className={styles.secondary} onClick={share}>Share this paper trade</button>
-                  {instrument && <button type="button" className={styles.secondary} onClick={() => watched.includes(instrument.id) ? unwatch(instrument.id) : watch(instrument.id)}>{watched.includes(instrument.id) ? 'Stop watching' : 'Watch'} {instrument.symbol}</button>}
-                  {!browsing && <button type="button" className={styles.secondary} onClick={() => edit(quote.intent)}>Re-quote {instrument?.symbol ?? 'this mark'}</button>}
-                  {shareNote && <p role="status" className={styles.shareFeedback}>{shareNote}</p>}
-                </div>
-              </details>
-            </div>
-          </> : <>
-            {LIVE_EXECUTION_ENABLED && view === 'review' && !expired && (
+          {quoteDrawer}
+          <div className={styles.slipDecision}>
+            {LIVE_EXECUTION_ENABLED && !expired && (
               <div className={styles.liveBox}>
                 <label className={styles.liveRowLabel}>
                   <input type="checkbox" checked={liveMode} onChange={() => onLiveModeChange(!liveMode)} aria-label="Toggle live execution on Base" />
@@ -633,22 +730,10 @@ export const TradeTicket = memo(function TradeTicket({
             )}
             <p className={styles.slipConsent}>{liveMode ? 'Executing moves real funds on Base. Recording saves a simulation, visible to anyone using this browser profile.' : 'Recording saves a simulation, visible to anyone using this browser profile.'}</p>
             {liveMode && quote && <LiveExecution quote={quote} execution={execution} expired={expired} expiringSoon={expiringSoon} onApproved={() => void requestQuote()} />}
-            {expired
-              ? <button className={styles.primary} type="button" onClick={() => void requestQuote()}>Refresh estimate<span aria-hidden="true">↻</span></button>
-              : expiringSoon
-                ? <button className={styles.primary} type="button" disabled title="The estimate is expiring — refresh for fresh terms">Refresh needed — estimate expiring<span aria-hidden="true">↻</span></button>
-                : <button className={styles.primary} type="button" disabled={!historyReady} onClick={save}>Record paper trade<span aria-hidden="true">→</span></button>}
-            {expiringSoon && !expired && <p role="status" className={styles.slipNotice}>The estimate is expiring. Refresh for fresh terms — recording is held.</p>}
-            <div className={styles.slipActions}>
-              {expired
-                ? <button className={styles.secondary} type="button" onClick={() => { edit(state.draft); document.getElementById('amount')?.focus({ preventScroll: true }); }}>Adjust amount</button>
-                : <button className={styles.secondary} type="button" title="Editing clears this estimate" onClick={() => edit(state.draft)}>Edit instruction</button>}
-              <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>
-            </div>
             {!expired && !expiringSoon && <p className={styles.slipNotice}>Editing clears this estimate.</p>}
-          </>}
-        </div>
-      </>}
+          </div>
+        </WrittenSlip>
+      ) : null}
     </div>
   </section>;
 });
@@ -675,7 +760,7 @@ function HettyDraftForm({
   state: ReturnType<typeof useTradingDesk>['state'];
   instrument: (typeof DESK_INSTRUMENTS)[number] | undefined;
   flash: 'instrument' | 'side' | 'amount' | null;
-  edit: ReturnType<typeof useTradingDesk>['edit'];
+  edit: (draft: TradeIntent, field?: 'instrument' | 'side' | 'amount' | 'units') => void;
   requestQuote: ReturnType<typeof useTradingDesk>['requestQuote'];
   isRecording: boolean;
   isTranscribing: boolean;
@@ -697,79 +782,24 @@ function HettyDraftForm({
           <legend>Stock</legend>
           {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
             <label key={stock.id} className={styles.plaque} data-flash={flash === 'instrument' && state.draft.instrumentId === stock.id ? 'true' : undefined}>
-              <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} onChange={() => edit({ ...state.draft, instrumentId: stock.id })} />
+              <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} onChange={() => edit({ ...state.draft, instrumentId: stock.id }, 'instrument')} />
               <span className={styles.plaqueSymbol}>{stock.symbol}</span>
               <span className={styles.plaqueName}>{stock.name}</span>
             </label>
           ))}
         </fieldset>
         <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
-        <div className={styles.dictationBar} title="Press and hold, speak, release — the words land on the ticket.">
-          <button
-            type="button"
-            className={styles.dictationButton}
-            data-recording={isRecording ? 'true' : undefined}
-            data-transcribing={isTranscribing ? 'true' : undefined}
-            disabled={isTranscribing}
-            onPointerDown={e => {
-              if (e.pointerType === 'mouse' || isTranscribing) return;
-              e.preventDefault();
-              try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older Safari */ }
-              setHoldMode(true);
-              void startRecording();
-            }}
-            onPointerUp={e => {
-              if (e.pointerType === 'mouse' || !holdMode) return;
-              holdReleaseRef.current = Date.now();
-              setHoldMode(false);
-              void stopRecording();
-            }}
-            onPointerCancel={() => {
-              if (!holdMode) return;
-              holdReleaseRef.current = Date.now();
-              setHoldMode(false);
-              void stopRecording();
-            }}
-            onContextMenu={e => { e.preventDefault(); }}
-            onClick={() => {
-              if (Date.now() - holdReleaseRef.current < 700) return;
-              if (isRecording) void stopRecording();
-              else void startRecording();
-            }}
-            aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice'}
-          >
-            <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
-            {isRecording ? (
-              <>
-                {holdMode ? 'Listening… release to finish' : 'Listening… tap to finish'}
-                <span className={styles.dictationWaveform} aria-hidden="true">
-                  <i /><i /><i /><i /><i /><i />
-                </span>
-              </>
-            ) : isTranscribing ? 'Writing it down…' : dictState.status === 'error' ? 'Try voice again' : 'Fill ticket by voice'}
-          </button>
-          <span className={styles.dictationBadge}>No call · You confirm</span>
-        </div>
-        {isRecording && (
-          <p className={styles.dictationHint} role="status">
-            {holdMode ? 'Keep holding — say the stock and the amount, then release.' : 'Say the stock and the amount, then tap again.'}
-          </p>
-        )}
-        {isTranscribing && <p className={styles.dictationHint} role="status">Writing it down…</p>}
-        {dictState.status === 'error' && dictState.error && (
-          <p className={styles.dictationError} role="alert">{dictState.error}</p>
-        )}
-        {dictState.transcript && (
-          <p className={styles.dictationTranscript} role="status">
-            <em>You said</em>
-            &ldquo;{dictState.transcript}&rdquo;
-            {provenance && (
-              <span className={styles.dictationSeal} title="A record of what was heard — not a trade.">
-                Heard · {provenance.shortSeal}
-              </span>
-            )}
-          </p>
-        )}
+        <DictationControl
+          isRecording={isRecording}
+          isTranscribing={isTranscribing}
+          holdMode={holdMode}
+          setHoldMode={setHoldMode}
+          holdReleaseRef={holdReleaseRef}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
+          dictState={dictState}
+          provenance={provenance}
+        />
         <div className={styles.fields}>
           <div>
             <label htmlFor="side">Instruction</label>
@@ -777,7 +807,7 @@ function HettyDraftForm({
               id="side"
               data-flash={flash === 'side' ? 'true' : undefined}
               value={state.draft.side}
-              onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}
+              onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent, 'side')}
             >
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
@@ -795,7 +825,7 @@ function HettyDraftForm({
               value={state.draft.amount}
               onFocus={() => setTyping(true)}
               onBlur={() => setTyping(false)}
-              onChange={e => edit({ ...state.draft, amount: e.target.value })}
+              onChange={e => edit({ ...state.draft, amount: e.target.value }, 'amount')}
               required
             />
           </div>
@@ -808,13 +838,13 @@ function HettyDraftForm({
               className={styles.amountChip}
               data-active={state.draft.amount === value ? 'true' : 'false'}
               aria-label={`Set amount to ${value} ${state.draft.unit}`}
-              onClick={() => edit({ ...state.draft, amount: value })}
+              onClick={() => edit({ ...state.draft, amount: value }, 'amount')}
             >
               {state.draft.side === 'buy' ? `$${value}` : value}
             </button>
           ))}
         </div>
-        <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
+        <button className={styles.primary} type="submit">{SLIP_ACTIONS.price}<span aria-hidden="true">→</span></button>
       </form>
       <Drawer
         className={styles.productDetails}
@@ -826,6 +856,101 @@ function HettyDraftForm({
         <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
       </Drawer>
       <p className={styles.paperFoot}>Your instruction. Your decision.</p>
+    </>
+  );
+}
+
+/** The mic on the ticket — hold-to-talk on touch, tap-to-toggle on mouse.
+    Shared by the Compact form and the Room's written slip. */
+function DictationControl({
+  isRecording,
+  isTranscribing,
+  holdMode,
+  setHoldMode,
+  holdReleaseRef,
+  startRecording,
+  stopRecording,
+  dictState,
+  provenance,
+}: {
+  isRecording: boolean;
+  isTranscribing: boolean;
+  holdMode: boolean;
+  setHoldMode: (next: boolean) => void;
+  holdReleaseRef: MutableRefObject<number>;
+  startRecording: () => void | Promise<void>;
+  stopRecording: () => void | Promise<void>;
+  dictState: { status: string; error?: string | null; transcript?: string | null };
+  provenance: DictationProvenance | null;
+}) {
+  return (
+    <>
+      <div className={styles.dictationBar} title="Press and hold, speak, release — the words land on the ticket.">
+        <button
+          type="button"
+          className={styles.dictationButton}
+          data-recording={isRecording ? 'true' : undefined}
+          data-transcribing={isTranscribing ? 'true' : undefined}
+          disabled={isTranscribing}
+          onPointerDown={e => {
+            if (e.pointerType === 'mouse' || isTranscribing) return;
+            e.preventDefault();
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older Safari */ }
+            setHoldMode(true);
+            void startRecording();
+          }}
+          onPointerUp={e => {
+            if (e.pointerType === 'mouse' || !holdMode) return;
+            holdReleaseRef.current = Date.now();
+            setHoldMode(false);
+            void stopRecording();
+          }}
+          onPointerCancel={() => {
+            if (!holdMode) return;
+            holdReleaseRef.current = Date.now();
+            setHoldMode(false);
+            void stopRecording();
+          }}
+          onContextMenu={e => { e.preventDefault(); }}
+          onClick={() => {
+            if (Date.now() - holdReleaseRef.current < 700) return;
+            if (isRecording) void stopRecording();
+            else void startRecording();
+          }}
+          aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice'}
+        >
+          <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
+          {isRecording ? (
+            <>
+              {holdMode ? 'Listening… release to finish' : 'Listening… tap to finish'}
+              <span className={styles.dictationWaveform} aria-hidden="true">
+                <i /><i /><i /><i /><i /><i />
+              </span>
+            </>
+          ) : isTranscribing ? 'Writing it down…' : dictState.status === 'error' ? 'Try voice again' : 'Fill ticket by voice'}
+        </button>
+        <span className={styles.dictationBadge}>No call · You confirm</span>
+      </div>
+      {isRecording && (
+        <p className={styles.dictationHint} role="status">
+          {holdMode ? 'Keep holding — say the stock and the amount, then release.' : 'Say the stock and the amount, then tap again.'}
+        </p>
+      )}
+      {isTranscribing && <p className={styles.dictationHint} role="status">Writing it down…</p>}
+      {dictState.status === 'error' && dictState.error && (
+        <p className={styles.dictationError} role="alert">{dictState.error}</p>
+      )}
+      {dictState.transcript && (
+        <p className={styles.dictationTranscript} role="status">
+          <em>You said</em>
+          &ldquo;{dictState.transcript}&rdquo;
+          {provenance && (
+            <span className={styles.dictationSeal} title="A record of what was heard — not a trade.">
+              Heard · {provenance.shortSeal}
+            </span>
+          )}
+        </p>
+      )}
     </>
   );
 }

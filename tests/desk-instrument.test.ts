@@ -68,11 +68,11 @@ describe('desk instrument line target', () => {
   it('production desk surfaces pass the broker-specific line target', () => {
     assert.match(
       source('components/desk/JesseDeskSurface.tsx'),
-      /brokerName="Jesse" lineTargetId="jesse-line"/,
+      /brokerName="Jesse"\s+lineTargetId="jesse-line"/,
     );
     assert.match(
       source('components/desk/HettyDeskSurface.tsx'),
-      /brokerName="Hetty" lineTargetId="hetty"/,
+      /brokerName="Hetty"\s+lineTargetId="hetty"/,
     );
   });
 });

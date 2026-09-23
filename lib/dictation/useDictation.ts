@@ -11,8 +11,19 @@ export interface DictationState {
   provider: string | null;
 }
 
+/** What the parser resolved — the intent plus the literal words that wrote
+    each field, so the slip can mark them "said". */
+export interface ParsedDictation {
+  intent: Partial<TradeIntent>;
+  spans?: { instrument?: string; side?: string; amount?: string };
+  /** The raw words as heard, before any LLM cleanup — spans only count
+      as "said" when they occur here. */
+  verbatimTranscript?: string | null;
+  cleanedUp?: boolean;
+}
+
 export interface UseDictationOptions {
-  onIntentParsed?: (intent: Partial<TradeIntent>, transcript: string) => void;
+  onIntentParsed?: (intent: Partial<TradeIntent>, transcript: string, parsed: ParsedDictation) => void;
 }
 
 /* The Wake Lock API is not in every TS DOM lib yet — a structural type is
@@ -215,7 +226,12 @@ export function useDictation(options?: UseDictationOptions) {
           });
 
           if (result.parsedIntent && options?.onIntentParsed) {
-            options.onIntentParsed(result.parsedIntent, cleanTranscript);
+            options.onIntentParsed(result.parsedIntent, cleanTranscript, {
+              intent: result.parsedIntent,
+              spans: result.parsedSpans ?? undefined,
+              verbatimTranscript: result.verbatimTranscript ?? null,
+              cleanedUp: result.cleanedUp === true,
+            });
           }
         } catch (err) {
           setState({

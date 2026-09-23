@@ -35,6 +35,7 @@ import {
   setJesseInstructionResult,
 } from '@/lib/jesse/voice-tools';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
+import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
@@ -88,6 +89,7 @@ function JesseCallInner({
   onLiveChange,
   onUserSpoken,
   onAgentSpoken,
+  onLineApplied,
   endNote,
   callError,
   onActivity,
@@ -102,6 +104,7 @@ function JesseCallInner({
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
+  onLineApplied?: (partial: SlipProvenance) => void;
   endNote: string | null;
   callError: string | null;
   onActivity: () => void;
@@ -114,6 +117,16 @@ function JesseCallInner({
   useEffect(() => { captionsRef.current = captions; });
   const onCaptionRef = useRef(onCaption);
   useEffect(() => { onCaptionRef.current = onCaption; });
+  const onLineAppliedRef = useRef(onLineApplied);
+  useEffect(() => { onLineAppliedRef.current = onLineApplied; });
+
+  /* A tool-applied field is marked "from the call" with the caller's latest
+     words attached — the slip never pretends the line typed it. */
+  const markLine = useCallback((field: SlipField, value: string) => {
+    onLineAppliedRef.current?.({
+      [field]: { kind: 'line', lastCaller: lastCaption(captionsRef.current, 'user')?.text ?? null, value },
+    });
+  }, []);
 
   const waitFor = useCallback((predicate: (d: JesseDesk) => boolean, ms: number) =>
     new Promise<boolean>(resolve => {
@@ -133,7 +146,8 @@ function JesseCallInner({
     const query = String(p.query ?? '');
     const instrument = resolveSolanaAlias(query);
     if (!instrument) return chooseSolanaInstrumentResult(query);
-    await d.edit({ instrumentId: instrument.id }, 'instrument');
+    const applied = await d.edit({ instrumentId: instrument.id }, 'instrument');
+    if (applied.status === 'applied' || applied.status === 'clarify') markLine('instrument', instrument.id);
     return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
   });
 
@@ -144,7 +158,8 @@ function JesseCallInner({
     const side = String(p.side ?? '');
     if (side !== 'buy' && side !== 'sell') return setJesseInstructionResult(side);
     const next = nextJesseInstructionDraft(d.state.draft, side);
-    await d.edit(next.draft, 'side');
+    const applied = await d.edit(next.draft, 'side');
+    if (applied.status === 'applied' || applied.status === 'clarify') markLine('side', side);
     return setJesseInstructionResult(side, next.amountCleared);
   });
 
@@ -156,7 +171,8 @@ function JesseCallInner({
     if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
       return `"${clean || 'That'}" is not a usable amount — say a plain number, like 100 or 0.5.`;
     }
-    await d.edit({ amount: clean }, 'amount');
+    const applied = await d.edit({ amount: clean }, 'amount');
+    if (applied.status === 'applied' || applied.status === 'clarify') markLine('amount', clean);
     return setJesseAmountResult(d.state.draft.side, clean);
   });
 
@@ -185,7 +201,8 @@ function JesseCallInner({
     if (query) {
       const instrument = resolveSolanaAlias(query);
       if (!instrument) return chooseSolanaInstrumentResult(query);
-      await d.edit({ instrumentId: instrument.id }, 'instrument');
+      const applied = await d.edit({ instrumentId: instrument.id }, 'instrument');
+      if (applied.status === 'applied' || applied.status === 'clarify') markLine('instrument', instrument.id);
     }
     if (!jesseRef.current.state.draft.instrumentId) {
       return 'Which xStock should I compare — Apple, NVIDIA, or Tesla?';
@@ -488,7 +505,7 @@ function JesseCallInner({
       ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
       : live && inReview
         ? 'The quotation is on the slip. Take your time — Jesse will hold the line.'
-        : 'Speak your instruction. Review it on the same ticket.';
+        : null;
 
   return (
     <section id="jesse-line" className={styles.call} aria-labelledby="jesse-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
@@ -500,7 +517,7 @@ function JesseCallInner({
         </span>
       </div>
       {!live && !ringing && <BrokerLinePlate deskId="jesse" take={take} />}
-      <p className={styles.callNote}>{callNote}</p>
+      {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
@@ -583,12 +600,14 @@ export const JesseCall = memo(function JesseCall({
   onLiveChange,
   onUserSpoken,
   onAgentSpoken,
+  onLineApplied,
 }: {
   jesse: JesseDesk;
   take?: string | null;
   onLiveChange?: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
+  onLineApplied?: (partial: SlipProvenance) => void;
 }) {
   const [sessionKey, setSessionKey] = useState(0);
   const [captions, setCaptions] = useState<Caption[]>([]);
@@ -616,6 +635,7 @@ export const JesseCall = memo(function JesseCall({
         onLiveChange={handleLiveChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}
+        onLineApplied={onLineApplied}
         endNote={endNote}
         callError={callError}
         onActivity={() => { setCallError(null); if (!live) setEndNote(null); }}

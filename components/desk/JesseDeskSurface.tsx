@@ -11,12 +11,23 @@ import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
 import { BlotterHearables } from './BlotterHearables';
 import { RoomMarketClock } from './RoomMarketClock';
+import { RoomTape } from './RoomTape';
 import { ReceiverShell } from './ReceiverShell';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
-import type { JesseDraft, SolanaInstrumentId } from '@/lib/solana/contracts';
-import { parseJesseUtterance } from '@/lib/jesse/speech';
+import type { CommandResult, JesseDraft, SolanaInstrumentId } from '@/lib/solana/contracts';
+import { parseJesseUtterance, type JesseSpeechParse } from '@/lib/jesse/speech';
+import {
+  carriedMarks,
+  handMarks,
+  mergeProvenance,
+  type SlipProvenance,
+} from '@/lib/desk/slip-provenance';
+import { provenanceFromParse } from '@/lib/jesse/slip-provenance';
+import { trackSuperseded, type SupersededSlip } from '@/lib/desk/superseded';
+import { JESSE_VOCAB, slipOneLine } from '@/lib/desk/written-slip';
+import { draftIntent } from '@/lib/jesse/draft-intent';
 import { projectJesseToRoom } from '@/lib/room-view-projection';
 import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
@@ -59,6 +70,11 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [jesseLive, setJesseLive] = useState(false);
   const offeringApplied = useRef<string | null>(null);
 
+  /* Slip provenance: where each written value came from. Marks render only
+     while the slip still holds the value they were recorded for. */
+  const [provenance, setProvenance] = useState<SlipProvenance>({});
+  const [superseded, setSuperseded] = useState<SupersededSlip[]>([]);
+
   const marks = useReferenceMarks('jesse');
   const clock = useMarketClock();
   const deskMarks = marks.result?.marks ?? NO_MARKS;
@@ -72,7 +88,72 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     && !jesse.state.draft.amount
     && jesse.foreground.kind === 'draft'
     && jesse.state.stage === 'draft';
-  const lineFirst = roomView && draftEmpty && !jesseLive;
+  /* Room: the line owns attention whenever the slip is not under review —
+     a filled draft still reads as a desk you ring, not a DEX form. */
+  const reviewActive = jesse.foreground.kind === 'quotation'
+    || jesse.foreground.kind === 'receipt'
+    || jesse.foreground.kind === 'archive';
+  const lineLed = roomView && !reviewActive && jesse.foreground.kind !== 'missing';
+  const blankSlip = lineLed && draftEmpty && !jesseLive;
+  /* Under review the room stays a room — the slip leads, on the desk. */
+  const slipLed = roomView && reviewActive;
+
+  const draftFieldsEmpty = !jesse.state.draft.instrumentId
+    && !jesse.state.draft.side
+    && !jesse.state.draft.amount;
+
+  /* A fully empty slip carries no provenance. */
+  useEffect(() => {
+    if (draftFieldsEmpty) {
+      setProvenance(prev => (Object.keys(prev).length > 0 ? {} : prev));
+    }
+  }, [draftFieldsEmpty]);
+
+  /* Fresh estimates strike the old price through on the same slip. */
+  const prevSlipRef = useRef<{ quote: typeof jesse.state.quote; stage: typeof jesse.state.stage }>({
+    quote: jesse.state.quote,
+    stage: jesse.state.stage,
+  });
+  useEffect(() => {
+    const before = prevSlipRef.current;
+    prevSlipRef.current = { quote: jesse.state.quote, stage: jesse.state.stage };
+    setSuperseded(prev => trackSuperseded(prev, {
+      quoteId: before.quote?.id ?? null,
+      line: before.quote ? slipOneLine(before.quote, JESSE_VOCAB) : null,
+      stage: before.stage,
+    }, {
+      quoteId: jesse.state.quote?.id ?? null,
+      stage: jesse.state.stage,
+      draftEmpty: draftFieldsEmpty,
+    }, Date.now()));
+  }, [jesse.state.quote, jesse.state.stage, draftFieldsEmpty]);
+
+  const recordParsed = useCallback((parse: JesseSpeechParse, result: CommandResult, priorDraft: JesseDraft) => {
+    if (result.status === 'stale') return;
+    if (parse.command?.type !== 'draft' && parse.command?.type !== 'clarify') return;
+    setProvenance(prev => mergeProvenance(prev, provenanceFromParse(parse, priorDraft)));
+  }, []);
+
+  const onLineApplied = useCallback((partial: SlipProvenance) => {
+    setProvenance(prev => mergeProvenance(prev, partial));
+  }, []);
+
+  const handEdit = useCallback((partial: Partial<JesseDraft>, field: 'instrument' | 'side' | 'amount' | 'units') => {
+    setProvenance(prev => mergeProvenance(prev, handMarks(partial, field)));
+    return jesse.edit(partial, field);
+  }, [jesse]);
+
+  /* Inline slip edits: a complete intent on a quoted slip re-prices exactly
+     like the spoken "make that 50"; otherwise it's a plain draft edit. */
+  const slipEdit = useCallback((partial: Partial<JesseDraft>, field: 'instrument' | 'side' | 'amount' | 'units') => {
+    setProvenance(prev => mergeProvenance(prev, handMarks(partial, field)));
+    const intent = draftIntent({ ...jesse.state.draft, ...partial });
+    if (jesse.foreground.kind === 'quotation' && intent) {
+      void jesse.run({ type: 'draft', intent, quote: true });
+      return;
+    }
+    void jesse.edit(partial, field);
+  }, [jesse]);
 
   const setMode = useDeskPresentation('jesse', mode => { jesse.setPresentationMode(mode); }, jesse.historyReady);
 
@@ -97,13 +178,11 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     if (entryIntent?.side) partial.side = entryIntent.side;
     if (entryIntent?.amount) partial.amount = entryIntent.amount;
     if (Object.keys(partial).length === 0) return;
+    setProvenance(prev => mergeProvenance(prev, carriedMarks(partial)));
     void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
   }, [entryInstrumentId, entryIntent, jesse]);
 
   const carriedNote = carriedIntentNote(entryIntent, jesse.state.draft);
-  const reviewActive = jesse.foreground.kind === 'quotation'
-    || jesse.foreground.kind === 'receipt'
-    || jesse.foreground.kind === 'archive';
   const instrumentStage = jesseLive
     ? (jesse.inFlight === 'quote' ? 'conversation' : reviewActive ? 'confirmation' : 'conversation')
     : jesse.inFlight === 'quote'
@@ -135,16 +214,18 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const sayToDesk = useCallback(async (phrase: string) => {
     setSpoken(phrase);
     setHeardNote(null);
-    const parsed = parseJesseUtterance(phrase, jesse.state.draft, jesse.state.quote?.id ?? null);
+    const priorDraft = jesse.state.draft;
+    const parsed = parseJesseUtterance(phrase, priorDraft, jesse.state.quote?.id ?? null);
     if (!parsed.command) {
       setHeardNote('I didn’t catch a supported xStock instruction. Try “buy 100 USDC of AAPLx”.');
       signalLine();
       return;
     }
     const result = await jesse.run(parsed.command);
+    recordParsed(parsed, result, priorDraft);
     setHeardNote(result.spokenText);
     scrollToDeskTarget('instruction');
-  }, [jesse]);
+  }, [jesse, recordParsed]);
 
   const onRoomView = (view: NightDeskView) => {
     if (view === 'evidence') {
@@ -204,6 +285,23 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         )}
       </ModeStamp>
       {roomView && <RoomMarketClock clock={clock} />}
+      {roomView && !reviewActive && (
+        <RoomTape
+          marks={deskMarks}
+          stale={marks.stale}
+          failed={marks.failed}
+          asOf={marks.result?.asOf}
+          clock={clock}
+          take={take}
+          brokerName="Jesse"
+          priceLabel="on Solana"
+          missingSecondLeg="no comparable reference"
+          onSelect={id => {
+            handEdit({ instrumentId: id as SolanaInstrumentId }, 'instrument');
+            scrollToDeskTarget('instruction');
+          }}
+        />
+      )}
       {lead}
       <div
         className={styles.grid}
@@ -212,7 +310,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         data-foreground={jesse.foreground.kind}
         data-live={jesseLive ? 'true' : 'false'}
         data-presentation={presentationMode}
-        data-line-first={lineFirst ? 'true' : undefined}
+        data-line-first={lineLed ? 'true' : undefined}
+        data-slip-led={slipLed ? 'true' : undefined}
       >
         {!roomView && (
           <>
@@ -223,9 +322,16 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </>
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
-          <JesseCall jesse={jesse} take={take} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />
-          {lineFirst && blotter}
-          <JesseCommandBar jesse={jesse} onHeard={setSpoken} />
+          <JesseCall jesse={jesse} take={roomView ? null : take} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
+          {blankSlip && blotter}
+          {roomView ? (
+            <details className={styles.typeInstead}>
+              <summary>Type instead</summary>
+              <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
+            </details>
+          ) : (
+            <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
+          )}
           <ReceiverShell
             stage={instrumentStage}
             label={instrumentLabel}
@@ -239,7 +345,19 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             <p>The house keeps the record.</p>
           </div>
         </aside>
-        <JesseTicket jesse={jesse} spokenLine={spoken} carriedNote={carriedNote} mark={selectedMark} blankSlip={lineFirst} />
+        <JesseTicket
+          jesse={jesse}
+          spokenLine={spoken}
+          carriedNote={carriedNote}
+          mark={selectedMark}
+          blankSlip={blankSlip}
+          quietEvidence={roomView}
+          roomView={roomView}
+          provenance={provenance}
+          superseded={superseded}
+          onSlipEdit={slipEdit}
+          handEdit={handEdit}
+        />
         <JesseLedger jesse={jesse} />
       </div>
       {!roomView && (
@@ -251,7 +369,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             stale={marks.stale}
             asOf={marks.result?.asOf}
             onSelect={id => {
-              void jesse.edit({ instrumentId: id as SolanaInstrumentId }, 'instrument');
+              handEdit({ instrumentId: id as SolanaInstrumentId }, 'instrument');
               scrollToDeskTarget('instruction', { focusId: 'amount' });
             }}
             disabled={jesse.inFlight === 'quote'}

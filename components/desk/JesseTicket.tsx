@@ -6,19 +6,27 @@ import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import { JESSE_LIVE_CLIENT_ENABLED } from '@/lib/solana/flags';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { mintFirstJessePaperSlip } from '@/lib/trading/desk-slips';
-import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { HouseMark } from '../desk/HouseMark';
 import { EducationTopicTrigger } from './EducationTopic';
 import { MarketEvidence } from '../solana/MarketEvidence';
 import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
-import type { JesseIntent, MarketComparison } from '@/lib/solana/contracts';
+import { WrittenSlip } from './WrittenSlip';
+import { GapStrip } from './GapStrip';
+import type { JesseDraft, JesseIntent, MarketComparison } from '@/lib/solana/contracts';
+import type { SlipProvenance } from '@/lib/desk/slip-provenance';
+import type { SupersededSlip } from '@/lib/desk/superseded';
+import { draftComplete, JESSE_VOCAB, slipValidity } from '@/lib/desk/written-slip';
 import { getEducationTopic } from '@/lib/education';
-import { EVIDENCE_DISCLAIMER, BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, HAND_FORM_SUMMARY } from '@/lib/desk/ui-copy';
-import { markPrice, type DeskMark } from '@/lib/trading/marks-shared';
+import { EVIDENCE_DISCLAIMER, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
+import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
+
+export { GapStrip } from './GapStrip';
+
+const SLIP_INSTRUMENTS = SOLANA_INSTRUMENTS.filter(s => s.quoteSupported);
 
 const AMOUNT_CHIPS = { buy: ['25', '100', '250'], sell: ['1', '5', '10'] } as const;
 
@@ -47,6 +55,12 @@ export const JesseTicket = memo(function JesseTicket({
   carriedNote = null,
   mark = null,
   blankSlip = false,
+  quietEvidence = false,
+  roomView = false,
+  provenance,
+  superseded,
+  onSlipEdit,
+  handEdit,
 }: {
   jesse: JesseDesk;
   spokenLine?: string | null;
@@ -55,6 +69,19 @@ export const JesseTicket = memo(function JesseTicket({
   mark?: DeskMark | null;
   /** Room first paint: blank blotter until the line (or hand) puts work on it. */
   blankSlip?: boolean;
+  /** Room: keep market evidence behind one disclosure until asked. */
+  quietEvidence?: boolean;
+  /** Room: the written sentence leads; Compact keeps the DraftForm. */
+  roomView?: boolean;
+  /** Where each value on the slip came from — marks only render while the
+      slip still holds the recorded value. */
+  provenance?: SlipProvenance;
+  /** Earlier prices struck through on this same slip. */
+  superseded?: SupersededSlip[];
+  /** Inline sentence edits — the surface decides edit-versus-reprice. */
+  onSlipEdit?: (partial: Partial<JesseDraft>, field: 'instrument' | 'side' | 'amount' | 'units') => void;
+  /** Plain hand edits (Compact DraftForm) — edit plus hand provenance. */
+  handEdit?: JesseDesk['edit'];
 }) {
   const { state, foreground, inFlight, lastResult, edit, quote, compare, cancel, dismissRecord } = jesse;
   const draft = state.draft;
@@ -66,9 +93,6 @@ export const JesseTicket = memo(function JesseTicket({
 
   const side = draft.side ?? 'buy';
   const unit = side === 'buy' ? 'USDC' : 'scaled-token';
-  const quoteFresh = state.quote && state.quote.expiresAt > reviewNow;
-  const secondsLeft = state.quote ? Math.max(0, Math.ceil((state.quote.expiresAt - reviewNow) / 1000)) : 0;
-  const freezeSoon = secondsLeft > 0 && secondsLeft <= 5;
 
   useEffect(() => {
     let cancelled = false;
@@ -127,31 +151,36 @@ export const JesseTicket = memo(function JesseTicket({
   if (foreground.kind === 'archive' || foreground.kind === 'receipt') {
     const record = jesse.records.find(r => r.id === (foreground.kind === 'receipt' ? foreground.recordId : foreground.recordId));
     const q = record?.quote ?? state.quote;
+    const receiptInstrument = record?.instrumentSnapshot
+      ?? (q ? SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId) : null)
+      ?? state.presentedInstrument;
     return (
       <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={record ? 'true' : 'false'}>
         <PaperChrome liveMode={false} />
         {record && <span className={styles.stamp} aria-hidden="true"><span>FILED</span><small>PAPER · SOLANA</small></span>}
         <div className={styles.ticketSurface} key="receipt">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
-        {q && (
-          <div className={styles.slipBody}>
-            <p className={styles.reviewHeading}>{q.intent.side.toUpperCase()} · {record?.instrumentSnapshot.symbol ?? q.outputSymbol}</p>
-            <p>Spend {q.inputAmount} {q.inputSymbol} → about {q.outputAmount} {q.outputSymbol}</p>
-            <p className={styles.product}>Multiplier {q.scaling.multiplier} · Jupiter Metis · Solana</p>
-            {record && <p className={styles.paperFoot}>Filed {formatRecordedTime(record.createdAt)} · kept in this browser</p>}
-          </div>
-        )}
-        <div className={styles.slipActions}>
-          <button type="button" className={styles.secondary} onClick={dismissRecord}>
-            {foreground.kind === 'receipt' ? 'Start another instruction' : 'Back to your instruction'}
-          </button>
-        </div>
-        {record?.comparison && (
-          <>
-            <MarketEvidence comparison={record.comparison} />
-            <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
-          </>
-        )}
+        <WrittenSlip
+          mode="receipt"
+          draft={draft}
+          vocab={JESSE_VOCAB}
+          instruments={SLIP_INSTRUMENTS}
+          quote={q}
+          instrument={receiptInstrument}
+          terms={q ? <>Multiplier {q.scaling.multiplier} · {receiptInstrument?.issuer ?? 'Backed'} · Token-2022 · Jupiter Metis · Solana</> : null}
+          filedAt={record?.createdAt ?? null}
+          actions={
+            <button type="button" className={styles.secondary} onClick={dismissRecord}>
+              {foreground.kind === 'receipt' ? 'Start another instruction' : 'Back to your instruction'}
+            </button>
+          }
+          receiptExtra={record?.comparison ? (
+            <>
+              <MarketEvidence comparison={record.comparison} />
+              <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
+            </>
+          ) : null}
+        />
         </div>
       </section>
     );
@@ -159,74 +188,78 @@ export const JesseTicket = memo(function JesseTicket({
 
   if (foreground.kind === 'quotation' && state.quote) {
     const q = state.quote;
-    const instrument = SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId);
+    const instrument = SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId) ?? state.presentedInstrument;
+    /* The last seconds are not for deciding — filing freezes so a click
+       cannot race the lapse. */
+    const validity = slipValidity(q.expiresAt, reviewNow);
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
         <PaperChrome liveMode={liveMode && liveAvailable} />
-      <GapStrip mark={mark} />
         <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
-        <div className={styles.slipBody}>
-          <p className={styles.reviewHeading}>{q.intent.side.toUpperCase()} · {instrument?.symbol ?? q.outputSymbol}</p>
-          <p>Spend {q.inputAmount} {q.inputSymbol} → about {q.outputAmount} {q.outputSymbol}</p>
-          <p className={styles.product}>
-            Multiplier {q.scaling.multiplier} · Jupiter Metis · Solana
-            {liveMode && liveAvailable ? ' · live settle available' : ' · paper estimate'}
-          </p>
-          {(instrument ?? state.presentedInstrument) && (
-            <p className={styles.assumptions}>
-              {(instrument ?? state.presentedInstrument)!.issuer} · {(instrument ?? state.presentedInstrument)!.decimals} decimals · scaled display units
-            </p>
+        <WrittenSlip
+          mode="review"
+          draft={draft}
+          vocab={JESSE_VOCAB}
+          instruments={SLIP_INSTRUMENTS}
+          quote={q}
+          instrument={instrument}
+          spokenLine={spokenLine}
+          provenance={provenance}
+          superseded={superseded}
+          now={reviewNow}
+          pending={inFlight === 'quote'}
+          pendingLabel="Jesse is pricing it at Jupiter…"
+          notice={localError ?? (lastResult && lastResult.status === 'rejected' ? lastResult.spokenText : null)}
+          headline={<GapStrip mark={mark} />}
+          terms={<>Multiplier {q.scaling.multiplier} · {instrument?.issuer ?? 'Backed'} · Token-2022 · Jupiter Metis · Solana · {liveMode && liveAvailable ? 'live settle available' : 'paper estimate'}</>}
+          actions={<>
+            <button
+              type="button"
+              className={`${styles.primary} ${styles.stampAction}`}
+              disabled={validity.state !== 'open'}
+              onClick={() => { void onFile(); }}
+            >
+              {SLIP_ACTIONS.file}
+            </button>
+            <button type="button" className={styles.secondary} onClick={() => { void quote(); }}>{SLIP_ACTIONS.fresh}</button>
+            <button type="button" className={styles.secondary} onClick={() => { void cancel(); }}>{SLIP_ACTIONS.setAside}</button>
+            <button type="button" className={styles.secondary} onClick={() => { void compare(); }}>{SLIP_ACTIONS.compare}</button>
+          </>}
+          trailing={
+            <EvidenceModule
+              comparison={state.comparison}
+              loading={inFlight === 'compare'}
+              instrumentId={q.intent.instrumentId}
+              onCompare={() => { void compare(); }}
+              compareDisabled={inFlight === 'compare'}
+              quiet={quietEvidence}
+            />
+          }
+          onEdit={onSlipEdit}
+        >
+          {liveAvailable && (
+            <div className={styles.liveBox}>
+              <label className={styles.liveRowLabel}>
+                <input
+                  type="checkbox"
+                  checked={liveMode}
+                  onChange={() => setLiveMode(!liveMode)}
+                  aria-label="Toggle live execution on Solana"
+                />
+                {' '}Live execution on Solana
+              </label>
+              {liveMode && (
+                <p className={styles.liveMeta}>
+                  Real USDC and xStock move when you sign. Paper filing stays available.
+                </p>
+              )}
+            </div>
           )}
-          <p role="status" className={styles.notice} data-urgent={freezeSoon ? 'true' : undefined}>
-            {quoteFresh
-              ? `${secondsLeft}s left to file — then request a fresh estimate.`
-              : 'This estimate has expired. Request a fresh one.'}
-          </p>
-          <p className={styles.assumptions}>{q.assumptions}</p>
-        </div>
-        {(localError || (lastResult && lastResult.status === 'rejected')) && (
-          <p className={styles.notice} role="alert">{localError ?? lastResult?.spokenText}</p>
-        )}
-
-        {liveAvailable && (
-          <div className={styles.liveBox}>
-            <label className={styles.liveRowLabel}>
-              <input
-                type="checkbox"
-                checked={liveMode}
-                onChange={() => setLiveMode(!liveMode)}
-                aria-label="Toggle live execution on Solana"
-              />
-              {' '}Live execution on Solana
-            </label>
-            {liveMode && (
-              <p className={styles.liveMeta}>
-                Real USDC and xStock move when you sign. Paper filing stays available.
-              </p>
-            )}
-          </div>
-        )}
-
-        {liveMode && liveAvailable && (
-          <JesseLiveSettle intent={q.intent} revision={state.revision} />
-        )}
-
-        <div className={styles.slipActions}>
-          <button type="button" className={styles.primary} disabled={!quoteFresh} onClick={() => { void onFile(); }}>
-            File paper record
-          </button>
-          <button type="button" className={styles.secondary} onClick={() => { void quote(); }}>Refresh estimate</button>
-          <button type="button" className={styles.secondary} onClick={() => { void cancel(); }}>Set aside</button>
-          <button type="button" className={styles.secondary} onClick={() => { void compare(); }}>Compare market</button>
-        </div>
-        <EvidenceModule
-          comparison={state.comparison}
-          loading={inFlight === 'compare'}
-          instrumentId={q.intent.instrumentId}
-          onCompare={() => { void compare(); }}
-          compareDisabled={inFlight === 'compare'}
-        />
+          {liveMode && liveAvailable && (
+            <JesseLiveSettle intent={q.intent} revision={state.revision} />
+          )}
+        </WrittenSlip>
         </div>
       </section>
     );
@@ -236,8 +269,7 @@ export const JesseTicket = memo(function JesseTicket({
   const liveIntent = intentFromDraft(draft);
   const selectedStock = draft.instrumentId ? SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId) : null;
 
-  /* Room first paint: a blank blotter waits for the line; the full form stays
-     behind “Write it by hand” so capability is never lost. */
+  /* Room first paint: the slip is a sentence with blanks, not a form. */
   if (blankSlip) {
     return (
       <section
@@ -249,35 +281,53 @@ export const JesseTicket = memo(function JesseTicket({
         <PaperChrome liveMode={false} />
         <div className={styles.ticketSurface} key="blank">
           <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{BLANK_SLIP_TITLE.jesse}</h1>
-          <p className={styles.blankSlipNote}>
-            {BLANK_SLIP_NOTE}
-          </p>
-          {spokenLine && (
-            <p className={styles.dictationRail} role="status" aria-live="polite">
-              You said: <em>{spokenLine}</em>
-            </p>
-          )}
-          <details className={styles.handForm}>
-            <summary>{HAND_FORM_SUMMARY}</summary>
-            <DraftForm
-              draft={draft}
-              side={side}
-              unit={unit}
-              inFlight={inFlight}
-              liveAvailable={liveAvailable}
-              liveMode={liveMode}
-              setLiveMode={setLiveMode}
-              selectedStock={selectedStock}
-              localError={localError}
-              lastSpoken={lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null}
-              edit={edit}
-              quote={quote}
-              compare={compare}
-              liveIntent={liveIntent}
-              revision={state.revision}
-              comparison={state.comparison}
-            />
-          </details>
+          <WrittenSlip
+            mode="blank"
+            draft={draft}
+            vocab={JESSE_VOCAB}
+            instruments={SLIP_INSTRUMENTS}
+            instrument={selectedStock}
+            spokenLine={spokenLine}
+            provenance={provenance}
+            superseded={superseded}
+            pending={inFlight === 'quote' || foreground.kind === 'pending'}
+            pendingLabel="Jesse is pricing it at Jupiter…"
+            notice={localError ?? (lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null)}
+            actions={draftComplete(draft) && inFlight !== 'quote' && foreground.kind !== 'pending' ? (
+              <button type="button" className={styles.primary} onClick={() => { void quote(); }}>{SLIP_ACTIONS.price}</button>
+            ) : null}
+            onEdit={onSlipEdit}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  /* Room draft: the written sentence leads; Compact keeps the DraftForm. */
+  if (roomView) {
+    return (
+      <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
+        <PaperChrome liveMode={liveMode && liveAvailable} />
+        <div className={styles.ticketSurface} key="draft">
+        {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
+        <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
+        <WrittenSlip
+          mode="draft"
+          draft={draft}
+          vocab={JESSE_VOCAB}
+          instruments={SLIP_INSTRUMENTS}
+          instrument={selectedStock}
+          spokenLine={spokenLine}
+          provenance={provenance}
+          superseded={superseded}
+          pending={inFlight === 'quote' || foreground.kind === 'pending'}
+          pendingLabel="Jesse is pricing it at Jupiter…"
+          notice={localError ?? (lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null)}
+          actions={draftComplete(draft) && inFlight !== 'quote' && foreground.kind !== 'pending' ? (
+            <button type="button" className={styles.primary} onClick={() => { void quote(); }}>{SLIP_ACTIONS.price}</button>
+          ) : null}
+          onEdit={onSlipEdit}
+        />
         </div>
       </section>
     );
@@ -286,7 +336,7 @@ export const JesseTicket = memo(function JesseTicket({
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome liveMode={liveMode && liveAvailable} />
-      <div className={styles.ticketSurface} key="draft">
+      <div className={styles.ticketSurface} key="compact-draft">
       {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
       <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
       <p className={styles.dictationRail} data-active={inFlight === 'quote' ? 'true' : 'false'} role="status" aria-live="polite">
@@ -307,12 +357,13 @@ export const JesseTicket = memo(function JesseTicket({
         selectedStock={selectedStock}
         localError={localError}
         lastSpoken={lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null}
-        edit={edit}
+        edit={handEdit ?? edit}
         quote={quote}
         compare={compare}
         liveIntent={liveIntent}
         revision={state.revision}
         comparison={state.comparison}
+        quietEvidence={quietEvidence}
       />
       </div>
     </section>
@@ -336,6 +387,7 @@ function DraftForm({
   liveIntent,
   revision,
   comparison,
+  quietEvidence = false,
 }: {
   draft: JesseDesk['state']['draft'];
   side: 'buy' | 'sell';
@@ -353,6 +405,7 @@ function DraftForm({
   liveIntent: JesseIntent | null;
   revision: number;
   comparison: MarketComparison | null;
+  quietEvidence?: boolean;
 }) {
   return (
     <>
@@ -415,7 +468,7 @@ function DraftForm({
           ))}
         </div>
 
-        {liveAvailable && (
+        {liveAvailable && !quietEvidence && (
           <div className={styles.liveBox}>
             <label className={styles.liveRowLabel}>
               <input
@@ -444,7 +497,7 @@ function DraftForm({
         </div>
       </form>
 
-      {liveMode && liveAvailable && (
+      {liveMode && liveAvailable && !quietEvidence && (
         <JesseLiveSettle intent={liveIntent} revision={revision} />
       )}
 
@@ -454,6 +507,7 @@ function DraftForm({
         instrumentId={draft.instrumentId}
         onCompare={() => { void compare(); }}
         compareDisabled={!draft.instrumentId || inFlight === 'compare'}
+        quiet={quietEvidence}
       />
     </>
   );
@@ -470,14 +524,16 @@ function EvidenceModule({
   instrumentId,
   onCompare,
   compareDisabled,
+  quiet = false,
 }: {
   comparison: MarketComparison | null;
   loading: boolean;
   instrumentId: string | null;
   onCompare: () => void;
   compareDisabled: boolean;
+  quiet?: boolean;
 }) {
-  return (
+  const body = (
     <>
       <MarketEvidence
         comparison={comparison}
@@ -493,51 +549,12 @@ function EvidenceModule({
       </p>
     </>
   );
-}
-
-function formatBps(raw: string | null): string {
-  const value = Number(raw);
-  if (raw === null || !Number.isFinite(value)) return '—';
-  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(1)} BPS`;
-}
-
-/**
- * The onchain-versus-reference gap as the slip's headline — the venue mark
- * and its stock reference from the same duplex reading. A flash marks a
- * real change between successive readings; nothing renders without both legs.
- */
-export function GapStrip({ mark }: { mark: DeskMark | null }) {
-  const bps = mark?.stockReference?.differenceBps ?? null;
-  const [seen, setSeen] = useState<{ id: string | null; bps: string | null }>({ id: mark?.instrumentId ?? null, bps });
-  const [tick, setTick] = useState<'up' | 'down' | null>(null);
-  if (seen.id !== (mark?.instrumentId ?? null) || seen.bps !== bps) {
-    const sameInstrument = seen.id === (mark?.instrumentId ?? null);
-    setSeen({ id: mark?.instrumentId ?? null, bps });
-    const before = Number(seen.bps);
-    const after = Number(bps);
-    setTick(sameInstrument && seen.bps !== null && bps !== null && Number.isFinite(before) && Number.isFinite(after) && before !== after
-      ? (after > before ? 'up' : 'down')
-      : null);
-  }
-  useEffect(() => {
-    if (!tick) return;
-    const timer = setTimeout(() => setTick(null), 1200);
-    return () => clearTimeout(timer);
-  }, [tick]);
-
-  const price = mark ? markPrice(mark) : null;
-  if (!mark || mark.reference.status !== 'observed' || !mark.stockReference || !price) return null;
+  if (!quiet) return body;
   return (
-    <div className={styles.gapStrip} data-tick={tick ?? undefined} aria-label={`${mark.symbol} on Solana $${price}, stock reference $${mark.stockReference.priceUsd}, ${formatBps(bps)}`}>
-      <p className={styles.gapLegs}>
-        <span>ON SOLANA <strong>${price}</strong></span>
-        <span>STOCK REF <strong>${mark.stockReference.priceUsd}</strong></span>
-        <span className={styles.gapBps}>{formatBps(bps)}{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}</span>
-      </p>
-      <p className={styles.gapSource}>
-        Jupiter venue vs {mark.stockReference.source === 'backed' ? 'Backed issuer indicative' : 'Jupiter stock data'}
-      </p>
-    </div>
+    <details className={styles.evidenceDrawer}>
+      <summary>The two markets</summary>
+      {body}
+    </details>
   );
 }
 

@@ -105,6 +105,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         transcript: mockText,
         confidence: 0.98,
         parsedIntent: parsed.intent,
+        parsedSpans: parsed.spans ?? null,
         matchedInstrument: parsed.matchedInstrument ? {
           id: parsed.matchedInstrument.id,
           symbol: parsed.matchedInstrument.symbol,
@@ -222,6 +223,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       cleanedUp: usedRewrite,
       confidence: data.confidence ?? 0.95,
       parsedIntent: parsed.intent,
+      parsedSpans: parsed.spans ?? null,
       matchedInstrument: parsed.matchedInstrument ? {
         id: parsed.matchedInstrument.id,
         symbol: parsed.matchedInstrument.symbol,

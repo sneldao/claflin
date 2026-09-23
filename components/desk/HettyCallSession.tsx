@@ -15,6 +15,7 @@ import { resolveDeskAlias } from '@/lib/trading/catalog';
 import { SavedCallsPanel } from './HettyCallSavedCalls';
 import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, explainConceptResult, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
+import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
@@ -98,7 +99,7 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-export function HettyCallSession({ desk, liveMode, take = null, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+export function HettyCallSession({ desk, liveMode, take = null, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
@@ -115,6 +116,8 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
+  /** A client tool wrote a field — the slip marks it "from the call". */
+  onLineApplied?: (partial: SlipProvenance) => void;
   /* Notes are owned by the outer shell so they survive session remounts. */
   endNote: string | null;
   callError: string | null;
@@ -135,6 +138,16 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
   useEffect(() => { onCaptionRef.current = onCaption; });
   const onSaveStateRef = useRef(onSaveState);
   useEffect(() => { onSaveStateRef.current = onSaveState; });
+  const onLineAppliedRef = useRef(onLineApplied);
+  useEffect(() => { onLineAppliedRef.current = onLineApplied; });
+
+  /* A tool-applied field is marked "from the call" with the caller's latest
+     words attached — the slip never pretends the line typed it. */
+  const markLine = useCallback((field: SlipField, value: string) => {
+    onLineAppliedRef.current?.({
+      [field]: { kind: 'line', lastCaller: lastCaption(captionsRef.current, 'user')?.text ?? null, value },
+    });
+  }, []);
 
   /* Idempotent transcript checkpointing: bounded saves during the call plus
      one terminal flush. The server is the record of what was stored — the
@@ -160,6 +173,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
     const instrument = resolveDeskAlias(query);
     if (!instrument) return chooseInstrumentResult(query);
     d.edit({ ...d.state.draft, instrumentId: instrument.id });
+    markLine('instrument', instrument.id);
     return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
   });
 
@@ -171,6 +185,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
     if (side !== 'buy' && side !== 'sell') return setInstructionResult(side);
     const next = nextInstructionDraft(d.state.draft, side);
     d.edit(next.draft);
+    markLine('side', side);
     return setInstructionResult(side, next.amountCleared);
   });
 
@@ -183,6 +198,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
       return `"${clean || 'That'}" is not a usable amount — say a plain number, like 25 or 0.5.`;
     }
     d.edit({ ...d.state.draft, amount: clean });
+    markLine('amount', clean);
     return setAmountResult(d.state.draft.side, clean);
   });
 
@@ -673,7 +689,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
       ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
       : live && inReview
         ? 'The quotation is on the slip. Take your time — Hetty will hold the line.'
-        : 'Speak your instruction. Review it on the same ticket.';
+        : null;
 
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
@@ -685,7 +701,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
         </span>
       </div>
       {!live && !ringing && <BrokerLinePlate deskId="hetty" take={take} />}
-      <p className={styles.callNote}>{callNote}</p>
+      {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>

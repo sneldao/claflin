@@ -34,6 +34,20 @@ import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { BlotterHearables } from './BlotterHearables';
 import { RoomMarketClock } from './RoomMarketClock';
+import { RoomTape } from './RoomTape';
+import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
+import type { ParsedDictation } from '@/lib/dictation/useDictation';
+import {
+  carriedMarks,
+  handMarks,
+  mergeProvenance,
+  provenanceFromFields,
+  spansInVerbatim,
+  type SlipProvenance,
+} from '@/lib/desk/slip-provenance';
+import { trackSuperseded, type SupersededSlip } from '@/lib/desk/superseded';
+import { HETTY_VOCAB, slipOneLine } from '@/lib/desk/written-slip';
+import type { TradeIntent } from '@/lib/trading/domain';
 import { ReceiverShell } from './ReceiverShell';
 import { DeskObjects, TapeMachine } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -60,7 +74,6 @@ function HettyDoorShell() {
         <h2 id="call-title">Hetty Green <small>The Witch of Wall Street · AI broker on Base</small></h2>
         <span className={styles.callLine}>DIRECT LINE</span>
       </div>
-      <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
       <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
       <p className={styles.callFoot}>{LINE_FOOT}</p>
     </section>
@@ -127,6 +140,13 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const [roomFocus, setRoomFocus] = useState<{ foreground: typeof foreground.kind; view: NightDeskView } | null>(null);
   const roomView = presentation === 'room';
 
+  /* The slip's provenance: every written value can say where it came from.
+     Marks are value-gated at render — a stale mark simply never shows. */
+  const [slipProv, setSlipProv] = useState<SlipProvenance>({});
+  const [superseded, setSuperseded] = useState<SupersededSlip[]>([]);
+  const prevSlipRef = useRef<{ quote: typeof desk.state.quote; stage: string }>({ quote: desk.state.quote, stage: desk.state.stage });
+  const draftFieldsEmpty = !desk.state.draft.instrumentId && !desk.state.draft.amount;
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -144,10 +164,96 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     desk.edit(side === 'sell'
       ? { instrumentId: instrument.id, side: 'sell', unit: 'token', amount: cleanAmount }
       : { instrumentId: instrument.id, side: 'buy', unit: 'USDC', amount: cleanAmount });
+    setSlipProv(carriedMarks({
+      instrumentId: instrument.id,
+      side,
+      amount: cleanAmount || undefined,
+    }));
     setSharedLoaded(true);
     scrollToDeskTarget('instruction');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  /* A fully blank slip carries no provenance — nothing to explain. Hetty's
+     side always has a default, so empty means no instrument and no amount. */
+  useEffect(() => {
+    if (desk.state.stage === 'draft' && draftFieldsEmpty) setSlipProv({});
+  }, [desk.state.stage, draftFieldsEmpty]);
+
+  /* Superseded prices stay struck through on the same slip. */
+  useEffect(() => {
+    const before = prevSlipRef.current;
+    prevSlipRef.current = { quote: desk.state.quote, stage: desk.state.stage };
+    setSuperseded(prev => trackSuperseded(prev, {
+      quoteId: before.quote?.id ?? null,
+      line: before.quote ? slipOneLine(before.quote, HETTY_VOCAB) : null,
+      stage: before.stage,
+    }, {
+      quoteId: desk.state.quote?.id ?? null,
+      stage: desk.state.stage,
+      draftEmpty: desk.state.stage === 'draft' && draftFieldsEmpty,
+    }, Date.now()));
+  }, [desk.state.quote, desk.state.stage, draftFieldsEmpty]);
+
+  const mergeSlipProv = useCallback((next: SlipProvenance) => {
+    setSlipProv(prev => mergeProvenance(prev, next));
+  }, []);
+
+  /* Dictation: the parser's literal spans say which words wrote which field. */
+  const recordDictated = useCallback((parsed: ParsedDictation, transcript: string, priorDraft: TradeIntent) => {
+    /* A cleaned-up rewrite may contain words the client never said — "said"
+       only counts when the span occurs in the verbatim transcript. */
+    const verbatim = parsed.cleanedUp ? parsed.verbatimTranscript : null;
+    mergeSlipProv(provenanceFromFields({
+      phrase: parsed.verbatimTranscript || transcript,
+      values: {
+        instrument: parsed.intent.instrumentId ?? priorDraft.instrumentId ?? null,
+        side: parsed.intent.side ?? priorDraft.side ?? null,
+        amount: (parsed.intent.amount ?? '') || null,
+      },
+      spans: verbatim ? spansInVerbatim(parsed.spans, verbatim) : parsed.spans,
+      prior: {
+        instrument: priorDraft.instrumentId ?? null,
+        side: priorDraft.side ?? null,
+        amount: priorDraft.amount || null,
+      },
+    }));
+  }, [mergeSlipProv]);
+
+  /* Hand edits mark only the field the client actually touched. Hetty's
+     draft stores '' where the slip grammar may send null. */
+  const applySlipPartial = (partial: { instrumentId?: string | null; side?: 'buy' | 'sell' | null; amount?: string | null; unit?: string | null }): TradeIntent => {
+    const merged = { ...desk.state.draft, ...partial };
+    const side = merged.side ?? desk.state.draft.side ?? 'buy';
+    return {
+      instrumentId: merged.instrumentId ?? '',
+      side,
+      amount: merged.amount ?? '',
+      unit: merged.unit ?? (side === 'sell' ? 'token' : 'USDC'),
+    } as TradeIntent;
+  };
+  const handEdit = useCallback((partial: { instrumentId?: string | null; side?: 'buy' | 'sell' | null; amount?: string | null; unit?: string | null }, field: 'instrument' | 'side' | 'amount' | 'units') => {
+    desk.edit(applySlipPartial(partial));
+    mergeSlipProv(handMarks(partial, field));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desk, mergeSlipProv]);
+
+  /* An inline correction on a quoted slip re-prices like a fresh ask. */
+  const requoteAfterEdit = useRef(false);
+  useEffect(() => {
+    if (!requoteAfterEdit.current) return;
+    if (desk.state.stage !== 'draft') return;
+    requoteAfterEdit.current = false;
+    void desk.requestQuote();
+  }, [desk]);
+  const slipEdit = useCallback((partial: { instrumentId?: string | null; side?: 'buy' | 'sell' | null; amount?: string | null; unit?: string | null }, field: 'instrument' | 'side' | 'amount' | 'units') => {
+    const next = applySlipPartial(partial);
+    const complete = Boolean(next.instrumentId && next.side && next.amount);
+    if (desk.state.quote && complete) requoteAfterEdit.current = true;
+    desk.edit(next);
+    mergeSlipProv(handMarks(partial, field));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desk, mergeSlipProv]);
 
   const prevForegroundRef = useRef(foreground.kind);
   useEffect(() => {
@@ -184,6 +290,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     } else {
       desk.edit({ instrumentId, side: 'buy', unit: 'USDC', amount: '' });
     }
+    mergeSlipProv(handMarks({ instrumentId }, 'instrument'));
     scrollToDeskTarget('instruction', { focusId: 'amount' });
   };
 
@@ -191,14 +298,23 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     if (phrase === 'buy $25 of Apple') {
       const apple = resolveDeskAlias('apple');
       if (apple?.quoteSupported) {
+        const prior = desk.state.draft;
         desk.edit({ instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '25' });
+        /* The blotter's own words wrote the slip — mark what was said. */
+        const parsed = parseDictatedTradeIntent(phrase);
+        mergeSlipProv(provenanceFromFields({
+          phrase,
+          values: { instrument: apple.id, side: 'buy', amount: '25' },
+          spans: parsed.spans,
+          prior: { instrument: prior.instrumentId ?? null, side: prior.side ?? null, amount: prior.amount || null },
+        }));
         handleUserSpoken(phrase);
         scrollToDeskTarget('instruction');
         return;
       }
     }
     signalLine();
-  }, [desk, handleUserSpoken]);
+  }, [desk, handleUserSpoken, mergeSlipProv]);
 
   useLineHotkey();
 
@@ -232,8 +348,13 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     }
   };
 
-  const draftEmpty = desk.state.stage === 'draft' && !desk.state.draft.instrumentId;
-  const lineFirst = roomView && draftEmpty && !hettyLive;
+  const draftEmpty = desk.state.stage === 'draft'
+    && !desk.state.draft.instrumentId
+    && !desk.state.draft.amount;
+  /* Room: the line owns attention whenever the slip is not under review. */
+  const lineLed = roomView && !reviewActive && foreground.kind !== 'missing';
+  const blankSlip = lineLed && draftEmpty && !hettyLive;
+  const slipLed = roomView && reviewActive;
 
   const work = (
     <>
@@ -256,6 +377,23 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         )}
       </ModeStamp>
       {roomView && <RoomMarketClock clock={clock} />}
+      {roomView && !reviewActive && (
+        <RoomTape
+          marks={marks.result?.marks ?? NO_MARKS}
+          stale={marks.stale}
+          failed={marks.failed}
+          asOf={marks.result?.asOf}
+          clock={clock}
+          take={take}
+          brokerName="Hetty"
+          priceLabel="Chainlink reference"
+          missingSecondLeg={null}
+          onSelect={id => {
+            loadInstrument(id);
+            scrollToDeskTarget('instruction');
+          }}
+        />
+      )}
       {!roomView && draftEmpty && (
         <div className={styles.introduction} id="introduction">
           <p className={styles.eyebrow}>THE OFFICE ABOVE THE PIT</p>
@@ -271,7 +409,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         data-foreground={foreground.kind}
         data-live={hettyLive ? 'true' : 'false'}
         data-presentation={presentation}
-        data-line-first={lineFirst ? 'true' : undefined}
+        data-line-first={lineLed ? 'true' : undefined}
+        data-slip-led={slipLed ? 'true' : undefined}
       >
         {!roomView && (
           <>
@@ -280,8 +419,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           </>
         )}
         <aside className={styles.support} aria-label="The Base desk’s direct line">
-          <HettyCall desk={desk} liveMode={liveMode} take={take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />
-          {lineFirst && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
+          <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
+          {blankSlip && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
           <ReceiverShell
             stage={instrumentStage}
             label={instrumentLabel}
@@ -318,7 +457,13 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           educationHandoff={practiceReturn}
           onLiveJournalChange={liveJournal.reload}
           carriedNote={carriedNote}
-          blankSlip={lineFirst}
+          blankSlip={blankSlip}
+          roomView={roomView}
+          provenance={slipProv}
+          superseded={superseded}
+          onHandEdit={handEdit}
+          onSlipEdit={slipEdit}
+          onDictated={recordDictated}
         />
         <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
       </div>
