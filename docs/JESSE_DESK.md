@@ -112,7 +112,7 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 
 ## Known limits
 
-- No Jesse mark adapter / tape
+- Venue-duplex-derived marks feed the same tape/wire/take/gap-strip as the evidence panel (adapter in `lib/trading/adapters/jupiter-marks.ts`)
 - Pyth numerical compare needs the Lazer daemon writing Redis (`PYTH_PRO_API_KEY` + Upstash) — without snapshots the panel stays honest-unavailable
 - Venue duplex is free evidence, not Pyth Pro quality or an exchange print
 - PreStocks is evidence-only — not filed as xStock paper

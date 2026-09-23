@@ -104,7 +104,7 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - Preserve useful implementation capabilities selectively; do not preserve the old discovery, onboarding or billing-led experience.
 - Give the client one coherent place to work. At the house, the first semantic thing is the instruction and concrete offerings; inside a desk, it is the ticket or the line. Do not list page inventory as the product, make the first broker the house identity, or present the settlement rail as the strategy.
 - Explain permissions and terms at the relevant action rather than build a prerequisite tour or a house-strategy grid.
-- Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline. Say paper mode once.
+- Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline. Say paper mode once — `MODE_HINTS` behind the ModeStamp ⓘ + `LINE_FOOT` at the line foot; no duplicate `title=` on tape/wire/ModeStamp/ledger/dictation/call-foot (91ce5d6).
 - A provider configuration or historical token listing is not evidence of operational readiness.
 - Sign-in alone is not trade authority. Live execution requires the explicit approve/execute wallet ceremony; a passing eligibility check is not access on its own.
 - Use the existing Next.js/React/TypeScript, ethers, Zod, Tailwind and Three.js stack; do not introduce a framework migration for this cutover.
