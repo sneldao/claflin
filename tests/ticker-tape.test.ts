@@ -127,4 +127,22 @@ describe('reference marks to ticker tape', () => {
     }));
     assert.doesNotMatch(freshHtml, /data-stale="true"/);
   });
+
+  it('names the lamp state on the tape label', () => {
+    const fresh: DeskMark = {
+      instrumentId: 'googl-base',
+      symbol: 'GOOGLc',
+      name: 'Alphabet Class A',
+      reference: { status: 'observed', source: 'chainlink', priceUsdPerToken: '164.20', updatedAt: now - 10_000, session: 'unknown', pauseStatus: 'unchecked' },
+    };
+    const freshHtml = renderToStaticMarkup(createElement(TickerTape, {
+      marks: [fresh], failed: false, onSelect: () => {},
+    }));
+    assert.match(freshHtml, /lamp glows warm while readings land/);
+    const staleHtml = renderToStaticMarkup(createElement(TickerTape, {
+      marks: [{ ...fresh, reference: { ...fresh.reference, status: 'stale' } }],
+      failed: false, stale: true, asOf: now - 120_000, onSelect: () => {},
+    }));
+    assert.match(staleHtml, /room cools while readings are stale/);
+  });
 });

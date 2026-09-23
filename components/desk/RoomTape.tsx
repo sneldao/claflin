@@ -5,6 +5,7 @@ import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
 import { formatBps } from '@/lib/desk/format-bps';
 import { useBpsTick } from '@/lib/desk/use-bps-tick';
 import type { MarketClock } from '@/lib/market-clock';
+import { SignalCaption } from './SignalCaption';
 import styles from './WorkingDesk.module.css';
 
 /**
@@ -53,6 +54,7 @@ export function RoomTape({
       {stale && asOf !== undefined && (
         <p className={styles.roomTapeStale} role="status">last reading {formatMarkAge(asOf)} ago</p>
       )}
+      {stale && <SignalCaption captionKey="lampCool" />}
       <ul className={styles.roomTapeRows}>
         {rows.map(mark => (
           <RoomTapeRow key={mark.instrumentId} mark={mark} priceLabel={priceLabel} missingSecondLeg={missingSecondLeg} onSelect={onSelect} />
@@ -65,6 +67,17 @@ export function RoomTape({
           <span className={styles.roomTapeTakeBy}>{brokerName}’s take · a way of looking, not advice</span>
         </p>
       )}
+      {/* The lamp's exact state, one tap away, forever. */}
+      <details className={styles.roomTapeLight}>
+        <summary>About this light</summary>
+        <p>
+          {stale && asOf !== undefined
+            ? `Tape stale — last reading ${formatMarkAge(asOf)} ago. The room stays cool until fresh marks print.`
+            : asOf !== undefined
+              ? 'Tape fresh — the lamp glows warm while readings land.'
+              : 'Waiting on the first reading.'}
+        </p>
+      </details>
     </section>
   );
 }

@@ -98,6 +98,28 @@ describe('room tape', () => {
     assert.match(html, /Both tapes are running\./);
   });
 
+  it('keeps the lamp state one tap away with exact words', () => {
+    const staleHtml = renderToStaticMarkup(createElement(RoomTape, {
+      ...jesseTape,
+      marks: [xMark],
+      clock: openClock,
+      stale: true,
+      asOf: Date.now() - 90_000,
+      onSelect: noop,
+    }));
+    assert.match(staleHtml, /About this light/);
+    assert.match(staleHtml, /Tape stale — last reading/);
+    assert.match(staleHtml, /room stays cool until fresh marks print/);
+    const freshHtml = renderToStaticMarkup(createElement(RoomTape, {
+      ...jesseTape,
+      marks: [xMark],
+      clock: openClock,
+      asOf: Date.now(),
+      onSelect: noop,
+    }));
+    assert.match(freshHtml, /lamp glows warm while readings land/);
+  });
+
   it('says Tonight’s tape after the close and labels a stale reading', () => {
     const html = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,

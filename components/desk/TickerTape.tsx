@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
+import { SignalCaption } from './SignalCaption';
 import styles from './DeskTicker.module.css';
 
 /**
@@ -19,10 +20,13 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
   const hasStale = stale ?? marks.some(mark => mark.reference.status !== 'observed');
 
   return (
+    <>
     <div className={styles.tape} role="region" aria-label="Reference marks" data-stale={hasStale && marks.length > 0 ? 'true' : undefined}>
       <span
         className={styles.tapeLabel}
-        title="Indicative reference marks — the estimate you review comes from the venue."
+        title={hasStale
+          ? 'Indicative reference marks — stale. The room cools while readings are stale.'
+          : 'Indicative reference marks — fresh. The room lamp glows warm while readings land.'}
       >
         REFERENCE TAPE
       </span>
@@ -51,6 +55,8 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
         </>
       )}
     </div>
+    {hasStale && marks.length > 0 && <SignalCaption captionKey="lampCool" />}
+    </>
   );
 });
 

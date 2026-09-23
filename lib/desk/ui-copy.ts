@@ -68,3 +68,14 @@ export const FOYER_LEDE =
   'Ring a broker, say the trade, watch the slip get written.';
 
 export const FOYER_BOUNDARY = 'Paper by default. Only you can sign.';
+
+/** First-exposure captions that teach an ambient signal once, then retire.
+ *  Keys are stable per browser (`claflin.signals.v1.*`); the text equivalent
+ *  of each signal stays available on tap and to assistive tech permanently. */
+export const SIGNAL_CAPTIONS = {
+  lampCool: 'The room cools when readings go stale — the tape keeps the last known marks.',
+  fuseDrain: 'The brass rule drains as the estimate expires — refresh for fresh terms.',
+  stampThud: 'That thud is the filing stamp — paper filed, nothing moved.',
+} as const;
+
+export type SignalCaptionKey = keyof typeof SIGNAL_CAPTIONS;

@@ -22,6 +22,7 @@ import { createDictationProvenance, type DictationProvenance } from '@/lib/tradi
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
 import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import { WrittenSlip } from './WrittenSlip';
+import { SignalCaption } from './SignalCaption';
 import { HETTY_VOCAB, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
 import type { SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { SupersededSlip } from '@/lib/desk/superseded';
@@ -654,6 +655,7 @@ export const TradeTicket = memo(function TradeTicket({
           </>}
           filedAt={filedRecord?.createdAt ?? null}
           receiptExtra={<>
+            {foreground.kind === 'receipt' && <SignalCaption captionKey="stampThud" />}
             <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p>
             {quoteDrawer}
           </>}
@@ -713,6 +715,7 @@ export const TradeTicket = memo(function TradeTicket({
           </>}
           onEdit={onSlipEdit}
         >
+          <SignalCaption captionKey="fuseDrain" />
           {liveMode ? (
             <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet. Pool fees, gas and <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> apply.</span></p>
           ) : (

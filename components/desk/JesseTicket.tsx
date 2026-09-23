@@ -14,6 +14,7 @@ import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
 import { WrittenSlip } from './WrittenSlip';
 import { GapStrip } from './GapStrip';
+import { SignalCaption } from './SignalCaption';
 import type { JesseDraft, JesseIntent, MarketComparison } from '@/lib/solana/contracts';
 import type { SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { SupersededSlip } from '@/lib/desk/superseded';
@@ -162,6 +163,7 @@ export const JesseTicket = memo(function JesseTicket({
         {record && <span className={styles.stamp} aria-hidden="true"><span>FILED</span><small>PAPER · SOLANA</small></span>}
         <div className={styles.ticketSurface} key="receipt">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
+        {foreground.kind === 'receipt' && <SignalCaption captionKey="stampThud" />}
         <WrittenSlip
           mode="receipt"
           draft={draft}
@@ -199,6 +201,7 @@ export const JesseTicket = memo(function JesseTicket({
         <PaperChrome liveMode={liveMode && liveAvailable} />
         <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
+        <SignalCaption captionKey="fuseDrain" />
         <WrittenSlip
           mode="review"
           draft={draft}
@@ -210,6 +213,7 @@ export const JesseTicket = memo(function JesseTicket({
           provenance={provenance}
           superseded={superseded}
           now={reviewNow}
+          freshness={Math.max(0, Math.min(1, (q.expiresAt - reviewNow) / 30000))}
           pending={inFlight === 'quote'}
           pendingLabel="Jesse is pricing it at Jupiter…"
           notice={localError ?? (lastResult && lastResult.status === 'rejected' ? lastResult.spokenText : null)}
