@@ -50,8 +50,8 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 1. **Problem (10s).** Equity/stock reference and token venue are different markets — hours, units, executable terms.
 2. **Arrive in Jesse’s room.** Load `/?desk=jesse&view=room`. State: Claflin house, Jesse’s Solana desk, night room, blank slip waiting. Market clock on screen.
 3. **Ring first.** Click **Ring Jesse** (or lift the receiver / press `H`). Line lifts; mic stays off until the ring.
-4. **Speak or tap.** Say or tap “buy 100 USDC of AAPLx”. Watch the slip write: Jupiter · Token-2022 · mint · scaled multiplier.
-5. **Correct.** Tap or speak “make that 50 USDC of AAPLx”. New slip supersedes; old authority gone.
+4. **Speak or tap.** Say or tap “buy 100 USDC of AAPLx”. The words appear verbatim on the slip, then the desk writes the instruction as a sentence — each value underlined with a small mark saying where it came from (“buy”, “100 USDC”, “AAPLx”). Jupiter · Token-2022 · scaled multiplier ride as the terms line.
+5. **Correct.** Tap or speak “make that 50 USDC of AAPLx”. The old price is struck through on the same slip — superseded, not erased — while the new estimate writes in.
 6. **Evidence.** Show **Pyth Pro** compare when available (equity vs xStock). Otherwise venue duplex / PreStocks — labelled not arbitrage. Never invent a Pyth number.
 7. **Live path (if flags on).** Connect wallet → prepare live order (tiny size) → sign → Solscan. Otherwise state paper-only for this deployment.
 8. **File + return.** File paper record → reload → record still there.
