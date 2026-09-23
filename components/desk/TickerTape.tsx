@@ -22,14 +22,7 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
   return (
     <>
     <div className={styles.tape} role="region" aria-label="Reference marks" data-stale={hasStale && marks.length > 0 ? 'true' : undefined}>
-      <span
-        className={styles.tapeLabel}
-        title={hasStale
-          ? 'Indicative reference marks — stale. The room cools while readings are stale.'
-          : 'Indicative reference marks — fresh. The room lamp glows warm while readings land.'}
-      >
-        REFERENCE TAPE
-      </span>
+      <span className={styles.tapeLabel}>REFERENCE TAPE</span>
       {marks.length === 0 ? (
         <p className={styles.tapeNote} role={failed ? 'status' : undefined}>
           {failed ? 'Tape unavailable — estimates unaffected.' : 'Reading the tape…'}
@@ -37,7 +30,7 @@ export const TickerTape = memo(function TickerTape({ marks, failed, onSelect, di
       ) : (
         <>
           {hasStale && asOf && (
-            <span className={styles.tapeStaleInline} role="status" title="Estimates are unaffected.">
+            <span className={styles.tapeStaleInline} role="status">
               STALE · last known {formatMarkAge(asOf)} ago
             </span>
           )}
@@ -77,7 +70,7 @@ function TapeItem({ mark, onSelect, disabled }: { mark: DeskMark; onSelect: (id:
       {/* key on price + freshness re-mounts the digit on each new mark or
           stale/observed crossing — the tape ticks instead of looping blind. */}
       <span key={`${price ?? 'none'}-${stale ? 'stale' : 'fresh'}`} className={styles.tapePrice}>{price ? `$${price}` : '—'}</span>
-      {stale && <span className={styles.tapeStale} title="Last known mark">STALE</span>}
+      {stale && <span className={styles.tapeStale}>STALE</span>}
     </button>
   );
 }

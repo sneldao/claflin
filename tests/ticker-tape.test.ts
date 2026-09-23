@@ -128,7 +128,7 @@ describe('reference marks to ticker tape', () => {
     assert.doesNotMatch(freshHtml, /data-stale="true"/);
   });
 
-  it('names the lamp state on the tape label', () => {
+  it('exposes lamp state via data-stale and a once-taught caption, not a tooltip', () => {
     const fresh: DeskMark = {
       instrumentId: 'googl-base',
       symbol: 'GOOGLc',
@@ -138,11 +138,13 @@ describe('reference marks to ticker tape', () => {
     const freshHtml = renderToStaticMarkup(createElement(TickerTape, {
       marks: [fresh], failed: false, onSelect: () => {},
     }));
-    assert.match(freshHtml, /lamp glows warm while readings land/);
+    assert.doesNotMatch(freshHtml, /title=/, 'the tape label must not hide lamp state in a tooltip');
+    assert.match(freshHtml, /REFERENCE TAPE/);
     const staleHtml = renderToStaticMarkup(createElement(TickerTape, {
       marks: [{ ...fresh, reference: { ...fresh.reference, status: 'stale' } }],
       failed: false, stale: true, asOf: now - 120_000, onSelect: () => {},
     }));
-    assert.match(staleHtml, /room cools while readings are stale/);
+    assert.match(staleHtml, /data-stale="true"/);
+    assert.doesNotMatch(staleHtml, /title=/, 'stale state must not be hidden in a tooltip — the room and once-taught caption carry it');
   });
 });

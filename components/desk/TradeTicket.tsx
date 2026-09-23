@@ -697,7 +697,6 @@ export const TradeTicket = memo(function TradeTicket({
                     type="button"
                     className={styles.primary}
                     disabled={!historyReady || validity.state !== 'open'}
-                    title={validity.state === 'closing' ? 'The estimate is expiring — refresh for fresh terms' : undefined}
                     onClick={() => {
                       save();
                       /* The paper record exists now — land the stamp's thud with its slam. */
@@ -709,7 +708,7 @@ export const TradeTicket = memo(function TradeTicket({
             <div className={styles.slipActions}>
               {expired
                 ? <button type="button" className={styles.secondary} onClick={() => { edit(state.draft); document.getElementById('amount')?.focus({ preventScroll: true }); }}>Adjust amount</button>
-                : <button type="button" className={styles.secondary} title="Editing clears this estimate" onClick={() => edit(state.draft)}>Edit instruction</button>}
+                : <button type="button" className={styles.secondary} onClick={() => edit(state.draft)}>Edit instruction</button>}
               <button type="button" className={styles.secondary} onClick={cancel}>Cancel instruction</button>
             </div>
           </>}
@@ -892,7 +891,7 @@ function DictationControl({
 }) {
   return (
     <>
-      <div className={styles.dictationBar} title="Press and hold, speak, release — the words land on the ticket.">
+      <div className={styles.dictationBar}>
         <button
           type="button"
           className={styles.dictationButton}

@@ -775,9 +775,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
             : 'The conversation could not be saved to your account. The ticket keeps the instruction.'}
         </p>
       )}
-      <p className={styles.callFoot} title={auth.enabled ? 'Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : undefined}>
-        {LINE_FOOT}
-      </p>
+      <p className={styles.callFoot}>{LINE_FOOT}</p>
     </section>
   );
 }

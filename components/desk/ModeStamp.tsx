@@ -29,7 +29,7 @@ export function ModeStamp({
       data-presentation={presentation}
       data-live={live ? 'true' : 'false'}
     >
-      <strong className={styles.modeStamp} title={hint}>
+      <strong className={styles.modeStamp}>
         {label}
       </strong>
       {hint && (

@@ -269,12 +269,7 @@ function LiveWire({ hetty, jesse, onPick }: { hetty: MarksRead; jesse: MarksRead
 
   return (
     <section className={foyerStyles.wire} aria-label="Live reference marks">
-      <span
-        className={foyerStyles.wireLabel}
-        title="Indicative reference marks, refreshed every two minutes. Your estimate comes from the venue when you ask."
-      >
-        LIVE REFERENCE MARKS
-      </span>
+      <span className={foyerStyles.wireLabel}>LIVE REFERENCE MARKS</span>
       {wireMarks.length === 0 ? (
         <p className={foyerStyles.wireNote} role={failed ? 'status' : undefined}>
           {failed ? 'Tape unavailable — estimates unaffected.' : 'Reading the tape…'}
@@ -323,7 +318,7 @@ function WireItem({ wire, tick, disabled, onPick }: { wire: WireMark; tick?: 'up
         {tick && <span className={foyerStyles.wireTickGlyph} aria-hidden="true">{tick === 'up' ? '▲' : '▼'}</span>}
       </span>
       <span className={foyerStyles.wireRail}>{wire.rail}</span>
-      {gap && <span className={foyerStyles.wireGap} title="vs stock reference">{gap}</span>}
+      {gap && <span className={foyerStyles.wireGap}>{gap}</span>}
       {stale && <span className={foyerStyles.wireStale}>STALE</span>}
     </button>
   );

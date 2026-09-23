@@ -36,7 +36,7 @@ export const BLANK_SLIP_TITLE = {
 } as const;
 
 export const BLANK_SLIP_NOTE =
-  'Ring the line, or tap a line the desk hears. This slip stays blank until there is an instruction.';
+  'This slip stays blank until there is an instruction — tap a line the desk hears.';
 
 /** One action vocabulary for both desks' slips — same verbs, same order. */
 export const SLIP_ACTIONS = {
