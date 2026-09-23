@@ -126,6 +126,8 @@ export const JesseTicket = memo(function JesseTicket({
       setLocalError(result.spokenText || 'Not filed.');
       return;
     }
+    /* The paper record exists now — land the stamp's thud with its slam. */
+    void import('@/lib/sounds').then(({ playStampThud }) => playStampThud()).catch(() => {});
     try {
       const { loadJessePaperRecords } = await import('@/lib/solana/paper');
       const saved = loadJessePaperRecords(window.localStorage).find(r => r.id === result.quoteId);

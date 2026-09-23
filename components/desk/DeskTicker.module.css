@@ -45,6 +45,9 @@
 
 .tapeTrack { display: flex; width: max-content; animation: tapeRun 44s linear infinite; }
 
+/* A stale tape crawls — staleness is felt in the motion, not just read. */
+.tape[data-stale="true"] .tapeTrack { animation-duration: 140s; }
+
 .tapeWindow:hover .tapeTrack, .tapeWindow:focus-within .tapeTrack { animation-play-state: paused; }
 
 .tapeCopy { display: flex; align-items: stretch; }

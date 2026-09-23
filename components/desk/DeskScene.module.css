@@ -60,6 +60,8 @@
    layers cleanly over the ambient lightPool and stays off the compositor
    layout path. Lives beside the voice lamp (data-live) — the two coexist. */
 .tradeLamp { position: absolute; inset: 14% 6% 24% 16%; background: radial-gradient(ellipse at 56% 40%, #e0c87e22, transparent 58%); opacity: 0; transition: opacity var(--dur-3) var(--ease-swift); pointer-events: none; z-index: 0; }
+/* A fresh tape warms the lamp at its resting glow — stage states below still lead. */
+.workspace[data-tape="fresh"] .tradeLamp { opacity: .3; }
 .workspace[data-desk-stage="loading"] .tradeLamp { opacity: .5; }
 .workspace[data-desk-stage="review"] .tradeLamp { opacity: .42; }
 .workspace[data-desk-stage="saved"] .tradeLamp { opacity: .72; }

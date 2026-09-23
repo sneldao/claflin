@@ -230,4 +230,25 @@ describe('night desk scene mount', () => {
     assert.doesNotMatch(markup, /<canvas/);
     assert.match(markup, /fallbackDesk/);
   });
+
+  it('warms the lamp on fresh tape and re-prints the glow per reading', () => {
+    const fresh = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', tape: 'fresh', tapeAt: 111 }));
+    assert.match(fresh, /data-tape="fresh"/);
+    assert.match(fresh, /tapeGlow/);
+    const stale = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', tape: 'stale', tapeAt: 111 }));
+    assert.match(stale, /data-tape="stale"/);
+    assert.doesNotMatch(stale, /tapeGlow/);
+    const idle = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival' }));
+    assert.doesNotMatch(idle, /data-tape/);
+    assert.doesNotMatch(idle, /tapeGlow/);
+  });
+
+  it('tape markup is SSR-deterministic across motion preferences', () => {
+    const markup = () => renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', tape: 'fresh', tapeAt: 222 }));
+    mockMatchMedia(false);
+    const full = markup();
+    mockMatchMedia(true);
+    const reduced = markup();
+    assert.equal(full, reduced, 'tape props must not branch on the client media query');
+  });
 });

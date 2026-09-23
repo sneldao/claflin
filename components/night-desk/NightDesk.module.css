@@ -54,10 +54,34 @@
 .fallbackRoom {
   position: absolute;
   inset: 0;
-  transition: opacity var(--dur-3, 700ms) var(--ease-swift, ease);
+  transition: opacity var(--dur-3, 700ms) var(--ease-swift, ease), filter var(--dur-3, 700ms) var(--ease-swift, ease);
   background:
     radial-gradient(120% 90% at 18% 30%, rgba(216, 164, 94, 0.16), transparent 46%),
     linear-gradient(180deg, #101820 0%, #16202c 42%, #241c14 78%, #161009 100%);
+}
+
+/* The lamp warms while the tape is fresh — a held state, not motion. */
+.sceneHost[data-tape='fresh'] .fallbackRoom {
+  filter: saturate(1.1) brightness(1.06);
+}
+.sceneHost[data-tape='fresh'] .fallbackLamp {
+  filter: drop-shadow(0 0 30px rgba(255, 201, 138, 0.9));
+}
+/* Fresh-reading glow: a warm wash that breathes once per new reading, over
+   canvas and fallback alike. Base state is invisible so reduced-motion
+   (animation: none) simply never shows it. */
+.tapeGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(60% 50% at 20% 28%, rgba(255, 196, 120, 0.22), transparent 70%);
+  animation: tapeGlowIn 2.6s ease-out backwards;
+}
+@keyframes tapeGlowIn { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tapeGlow { animation: none; }
+  .sceneHost[data-tape='fresh'] .fallbackRoom { filter: saturate(1.05) brightness(1.03); }
 }
 
 .fallbackWindow {

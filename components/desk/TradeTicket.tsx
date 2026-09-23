@@ -696,7 +696,11 @@ export const TradeTicket = memo(function TradeTicket({
                     className={styles.primary}
                     disabled={!historyReady || validity.state !== 'open'}
                     title={validity.state === 'closing' ? 'The estimate is expiring — refresh for fresh terms' : undefined}
-                    onClick={save}
+                    onClick={() => {
+                      save();
+                      /* The paper record exists now — land the stamp's thud with its slam. */
+                      void import('@/lib/sounds').then(({ playStampThud }) => playStampThud()).catch(() => {});
+                    }}
                   >{SLIP_ACTIONS.file}<span aria-hidden="true">→</span></button>
                   <button type="button" className={styles.secondary} onClick={() => void requestQuote()}>{SLIP_ACTIONS.fresh}<span aria-hidden="true">↻</span></button>
                 </>}

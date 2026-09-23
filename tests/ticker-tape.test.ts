@@ -2,9 +2,11 @@ import './jsdom-setup';
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement, act } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { createRoot, type Root } from 'react-dom/client';
 import { TickerTape } from '../components/desk/TickerTape';
 import { useReferenceMarks } from '../lib/trading/useReferenceMarks';
+import type { DeskMark } from '../lib/trading/marks-shared';
 import { resetContainer, getRootElement } from './jsdom-setup';
 
 const now = Date.now();
@@ -103,5 +105,26 @@ describe('reference marks to ticker tape', () => {
     await refresh();
     assert.ok(!container.textContent?.includes('STALE'), 'successful recovery should remove stale labels');
     assert.ok(!container.textContent?.includes('last known'), 'stale note should disappear after recovery');
+  });
+
+  it('crawls the marquee while stale and runs full speed when fresh', () => {
+    const fresh: DeskMark = {
+      instrumentId: 'googl-base',
+      symbol: 'GOOGLc',
+      name: 'Alphabet Class A',
+      reference: { status: 'observed', source: 'chainlink', priceUsdPerToken: '164.20', updatedAt: now - 10_000, session: 'unknown', pauseStatus: 'unchecked' },
+    };
+    const stale: DeskMark = {
+      ...fresh,
+      reference: { ...fresh.reference, status: 'stale' },
+    };
+    const staleHtml = renderToStaticMarkup(createElement(TickerTape, {
+      marks: [stale], failed: false, stale: true, asOf: now - 120_000, onSelect: () => {},
+    }));
+    assert.match(staleHtml, /data-stale="true"/);
+    const freshHtml = renderToStaticMarkup(createElement(TickerTape, {
+      marks: [fresh], failed: false, onSelect: () => {},
+    }));
+    assert.doesNotMatch(freshHtml, /data-stale="true"/);
   });
 });

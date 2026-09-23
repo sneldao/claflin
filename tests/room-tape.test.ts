@@ -85,6 +85,19 @@ describe('room tape', () => {
     assert.match(html, /stock ref/);
   });
 
+  it('prints a fresh marker per reading and crossfades the take', () => {
+    const html = renderToStaticMarkup(createElement(RoomTape, {
+      ...jesseTape,
+      marks: [xMark],
+      clock: openClock,
+      take: 'Both tapes are running.',
+      asOf: 123456789,
+      onSelect: noop,
+    }));
+    assert.match(html, /roomTapeFresh/);
+    assert.match(html, /Both tapes are running\./);
+  });
+
   it('says Tonight’s tape after the close and labels a stale reading', () => {
     const html = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,

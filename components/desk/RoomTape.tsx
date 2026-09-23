@@ -47,6 +47,9 @@ export function RoomTape({
   return (
     <section className={styles.roomTape} aria-label={heading}>
       <h2 className={styles.roomTapeHeading}>{heading}</h2>
+      {/* Fresh-print pulse: remounts on each new reading so the tape is seen
+          to print, not just sit. Decorative — the rows carry the meaning. */}
+      <span key={asOf ?? 'none'} className={styles.roomTapeFresh} aria-hidden="true" />
       {stale && asOf !== undefined && (
         <p className={styles.roomTapeStale} role="status">last reading {formatMarkAge(asOf)} ago</p>
       )}
@@ -56,7 +59,8 @@ export function RoomTape({
         ))}
       </ul>
       {take && (
-        <p className={styles.roomTapeTake}>
+        /* Keyed on the take: a new reading crossfades the broker's line in. */
+        <p key={take} className={styles.roomTapeTake}>
           {take}
           <span className={styles.roomTapeTakeBy}>{brokerName}’s take · a way of looking, not advice</span>
         </p>

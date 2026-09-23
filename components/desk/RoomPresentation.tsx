@@ -43,6 +43,8 @@ export function RoomPresentation({
   onPresentation,
   onSwitchDesk,
   onLeaveDesk,
+  tape,
+  tapeAt = null,
   children,
 }: {
   desk: HouseDesk;
@@ -53,9 +55,13 @@ export function RoomPresentation({
   onPresentation: (mode: DeskPresentation) => void;
   onSwitchDesk: (id: HouseDeskId) => void;
   onLeaveDesk: () => void;
+  /** Reference-tape freshness from the active desk — warms the shared lamp. */
+  tape?: 'fresh' | 'stale';
+  /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
+  tapeAt?: number | null;
   children: ReactNode;
 }) {
-  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false });
+  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false, tape, tapeAt });
   const mainRef = useRef<HTMLElement>(null);
   const evidenceRef = useRef<HTMLButtonElement>(null);
   const reviewRef = useRef<HTMLButtonElement>(null);
@@ -102,8 +108,9 @@ export function RoomPresentation({
       data-shared-scene={sharedScene ? 'true' : undefined}
       data-stage={stage}
       data-view={view}
+      data-tape={tape}
     >
-      {!sharedScene && <NightDeskScene view={view} stage={stage} onAnchors={applyAnchors} />}
+      {!sharedScene && <NightDeskScene view={view} stage={stage} tape={tape} tapeAt={tapeAt} onAnchors={applyAnchors} />}
 
       <header className={styles.roomViewHeader}>
         <Link

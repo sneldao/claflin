@@ -123,36 +123,48 @@
 @media (hover: hover) {
   .ticket:hover { transform: translateY(-2px); box-shadow: 4px 8px 0 #b3a98c, 0 24px 60px #0006; }
 }
-/* The stamp echoes once after landing — an ink ring expanding off it. */
+/* The stamp echoes twice after landing — ink rings expanding off it. */
 .stamp::after { content: ''; position: absolute; inset: -2px; border: 2px solid #7a5f28; border-radius: 6px; opacity: 0; }
-.ticket[data-acknowledged="true"] .stamp::after { animation: stampEcho 700ms ease-out 240ms both; }
+.ticket[data-acknowledged="true"] .stamp::after { animation: stampEcho 700ms ease-out 240ms backwards; }
+.ticket[data-acknowledged="true"] .stamp::before { content: ''; position: absolute; inset: -2px; border: 1px solid #7a5f28; border-radius: 6px; opacity: 0; animation: stampEcho 900ms ease-out 560ms backwards; }
 @keyframes stampEcho { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(1.35); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .ticket { transition: none; }
   .ticket:hover { transform: none; }
-  .ticket[data-acknowledged="true"] .stamp::after { animation: none; }
+  .ticket[data-acknowledged="true"] .stamp::after, .ticket[data-acknowledged="true"] .stamp::before { animation: none; }
 }
 .stamp { position: absolute; top: 90px; right: 30px; display: grid; place-items: center; gap: 3px; padding: 10px 16px; transform: rotate(9deg); border: 2px solid #7a5f28; border-radius: 4px; box-shadow: inset 0 0 0 1px #7a5f2855; color: #7a5f28; font: 700 14px/1 var(--font-mono), monospace; letter-spacing: .2em; text-align: center; opacity: .82; pointer-events: none; mix-blend-mode: multiply; }
 .stamp small { font-size: 7px; letter-spacing: .14em; font-weight: 500; }
-.ticket[data-acknowledged="true"] .stamp { animation: stampIn 420ms cubic-bezier(.2, 1.4, .32, 1) both; }
-/* The stamp hits with weight: it drops, lands hard, rebounds once. */
+.ticket[data-acknowledged="true"] .stamp { animation: stampIn 520ms cubic-bezier(.2, 1.4, .32, 1) backwards; }
+/* The stamp hits with weight: it drops from above, lands hard, rebounds twice. */
 @keyframes stampIn {
-  0% { transform: rotate(13deg) scale(2.2); opacity: 0; }
-  38% { transform: rotate(9deg) scale(.88); opacity: 1; }
-  62% { transform: rotate(9deg) scale(1.05); }
-  82% { transform: rotate(9deg) scale(.98); }
+  0% { transform: rotate(16deg) translateY(-26px) scale(2.6); opacity: 0; }
+  34% { transform: rotate(9deg) translateY(2px) scale(.86); opacity: 1; }
+  55% { transform: rotate(9deg) translateY(-1px) scale(1.06); }
+  75% { transform: rotate(9deg) scale(.97); }
   to { transform: rotate(9deg) scale(1); opacity: .82; }
 }
-/* Impact: the paper briefly carries the blow. */
-.ticket[data-acknowledged="true"] { animation: ticketImpact 420ms ease-out both; }
+/* Impact: the paper carries the blow, then settles. */
+.ticket[data-acknowledged="true"] { animation: ticketImpact 520ms ease-out backwards; }
 @keyframes ticketImpact {
-  0%, 30% { transform: none; }
-  45% { transform: translateY(1.5px) rotate(-.15deg); }
-  70% { transform: translateY(-.5px); }
+  0%, 28% { transform: none; }
+  42% { transform: translateY(3px) rotate(-.3deg); }
+  62% { transform: translateY(-1.5px) rotate(.12deg); }
+  80% { transform: translateY(.5px); }
   to { transform: none; }
 }
+/* Brass light sweeps the filed slip once the stamp lands. */
+.ticket[data-acknowledged="true"]::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(105deg, transparent 42%, #c5ac7866 50%, transparent 58%); background-size: 280% 100%; animation: filedSheen 950ms ease-out 380ms backwards; }
+@keyframes filedSheen { from { background-position: -60% 0; } to { background-position: 120% 0; } }
+/* The filed slip's lines rise in sequence behind the stamp. */
+.ticket[data-acknowledged="true"] .ticketSurface > * { animation: filedRise 480ms var(--ease-swift) backwards; }
+.ticket[data-acknowledged="true"] .ticketSurface > :nth-child(2) { animation-delay: 90ms; }
+.ticket[data-acknowledged="true"] .ticketSurface > :nth-child(3) { animation-delay: 180ms; }
+.ticket[data-acknowledged="true"] .ticketSurface > :nth-child(n+4) { animation-delay: 270ms; }
+@keyframes filedRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .ticket[data-acknowledged="true"] .stamp, .ticket[data-acknowledged="true"] { animation: none; }
+  .ticket[data-acknowledged="true"]::after, .ticket[data-acknowledged="true"] .ticketSurface > * { animation: none; }
 }
 @media (max-width: 760px) {
   .stamp { top: 84px; right: 14px; transform: rotate(7deg) scale(.9); }
@@ -1036,6 +1048,23 @@
 .ledgerLines li[data-current="true"] button { box-shadow: inset 3px 0 0 var(--desk-brass); padding-left: 10px; }
 .ledgerLines li[data-just-filed="true"] button { background: #c5ac7818; }
 .ledgerLines li[data-just-filed="true"] strong { color: var(--desk-brass); }
+/* The stamp's shockwave lands in the ledger: the just-filed line drops in
+   just after the slam (450ms), shakes off the impact, and holds its brass
+   highlight. Both ledgers mark the line the same way. */
+.ledgerPreview li[data-just-filed="true"],
+.ledgerLines li[data-just-filed="true"] {
+  animation: filedDrop 620ms cubic-bezier(.2, 1.2, .3, 1) 450ms backwards;
+}
+@keyframes filedDrop {
+  0% { opacity: 0; transform: translateY(-14px); }
+  55% { opacity: 1; transform: translateY(2px); }
+  75% { transform: translateY(-1px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledgerPreview li[data-just-filed="true"],
+  .ledgerLines li[data-just-filed="true"] { animation: none; }
+}
 .filedHome { margin: 0 0 12px !important; max-width: 46ch; color: var(--desk-paper-ink); font-size: 13px; line-height: 1.6; }
 .filedHome a { color: inherit; text-underline-offset: 3px; }
 .brokerPlate { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; max-width: 370px; padding: 13px 18px; margin-bottom: 16px; border: 1px solid var(--desk-brass-dim); border-radius: 2px; color: var(--desk-deep); background: linear-gradient(125deg, var(--desk-brass-dim), var(--desk-brass) 28%, var(--desk-metal-light) 60%, var(--desk-brass-dim)); box-shadow: inset 0 0 0 3px var(--desk-patina), inset 0 0 0 4px var(--desk-brass), 0 4px 0 var(--desk-walnut), 0 8px 14px var(--desk-shadow); }
@@ -1825,6 +1854,23 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   margin: 12px 0 0 !important;
   font: 400 15px/1.5 var(--font-display), serif;
   color: var(--desk-paper-light);
+  animation: takeIn 450ms var(--ease-swift) backwards;
+}
+@keyframes takeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Fresh-print pulse: a brass rule that draws itself under the heading on
+   each new reading, so the tape is seen to print. */
+.roomTapeFresh {
+  display: block;
+  height: 2px;
+  margin: 0 0 8px;
+  background: linear-gradient(90deg, var(--desk-brass), transparent);
+  transform-origin: left;
+  animation: freshPrint 700ms ease-out backwards;
+}
+@keyframes freshPrint { from { transform: scaleX(0); opacity: 0; } 30% { opacity: 1; } to { transform: scaleX(1); opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .roomTapeTake, .roomTapeFresh { animation: none; }
+  .roomTapeFresh { opacity: .4; }
 }
 .roomTapeTakeBy {
   display: block;

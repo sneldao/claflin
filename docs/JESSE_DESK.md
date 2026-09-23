@@ -59,7 +59,7 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 
 ## View
 
-Room / Compact is a preference only (`claflin.presentation.v1.jesse`). Toggle on the desk or use `?view=room|compact` (legacy `night|direct` still accepted). Room mounts the approved 3D scene with the same ticket, line, and ledger as Compact — scene focus never authorizes money. Switching never remounts the controller, re-quotes, or resets the draft. `/night-desk` redirects to Room view; `?study=1` keeps the fixture study.
+Room / Compact is a preference only (`claflin.presentation.v1.jesse`). Toggle on the desk or use `?view=room|compact` (legacy `night|direct` still accepted). Room mounts the approved 3D scene with the same ticket, line, and ledger as Compact — scene focus never authorizes money. Switching never remounts the controller, re-quotes, or resets the draft. `/night-desk` redirects to Room view; `?study=1` keeps the fixture study. The room reacts to the work: fresh tape readings warm the lamp (shared scene `tape` channel), and filing lands a stamp ceremony — slam, thud, sheen, staggered receipt — with the just-filed ledger line dropping in 450ms later. No second motion library; CSS + the existing synth in [`lib/sounds.ts`](../lib/sounds.ts) only.
 
 ## Command grammar
 

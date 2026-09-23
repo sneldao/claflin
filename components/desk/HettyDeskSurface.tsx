@@ -133,6 +133,9 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   }, []);
   const marks = useReferenceMarks(desk.deskId);
   const clock = useMarketClock();
+  /* Lamp channel: the shared scene warms while the tape is fresh. */
+  const tapeAt = marks.result?.asOf ?? null;
+  const tapeState = marks.failed || marks.stale ? 'stale' : tapeAt !== null ? 'fresh' : undefined;
   const take = brokerTake('hetty', marks.result?.marks ?? NO_MARKS, clock);
   const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
@@ -495,6 +498,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}
         onLeaveDesk={desk.leaveDesk}
+        tape={tapeState}
+        tapeAt={tapeAt}
       >
         {work}
       </RoomPresentation>
@@ -514,6 +519,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       importStatus={importStatus}
       onImportAnonymous={() => { void importAnonymousRecords(); }}
       onLeaveDesk={desk.leaveDesk}
+      tape={tapeState}
+      tapeAt={tapeAt}
     >
       {work}
     </DeskRoom>

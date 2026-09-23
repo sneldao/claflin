@@ -15,6 +15,8 @@ export function NightDeskScene({
   stage,
   layout = 'room',
   still = false,
+  tape,
+  tapeAt = null,
   onAnchors,
 }: {
   view: NightDeskView;
@@ -22,6 +24,10 @@ export function NightDeskScene({
   layout?: NightDeskLayout;
   /** Render the authored CSS room without resolving or mounting WebGL. */
   still?: boolean;
+  /** Reference-tape freshness — the lamp warms while fresh. */
+  tape?: 'fresh' | 'stale';
+  /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
+  tapeAt?: number | null;
   onAnchors?: (anchors: NightDeskAnchors) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -107,7 +113,13 @@ export function NightDeskScene({
       data-scene={ready && !unavailable && !still && reducedMotion === false ? 'live' : 'static'}
       data-motion={still ? 'still' : reducedMotion === null ? 'pending' : reducedMotion ? 'reduce' : 'full'}
       data-layout={layout}
+      data-tape={tape}
     >
+      {/* Fresh-reading glow: remounts per reading so the lamp is seen to warm.
+          Decorative — paint only, above canvas and fallback alike. */}
+      {tape === 'fresh' && tapeAt !== null && (
+        <span key={tapeAt} className={styles.tapeGlow} aria-hidden="true" />
+      )}
       <div className={styles.fallbackRoom} aria-hidden="true">
         {layout === 'foyer' && (
           <Image

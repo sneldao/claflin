@@ -13,6 +13,10 @@ export type HouseSceneState = {
   stage: NightDeskStage;
   /** A composed CSS room without mounting the animated WebGL surface. */
   still: boolean;
+  /** Reference-tape freshness from the active desk — the room's lamp warms on it. */
+  tape?: 'fresh' | 'stale';
+  /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
+  tapeAt?: number | null;
 };
 
 type HouseSceneApi = {
@@ -32,7 +36,9 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
     && old.layout === next.layout
     && old.view === next.view
     && old.stage === next.stage
-    && old.still === next.still ? old : next), []);
+    && old.still === next.still
+    && old.tape === next.tape
+    && old.tapeAt === next.tapeAt ? old : next), []);
   const subscribeAnchors = useCallback((listener: (anchors: NightDeskAnchors) => void) => {
     anchorListeners.current.add(listener);
     return () => anchorListeners.current.delete(listener);
@@ -50,6 +56,8 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
             stage={scene.stage}
             layout={scene.layout}
             still={scene.still}
+            tape={scene.tape}
+            tapeAt={scene.tapeAt}
             onAnchors={emitAnchors}
           />
         </div>
@@ -61,8 +69,8 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
 
 export function useHouseScene(state: HouseSceneState) {
   const api = useContext(HouseSceneContext);
-  const { visible, layout, view, stage, still } = state;
-  useEffect(() => { api?.update({ visible, layout, view, stage, still }); }, [api, visible, layout, view, stage, still]);
+  const { visible, layout, view, stage, still, tape, tapeAt } = state;
+  useEffect(() => { api?.update({ visible, layout, view, stage, still, tape, tapeAt }); }, [api, visible, layout, view, stage, still, tape, tapeAt]);
   return api !== null;
 }
 

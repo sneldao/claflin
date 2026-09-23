@@ -140,6 +140,35 @@ describe('mobile filing integration through actual buttons', () => {
   });
 });
 
+describe('filing ceremony contract', () => {
+  function css(path: string): string {
+    return readFileSync(new URL(path, import.meta.url), 'utf8');
+  }
+
+  it('drops the just-filed ledger line in after the stamp slam', () => {
+    const desk = css('../components/desk/WorkingDesk.module.css');
+    /* Both ledgers mark the line the same way; the shockwave is delayed past the slam. */
+    assert.match(desk, /\.ledgerPreview li\[data-just-filed="true"\]/);
+    assert.match(desk, /\.ledgerLines li\[data-just-filed="true"\][\s\S]*?animation: filedDrop/);
+    assert.match(desk, /@keyframes filedDrop/);
+  });
+
+  it('stages the stamp as a multi-beat ceremony with reduced-motion kills', () => {
+    const desk = css('../components/desk/WorkingDesk.module.css');
+    assert.match(desk, /@keyframes stampIn/);
+    assert.match(desk, /@keyframes stampEcho/);
+    assert.match(desk, /@keyframes ticketImpact/);
+    assert.match(desk, /@keyframes filedSheen/);
+    assert.match(desk, /@keyframes filedRise/);
+  });
+
+  it('warms the shared-scene lamp per tape reading', () => {
+    const scene = css('../components/night-desk/NightDesk.module.css');
+    assert.match(scene, /data-tape='fresh'/);
+    assert.match(scene, /@keyframes tapeGlowIn/);
+    assert.match(scene, /\.tapeGlow/);
+  });
+});
 describe('paper ledger edge cases', () => {
   let root: Root | null = null;
 

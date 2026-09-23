@@ -78,6 +78,9 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const marks = useReferenceMarks('jesse');
   const clock = useMarketClock();
   const deskMarks = marks.result?.marks ?? NO_MARKS;
+  /* Lamp channel: the shared scene warms while the tape is fresh. */
+  const tapeAt = marks.result?.asOf ?? null;
+  const tapeState = marks.failed || marks.stale ? 'stale' : tapeAt !== null ? 'fresh' : undefined;
   const take = brokerTake('jesse', deskMarks, clock);
   const selectedMark = deskMarks.find(mark => mark.instrumentId === jesse.state.draft.instrumentId) ?? null;
 
@@ -391,6 +394,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}
         onLeaveDesk={desk.leaveDesk}
+        tape={tapeState}
+        tapeAt={tapeAt}
       >
         {work}
       </RoomPresentation>
@@ -406,6 +411,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       deskStage={jesse.state.stage}
       onSwitchDesk={desk.switchDesk}
       onLeaveDesk={desk.leaveDesk}
+      tape={tapeState}
+      tapeAt={tapeAt}
     >
       {work}
     </DeskRoom>

@@ -25,6 +25,8 @@ export function DeskRoom({
   anonymousCount = 0,
   importStatus = 'idle',
   onImportAnonymous,
+  tape,
+  tapeAt = null,
   children,
 }: {
   deskId: HouseDeskId;
@@ -38,11 +40,15 @@ export function DeskRoom({
   anonymousCount?: number;
   importStatus?: 'idle' | 'pending' | 'done' | 'failed';
   onImportAnonymous?: () => void;
+  /** Reference-tape freshness from the active desk — warms the shared lamp. */
+  tape?: 'fresh' | 'stale';
+  /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
+  tapeAt?: number | null;
   children: ReactNode;
 }) {
   const auth = useDeskAuth();
   const tone = useRoomTone(lineLive);
-  const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true });
+  const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true, tape, tapeAt });
 
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -101,6 +107,7 @@ export function DeskRoom({
       data-desk-open={open ? 'true' : 'false'}
       data-presentation="compact"
       data-shared-still={sharedScene ? 'true' : undefined}
+      data-tape={tape}
     >
       {!sharedScene && (
         <div className={scene.room} aria-hidden="true">
