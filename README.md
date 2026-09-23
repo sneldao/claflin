@@ -70,9 +70,10 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
 | Offering presentation, instruction matching and desk eligibility | `lib/desk/offerings-presentation.ts`, `components/desk/HouseOfferings.tsx` |
 | Base estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
-| Desk adapter resolution and quote route | `lib/trading/adapters.ts`, `app/api/desk/[deskId]/quote/route.ts` |
+| Desk adapter resolution, quote and marks routes | `lib/trading/adapters.ts`, `app/api/desk/[deskId]/quote/route.ts`, `app/api/desk/[deskId]/marks/route.ts` |
 | Thin HTTP boundary | `lib/trading/http.ts`, `lib/api-client.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
-| Indicative tape marks (Chainlink reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts` |
+| Indicative tape marks (Chainlink on Base; Jupiter venue-duplex marks on Solana — reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts`, `lib/trading/adapters/jupiter-marks.ts` |
+| Market clock, broker voice and the ring-on-arrival line | `lib/market-clock.ts`, `lib/use-market-clock.ts`, `lib/desk/broker-voice.ts`, `lib/desk/broker-take.ts`, `lib/trading/line-signal.ts`, `components/desk/BrokerLine.tsx` |
 | Solana instruments, estimates, paper and live evidence | `lib/solana/` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Live execution journal (approvals, submitted/confirmed swaps) | `lib/trading/live-journal.ts`, `lib/trading/useLiveJournal.ts`, `lib/trading/useDeskExecution.ts` |

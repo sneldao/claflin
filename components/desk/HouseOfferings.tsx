@@ -24,8 +24,17 @@ function offeringHref(offering: InstrumentOffering, deskId: HouseDeskId): string
  * The house book: instruction first, then concrete offerings and only the
  * desks that can actually carry each product/rail/venue combination.
  */
-export function HouseOfferings({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void }) {
-  const [instruction, setInstruction] = useState('');
+export function HouseOfferings({ onEnter, instruction: controlledInstruction, onInstructionChange }: {
+  onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void;
+  instruction?: string;
+  onInstructionChange?: (value: string) => void;
+}) {
+  const [internalInstruction, setInternalInstruction] = useState('');
+  const instruction = controlledInstruction ?? internalInstruction;
+  const setInstruction = (value: string) => {
+    if (onInstructionChange) onInstructionChange(value);
+    else setInternalInstruction(value);
+  };
   const groups = useMemo(() => offeringGroupsForInstruction(instruction), [instruction]);
 
   const enter = (offering: InstrumentOffering, deskId: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -45,11 +54,11 @@ export function HouseOfferings({ onEnter }: { onEnter: (id: HouseDeskId, offerin
     <section className={foyerStyles.offerings} id="house-offerings" aria-labelledby="house-offerings-title">
       <div className={foyerStyles.offeringsIntro}>
         <p className={foyerStyles.kicker}>THE HOUSE BOOK</p>
-        <h2 id="house-offerings-title">Choose the product first.</h2>
+        <h2 id="house-offerings-title">Every verified offering.</h2>
         <p>
-          Name the exposure in your own words. Claflin shows the verified offerings,
-          the rail each settles on, and only the desks that can carry it. Similar
-          products on different rails are never substituted for one another.
+          The rail each settles on, the venue that quotes it, and the desks that
+          can carry it. Similar products on different rails are never swapped for
+          one another.
         </p>
         <label className={foyerStyles.instructionSearch}>
           <span>What would you like to review?</span>

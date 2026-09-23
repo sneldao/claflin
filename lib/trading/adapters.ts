@@ -8,6 +8,7 @@ import type { DeskCoverage, DeskRuntime } from '../desk/contracts';
 import { aerodromeQuoteAdapter } from './adapters/aerodrome';
 import { jupiterQuoteAdapter } from './adapters/jupiter';
 import { chainlinkMarkAdapter } from './adapters/chainlink';
+import { jupiterMarkAdapter } from './adapters/jupiter-marks';
 
 /**
  * Venue adapter registries — one desk, one market, one verified venue set.
@@ -45,6 +46,7 @@ const QUOTE_ADAPTERS: Record<string, QuoteAdapter | null> = {
 
 const MARK_ADAPTERS: Record<string, MarkAdapter | null> = {
   chainlink: chainlinkMarkAdapter,
+  jupiter: jupiterMarkAdapter,
 };
 
 function unavailable(deskId: string): TradingError {

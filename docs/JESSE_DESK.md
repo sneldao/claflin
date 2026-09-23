@@ -49,6 +49,7 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 - Quote: `GET /api/desk/jesse/quote` → Jesse runtime coverage → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
 - Compare (Pyth Pro): `GET /api/desk/jesse/comparison?instrumentId=sol:…` → Redis snapshots from the Lazer daemon; normalizes raw-token prices by mint multiplier; honest `unavailable` when feeds/multiplier missing
 - Venue duplex (free): `GET /api/desk/jesse/venue-duplex?instrumentId=sol:…` → Backed public `price-data` when present, else Jupiter Price v3 `stockData`, versus Jupiter venue `usdPrice` — evidence only, never labelled Pyth
+- Marks: `GET /api/desk/jesse/marks` → Jesse mark adapter ([`lib/trading/adapters/jupiter-marks.ts`](../lib/trading/adapters/jupiter-marks.ts)) → observed marks built from the same venue-duplex read; the venue leg is the mark and a comparable issuer/stock reference rides along as `stockReference` with `differenceBps`. Feeds the desk tape, the foyer wire, Jesse's broker take and the ticket's onchain-versus-reference gap strip, so those surfaces cannot disagree with the evidence panel
 - PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
 - Live prepare: `POST /api/desk/jesse/live/prepare` → fresh Metis `/order` with `taker` (both live flags required)
 - Live submit: `POST /api/desk/jesse/live/submit` → message-bound signed tx → Jupiter `/execute`
@@ -74,7 +75,7 @@ Missing amounts never inherit. Unknown tickers never resolve to the catalog. Liv
 ## Evidence honesty
 
 - **Pyth panel:** equity vs xStock from Pro/Lazer snapshots. Token basis is `usd-per-raw-token` (verified 2026-09-21). Filing does not wait on evidence. Quiet Pyth Pro credit on the panel.
-- **Venue duplex:** free Backed/Jupiter reference vs Jupiter venue USD when Pyth snapshots are cold.
+- **Venue duplex:** free Backed/Jupiter reference vs Jupiter venue USD when Pyth snapshots are cold. The same read backs the `marks` adapter, so the tape, broker take and gap strip share one number with the evidence panel.
 - **PreStocks:** SPV issuer mark vs issuer token price — secondary bounty track only.
 
 ## Live settle (gated)

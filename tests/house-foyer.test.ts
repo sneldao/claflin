@@ -8,34 +8,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { HouseFoyer } from '../components/desk/HouseFoyer';
 import { WorkingDesk } from '../components/desk/WorkingDesk';
 import { offeringForInstrument } from '../lib/desk/offerings';
+import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { SOLANA_INSTRUMENTS } from '../lib/solana/catalog';
 import { resetContainer, getRootElement } from './jsdom-setup';
 
 const originalFetch = globalThis.fetch;
 const originalScrollTo = window.scrollTo;
 const originalMatchMedia = window.matchMedia;
-
-type MediaControl = { setReduced(reduced: boolean): void };
-
-function mockMatchMedia(reduced: boolean): MediaControl {
-  const listeners = new Set<() => void>();
-  (window as any).matchMedia = (query: string) => ({
-    get matches() { return query.includes('prefers-reduced-motion') ? reduced : false; },
-    media: query,
-    onchange: null,
-    addEventListener: (_event: string, cb: () => void) => listeners.add(cb),
-    removeEventListener: (_event: string, cb: () => void) => listeners.delete(cb),
-    dispatchEvent: () => false,
-    addListener: () => {},
-    removeListener: () => {},
-  });
-  return {
-    setReduced(next: boolean) {
-      reduced = next;
-      listeners.forEach(cb => cb());
-    },
-  };
-}
+const originalSetItem = window.Storage.prototype.setItem;
 
 function text(el: Element | null | undefined) {
   return el?.textContent ?? '';
@@ -82,17 +62,22 @@ describe('house foyer', () => {
 
   beforeEach(() => {
     resetContainer();
+    window.sessionStorage.clear();
     fetchCalls = 0;
     micCalls = 0;
     storageWrites = 0;
     (window as any).scrollTo = () => {};
-    (globalThis as any).fetch = () => { fetchCalls += 1; throw new Error('foyer demo must not fetch'); };
+    (globalThis as any).fetch = () => { fetchCalls += 1; throw new Error('unexpected fetch'); };
     micDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'mediaDevices');
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
-      value: { getUserMedia: () => { micCalls += 1; return Promise.reject(new Error('foyer demo must not use the mic')); } },
+      value: { getUserMedia: () => { micCalls += 1; return Promise.reject(new Error('foyer must not use the mic')); } },
     });
-    mock.method(window.Storage.prototype, 'setItem', () => { storageWrites += 1; });
+    /* Count writes but keep them real — ring-on-arrival must leave a readable key. */
+    mock.method(window.Storage.prototype, 'setItem', function (this: Storage, key: string, value: string) {
+      storageWrites += 1;
+      return originalSetItem.call(this, key, value);
+    });
   });
 
   afterEach(async () => {
@@ -101,19 +86,27 @@ describe('house foyer', () => {
     (globalThis as any).fetch = originalFetch;
     (window as any).scrollTo = originalScrollTo;
     (window as any).matchMedia = originalMatchMedia;
+    window.sessionStorage.clear();
     if (micDescriptor) Object.defineProperty(window.navigator, 'mediaDevices', micDescriptor);
     else delete (window.navigator as any).mediaDevices;
   });
 
-  it('SSR paints the full foyer with a real primary link and no slip numbers', () => {
+  it('SSR paints the full foyer — market clock, the lines, the wire, the book', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
-    assert.match(html, /A clearer view\./);
-    assert.match(html, /Before you trade\./);
+    assert.match(html, /THE ONCHAIN BOOK NEVER CLOSES/, 'fallback kicker on first paint');
+    assert.match(html, /The exchange closes\./);
+    assert.match(html, /This book doesn’t\./);
     assert.match(html, /id="foyer-title"/);
     assert.match(html, /href="#house-offerings"/);
-    assert.match(html, /Choose an offering/);
+    assert.match(html, /Browse the house book/);
+    assert.match(html, /Paper by default\. Voice fills the slip — only you can sign\./);
+    assert.match(html, /Ring Hetty/);
+    assert.match(html, /Ring Jesse/);
+    assert.match(html, /The Witch of Wall Street/);
+    assert.match(html, /The Boy Plunger/);
+    assert.match(html, /LIVE REFERENCE MARKS/);
     assert.match(html, /id="house-offerings"/);
-    assert.match(html, /Choose the product first\./);
+    assert.match(html, /Every verified offering\./);
     assert.match(html, /AAPLc/);
     assert.match(html, /AAPLx/);
     assert.match(html, /Coinbase Tokenized Stocks/);
@@ -121,27 +114,24 @@ describe('house foyer', () => {
     assert.match(html, /href="\/\?desk=hetty&amp;offering=/);
     assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
     assert.match(html, /Open Jesse’s desk/);
-    assert.match(html, /ILLUSTRATIVE EXAMPLE · NOT A LIVE QUOTE/);
-    assert.match(html, /Try an instruction\. Watch the desk write it down\./);
-    assert.match(html, /Quote 100 USDC of Apple/);
     assert.match(html, /id="house-method"/);
-    assert.match(html, /Your instruction\. Your decision\./);
-    assert.match(html, /Nothing moves without your approval/);
+    assert.match(html, /How the line works\./);
+    assert.match(html, /THE TAPE RUNS ALL NIGHT\. THE HOUSE KEEPS THE RECORD\./);
+    assert.doesNotMatch(html, /ILLUSTRATIVE EXAMPLE/);
     assert.doesNotMatch(html, /0\.490 Apple units/);
     assert.doesNotMatch(html, /0\.245 Apple units/);
-    assert.match(html, /THE PIT IS DOWNSTAIRS/);
   });
 
   it('SSR of the real entry tree renders the foyer headline first paint', () => {
     const html = renderToStaticMarkup(createElement(WorkingDesk));
     assert.match(html, /id="foyer-title"/);
-    assert.match(html, /A clearer view\./);
+    assert.match(html, /The exchange closes\./);
     assert.match(html, /id="house-offerings"/);
-    assert.match(html, /ILLUSTRATIVE EXAMPLE · NOT A LIVE QUOTE/);
+    assert.doesNotMatch(html, /ILLUSTRATIVE EXAMPLE/);
     assert.doesNotMatch(html, /<canvas/, 'no canvas in the SSR first paint');
   });
 
-  it('shows the paper-only decision line when live settle is off', () => {
+  it('shows the paper-only signature line when live settle is off', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
     assert.match(html, /File a paper record only when you choose\. No real funds move\./);
     assert.doesNotMatch(html, /live settlement|Live settle/);
@@ -167,43 +157,24 @@ describe('house foyer', () => {
     assert.doesNotMatch(html, /TSLAx/);
   });
 
-  it('runs the example through writing to ready, then revises with a superseded slip', async () => {
-    mockMatchMedia(false);
+  it('Ring Hetty leaves a ring-on-arrival note and enters her desk', async () => {
+    let entered: string | null = null;
     root = createRoot(getRootElement());
-    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => {} })));
+    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: id => { entered = id; } })));
 
-    const action = findButton('Quote 100 USDC of Apple');
-    assert.ok(action, 'idle example action exists');
-    await act(async () => click(action!));
+    const ringHetty = findButton('Ring Hetty');
+    assert.ok(ringHetty, 'Hetty ring button rendered');
+    await act(async () => click(ringHetty!));
 
-    assert.match(text(getRootElement()), /Writing the estimate…/);
-    assert.ok(findButton('Try an example')?.hasAttribute('disabled'), 'demo buttons disabled while writing');
-
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 520)); });
-
-    const html = text(getRootElement());
-    assert.match(html, /100 USDC/);
-    assert.match(html, /0\.490 Apple units/);
-    assert.match(html, /STUDY-001/);
-    assert.match(html, /NOT A LIVE QUOTE/);
-    assert.match(html, /not calculated from the reference prices/);
-
-    const revise = findButton('Make that 50 USDC');
-    assert.ok(revise, 'revision action offered on the 100 slip');
-    await act(async () => click(revise!));
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 520)); });
-
-    const revised = text(getRootElement());
-    assert.match(revised, /50 USDC/);
-    assert.match(revised, /0\.245 Apple units/);
-    assert.match(revised, /STUDY-002/);
-    assert.match(revised, /SUPERSEDED EXAMPLE/);
-    const prior = getRootElement().querySelector('.slipPrior s');
-    assert.ok(prior, 'superseded line is struck through');
-    assert.match(text(prior), /100 USDC → 0\.490 Apple units/);
+    assert.equal(entered, 'hetty');
+    const raw = window.sessionStorage.getItem('claflin:ring-on-arrival');
+    assert.ok(raw, 'ring-on-arrival key written');
+    const pending = JSON.parse(raw!) as { deskId?: string; at?: number };
+    assert.equal(pending.deskId, 'hetty');
+    assert.equal(typeof pending.at, 'number');
   });
 
-  it('demo makes no external calls; an offering link dispatches desk and offering once', async () => {
+  it('an offering link dispatches desk and offering once; meta-click is untouched', async () => {
     let entered: string | null = null;
     let selectedOffering: string | null = null;
     let enterCount = 0;
@@ -211,16 +182,6 @@ describe('house foyer', () => {
     await act(async () => root!.render(createElement(HouseFoyer, {
       onEnter: (id, offeringId) => { entered = id; selectedOffering = offeringId ?? null; enterCount += 1; },
     })));
-
-    await act(async () => click(findButton('Quote 100 USDC of Apple')!));
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 520)); });
-    await act(async () => click(findButton('Make that 50 USDC')!));
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 520)); });
-    await act(async () => click(findButton('Clear example')!));
-
-    assert.equal(fetchCalls, 0, 'demo never fetches');
-    assert.equal(micCalls, 0, 'demo never touches the microphone');
-    assert.equal(storageWrites, 0, 'demo writes no storage');
 
     const offering = offeringForInstrument(SOLANA_INSTRUMENTS[0].id)!;
     const primary = Array.from(getRootElement().querySelectorAll('a'))
@@ -232,7 +193,6 @@ describe('house foyer', () => {
     assert.equal(entered, 'jesse');
     assert.equal(selectedOffering, offering.offeringId);
     assert.equal(enterCount, 1);
-    assert.equal(storageWrites, 0, 'entry dispatch itself writes nothing from the foyer');
 
     const modified = new (window as any).MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true });
     let prevented = false;
@@ -243,68 +203,71 @@ describe('house foyer', () => {
     assert.equal(prevented, false, 'meta-click keeps its default action');
   });
 
-  it('reduced motion lands ready immediately and a mid-write preference flip finishes the slip', async () => {
+  it('a wire mark click fills the house-book instruction with the ticker', async () => {
+    const apple = DESK_INSTRUMENTS.find(stock => stock.symbol === 'AAPLc')!;
+    const marks = {
+      asOf: Date.now(),
+      marks: [{
+        instrumentId: apple.id,
+        symbol: apple.symbol,
+        name: apple.name,
+        reference: { status: 'observed', source: 'chainlink', priceUsdPerToken: '227.10', updatedAt: Date.now(), session: 'unknown', pauseStatus: 'unchecked' },
+      }],
+    };
+    (globalThis as any).fetch = () => {
+      fetchCalls += 1;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: () => Promise.resolve(marks),
+      });
+    };
+
     root = createRoot(getRootElement());
     await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => {} })));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
 
-    await act(async () => click(findButton('Quote 100 USDC of Apple')!));
-    assert.match(text(getRootElement()), /0\.490 Apple units/, 'reduced motion skips the writing delay');
+    const wireItem = findButton('AAPLc');
+    assert.ok(wireItem, 'wire item rendered from real marks');
+    await act(async () => click(wireItem!));
 
-    const control = mockMatchMedia(false);
-    await act(async () => click(findButton('Make that 50 USDC')!));
-    assert.match(text(getRootElement()), /Writing the estimate…/);
-    await act(async () => control.setReduced(true));
-    assert.match(text(getRootElement()), /0\.245 Apple units/, 'preference flip resolves the pending write');
+    const input = getRootElement().querySelector('.instructionSearch input') as HTMLInputElement;
+    assert.equal(input.value, 'AAPL', 'wire click writes the underlying ticker');
+    assert.match(text(getRootElement()), /AAPLc/);
+    assert.match(text(getRootElement()), /AAPLx/);
+    assert.doesNotMatch(text(getRootElement()), /TSLAx/);
   });
 
-  it('clear example removes the slip and resets state', async () => {
+  it('carries Jesse’s Solana marks on the wire with the stock-reference gap, and gives his card a take', async () => {
+    const apple = DESK_INSTRUMENTS.find(stock => stock.symbol === 'AAPLc')!;
+    const xApple = SOLANA_INSTRUMENTS.find(stock => stock.symbol === 'AAPLx')!;
+    const now = Date.now();
+    const bodies: Record<string, unknown> = {
+      '/api/desk/hetty/marks': { asOf: now, marks: [{ instrumentId: apple.id, symbol: apple.symbol, name: apple.name, reference: { status: 'observed', source: 'chainlink', priceUsdPerToken: '227.10', updatedAt: now, session: 'unknown', pauseStatus: 'unchecked' } }] },
+      '/api/desk/jesse/marks': { asOf: now, marks: [{ instrumentId: xApple.id, symbol: xApple.symbol, name: xApple.name, reference: { status: 'observed', source: 'jupiter-price-v3', priceUsdPerToken: '227.41', updatedAt: now, session: 'unknown', pauseStatus: 'unchecked' }, stockReference: { priceUsd: '227.10', source: 'backed', differenceBps: '13.6' } }] },
+    };
+    (globalThis as any).fetch = (url: string) => {
+      fetchCalls += 1;
+      const body = bodies[String(url)];
+      if (!body) return Promise.reject(new Error(`unexpected fetch ${url}`));
+      return Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: () => Promise.resolve(body) });
+    };
+
     root = createRoot(getRootElement());
     await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => {} })));
-    await act(async () => click(findButton('Quote 100 USDC of Apple')!));
-    assert.match(text(getRootElement()), /0\.490 Apple units/);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
 
-    await act(async () => click(findButton('Clear example')!));
-    const html = text(getRootElement());
-    assert.doesNotMatch(html, /0\.490 Apple units/);
-    assert.doesNotMatch(html, /SUPERSEDED EXAMPLE/);
-    assert.match(html, /Try an instruction\. Watch the desk write it down\./);
-  });
-
-  it('unmounting mid-write clears the pending timer', async () => {
-    let cleared = 0;
-    const realClear = globalThis.clearTimeout;
-    mock.method(globalThis, 'clearTimeout', (id: Parameters<typeof clearTimeout>[0]) => {
-      cleared += 1;
-      return realClear(id);
-    });
-    mockMatchMedia(false);
-    root = createRoot(getRootElement());
-    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => {} })));
-    await act(async () => click(findButton('Quote 100 USDC of Apple')!));
-    await act(async () => root!.unmount());
-    root = null;
-    assert.ok(cleared >= 1, 'pending demo timer was cleared on unmount');
-  });
-
-  it('entry clears a pending demo timer before dispatching', async () => {
-    let cleared = 0;
-    const realClear = globalThis.clearTimeout;
-    mock.method(globalThis, 'clearTimeout', (id: Parameters<typeof clearTimeout>[0]) => {
-      cleared += 1;
-      return realClear(id);
-    });
-    mockMatchMedia(false);
-    let enterCount = 0;
-    root = createRoot(getRootElement());
-    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => { enterCount += 1; } })));
-    await act(async () => click(findButton('Quote 100 USDC of Apple')!));
-
-    const primary = Array.from(getRootElement().querySelectorAll('a'))
-      .find(a => a.textContent?.includes('Open Jesse’s desk'));
-    await act(async () => click(primary!));
-    assert.equal(enterCount, 1);
-    assert.ok(cleared >= 1, 'pending demo timer was cleared on entry');
-    await new Promise(resolve => setTimeout(resolve, 520));
+    const solItem = Array.from(getRootElement().querySelectorAll('button'))
+      .find(button => button.getAttribute('aria-label')?.startsWith('AAPLx'));
+    assert.ok(solItem, 'Solana mark on the wire');
+    assert.equal(solItem!.getAttribute('aria-label'), 'AAPLx $227.41 on Solana');
+    assert.match(text(solItem), /SOL/);
+    assert.match(text(solItem), /\+13\.6 bps/);
+    const page = text(getRootElement());
+    assert.match(page, /Jesse’s take/);
+    assert.match(page, /AAPLx is printing 13\.6 bps over its stock reference on Solana/);
+    assert.match(page, /Hetty’s take/);
   });
 
   it('keeps Jesse offerings out of the house book when Jesse is gated, even with the live flag on', () => {
@@ -322,7 +285,6 @@ describe('house foyer', () => {
     const html = renderFoyerInEnv({ NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true' });
     assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
     assert.match(html, /choose live settlement where the selected desk supports it/);
-    assert.match(html, /Live settle appears only where the selected desk supports it/);
     assert.match(html, /live settle available/);
   });
 });

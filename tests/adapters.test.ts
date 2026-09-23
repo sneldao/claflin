@@ -58,10 +58,12 @@ describe('adapter registries', () => {
     for (const deskId of ['isabel', 'arbitrum', 'nope']) {
       assert.equal(codeOf(() => quoteAdapterFor(deskId)), 'desk_unavailable');
     }
-    /* Jesse quotes via Jupiter since the adapter landed; his marks stay
-       unregistered until the Pyth reader (Engineer 2) exists. */
+    /* Jesse quotes and marks via Jupiter — his marks ride the same venue
+       duplex the desk shows as evidence. */
     assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
-    for (const deskId of ['jesse', 'isabel', 'arbitrum', 'nope']) {
+    assert.equal(markAdapterFor('jesse').source, 'jupiter-price-v3');
+    assert.equal(markAdapterFor('jesse').market, 'Solana');
+    for (const deskId of ['isabel', 'arbitrum', 'nope']) {
       assert.equal(codeOf(() => markAdapterFor(deskId)), 'desk_unavailable');
     }
   });

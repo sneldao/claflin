@@ -39,7 +39,7 @@ describe('one canonical house', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');
     const room = source('components/desk/DeskRoom.tsx');
     assert.doesNotMatch(desk, /href="\/desk-study"|Broker directory|Exact instrument|token decimals|per minute|Start a free call|Live access|useEligibility|YOUR AI BROKER|WELCOME TO CLAFLIN|A CONSIDERED APPROACH/);
-    assert.match(desk, /The pit is/);
+    assert.match(desk, /The tape runs all night\./);
     assert.match(desk, /About Hetty/);
     assert.match(desk, /<ModeStamp/);
     assert.match(source('components/desk/ModeStamp.tsx'), /MODE_LABELS/);
@@ -49,14 +49,14 @@ describe('one canonical house', () => {
     assert.doesNotMatch(room, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
   });
-  it('puts the ticket before the room and introduces the line only once', () => {
+  it('puts the line before the ticket (voice first) and introduces it only once', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');
     /* The desk's one lead (styles.introduction) is sanctioned while the
        ticket is untouched — but the room stays honest: no fake broker
        plate, no status prop, no desk map. The line itself is mounted once. */
     assert.doesNotMatch(desk, /<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
     assert.equal(desk.match(/<HettyCall\s/g)?.length, 1);
-    assert.ok(desk.indexOf('<TradeTicket desk=') < desk.indexOf('<HettyCall '));
+    assert.ok(desk.indexOf('<HettyCall ') < desk.indexOf('<TradeTicket desk='), 'the line leads the DOM so small screens and focus order are voice first');
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
   });
   it('shows continuity shells with empty states, without hiding storage failures', () => {
@@ -119,10 +119,10 @@ describe('one canonical house', () => {
     assert.match(entry, /claflin\.desk\.v1\.last/);
     assert.match(entry, /resolveHouseEntry/);
     assert.match(entry, /\?desk=/);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /A clearer view\./);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /Before you trade\./);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /The exchange closes\./);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /This book doesn’t\./);
     assert.match(source('components/desk/HouseFoyer.tsx'), /\/\?desk=/);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /ILLUSTRATIVE EXAMPLE/);
+    assert.doesNotMatch(source('components/desk/HouseFoyer.tsx'), /ILLUSTRATIVE EXAMPLE/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /HouseOfferings/);
     assert.match(source('components/desk/HouseOfferings.tsx'), /offeringGroupsForInstruction/);
     assert.match(source('components/desk/HouseOfferings.tsx'), /openDesksForOffering/);

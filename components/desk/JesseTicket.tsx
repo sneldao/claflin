@@ -16,6 +16,7 @@ import { JesseLiveSettle } from './JesseLiveSettle';
 import type { JesseIntent, MarketComparison } from '@/lib/solana/contracts';
 import { getEducationTopic } from '@/lib/education';
 import { EVIDENCE_DISCLAIMER } from '@/lib/desk/ui-copy';
+import { markPrice, type DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
 
@@ -44,10 +45,13 @@ export const JesseTicket = memo(function JesseTicket({
   jesse,
   spokenLine = null,
   carriedNote = null,
+  mark = null,
 }: {
   jesse: JesseDesk;
   spokenLine?: string | null;
   carriedNote?: string | null;
+  /** The venue mark for the drafted instrument — its stock-reference gap heads the slip. */
+  mark?: DeskMark | null;
 }) {
   const { state, foreground, inFlight, lastResult, edit, quote, compare, cancel, dismissRecord } = jesse;
   const draft = state.draft;
@@ -156,6 +160,8 @@ export const JesseTicket = memo(function JesseTicket({
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
         <PaperChrome liveMode={liveMode && liveAvailable} />
+      <GapStrip mark={mark} />
+        <GapStrip mark={mark} />
         <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <div className={styles.slipBody}>
@@ -377,6 +383,52 @@ function EvidenceModule({
         {TAPE_TOPIC && <EducationTopicTrigger topic={TAPE_TOPIC} label="About the tape" />}
       </p>
     </>
+  );
+}
+
+function formatBps(raw: string | null): string {
+  const value = Number(raw);
+  if (raw === null || !Number.isFinite(value)) return '—';
+  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(1)} BPS`;
+}
+
+/**
+ * The onchain-versus-reference gap as the slip's headline — the venue mark
+ * and its stock reference from the same duplex reading. A flash marks a
+ * real change between successive readings; nothing renders without both legs.
+ */
+export function GapStrip({ mark }: { mark: DeskMark | null }) {
+  const bps = mark?.stockReference?.differenceBps ?? null;
+  const [seen, setSeen] = useState<{ id: string | null; bps: string | null }>({ id: mark?.instrumentId ?? null, bps });
+  const [tick, setTick] = useState<'up' | 'down' | null>(null);
+  if (seen.id !== (mark?.instrumentId ?? null) || seen.bps !== bps) {
+    const sameInstrument = seen.id === (mark?.instrumentId ?? null);
+    setSeen({ id: mark?.instrumentId ?? null, bps });
+    const before = Number(seen.bps);
+    const after = Number(bps);
+    setTick(sameInstrument && seen.bps !== null && bps !== null && Number.isFinite(before) && Number.isFinite(after) && before !== after
+      ? (after > before ? 'up' : 'down')
+      : null);
+  }
+  useEffect(() => {
+    if (!tick) return;
+    const timer = setTimeout(() => setTick(null), 1200);
+    return () => clearTimeout(timer);
+  }, [tick]);
+
+  const price = mark ? markPrice(mark) : null;
+  if (!mark || mark.reference.status !== 'observed' || !mark.stockReference || !price) return null;
+  return (
+    <div className={styles.gapStrip} data-tick={tick ?? undefined} aria-label={`${mark.symbol} on Solana $${price}, stock reference $${mark.stockReference.priceUsd}, ${formatBps(bps)}`}>
+      <p className={styles.gapLegs}>
+        <span>ON SOLANA <strong>${price}</strong></span>
+        <span>STOCK REF <strong>${mark.stockReference.priceUsd}</strong></span>
+        <span className={styles.gapBps}>{formatBps(bps)}{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}</span>
+      </p>
+      <p className={styles.gapSource}>
+        Jupiter venue vs {mark.stockReference.source === 'backed' ? 'Backed issuer indicative' : 'Jupiter stock data'}
+      </p>
+    </div>
   );
 }
 

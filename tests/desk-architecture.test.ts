@@ -117,7 +117,7 @@ describe('rail-neutral desk architecture', () => {
       assert.throws(() => quoteAdapterFor(deskId));
       assert.throws(() => markAdapterFor(deskId));
     }
-    assert.throws(() => markAdapterFor('jesse'));
+    assert.equal(markAdapterFor('jesse').source, 'jupiter-price-v3');
   });
 
   it('keeps multi-coverage matching explicit and fails closed when ambiguous', () => {

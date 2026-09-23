@@ -97,6 +97,14 @@ const DESK_WORDS: Readonly<Record<HouseDeskId, readonly DeskNote[]>> = {
 /** Every third day the desk teaches a word instead of offering a note. */
 const WORD_DAY = 2;
 
+/** The desk's signature line: its first note that carries a historical speaker's words. */
+export function signatureLine(deskId: HouseDeskId): DeskNote | null {
+  for (const note of DESK_NOTES[deskId] ?? []) {
+    if (typeof note === 'object' && note.attribution) return note;
+  }
+  return null;
+}
+
 /** Stable within a local day and per desk, varied across days and between desks. */
 export function deskNoteOfTheDay(deskId: HouseDeskId, date = new Date()): DeskNote {
   const dayIndex = Math.floor(date.getTime() / 86_400_000);

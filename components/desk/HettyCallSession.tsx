@@ -16,7 +16,8 @@ import { SavedCallsPanel } from './HettyCallSavedCalls';
 import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstructionResult, setAmountResult, estimateSpokenResult, recordPaperGuard, watchTarget, describeDesk, deskNoteSpokenLine, explainConceptResult, DESK_NOTE_ALREADY_SHARED, RECORD_UNAVAILABLE_MESSAGE, deskSymbol, hettyOpeningLine, hettyClosingLine, appliedTicketLine } from '@/lib/trading/voice-tools';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
-import { LINE_SIGNAL_EVENT } from '@/lib/trading/line-signal';
+import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
+import { BrokerLinePlate, LineCaptions } from './BrokerLine';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
@@ -96,10 +97,12 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-export function HettyCallSession({ desk, liveMode, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+export function HettyCallSession({ desk, liveMode, take = null, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
+  /** Hetty's take on the tape, computed by the surface from real marks. */
+  take?: string | null;
   /** Discussion owned above the resettable provider — survives remounts. */
   captions: Caption[];
   onCaption: (caption: Caption) => void;
@@ -631,6 +634,13 @@ export function HettyCallSession({ desk, liveMode, captions, onCaption, saveStat
     return () => window.removeEventListener(LINE_SIGNAL_EVENT, onSignal);
   }, [live, ringing, endCall, cancelRing]);
 
+  /* Ring-on-arrival: the foyer's "Ring Hetty" leaves a one-shot note; the
+     line lifts on mount. Failure paths (unconfigured, mic refused) surface
+     through the same ring() guards as a manual ring. */
+  useEffect(() => {
+    if (consumeRingOnArrival('hetty')) void ringRef.current('fresh');
+  }, []);
+
   /* Truthful line states — only what real SDK or desk events support.
      Not speaking does not mean listening, especially muted or waiting. */
   const estimating = desk.state.stage === 'quoting' || desk.foreground.kind === 'pending';
@@ -667,16 +677,14 @@ export function HettyCallSession({ desk, liveMode, captions, onCaption, saveStat
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
-        <h2 id="call-title">Hetty Green <small>AI BROKER · BASE</small></h2>
+        <h2 id="call-title">Hetty Green <small>The Witch of Wall Street · AI broker on Base</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
         </span>
       </div>
+      {!live && !ringing && <BrokerLinePlate deskId="hetty" take={take} />}
       <p className={styles.callNote}>{callNote}</p>
-      {!live && !ringing && (
-        <p className={styles.callHint} title="Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">Say the trade — Hetty fills the ticket and reads it back before anything is filed.</p>
-      )}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
@@ -692,8 +700,8 @@ export function HettyCallSession({ desk, liveMode, captions, onCaption, saveStat
           </>
         )}
         {!live && !ringing && captions.length === 0 && (
-          <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')} title="A live conversation — Hetty talks back and works the ticket with you. Just filling the ticket with no call? Use “Fill ticket by voice” on the ticket.">
-            Talk it through with Hetty
+          <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
+            Ring Hetty
           </button>
         )}
         {ringing && !live && (
@@ -724,11 +732,8 @@ export function HettyCallSession({ desk, liveMode, captions, onCaption, saveStat
       </div>
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
-          {lastUser && <p className={styles.captionLine}><span>You said.</span> {lastUser.text}</p>}
-          {lastAgent && <p className={styles.captionLine} data-voice="hetty"><span>Hetty replied.</span> {lastAgent.text}</p>}
-          {applied && <p className={styles.captionApplied}>{applied}</p>}
-          {discussion && <p className={styles.captionApplied}>{discussion}</p>}
-          {captions.length > 2 && (
+          <LineCaptions captions={captions} brokerName="Hetty" applied={applied} discussion={discussion} />
+          {captions.length > 4 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>
               <ol>
@@ -753,7 +758,7 @@ export function HettyCallSession({ desk, liveMode, captions, onCaption, saveStat
         </p>
       )}
       <p className={styles.callFoot} title={auth.enabled ? 'Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : undefined}>
-        Mic stays off until you talk — nothing is filed without your review.
+        Mic stays off until you ring. Voice fills the slip — only you can sign.
       </p>
     </section>
   );

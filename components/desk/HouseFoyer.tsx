@@ -2,31 +2,40 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowRight } from 'lucide-react';
+import { ArrowRight, Phone } from 'lucide-react';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import type { EntryIntent } from '@/lib/house-entry';
-import { NIGHT_DESK_FIXTURES, type NightDeskAmount, type NightDeskStage } from '@/lib/night-desk-fixtures';
+import { useMarketClock } from '@/lib/use-market-clock';
+import { signatureLine } from '@/lib/desk-notes';
+import { BROKER_VOICE } from '@/lib/desk/broker-voice';
+import { brokerTake } from '@/lib/desk/broker-take';
+import { requestRingOnArrival } from '@/lib/trading/line-signal';
+import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
+import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
+import { offeringForInstrument } from '@/lib/desk/offerings';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
+import { BrokerTake } from './BrokerLine';
 import foyerStyles from './HouseFoyer.module.css';
 
-type DemoPhase = 'idle' | 'writing' | 'ready';
+type WireMark = { key: string; rail: 'BASE' | 'SOL'; mark: DeskMark };
 
-/** Illustrative foyer loop — labeled example, not a live venue quote. */
-const EXAMPLE_QUOTES = {
-  '100': { ...NIGHT_DESK_FIXTURES.quotes['100'], receive: '0.490 Apple units', route: 'Illustrative house quotation' },
-  '50': { ...NIGHT_DESK_FIXTURES.quotes['50'], receive: '0.245 Apple units', route: 'Illustrative house quotation' },
-} as const;
+/** The house-book instruction a wire mark stands for — the plain underlying ticker. */
+function instructionForMark(mark: DeskMark): string {
+  return offeringForInstrument(mark.instrumentId)?.underlyingSymbol
+    ?? mark.symbol.replace(/[a-z]+$/, '');
+}
 
 /**
- * Claflin foyer — Sylva-shaped: one composition, a touchable central subject
- * (mini slip demo), plain product sentence, and catalog-led desk entry.
+ * Claflin foyer — the market and the brokers' lines are the hero: a live
+ * market clock, the tape, and one card per desk whose line is connected.
  */
 export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void }) {
   const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
+  const lineDesks = openDesks.filter(desk => DESK_CAPABILITIES[desk.id].voice && BROKER_VOICE[desk.id]);
 
   /* Same landing discipline as the desk rooms — focus the work, not the chrome. */
   const mainRef = useRef<HTMLElement>(null);
@@ -37,81 +46,39 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     }
   }, []);
 
-  const [phase, setPhase] = useState<DemoPhase>('idle');
-  const [amount, setAmount] = useState<NightDeskAmount>('100');
-  const [priorAmount, setPriorAmount] = useState<NightDeskAmount | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* The clock's line needs a Date — null on the server so SSR and first
+     paint agree on the fallback kicker. */
+  const clock = useMarketClock();
+  const jesseOpen = isOpenDesk('jesse');
+  const hettyMarks = useReferenceMarks('hetty');
+  const jesseMarksRead = useReferenceMarks(jesseOpen ? 'jesse' : 'hetty');
+  const jesseMarks = jesseOpen ? jesseMarksRead : null;
+  const marksFor = (id: HouseDeskId): readonly DeskMark[] =>
+    (id === 'hetty' ? hettyMarks.result?.marks : id === 'jesse' ? jesseMarks?.result?.marks : undefined) ?? [];
 
-  useEffect(() => () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
+  /* The house-book instruction lives here so a wire-mark click can write it. */
+  const [wireInstruction, setWireInstruction] = useState('');
 
-  useEffect(() => {
-    if (phase !== 'writing') return;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const finish = () => {
-      if (!media.matches) return;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setPhase('ready');
-    };
-    media.addEventListener('change', finish);
-    return () => media.removeEventListener('change', finish);
-  }, [phase]);
-
-  const runDemo = (next: NightDeskAmount) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPriorAmount(phase === 'ready' && amount !== next ? amount : null);
-    setAmount(next);
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setPhase('ready'); return; }
-    setPhase('writing');
-    timerRef.current = setTimeout(() => { timerRef.current = null; setPhase('ready'); }, 460);
-  };
-
-  const resetDemo = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setAmount('100');
-    setPriorAmount(null);
-    setPhase('idle');
-  };
-
-  const stage: NightDeskStage = phase === 'idle'
-    ? 'arrival'
-    : phase === 'writing'
-      ? 'conversation'
-      : priorAmount !== null ? 'revised' : 'quote';
-  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage, still: false });
+  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false });
 
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
 
   const enter = (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
     window.scrollTo({ top: 0, behavior: 'instant' });
     onEnter(id);
   };
 
-  const quote = EXAMPLE_QUOTES[amount];
-  const priorQuote = priorAmount ? EXAMPLE_QUOTES[priorAmount] : null;
-  const writing = phase === 'writing';
-  const statusText = phase === 'writing'
-    ? 'Writing the estimate…'
-    : phase === 'ready'
-      ? `Example estimate ready — ${quote.spend} for ${quote.receive}.`
-      : 'No example running.';
+  const ring = (id: HouseDeskId) => () => {
+    requestRingOnArrival(id);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    onEnter(id);
+  };
 
   return (
-    <div className={foyerStyles.foyer} data-demo-phase={phase}>
-      {!sharedScene && <NightDeskScene view="desk" stage={stage} layout="foyer" />}
+    <div className={foyerStyles.foyer}>
+      {!sharedScene && <NightDeskScene view="desk" stage="arrival" layout="foyer" />}
 
       <header className={foyerStyles.header}>
         <Link href="/" className={foyerStyles.brand} aria-label="Claflin home">
@@ -141,136 +108,104 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
       <main id="main-content" tabIndex={-1} ref={mainRef} className={foyerStyles.main}>
         <section className={foyerStyles.hero} aria-labelledby="foyer-title">
           <div className={foyerStyles.copy}>
-            <p className={foyerStyles.kicker}>A LITTLE DISTANCE FROM THE MARKET</p>
+            <p className={foyerStyles.kicker} data-exchange={clock?.exchange ?? 'pending'}>
+              <span className={foyerStyles.clockLamp} aria-hidden="true" />
+              {clock?.line ?? 'THE ONCHAIN BOOK NEVER CLOSES'}
+            </p>
             <h1 id="foyer-title" className={foyerStyles.title}>
-              A clearer view.<br />
-              Before you trade.
+              The exchange closes.<br />
+              This book doesn’t.
             </h1>
             <p className={foyerStyles.lede}>
-              Talk or type a tokenized-stock instruction. Compare the verified
-              offerings, choose the desk that can carry yours, and review a real
-              venue estimate before you decide.
+              Tokenized US stocks trade onchain around the clock. Ring a broker,
+              say the trade, and watch the slip get written — with a real venue
+              estimate before anything is filed.
             </p>
             <div className={foyerStyles.actions}>
-              <a href="#house-offerings" className={foyerStyles.primary}>
-                Choose an offering
+              <a href="#house-offerings" className={foyerStyles.secondary}>
+                Browse the house book
                 <ArrowRight size={16} aria-hidden="true" />
               </a>
-              <button
-                type="button"
-                className={foyerStyles.tryExample}
-                aria-controls="foyer-example"
-                disabled={writing}
-                onClick={() => runDemo('100')}
-              >
-                Try an example
-              </button>
             </div>
             <p className={foyerStyles.reassurance}>
-              Paper by default. Nothing moves without your approval.
-              {liveAvailable ? ' Live settle appears only where the selected desk supports it.' : ''}
+              Paper by default. Voice fills the slip — only you can sign.
             </p>
           </div>
 
-          <div className={foyerStyles.demo}>
-            <p className={foyerStyles.sceneCaption}>
-              THE DESK IS YOURS.
-              <span>An instruction. An estimate. A moment to decide.</span>
-            </p>
-            <div className={foyerStyles.example} id="foyer-example">
-              <p className={foyerStyles.exampleKicker}>ILLUSTRATIVE EXAMPLE · NOT A LIVE QUOTE</p>
-              <p className={foyerStyles.exampleStatus} role="status">{statusText}</p>
-              {phase === 'idle' && (
-                <div className={foyerStyles.exampleIdle}>
-                  <p>Try an instruction. Watch the desk write it down.</p>
-                  <button type="button" onClick={() => runDemo('100')} disabled={writing}>
-                    Quote 100 USDC of Apple
-                  </button>
-                </div>
-              )}
-              {phase !== 'idle' && (
-                <div className={foyerStyles.slips} data-revised={priorQuote ? 'true' : undefined}>
-                  {priorQuote && (
-                    <article className={foyerStyles.slipPrior} aria-label="Superseded example slip">
-                      <p className={foyerStyles.slipPriorStamp}>SUPERSEDED EXAMPLE</p>
-                      <p className={foyerStyles.slipPriorLine}>
-                        <s>{priorQuote.spend} → {priorQuote.receive}</s>
-                      </p>
-                    </article>
-                  )}
-                  <article className={foyerStyles.slip} data-phase={phase} aria-label="Example quotation slip">
-                    {phase === 'writing' ? (
-                      <p className={foyerStyles.slipWriting}>Writing the estimate…</p>
-                    ) : (
-                      <>
-                        <p className={foyerStyles.slipInstrument}>Apple — illustrative exposure</p>
-                        <dl className={foyerStyles.slipBody}>
-                          <div>
-                            <dt>Spend</dt>
-                            <dd>{quote.spend}</dd>
-                          </div>
-                          <div>
-                            <dt>Receive</dt>
-                            <dd>{quote.receive}</dd>
-                          </div>
-                          <div>
-                            <dt>Reference</dt>
-                            <dd>{quote.id}</dd>
-                          </div>
-                        </dl>
-                        <p className={foyerStyles.slipRoute}>{quote.route}</p>
-                        <p className={foyerStyles.slipFine}>{NIGHT_DESK_FIXTURES.quoteDisclosure}</p>
-                        <div className={foyerStyles.slipActions}>
-                          {amount === '100' && (
-                            <button type="button" onClick={() => runDemo('50')} disabled={writing}>
-                              Make that 50 USDC
-                            </button>
-                          )}
-                          <button type="button" onClick={resetDemo} disabled={writing}>
-                            Clear example
-                          </button>
-                        </div>
-                      </>
+          {lineDesks.length > 0 && (
+            <div className={foyerStyles.lines}>
+              {lineDesks.map(desk => {
+                const details = BROKER_VOICE[desk.id]!;
+                const signature = signatureLine(desk.id);
+                return (
+                  <article key={desk.id} className={foyerStyles.lineCard}>
+                    <header className={foyerStyles.lineCardHeader}>
+                      <h2 className={foyerStyles.lineName}>{desk.name}</h2>
+                      <p className={foyerStyles.lineEpithet}>{details.epithet}</p>
+                    </header>
+                    <p className={foyerStyles.lineRail}>{details.rail}</p>
+                    {signature && (
+                      <blockquote className={foyerStyles.lineQuote}>
+                        <p>{signature.text}</p>
+                        <cite>— {signature.attribution}</cite>
+                      </blockquote>
                     )}
+                    <p className={foyerStyles.lineLens}>{details.lens}</p>
+                    <BrokerTake deskId={desk.id} take={brokerTake(desk.id, marksFor(desk.id), clock)} className={foyerStyles.lineTake} />
+                    <div className={foyerStyles.lineActions}>
+                      <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
+                        <span className={foyerStyles.lineLamp} aria-hidden="true" />
+                        <Phone size={15} aria-hidden="true" />
+                        Ring {desk.shortName}
+                      </button>
+                      <a
+                        href={`/?desk=${desk.id}`}
+                        className={foyerStyles.typeInstead}
+                        onClick={enter(desk.id)}
+                      >
+                        Open the desk and type instead
+                      </a>
+                    </div>
                   </article>
-                </div>
-              )}
+                );
+              })}
             </div>
-          </div>
-
-          <div className={foyerStyles.heroRail}>
-            <span>01 / THE ARRIVAL</span>
-            <a href="#house-method">
-              How the desk works
-              <ArrowDown size={12} aria-hidden="true" />
-            </a>
-          </div>
+          )}
         </section>
 
-        <HouseOfferings onEnter={onEnter} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={symbol => {
+          setWireInstruction(symbol);
+          document.getElementById('house-offerings')?.scrollIntoView?.({ block: 'start' });
+        }} />
+
+        <HouseOfferings
+          onEnter={onEnter}
+          instruction={wireInstruction}
+          onInstructionChange={setWireInstruction}
+        />
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
-          <h2 id="house-method-title">Your instruction. Your decision.</h2>
+          <h2 id="house-method-title">How the line works.</h2>
           <div className={foyerStyles.methodRows}>
             <div className={foyerStyles.methodRow}>
-              <span className={foyerStyles.methodIndex}>01 / The instruction</span>
+              <span className={foyerStyles.methodIndex}>01 / The call</span>
               <div>
-                <h3>Say it in your own words.</h3>
-                <p>Talk or type a supported tokenized-stock instruction in plain language. The desk puts the details in front of you for review.</p>
+                <h3>Say it like you would to a broker.</h3>
+                <p>Ring the desk and talk, or type. The broker writes your instruction onto the slip as you go.</p>
               </div>
             </div>
             <div className={foyerStyles.methodRow}>
-              <span className={foyerStyles.methodIndex}>02 / The estimate</span>
+              <span className={foyerStyles.methodIndex}>02 / The slip</span>
               <div>
-                <h3>Put the numbers on paper.</h3>
-                <p>A real venue estimate lands on the slip — priced at the moment you ask, time-sensitive like any quote. Nothing is placed.</p>
+                <h3>A real price, the moment you ask.</h3>
+                <p>The venue’s estimate lands on the slip, time-stamped and time-limited like any quotation.</p>
               </div>
             </div>
             <div className={foyerStyles.methodRow}>
-              <span className={foyerStyles.methodIndex}>03 / The decision</span>
+              <span className={foyerStyles.methodIndex}>03 / Your signature</span>
               <div>
-                <h3>Nothing moves without you.</h3>
-                <p>Review the paper first. {liveAvailable
+                <h3>Only you can sign.</h3>
+                <p>{liveAvailable
                   ? 'File a paper record, or choose live settlement where the selected desk supports it — only with your approval.'
                   : 'File a paper record only when you choose. No real funds move.'}</p>
               </div>
@@ -281,7 +216,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
       <footer className={foyerStyles.footer}>
         <HouseMark small className={foyerStyles.footerMark} />
-        <span>THE PIT IS DOWNSTAIRS. THIS DESK IS FOR DECIDING.</span>
+        <span>THE TAPE RUNS ALL NIGHT. THE HOUSE KEEPS THE RECORD.</span>
         {planned.length > 0 && (
           <span className={foyerStyles.footerPlanned}>
             Later — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
@@ -289,5 +224,111 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
         )}
       </footer>
     </div>
+  );
+}
+
+/**
+ * The live wire — reference marks from every desk that publishes them,
+ * merged into one band. Indicative observations only: ticks are computed
+ * from successive real readings, never invented.
+ */
+type MarksRead = { result: MarksResult | null; failed: boolean };
+
+function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null): WireMark[] {
+  return [
+    ...(hetty.result?.marks ?? []).map(mark => ({ key: `base:${mark.instrumentId}`, rail: 'BASE' as const, mark })),
+    ...(jesse?.result?.marks ?? []).map(mark => ({ key: `sol:${mark.instrumentId}`, rail: 'SOL' as const, mark })),
+  ];
+}
+
+function LiveWire({ hetty, jesse, onPick }: { hetty: MarksRead; jesse: MarksRead | null; onPick: (symbol: string) => void }) {
+  const wireMarks = wireMarksOf(hetty, jesse);
+  const failed = hetty.failed && (jesse?.failed ?? true);
+
+  const [ticks, setTicks] = useState<Record<string, 'up' | 'down'>>({});
+  const [seen, setSeen] = useState<{ hetty: MarksResult | null; jesse: MarksResult | null }>({ hetty: hetty.result, jesse: jesse?.result ?? null });
+
+  /* Compare successive real readings only — a tick exists only when a refresh
+     actually moved the price. */
+  if (hetty.result !== seen.hetty || (jesse?.result ?? null) !== seen.jesse) {
+    const prior = wireMarksOf({ result: seen.hetty, failed: false }, { result: seen.jesse, failed: false });
+    setSeen({ hetty: hetty.result, jesse: jesse?.result ?? null });
+    const nextTicks: Record<string, 'up' | 'down'> = {};
+    for (const wire of wireMarks) {
+      const old = prior.find(p => p.key === wire.key);
+      const price = markPrice(wire.mark);
+      const before = old ? markPrice(old.mark) : null;
+      if (price && before && price !== before) {
+        nextTicks[wire.key] = Number(price) > Number(before) ? 'up' : 'down';
+      }
+    }
+    if (Object.keys(nextTicks).length > 0) setTicks(nextTicks);
+  }
+
+  useEffect(() => {
+    if (Object.keys(ticks).length === 0) return;
+    const timer = setTimeout(() => setTicks({}), 1200);
+    return () => clearTimeout(timer);
+  }, [ticks]);
+
+  return (
+    <section className={foyerStyles.wire} aria-label="Live reference marks">
+      <span
+        className={foyerStyles.wireLabel}
+        title="Indicative reference marks, refreshed every two minutes. Your estimate comes from the venue when you ask."
+      >
+        LIVE REFERENCE MARKS
+      </span>
+      {wireMarks.length === 0 ? (
+        <p className={foyerStyles.wireNote} role={failed ? 'status' : undefined}>
+          {failed ? 'Tape unavailable — estimates unaffected.' : 'Reading the tape…'}
+        </p>
+      ) : (
+        <div className={foyerStyles.wireWindow}>
+          <div className={foyerStyles.wireTrack}>
+            {[0, 1].map(copy => (
+              <div key={copy} className={foyerStyles.wireCopy} aria-hidden={copy === 1}>
+                {wireMarks.map(wire => (
+                  <WireItem
+                    key={wire.key}
+                    wire={wire}
+                    tick={ticks[wire.key]}
+                    disabled={copy === 1}
+                    onPick={onPick}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WireItem({ wire, tick, disabled, onPick }: { wire: WireMark; tick?: 'up' | 'down'; disabled?: boolean; onPick: (symbol: string) => void }) {
+  const price = markPrice(wire.mark);
+  const stale = wire.mark.reference.status === 'stale';
+  const instruction = instructionForMark(wire.mark);
+  const gapBps = wire.mark.reference.status === 'observed' ? Number(wire.mark.stockReference?.differenceBps ?? NaN) : NaN;
+  const gap = Number.isFinite(gapBps) ? `${gapBps > 0 ? '+' : gapBps < 0 ? '−' : ''}${Math.abs(gapBps).toFixed(1)} bps` : null;
+  return (
+    <button
+      type="button"
+      className={foyerStyles.wireItem}
+      disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onClick={() => onPick(instruction)}
+      aria-label={`${wire.mark.symbol} ${price ? `$${price}` : 'reference unavailable'} on ${wire.rail === 'BASE' ? 'Base' : 'Solana'}`}
+    >
+      <span className={foyerStyles.wireSymbol}>{wire.mark.symbol}</span>
+      <span className={foyerStyles.wirePrice} data-tick={tick}>
+        {price ? `$${price}` : '—'}
+        {tick && <span className={foyerStyles.wireTickGlyph} aria-hidden="true">{tick === 'up' ? '▲' : '▼'}</span>}
+      </span>
+      <span className={foyerStyles.wireRail}>{wire.rail}</span>
+      {gap && <span className={foyerStyles.wireGap} title="vs stock reference">{gap}</span>}
+      {stale && <span className={foyerStyles.wireStale}>STALE</span>}
+    </button>
   );
 }

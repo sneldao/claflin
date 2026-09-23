@@ -8,6 +8,20 @@
 
 **Governing idea:** you are not looking at a trading application with antique styling. You are giving an instruction to a house that keeps a record.
 
+## Bringing the house to life
+
+**Approved 2026-09-23. Supersedes any line below that reads as a ban on energy.** The foundation (honest speech, paper/live separation, explicit authorization, readable HTML) was right and stays. Its tone was not: the house described itself as a place *away* from the market ("a little distance", "the pit is downstairs", "nothing moves"), and the surfaces read as slick but unengaging. Claflin is a voice-first 1920s brokerage for one of the most exciting new instruments in markets. It should feel like the tape is running and the broker has a view.
+
+What changes:
+
+1. **The market is the protagonist.** Tokenized stocks trade onchain around the clock while the exchange sleeps. Say so, with real data: live reference marks on the first screen, a market clock that states whether the listing exchange is open and that the onchain book is, and — where a desk has it — the onchain-versus-reference gap as a headline, not an appendix. Motion driven by real observations (a tick, a changed mark, a widening gap) is encouraged. Motion that implies data we do not have is still forbidden.
+2. **Voice is the front door, not a sidebar.** The broker's line is the hero of the foyer and of each desk. Ringing a broker from the foyer opens their desk with the line already lifting. The ticket is the slip the broker writes while you talk; it remains fully usable by hand.
+3. **Brokers have character and a point of view.** Hetty Green and Jesse Livermore are among the most colourful figures in market history; use it. Each broker may have a signature line, a period voice, and a stated way of looking at the tape (Hetty: downside first; Jesse: price action and timing). A view is framed as how *they* would examine a question — education, never a recommendation to trade. Quotes stay fact-checked and attributed; history is now welcome flavour, not optional small print.
+4. **Say the boundary once, clearly, where it matters.** Paper/live mode is stated in the mode stamp and at the consequential action. Do not repeat "not a quote / nothing moves / reference, not your estimate" in every tooltip, caption and aria-label. One clear line beats sixteen defensive ones.
+5. **Energy, not incentive.** Still no XP, streaks, turnover rewards or balance thresholds (see Continuity, not consumption). Excitement comes from the market and the brokers, never from nudging the client to trade more.
+
+Unchanged and non-negotiable: voice cannot sign, submit or reconcile; paper records are never fills; fixtures are never presented as live data; every spoken line is true of what the desk observed; the full journey works without audio, motion or a pointer.
+
 ## Desk views (Room / Compact)
 
 **Approved 2026-09-17; nomenclature locked 2026-09-20.** The room does not unlock; it becomes yours through the work you choose to keep. This decision supersedes older language that treats every spatial object as decorative weather or limits Jesse to a new nameplate and comparison card. It does not weaken trading safeguards.

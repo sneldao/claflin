@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { DeskInstrument } from './DeskInstrument';
-import { DeskObjects } from './BrokerageRoom';
+import { DeskObjects, TapeMachine } from './BrokerageRoom';
+import { TickerTape } from './TickerTape';
 import { DeskRoom } from './DeskRoom';
 import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
@@ -23,7 +24,14 @@ import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MODE_HINTS } from '@/lib/desk/ui-copy';
 import { ModeStamp } from './ModeStamp';
+import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
+import type { DeskMark } from '@/lib/trading/marks-shared';
+import { brokerTake } from '@/lib/desk/broker-take';
+import { useMarketClock } from '@/lib/use-market-clock';
 import styles from './WorkingDesk.module.css';
+import ticker from './DeskTicker.module.css';
+
+const NO_MARKS: DeskMark[] = [];
 
 const RoomPresentation = dynamic(
   () => import('./RoomPresentation').then(m => m.RoomPresentation),
@@ -50,6 +58,12 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
   const offeringApplied = useRef<string | null>(null);
+
+  const marks = useReferenceMarks('jesse');
+  const clock = useMarketClock();
+  const deskMarks = marks.result?.marks ?? NO_MARKS;
+  const take = brokerTake('jesse', deskMarks, clock);
+  const selectedMark = deskMarks.find(mark => mark.instrumentId === jesse.state.draft.instrumentId) ?? null;
 
   const presentationMode = jesse.state.presentation.mode;
   const roomView = presentationMode === 'room';
@@ -206,10 +220,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             <DeskObjects />
           </>
         )}
-        <JesseTicket jesse={jesse} spokenLine={spoken} carriedNote={carriedNote} />
-        <JesseLedger jesse={jesse} />
         <aside className={styles.support} aria-label="Jesse’s desk">
-          <JesseCall jesse={jesse} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />
+          <JesseCall jesse={jesse} take={take} onLiveChange={setJesseLive} onUserSpoken={setSpoken} />
           <JesseCommandBar jesse={jesse} onHeard={setSpoken} />
           {!roomView && (
             <div className={styles.instrumentShell} data-stage={instrumentStage}>
@@ -224,11 +236,29 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             </div>
           )}
           <div className={styles.deskInscription}>
-            <span>The pit is downstairs.</span>
-            <p>This desk is for deciding.</p>
+            <span>The tape runs all night.</span>
+            <p>The house keeps the record.</p>
           </div>
         </aside>
+        <JesseTicket jesse={jesse} spokenLine={spoken} carriedNote={carriedNote} mark={selectedMark} />
+        <JesseLedger jesse={jesse} />
       </div>
+      {!roomView && (
+        <div className={ticker.tickerStation}>
+          <TapeMachine />
+          <TickerTape
+            marks={deskMarks}
+            failed={marks.failed}
+            stale={marks.stale}
+            asOf={marks.result?.asOf}
+            onSelect={id => {
+              void jesse.edit({ instrumentId: id as SolanaInstrumentId }, 'instrument');
+              scrollToDeskTarget('instruction', { focusId: 'amount' });
+            }}
+            disabled={jesse.inFlight === 'quote'}
+          />
+        </div>
+      )}
     </>
   );
 

@@ -8,6 +8,8 @@ import { usePaperSync } from '@/lib/trading/usePaperSync';
 import { useLiveJournal } from '@/lib/trading/useLiveJournal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { deskNoteOfTheDay } from '@/lib/desk-notes';
+import { brokerTake } from '@/lib/desk/broker-take';
+import { useMarketClock } from '@/lib/use-market-clock';
 import { getBrokerMethod, PRACTICE_RETURN_PARAM, PRACTICE_RETURN_VALUE } from '@/lib/education';
 import { EducationTopicTrigger } from './EducationTopic';
 import { appliedTicketLine, deskNoteEducationTopic } from '@/lib/trading/voice-tools';
@@ -47,13 +49,12 @@ function HettyDoorShell() {
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" aria-busy="true">
       <div className={styles.brokerPlate}>
-        <h2 id="call-title">Hetty Green <small>AI BROKER · BASE</small></h2>
+        <h2 id="call-title">Hetty Green <small>The Witch of Wall Street · AI broker on Base</small></h2>
         <span className={styles.callLine}>DIRECT LINE</span>
       </div>
       <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
-      <p className={styles.callHint}>Say the trade — Hetty fills the ticket and reads it back before anything is filed.</p>
       <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
-      <p className={styles.callFoot}>Mic stays off until you talk — nothing is filed without your review.</p>
+      <p className={styles.callFoot}>Mic stays off until you ring. Voice fills the slip — only you can sign.</p>
     </section>
   );
 }
@@ -110,6 +111,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     rememberSlipDedication('agent', text);
   }, []);
   const marks = useReferenceMarks(desk.deskId);
+  const clock = useMarketClock();
+  const take = brokerTake('hetty', marks.result?.marks ?? NO_MARKS, clock);
   const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
   const [sharedLoaded, setSharedLoaded] = useState(false);
@@ -261,10 +264,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             <DeskObjects />
           </>
         )}
-        <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} carriedNote={carriedNote} />
-        <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
         <aside className={styles.support} aria-label="The Base desk’s direct line">
-          <HettyCall desk={desk} liveMode={liveMode} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />
+          <HettyCall desk={desk} liveMode={liveMode} take={take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />
           {!roomView && (
             <div className={styles.instrumentShell} data-stage={instrumentStage}>
               <div className={styles.instrument} data-stage={instrumentStage}>
@@ -278,8 +279,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             </div>
           )}
           <div className={styles.deskInscription}>
-            <span>The pit is downstairs.</span>
-            <p>This desk is for deciding.</p>
+            <span>The tape runs all night.</span>
+            <p>The house keeps the record.</p>
             <DeskNoteLine deskId={desk.deskId} muted={hettyLive} />
           </div>
           <details className={styles.aboutHetty}>
@@ -294,6 +295,8 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             </div>
           </details>
         </aside>
+        <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} carriedNote={carriedNote} />
+        <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
       </div>
       {!roomView && (
         <>

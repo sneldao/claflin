@@ -48,7 +48,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     coverages: Object.freeze([
       Object.freeze({
         mandate: MARKET_MANDATES['backed-xstocks'],
-        adapters: Object.freeze({ quote: 'jupiter', marks: null, execution: 'jupiter-live', voice: 'elevenlabs-convai' }),
+        adapters: Object.freeze({ quote: 'jupiter', marks: 'jupiter', execution: 'jupiter-live', voice: 'elevenlabs-convai' }),
       }),
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),
@@ -83,7 +83,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
 
 const EXTENDED_CAPABILITIES: Readonly<Record<HouseDeskId, { marks: boolean; accountSync: boolean; evidence: readonly string[] }>> = Object.freeze({
   hetty: Object.freeze({ marks: true, accountSync: true, evidence: [] }),
-  jesse: Object.freeze({ marks: false, accountSync: false, evidence: ['comparison', 'venue-duplex', 'prestocks'] }),
+  jesse: Object.freeze({ marks: true, accountSync: false, evidence: ['comparison', 'venue-duplex', 'prestocks'] }),
   isabel: Object.freeze({ marks: false, accountSync: false, evidence: [] }),
   arbitrum: Object.freeze({ marks: false, accountSync: false, evidence: [] }),
 });

@@ -35,7 +35,8 @@ import {
   setJesseInstructionResult,
 } from '@/lib/jesse/voice-tools';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
-import { LINE_SIGNAL_EVENT } from '@/lib/trading/line-signal';
+import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
+import { BrokerLinePlate, LineCaptions } from './BrokerLine';
 import styles from './WorkingDesk.module.css';
 
 type ToolParams = Record<string, unknown>;
@@ -79,6 +80,7 @@ function receiverClick(): void {
 
 function JesseCallInner({
   jesse,
+  take = null,
   captions,
   onCaption,
   onClearDiscussion,
@@ -92,6 +94,7 @@ function JesseCallInner({
   onSessionFailed,
 }: {
   jesse: JesseDesk;
+  take?: string | null;
   captions: Caption[];
   onCaption: (caption: Caption) => void;
   onClearDiscussion: () => void;
@@ -448,6 +451,13 @@ function JesseCallInner({
     return () => window.removeEventListener(LINE_SIGNAL_EVENT, onSignal);
   }, [live, ringing, endCall, cancelRing]);
 
+  /* Ring-on-arrival: the foyer's "Ring Jesse" leaves a one-shot note; the
+     line lifts on mount. Failure paths (unconfigured, mic refused) surface
+     through the same ring() guards as a manual ring. */
+  useEffect(() => {
+    if (consumeRingOnArrival('jesse')) void ringRef.current('fresh');
+  }, []);
+
   const estimating = jesse.inFlight === 'quote' || jesse.foreground.kind === 'pending';
   const inReview = jesse.foreground.kind === 'quotation';
   const speaking = live && conversation.isSpeaking;
@@ -482,16 +492,14 @@ function JesseCallInner({
   return (
     <section id="jesse-line" className={styles.call} aria-labelledby="jesse-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
-        <h2 id="jesse-call-title">Jesse Livermore <small>AI BROKER · SOLANA</small></h2>
+        <h2 id="jesse-call-title">Jesse Livermore <small>The Boy Plunger · AI broker on Solana</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
         </span>
       </div>
+      {!live && !ringing && <BrokerLinePlate deskId="jesse" take={take} />}
       <p className={styles.callNote}>{callNote}</p>
-      {!live && !ringing && (
-        <p className={styles.callHint}>Say the trade — Jesse fills the ticket and reads it back before anything is filed. Paper only.</p>
-      )}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
@@ -508,7 +516,7 @@ function JesseCallInner({
         )}
         {!live && !ringing && captions.length === 0 && (
           <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
-            Talk it through with Jesse
+            Ring Jesse
           </button>
         )}
         {ringing && !live && (
@@ -539,16 +547,25 @@ function JesseCallInner({
       </div>
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
-          {lastUser && <p className={styles.captionLine}><span>You said.</span> {lastUser.text}</p>}
-          {lastAgent && <p className={styles.captionLine} data-voice="jesse"><span>Jesse replied.</span> {lastAgent.text}</p>}
-          {applied && <p className={styles.captionApplied}>{applied}</p>}
-          {discussion && <p className={styles.captionApplied}>{discussion}</p>}
+          <LineCaptions captions={captions} brokerName="Jesse" applied={applied} discussion={discussion} />
+          {captions.length > 4 && (
+            <details className={styles.captionHistory}>
+              <summary>Conversation ({captions.length})</summary>
+              <ol>
+                {captions.map((c, i) => (
+                  <li key={`${c.at}-${i}`} data-voice={c.role}>
+                    <span>{c.role === 'user' ? 'You' : 'Jesse'}.</span> {c.text}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
         </div>
       )}
       {endNote && !live && !ringing && <p className={styles.callFoot} role="status">{endNote}</p>}
       {callError && <p className={styles.callError} role="alert">{callError}</p>}
       {!live && !ringing && !endNote && !callError && (
-        <p className={styles.callFoot}>Mic stays off until you talk — nothing is filed without your review.</p>
+        <p className={styles.callFoot}>Mic stays off until you ring. Voice fills the slip — only you can sign.</p>
       )}
     </section>
   );
@@ -560,11 +577,13 @@ function JesseCallInner({
  */
 export const JesseCall = memo(function JesseCall({
   jesse,
+  take = null,
   onLiveChange,
   onUserSpoken,
   onAgentSpoken,
 }: {
   jesse: JesseDesk;
+  take?: string | null;
   onLiveChange?: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -588,6 +607,7 @@ export const JesseCall = memo(function JesseCall({
     <ConversationProvider key={sessionKey}>
       <JesseCallInner
         jesse={jesse}
+        take={take}
         captions={captions}
         onCaption={(c) => setCaptions(prev => appendCaption(prev, c))}
         onClearDiscussion={() => { setCaptions([]); setEndNote(null); setCallError(null); }}
