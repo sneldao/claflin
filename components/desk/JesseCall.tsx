@@ -83,6 +83,7 @@ function receiverClick(): void {
 function JesseCallInner({
   jesse,
   take = null,
+  compactPlate = false,
   captions,
   onCaption,
   onClearDiscussion,
@@ -98,6 +99,7 @@ function JesseCallInner({
 }: {
   jesse: JesseDesk;
   take?: string | null;
+  compactPlate?: boolean;
   captions: Caption[];
   onCaption: (caption: Caption) => void;
   onClearDiscussion: () => void;
@@ -516,7 +518,7 @@ function JesseCallInner({
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
         </span>
       </div>
-      {!live && !ringing && <BrokerLinePlate deskId="jesse" take={take} />}
+      {!live && !ringing && <BrokerLinePlate deskId="jesse" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
@@ -597,6 +599,7 @@ function JesseCallInner({
 export const JesseCall = memo(function JesseCall({
   jesse,
   take = null,
+  compactPlate = false,
   onLiveChange,
   onUserSpoken,
   onAgentSpoken,
@@ -604,6 +607,7 @@ export const JesseCall = memo(function JesseCall({
 }: {
   jesse: JesseDesk;
   take?: string | null;
+  compactPlate?: boolean;
   onLiveChange?: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
@@ -629,6 +633,7 @@ export const JesseCall = memo(function JesseCall({
       <JesseCallInner
         jesse={jesse}
         take={take}
+        compactPlate={compactPlate}
         captions={captions}
         onCaption={(c) => setCaptions(prev => appendCaption(prev, c))}
         onClearDiscussion={() => { setCaptions([]); setEndNote(null); setCallError(null); }}

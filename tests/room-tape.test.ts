@@ -71,6 +71,20 @@ describe('room tape', () => {
     })), '');
   });
 
+  it('leads with percent-vs-stock while keeping full legs in the accessible name', () => {
+    const html = renderToStaticMarkup(createElement(RoomTape, {
+      ...jesseTape,
+      marks: [xMark],
+      clock: openClock,
+      onSelect: noop,
+    }));
+    /* Visible row: one line, no bps jargon. 13.6 bps -> +0.14% vs stock. */
+    assert.match(html, /\+0\.14% vs stock/);
+    /* Full venue-vs-reference legs survive in aria-label + title for details. */
+    assert.match(html, /aria-label="AAPLx \$227\.41 on Solana/);
+    assert.match(html, /stock ref/);
+  });
+
   it('says Tonight’s tape after the close and labels a stale reading', () => {
     const html = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,

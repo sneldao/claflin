@@ -13,6 +13,7 @@ export function ReceiverShell({
   brokerName,
   lineTargetId,
   live,
+  hideCue = false,
 }: {
   stage: DeskInstrumentStage;
   label: string;
@@ -20,6 +21,8 @@ export function ReceiverShell({
   brokerName: string;
   lineTargetId: string;
   live: boolean;
+  /** Room already says the H shortcut once at the line foot — hide the duplicate. */
+  hideCue?: boolean;
 }) {
   return (
     <div className={styles.instrumentShell} data-stage={stage}>
@@ -34,7 +37,7 @@ export function ReceiverShell({
           lineTargetId={lineTargetId}
         />
       </div>
-      {!live && (
+      {!live && !hideCue && (
         <p className={styles.receiverCue}>
           {RECEIVER_CUE_LEAD} <kbd>H</kbd>{RECEIVER_CUE_TAIL}
         </p>

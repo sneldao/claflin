@@ -35,6 +35,15 @@ describe('broker line plate', () => {
     assert.match(html, /Jesse Livermore/);
     assert.doesNotMatch(html, /Jesse’s take|not advice/);
   });
+
+  it('collapses the signature behind a disclosure in compact room mode', () => {
+    const raw = renderToStaticMarkup(createElement(BrokerLinePlate, { deskId: 'jesse', take: null, compact: true }));
+    /* Lens stays as the nameplate; the epigraph waits one tap away. */
+    assert.match(textOf(raw), /Reads the tape first/);
+    assert.match(raw, /<details/);
+    assert.match(raw, /Why Jesse reads the tape/);
+    assert.match(raw, /There is only one side to the stock market/);
+  });
 });
 
 describe('line captions', () => {

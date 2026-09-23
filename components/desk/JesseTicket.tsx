@@ -117,7 +117,7 @@ export const JesseTicket = memo(function JesseTicket({
         ? 'Jesse is pricing it.'
         : foreground.kind === 'quotation'
           ? 'Read it twice. Then it’s yours.'
-          : 'Say it. I’ll write it.';
+          : BLANK_SLIP_TITLE.jesse;
 
   const onFile = async () => {
     setLocalError(null);

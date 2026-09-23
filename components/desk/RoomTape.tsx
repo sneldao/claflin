@@ -65,6 +65,14 @@ export function RoomTape({
   );
 }
 
+function formatPctFromBps(raw: string | null): string | null {
+  const value = Number(raw);
+  if (raw === null || !Number.isFinite(value)) return null;
+  const pct = Math.abs(value) / 100;
+  const sign = value > 0 ? '+' : value < 0 ? '−' : '';
+  return `${sign}${pct.toFixed(2)}%`;
+}
+
 function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
   mark: DeskMark;
   priceLabel: string;
@@ -75,9 +83,12 @@ function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
   const bps = mark.stockReference?.differenceBps ?? null;
   const tick = useBpsTick(mark.instrumentId, bps);
   const ref = mark.stockReference;
+  /* Full legs stay in the accessible name + hover title; the visible row is
+     one line — price plus percent vs stock — so bps jargon never blocks. */
   const label = ref
     ? `${mark.symbol} $${price} ${priceLabel} · $${ref.priceUsd} stock ref · ${formatBps(bps, 'lower')}`
     : `${mark.symbol} $${price} ${priceLabel}${missingSecondLeg ? ` · ${missingSecondLeg}` : ''}`;
+  const pct = formatPctFromBps(bps);
   return (
     <li>
       <button
@@ -86,16 +97,14 @@ function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
         data-tick={tick ?? undefined}
         onClick={() => onSelect(mark.instrumentId)}
         aria-label={`${label} — write it on the slip`}
+        title={label}
       >
         <strong>{mark.symbol}</strong>
-        <span>${price} {priceLabel}</span>
-        {ref ? (
-          <>
-            <span>${ref.priceUsd} stock ref</span>
-            <span className={styles.roomTapeBps}>
-              {formatBps(bps, 'lower')}{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}
-            </span>
-          </>
+        <span>${price}</span>
+        {ref && pct ? (
+          <span className={styles.roomTapeBps}>
+            {pct} vs stock{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}
+          </span>
         ) : (
           missingSecondLeg && <span className={styles.roomTapeNoRef}>{missingSecondLeg}</span>
         )}

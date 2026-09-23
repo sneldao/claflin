@@ -20,9 +20,28 @@ export function BrokerTake({ deskId, take, className }: { deskId: HouseDeskId; t
 }
 
 /** Idle hero on the desk call panel — the broker's voice before the line is
- *  open: signature line and, when the tape gives one, their take. */
-export function BrokerLinePlate({ deskId, take }: { deskId: HouseDeskId; take?: string | null }) {
+ *  open: signature line and, when the tape gives one, their take.
+ *  In Room (`compact`) the quote collapses to a nameplate with the full
+ *  signature one tap away — the ticket, not the epigraph, leads. */
+export function BrokerLinePlate({ deskId, take, compact = false }: { deskId: HouseDeskId; take?: string | null; compact?: boolean }) {
   const signature = signatureLine(deskId);
+  if (compact) {
+    return (
+      <div className={styles.linePlate}>
+        {BROKER_VOICE[deskId] && <p className={styles.lineLens}>{BROKER_VOICE[deskId]!.lens}</p>}
+        {signature && (
+          <details className={styles.typeInstead}>
+            <summary>Why {getHouseDesk(deskId)?.shortName ?? 'the broker'} reads the tape</summary>
+            <blockquote className={styles.lineSignature}>
+              <p>{signature.text}</p>
+              <cite>— {signature.attribution}</cite>
+            </blockquote>
+          </details>
+        )}
+        <BrokerTake deskId={deskId} take={take} />
+      </div>
+    );
+  }
   return (
     <div className={styles.linePlate}>
       {signature && (

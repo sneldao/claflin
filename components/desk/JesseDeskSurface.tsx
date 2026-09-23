@@ -322,7 +322,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </>
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
-          <JesseCall jesse={jesse} take={roomView ? null : take} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
+          <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
           {blankSlip && blotter}
           {roomView ? (
             <details className={styles.typeInstead}>
@@ -339,6 +339,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             brokerName="Jesse"
             lineTargetId="jesse-line"
             live={jesseLive}
+            hideCue={roomView}
           />
           <div className={styles.deskInscription}>
             <span>The tape runs all night.</span>

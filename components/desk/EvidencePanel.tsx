@@ -36,6 +36,7 @@ export function EvidencePanel({
   body,
   about,
   meta,
+  autoExpand = true,
 }: {
   titleId: string;
   eyebrow: string;
@@ -44,17 +45,20 @@ export function EvidencePanel({
   body?: ReactNode;
   about?: ReactNode;
   meta?: ReactNode;
+  /** When false, a finished reading stays collapsed until the caller opens it. */
+  autoExpand?: boolean;
 }) {
   const hasReading = status === 'ready' || status === 'unavailable';
-  const [open, setOpen] = useState(status === 'ready');
-  const sawReading = useRef(status === 'ready');
+  const [open, setOpen] = useState(() => autoExpand && status === 'ready');
+  const sawReading = useRef(autoExpand && status === 'ready');
 
   useEffect(() => {
+    if (!autoExpand) return;
     if (status === 'ready' && !sawReading.current) {
       sawReading.current = true;
       setOpen(true);
     }
-  }, [status]);
+  }, [status, autoExpand]);
 
   return (
     <details

@@ -1797,7 +1797,7 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 .roomTapeRows { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .roomTapeRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px 14px;
   align-items: baseline;
   width: 100%;
@@ -1810,6 +1810,9 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   font: 11px/1.5 var(--font-mono), monospace;
   letter-spacing: .04em;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color var(--dur-1) var(--ease-swift), background var(--dur-1) var(--ease-swift);
 }
 .roomTapeRow:hover, .roomTapeRow:focus-visible { color: var(--desk-brass); background: #c5ac7810; }
@@ -1861,6 +1864,26 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   .grid[data-slip-led='true'] .blotterHearables,
   .grid[data-slip-led='true'] .instrumentShell,
   .grid[data-slip-led='true'] .deskInscription { display: none; }
+}
+/* Room: the slip leads — ticket beside the line, ledger below the fold,
+   never competing on first paint. Mobile stacks ticket first. */
+@media (min-width: 761px) {
+  .grid[data-presentation='room'][data-ledger='true'] .support { grid-column: 1; grid-row: 1; }
+  .grid[data-presentation='room'][data-ledger='true'] .ticket { grid-column: 2; grid-row: 1; }
+  .grid[data-presentation='room'][data-ledger='true'] .paperLedger {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+    margin-top: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .grid[data-presentation='room'] .ticket,
+  .grid[data-presentation='room'][data-ledger='true'] .ticket { grid-column: 1; grid-row: 1; }
+  .grid[data-presentation='room'] .support,
+  .grid[data-presentation='room'][data-ledger='true'] .support { grid-column: 1; grid-row: 2; }
+  .grid[data-presentation='room'] .paperLedger,
+  .grid[data-presentation='room'][data-ledger='true'] .paperLedger { grid-column: 1; grid-row: 3; }
 }
 @media (prefers-reduced-motion: reduce) {
   .grid[data-slip-led='true'] .ticket { transition: none; }
