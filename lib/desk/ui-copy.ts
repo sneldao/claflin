@@ -6,29 +6,58 @@
  */
 
 export const MODE_LABELS = {
-  paper: 'PAPER TRADING',
-  live: 'LIVE EXECUTION',
+  paper: 'PAPER',
+  live: 'LIVE',
 } as const;
 
+/** One line behind the stamp disclosure — not a second banner. */
 export const MODE_HINTS = {
-  jessePaper: 'Real Jupiter estimates, no real funds move. Kept in this browser.',
-  jesseLive: 'Settles on Solana after your signature. Paper filing stays available.',
-  hettyPaper: 'Real estimates, no real funds move.',
-  hettyLive: 'Real tokens and real USDC will move when you sign.',
+  jessePaper: 'Jupiter estimates · no funds move · kept in this browser.',
+  jesseLive: 'Settles on Solana after you sign. Paper filing stays available.',
+  hettyPaper: 'Real estimates · no funds move.',
+  hettyLive: 'Real tokens move when you sign.',
 } as const;
+
+/** Compact market labels for the mode row — not a product brochure. */
+export const MARKET_LABELS = {
+  jesse: 'SOLANA',
+  hetty: 'BASE',
+} as const;
+
+/** Said once at the line foot — not on every caption and tooltip. */
+export const LINE_FOOT = 'Mic stays off until you ring. Only you can sign.';
+
+export const RECEIVER_CUE_LEAD = 'Lift the receiver — or press';
+export const RECEIVER_CUE_TAIL = '. Speak first.';
+
+export const BLANK_SLIP_TITLE = {
+  jesse: 'Jesse will write what you say.',
+  hetty: 'Hetty will write what you say.',
+} as const;
+
+export const BLANK_SLIP_NOTE =
+  'Ring the line, or tap a line the desk hears. This slip stays blank until there is an instruction.';
+
+export const HAND_FORM_SUMMARY = 'Write it by hand';
 
 /** One caveat line for the whole evidence module — rendered once, not per source. */
 export const EVIDENCE_DISCLAIMER =
-  'Reference reading only — not an exchange print, not arbitrage, not profit.';
+  'Reference only — not an exchange print, not arbitrage.';
 
 /** Empty-state line inside the market-evidence card; paired with its action. */
 export const MARKET_EMPTY_HINT = 'No comparison on this slip yet.';
 
 export const PYTH_PRO_ABOUT =
-  'Equity and xStock reference tape via Pyth Pro. With thanks to the Pyth team for Stocklana trial access.';
+  'Equity and xStock reference via Pyth Pro.';
 
 export const VENUE_DUPLEX_ABOUT =
-  'Free duplex without Pyth Pro: Backed public price-data when available, otherwise Jupiter’s xStocks stock reference, versus Jupiter venue USD for the same mint.';
+  'Backed or Jupiter stock reference vs Jupiter venue USD for the same mint.';
 
 export const PRESTOCKS_ABOUT =
-  'The issuer mark stands in for a public equity feed. SPV-backed PreStocks only; not part of the xStock paper ticket you can file.';
+  'Issuer mark vs token — PreStocks only; not the xStock paper ticket.';
+
+/** Foyer hero — one lede, one boundary. */
+export const FOYER_LEDE =
+  'Ring a broker, say the trade, watch the slip get written.';
+
+export const FOYER_BOUNDARY = 'Paper by default. Only you can sign.';

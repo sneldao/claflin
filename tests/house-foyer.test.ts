@@ -99,7 +99,7 @@ describe('house foyer', () => {
     assert.match(html, /id="foyer-title"/);
     assert.match(html, /href="#house-offerings"/);
     assert.match(html, /Browse the house book/);
-    assert.match(html, /Paper by default\. Voice fills the slip — only you can sign\./);
+    assert.match(html, /Paper by default\. Only you can sign\./);
     assert.match(html, /Ring Hetty/);
     assert.match(html, /Ring Jesse/);
     assert.match(html, /The Witch of Wall Street/);
@@ -284,7 +284,7 @@ describe('house foyer', () => {
   it('advertises live settlement only where the selected desk supports it', () => {
     const html = renderFoyerInEnv({ NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true' });
     assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
-    assert.match(html, /choose live settlement where the selected desk supports it/);
+    assert.match(html, /live settle where the desk supports it/);
     assert.match(html, /live settle available/);
   });
 });

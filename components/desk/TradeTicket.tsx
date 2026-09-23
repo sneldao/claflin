@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties, type MutableRefObject } from 'react';
 import { formatEther } from 'viem';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
@@ -20,6 +20,7 @@ import { getEducationTopic } from '@/lib/education';
 import { useDictation } from '@/lib/dictation/useDictation';
 import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
+import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, HAND_FORM_SUMMARY } from '@/lib/desk/ui-copy';
 import styles from './WorkingDesk.module.css';
 
 /** Honest quote status — the real elapsed wait. The venue does not expose
@@ -285,7 +286,32 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
  * line is live, `applied` carries what the voice actually resolved onto the
  * ticket: heard, said, and applied stay distinct.
  */
-export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveModeChange, spokenLine, hettyLine, live, applied, educationHandoff, onLiveJournalChange, carriedNote }: { desk: ReturnType<typeof useTradingDesk>; liveMode: boolean; onLiveModeChange: (live: boolean) => void; spokenLine?: string | null; hettyLine?: string | null; live?: boolean; applied?: string | null; educationHandoff?: boolean; onLiveJournalChange?: () => void; carriedNote?: string | null }) {
+export const TradeTicket = memo(function TradeTicket({
+  desk,
+  liveMode,
+  onLiveModeChange,
+  spokenLine,
+  hettyLine,
+  live,
+  applied,
+  educationHandoff,
+  onLiveJournalChange,
+  carriedNote,
+  blankSlip = false,
+}: {
+  desk: ReturnType<typeof useTradingDesk>;
+  liveMode: boolean;
+  onLiveModeChange: (live: boolean) => void;
+  spokenLine?: string | null;
+  hettyLine?: string | null;
+  live?: boolean;
+  applied?: string | null;
+  educationHandoff?: boolean;
+  onLiveJournalChange?: () => void;
+  carriedNote?: string | null;
+  /** Room first paint: blank blotter until the line puts work on it. */
+  blankSlip?: boolean;
+}) {
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -428,11 +454,13 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     });
   };
 
+  const showBlank = blankSlip && view === 'draft' && !state.draft.instrumentId;
+
   return <section
     id="instruction"
-    className={`${styles.ticket}${slipActive ? ` ${styles.quotationSlip}` : ''}${recorded ? ` ${styles.ticketRecorded}` : ''}`}
+    className={`${styles.ticket}${slipActive ? ` ${styles.quotationSlip}` : ''}${recorded ? ` ${styles.ticketRecorded}` : ''}${showBlank ? ` ${styles.blankSlip}` : ''}`}
     aria-labelledby="instruction-title"
-    data-ticket-view={view}
+    data-ticket-view={showBlank ? 'blank' : view}
     data-foreground={foreground.kind}
     data-slip={slipActive ? 'true' : 'false'}
     data-acknowledged={recorded ? 'true' : 'false'}
@@ -445,10 +473,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
       <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
     {view === 'draft' && carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
-    <h1 id="instruction-title" ref={review} tabIndex={-1}>{title}</h1>
+    <h1 id="instruction-title" ref={review} tabIndex={-1}>{showBlank ? BLANK_SLIP_TITLE.hetty : title}</h1>
+    {showBlank && <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>}
     {/* The dictation rail: the ticket's voice, always at the head of the
         paper. It shows the last words the desk heard — or invites the first. */}
-    {view === 'draft' && (
+    {view === 'draft' && !showBlank && (
       <p className={styles.dictationRail} data-active={isRecording ? 'true' : 'false'} role="status" aria-live="polite">
         {isRecording
           ? 'Listening… release when you’re done.'
@@ -457,6 +486,11 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
             : dictationReadback
               ? <>On the ticket: <em>{dictationReadback}</em></>
               : 'Speak your instruction — “buy $25 of Apple” — or type below.'}
+      </p>
+    )}
+    {showBlank && spokenLine && (
+      <p className={styles.dictationRail} role="status" aria-live="polite">
+        You said: <em>{spokenLine}</em>
       </p>
     )}
     {/* Draft already carries spoken/dictation copy in the rail — keep the
@@ -476,119 +510,50 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
       {missing ? <div className={styles.pendingSlip}>
         <p className={styles.quoteBoundary} role="status">This paper record is no longer in this browser.<span>It may have been deleted in another tab, or storage could not be read. Nothing else on this desk was changed.</span></p>
       </div> : view === 'draft' ? <>
-        <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
-          <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
-            <legend>Stock</legend>
-            {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
-              <label key={stock.id} className={styles.plaque} data-flash={flash === 'instrument' && state.draft.instrumentId === stock.id ? 'true' : undefined}>
-                <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} onChange={() => edit({ ...state.draft, instrumentId: stock.id })} />
-                <span className={styles.plaqueSymbol}>{stock.symbol}</span>
-                <span className={styles.plaqueName}>{stock.name}</span>
-              </label>
-            ))}
-          </fieldset>
-          <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
-          <div className={styles.dictationBar} title="One shot, no conversation: press and hold, say e.g. “Buy 100 USDC of Nvidia”, release — the words land on the ticket for your review. Or type below.">
-            <button
-              type="button"
-              className={styles.dictationButton}
-              data-recording={isRecording ? 'true' : undefined}
-              data-transcribing={isTranscribing ? 'true' : undefined}
-              disabled={isTranscribing}
-              onPointerDown={e => {
-                if (e.pointerType === 'mouse' || isTranscribing) return;
-                /* Touch: press-and-hold. Pointer capture keeps the release
-                   landing here even if the finger drifts off the button. */
-                e.preventDefault();
-                try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older Safari */ }
-                setHoldMode(true);
-                void startRecording();
-              }}
-              onPointerUp={e => {
-                if (e.pointerType === 'mouse' || !holdMode) return;
-                holdReleaseRef.current = Date.now();
-                setHoldMode(false);
-                void stopRecording();
-              }}
-              onPointerCancel={() => {
-                if (!holdMode) return;
-                holdReleaseRef.current = Date.now();
-                setHoldMode(false);
-                void stopRecording();
-              }}
-              onContextMenu={e => {
-                // An iOS long-press must never open the callout menu mid-dictation.
-                e.preventDefault();
-              }}
-              onClick={() => {
-                if (Date.now() - holdReleaseRef.current < 700) return;
-                if (isRecording) {
-                  void stopRecording();
-                } else {
-                  void startRecording();
-                }
-              }}
-              title="One shot, no conversation: press and hold, say e.g. “Buy 100 USDC of Nvidia”, release — the words land on the ticket for your review. Or type below."
-              aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice — press and hold, speak, release to finish'}
-            >
-              <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
-              {isRecording ? (
-                <>
-                  {holdMode ? 'Listening… release to finish' : 'Listening… tap to finish'}
-                  <span className={styles.dictationWaveform} aria-hidden="true">
-                    <i /><i /><i /><i /><i /><i />
-                  </span>
-                </>
-              ) : isTranscribing ? 'Writing it down…' : dictState.status === 'error' ? 'Try voice again' : 'Fill ticket by voice'}
-            </button>
-            <span className={styles.dictationBadge} title="Fills the ticket only — you review and confirm. For a back-and-forth conversation, talk with Hetty ↓">No call · You confirm</span>
-          </div>
-          {isRecording && (
-            <p className={styles.dictationHint} role="status">
-              {holdMode ? 'Keep holding — say the stock and the amount, then release.' : 'Say the stock and the amount, then tap again.'}
-            </p>
-          )}
-          {isTranscribing && (
-            <p className={styles.dictationHint} role="status">Writing it down…</p>
-          )}
-          {dictState.status === 'error' && dictState.error && (
-            <p className={styles.dictationError} role="alert">{dictState.error}</p>
-          )}
-          {dictState.transcript && (
-            <p className={styles.dictationTranscript} role="status">
-              <em>You said</em>
-              &ldquo;{dictState.transcript}&rdquo;
-              {provenance && (
-                <span className={styles.dictationSeal} title="A record of what was heard — not a trade, not an approval.">
-                  Heard · {provenance.shortSeal}
-                </span>
-              )}
-            </p>
-          )}
-          <div className={styles.fields}>
-            <div><label htmlFor="side">Instruction</label><select id="side" data-flash={flash === 'side' ? 'true' : undefined} value={state.draft.side} onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
-            <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" data-flash={flash === 'amount' ? 'true' : undefined} inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
-          </div>
-          <div className={styles.amountChips} role="group" aria-label="Quick amounts">
-            {AMOUNT_CHIPS[state.draft.side].map(value => (
-              <button key={value} type="button" className={styles.amountChip} data-active={state.draft.amount === value ? 'true' : 'false'} aria-label={`Set amount to ${value} ${state.draft.unit}`} onClick={() => edit({ ...state.draft, amount: value })}>
-                {state.draft.side === 'buy' ? `$${value}` : value}
-              </button>
-            ))}
-          </div>
-          <p className={styles.product} title={state.draft.side === 'buy' ? 'The estimate shows how many tokens you would receive.' : 'The estimate shows how much USDC you would receive.'}>{state.draft.side === 'buy' ? 'USDC to spend.' : 'Token quantity to sell.'}</p>
-          <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
-        </form>
-        <Drawer
-          className={styles.productDetails}
-          trigger="Product dossier"
-          title="Product dossier"
-          testId="product-dossier-panel"
-        >
-          <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
-          <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
-        </Drawer>
-        <p className={styles.paperFoot}>Your instruction. Your decision.</p>
+        {showBlank ? (
+          <details className={styles.handForm}>
+            <summary>{HAND_FORM_SUMMARY}</summary>
+            <HettyDraftForm
+              state={state}
+              instrument={instrument}
+              flash={flash}
+              edit={edit}
+              requestQuote={requestQuote}
+              isRecording={isRecording}
+              isTranscribing={isTranscribing}
+              holdMode={holdMode}
+              setHoldMode={setHoldMode}
+              holdReleaseRef={holdReleaseRef}
+              startRecording={startRecording}
+              stopRecording={stopRecording}
+              dictState={dictState}
+              provenance={provenance}
+              setTyping={setTyping}
+              liveMode={liveMode}
+              remindAfterEducation={remindAfterEducation}
+            />
+          </details>
+        ) : (
+          <HettyDraftForm
+            state={state}
+            instrument={instrument}
+            flash={flash}
+            edit={edit}
+            requestQuote={requestQuote}
+            isRecording={isRecording}
+            isTranscribing={isTranscribing}
+            holdMode={holdMode}
+            setHoldMode={setHoldMode}
+            holdReleaseRef={holdReleaseRef}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+            dictState={dictState}
+            provenance={provenance}
+            setTyping={setTyping}
+            liveMode={liveMode}
+            remindAfterEducation={remindAfterEducation}
+          />
+        )}
       </> : pending ? <div className={styles.pendingSlip}>
         <p className={styles.quoteInstrument}>{state.draft.side === 'buy' ? 'Buy' : 'Sell'} {instrument?.symbol}<span>{instrument?.name}</span></p>
         <p className={styles.pendingAmount}>{state.draft.amount} <span>{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol ?? ''} tokens to sell`}</span></p>
@@ -687,3 +652,180 @@ export const TradeTicket = memo(function TradeTicket({ desk, liveMode, onLiveMod
     </div>
   </section>;
 });
+
+function HettyDraftForm({
+  state,
+  instrument,
+  flash,
+  edit,
+  requestQuote,
+  isRecording,
+  isTranscribing,
+  holdMode,
+  setHoldMode,
+  holdReleaseRef,
+  startRecording,
+  stopRecording,
+  dictState,
+  provenance,
+  setTyping,
+  liveMode,
+  remindAfterEducation,
+}: {
+  state: ReturnType<typeof useTradingDesk>['state'];
+  instrument: (typeof DESK_INSTRUMENTS)[number] | undefined;
+  flash: 'instrument' | 'side' | 'amount' | null;
+  edit: ReturnType<typeof useTradingDesk>['edit'];
+  requestQuote: ReturnType<typeof useTradingDesk>['requestQuote'];
+  isRecording: boolean;
+  isTranscribing: boolean;
+  holdMode: boolean;
+  setHoldMode: (next: boolean) => void;
+  holdReleaseRef: MutableRefObject<number>;
+  startRecording: () => void | Promise<void>;
+  stopRecording: () => void | Promise<void>;
+  dictState: { status: string; error?: string | null; transcript?: string | null };
+  provenance: DictationProvenance | null;
+  setTyping: (next: boolean) => void;
+  liveMode: boolean;
+  remindAfterEducation: () => void;
+}) {
+  return (
+    <>
+      <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
+        <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
+          <legend>Stock</legend>
+          {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
+            <label key={stock.id} className={styles.plaque} data-flash={flash === 'instrument' && state.draft.instrumentId === stock.id ? 'true' : undefined}>
+              <input type="radio" name="instrument" value={stock.id} checked={state.draft.instrumentId === stock.id} onChange={() => edit({ ...state.draft, instrumentId: stock.id })} />
+              <span className={styles.plaqueSymbol}>{stock.symbol}</span>
+              <span className={styles.plaqueName}>{stock.name}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p className={styles.product}>{instrument ? `${instrument.symbol} · Coinbase-issued token on Base` : 'Coinbase Tokenized Stocks on Base.'}</p>
+        <div className={styles.dictationBar} title="Press and hold, speak, release — the words land on the ticket.">
+          <button
+            type="button"
+            className={styles.dictationButton}
+            data-recording={isRecording ? 'true' : undefined}
+            data-transcribing={isTranscribing ? 'true' : undefined}
+            disabled={isTranscribing}
+            onPointerDown={e => {
+              if (e.pointerType === 'mouse' || isTranscribing) return;
+              e.preventDefault();
+              try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older Safari */ }
+              setHoldMode(true);
+              void startRecording();
+            }}
+            onPointerUp={e => {
+              if (e.pointerType === 'mouse' || !holdMode) return;
+              holdReleaseRef.current = Date.now();
+              setHoldMode(false);
+              void stopRecording();
+            }}
+            onPointerCancel={() => {
+              if (!holdMode) return;
+              holdReleaseRef.current = Date.now();
+              setHoldMode(false);
+              void stopRecording();
+            }}
+            onContextMenu={e => { e.preventDefault(); }}
+            onClick={() => {
+              if (Date.now() - holdReleaseRef.current < 700) return;
+              if (isRecording) void stopRecording();
+              else void startRecording();
+            }}
+            aria-label={isRecording ? 'Stop — transcribe what I said' : 'Fill the ticket by voice'}
+          >
+            <span className={styles.dictationDot} data-recording={isRecording ? 'true' : undefined} data-transcribing={isTranscribing ? 'true' : undefined} />
+            {isRecording ? (
+              <>
+                {holdMode ? 'Listening… release to finish' : 'Listening… tap to finish'}
+                <span className={styles.dictationWaveform} aria-hidden="true">
+                  <i /><i /><i /><i /><i /><i />
+                </span>
+              </>
+            ) : isTranscribing ? 'Writing it down…' : dictState.status === 'error' ? 'Try voice again' : 'Fill ticket by voice'}
+          </button>
+          <span className={styles.dictationBadge}>No call · You confirm</span>
+        </div>
+        {isRecording && (
+          <p className={styles.dictationHint} role="status">
+            {holdMode ? 'Keep holding — say the stock and the amount, then release.' : 'Say the stock and the amount, then tap again.'}
+          </p>
+        )}
+        {isTranscribing && <p className={styles.dictationHint} role="status">Writing it down…</p>}
+        {dictState.status === 'error' && dictState.error && (
+          <p className={styles.dictationError} role="alert">{dictState.error}</p>
+        )}
+        {dictState.transcript && (
+          <p className={styles.dictationTranscript} role="status">
+            <em>You said</em>
+            &ldquo;{dictState.transcript}&rdquo;
+            {provenance && (
+              <span className={styles.dictationSeal} title="A record of what was heard — not a trade.">
+                Heard · {provenance.shortSeal}
+              </span>
+            )}
+          </p>
+        )}
+        <div className={styles.fields}>
+          <div>
+            <label htmlFor="side">Instruction</label>
+            <select
+              id="side"
+              data-flash={flash === 'side' ? 'true' : undefined}
+              value={state.draft.side}
+              onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent)}
+            >
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label>
+            <input
+              id="amount"
+              data-flash={flash === 'amount' ? 'true' : undefined}
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'}
+              maxLength={40}
+              value={state.draft.amount}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
+              onChange={e => edit({ ...state.draft, amount: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+        <div className={styles.amountChips} role="group" aria-label="Quick amounts">
+          {AMOUNT_CHIPS[state.draft.side].map(value => (
+            <button
+              key={value}
+              type="button"
+              className={styles.amountChip}
+              data-active={state.draft.amount === value ? 'true' : 'false'}
+              aria-label={`Set amount to ${value} ${state.draft.unit}`}
+              onClick={() => edit({ ...state.draft, amount: value })}
+            >
+              {state.draft.side === 'buy' ? `$${value}` : value}
+            </button>
+          ))}
+        </div>
+        <button className={styles.primary} type="submit">Review estimate<span aria-hidden="true">→</span></button>
+      </form>
+      <Drawer
+        className={styles.productDetails}
+        trigger="Product dossier"
+        title="Product dossier"
+        testId="product-dossier-panel"
+      >
+        <p className={styles.dossierHeading}>{instrument ? instrument.name : 'Coinbase Tokenized Stocks'}<span>PRODUCT INFORMATION · NOT PROOF OF OWNERSHIP</span></p>
+        <ProductTerms instrument={instrument} live={liveMode} onEducationDismiss={remindAfterEducation} />
+      </Drawer>
+      <p className={styles.paperFoot}>Your instruction. Your decision.</p>
+    </>
+  );
+}

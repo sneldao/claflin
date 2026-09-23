@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Phone } from 'lucide-react';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import type { EntryIntent } from '@/lib/house-entry';
 import { useMarketClock } from '@/lib/use-market-clock';
@@ -13,6 +12,7 @@ import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
+import { FOYER_BOUNDARY, FOYER_LEDE } from '@/lib/desk/ui-copy';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
@@ -117,18 +117,15 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               This book doesn’t.
             </h1>
             <p className={foyerStyles.lede}>
-              Tokenized US stocks trade onchain around the clock. Ring a broker,
-              say the trade, and watch the slip get written — with a real venue
-              estimate before anything is filed.
+              {FOYER_LEDE}
             </p>
             <div className={foyerStyles.actions}>
               <a href="#house-offerings" className={foyerStyles.secondary}>
                 Browse the house book
-                <ArrowRight size={16} aria-hidden="true" />
               </a>
             </div>
             <p className={foyerStyles.reassurance}>
-              Paper by default. Voice fills the slip — only you can sign.
+              {FOYER_BOUNDARY}
             </p>
           </div>
 
@@ -137,6 +134,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               {lineDesks.map(desk => {
                 const details = BROKER_VOICE[desk.id]!;
                 const signature = signatureLine(desk.id);
+                const take = brokerTake(desk.id, marksFor(desk.id), clock);
                 return (
                   <article key={desk.id} className={foyerStyles.lineCard}>
                     <header className={foyerStyles.lineCardHeader}>
@@ -150,12 +148,10 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                         <cite>— {signature.attribution}</cite>
                       </blockquote>
                     )}
-                    <p className={foyerStyles.lineLens}>{details.lens}</p>
-                    <BrokerTake deskId={desk.id} take={brokerTake(desk.id, marksFor(desk.id), clock)} className={foyerStyles.lineTake} />
+                    <BrokerTake deskId={desk.id} take={take} className={foyerStyles.lineTake} />
                     <div className={foyerStyles.lineActions}>
                       <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
                         <span className={foyerStyles.lineLamp} aria-hidden="true" />
-                        <Phone size={15} aria-hidden="true" />
                         Ring {desk.shortName}
                       </button>
                       <a
@@ -163,7 +159,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                         className={foyerStyles.typeInstead}
                         onClick={enter(desk.id)}
                       >
-                        Open the desk and type instead
+                        Type instead
                       </a>
                     </div>
                   </article>
@@ -191,14 +187,14 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               <span className={foyerStyles.methodIndex}>01 / The call</span>
               <div>
                 <h3>Say it like you would to a broker.</h3>
-                <p>Ring the desk and talk, or type. The broker writes your instruction onto the slip as you go.</p>
+                <p>Ring the desk. The broker writes the slip as you go.</p>
               </div>
             </div>
             <div className={foyerStyles.methodRow}>
               <span className={foyerStyles.methodIndex}>02 / The slip</span>
               <div>
-                <h3>A real price, the moment you ask.</h3>
-                <p>The venue’s estimate lands on the slip, time-stamped and time-limited like any quotation.</p>
+                <h3>A real price when you ask.</h3>
+                <p>The venue’s estimate lands on the slip — time-stamped, time-limited.</p>
               </div>
             </div>
             <div className={foyerStyles.methodRow}>
@@ -206,7 +202,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               <div>
                 <h3>Only you can sign.</h3>
                 <p>{liveAvailable
-                  ? 'File a paper record, or choose live settlement where the selected desk supports it — only with your approval.'
+                  ? 'File paper, or live settle where the desk supports it — only with your approval.'
                   : 'File a paper record only when you choose. No real funds move.'}</p>
               </div>
             </div>

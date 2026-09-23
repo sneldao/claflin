@@ -10,7 +10,7 @@ Claflin is the institution. A desk combines a broker, mandate, settlement rail, 
 
 ## Desk views and Stocklana team handoff
 
-[The public Room view](https://claflin.trustfall.xyz/?desk=jesse&view=room) is the live Jesse spatial layout (same controller as Compact). Fixture study: [`/night-desk?study=1`](https://claflin.trustfall.xyz/night-desk?study=1). The **integrated Jesse desk** opens from the house book or `/?desk=jesse` — real Jupiter quotes, v2 local paper, Room/Compact views, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` shows the foyer on a fresh visit and restores only a remembered open desk.
+[The public Room view](https://claflin.trustfall.xyz/?desk=jesse&view=room) is the live Jesse spatial layout (same controller as Compact). Fixture study: [`/night-desk?study=1`](https://claflin.trustfall.xyz/night-desk?study=1). The **integrated Jesse desk** for Stocklana demos: [`/?desk=jesse&view=room`](https://claflin.trustfall.xyz/?desk=jesse&view=room) — real Jupiter quotes, v2 local paper, Room/Compact views, PreStocks secondary duplex (issuer mark vs token), and honest Pyth comparison when entitled. See [Jesse desk](docs/JESSE_DESK.md). `/` shows the foyer on a fresh visit and restores only a remembered open desk.
 
 **Engineers:** [Stocklana Build Plan](docs/STOCKLANA_BUILD_PLAN.md) is the historical execution brief; [Jesse desk](docs/JESSE_DESK.md) owns current Jesse capabilities and remaining Pyth/live-release limits. [Product Direction](docs/PRODUCT_DIRECTION.md#desk-views-room--compact) records Room/Compact as view choices over the same work.
 
@@ -74,6 +74,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Thin HTTP boundary | `lib/trading/http.ts`, `lib/api-client.ts`, `app/api/stocks/quote/route.ts`, `app/api/stocks/marks/route.ts` |
 | Indicative tape marks (Chainlink on Base; Jupiter venue-duplex marks on Solana — reference, never offers) | `lib/trading/marks.ts`, `lib/trading/marks-shared.ts`, `lib/trading/useReferenceMarks.ts`, `lib/trading/adapters/jupiter-marks.ts` |
 | Market clock, broker voice and the ring-on-arrival line | `lib/market-clock.ts`, `lib/use-market-clock.ts`, `lib/desk/broker-voice.ts`, `lib/desk/broker-take.ts`, `lib/trading/line-signal.ts`, `components/desk/BrokerLine.tsx` |
+| House presence grammar (blotter hearables, blank slip, receiver, room clock, shared copy) | `components/desk/BlotterHearables.tsx`, `components/desk/ReceiverShell.tsx`, `components/desk/RoomMarketClock.tsx`, `lib/desk/ui-copy.ts` |
 | Solana instruments, estimates, paper and live evidence | `lib/solana/` |
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Live execution journal (approvals, submitted/confirmed swaps) | `lib/trading/live-journal.ts`, `lib/trading/useLiveJournal.ts`, `lib/trading/useDeskExecution.ts` |

@@ -15,7 +15,7 @@ import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
 import type { JesseIntent, MarketComparison } from '@/lib/solana/contracts';
 import { getEducationTopic } from '@/lib/education';
-import { EVIDENCE_DISCLAIMER } from '@/lib/desk/ui-copy';
+import { EVIDENCE_DISCLAIMER, BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, HAND_FORM_SUMMARY } from '@/lib/desk/ui-copy';
 import { markPrice, type DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
@@ -46,12 +46,15 @@ export const JesseTicket = memo(function JesseTicket({
   spokenLine = null,
   carriedNote = null,
   mark = null,
+  blankSlip = false,
 }: {
   jesse: JesseDesk;
   spokenLine?: string | null;
   carriedNote?: string | null;
   /** The venue mark for the drafted instrument — its stock-reference gap heads the slip. */
   mark?: DeskMark | null;
+  /** Room first paint: blank blotter until the line (or hand) puts work on it. */
+  blankSlip?: boolean;
 }) {
   const { state, foreground, inFlight, lastResult, edit, quote, compare, cancel, dismissRecord } = jesse;
   const draft = state.draft;
@@ -161,7 +164,6 @@ export const JesseTicket = memo(function JesseTicket({
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
         <PaperChrome liveMode={liveMode && liveAvailable} />
       <GapStrip mark={mark} />
-        <GapStrip mark={mark} />
         <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <div className={styles.slipBody}>
@@ -233,6 +235,54 @@ export const JesseTicket = memo(function JesseTicket({
   /* Draft / pending */
   const liveIntent = intentFromDraft(draft);
   const selectedStock = draft.instrumentId ? SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId) : null;
+
+  /* Room first paint: a blank blotter waits for the line; the full form stays
+     behind “Write it by hand” so capability is never lost. */
+  if (blankSlip) {
+    return (
+      <section
+        id="instruction"
+        className={`${styles.ticket} ${styles.blankSlip}`}
+        aria-labelledby="instruction-title"
+        data-ticket-view="blank"
+      >
+        <PaperChrome liveMode={false} />
+        <div className={styles.ticketSurface} key="blank">
+          <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{BLANK_SLIP_TITLE.jesse}</h1>
+          <p className={styles.blankSlipNote}>
+            {BLANK_SLIP_NOTE}
+          </p>
+          {spokenLine && (
+            <p className={styles.dictationRail} role="status" aria-live="polite">
+              You said: <em>{spokenLine}</em>
+            </p>
+          )}
+          <details className={styles.handForm}>
+            <summary>{HAND_FORM_SUMMARY}</summary>
+            <DraftForm
+              draft={draft}
+              side={side}
+              unit={unit}
+              inFlight={inFlight}
+              liveAvailable={liveAvailable}
+              liveMode={liveMode}
+              setLiveMode={setLiveMode}
+              selectedStock={selectedStock}
+              localError={localError}
+              lastSpoken={lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null}
+              edit={edit}
+              quote={quote}
+              compare={compare}
+              liveIntent={liveIntent}
+              revision={state.revision}
+              comparison={state.comparison}
+            />
+          </details>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
       <PaperChrome liveMode={liveMode && liveAvailable} />
@@ -246,8 +296,68 @@ export const JesseTicket = memo(function JesseTicket({
             ? <>You said: <em>{spokenLine}</em></>
             : 'Speak or type an instruction, e.g. “buy 100 USDC of AAPLx”.'}
       </p>
-      {(localError || lastResult?.status === 'clarify' || lastResult?.status === 'rejected') && (
-        <p className={styles.notice} role="alert">{localError ?? lastResult?.spokenText}</p>
+      <DraftForm
+        draft={draft}
+        side={side}
+        unit={unit}
+        inFlight={inFlight}
+        liveAvailable={liveAvailable}
+        liveMode={liveMode}
+        setLiveMode={setLiveMode}
+        selectedStock={selectedStock}
+        localError={localError}
+        lastSpoken={lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null}
+        edit={edit}
+        quote={quote}
+        compare={compare}
+        liveIntent={liveIntent}
+        revision={state.revision}
+        comparison={state.comparison}
+      />
+      </div>
+    </section>
+  );
+});
+
+function DraftForm({
+  draft,
+  side,
+  unit,
+  inFlight,
+  liveAvailable,
+  liveMode,
+  setLiveMode,
+  selectedStock,
+  localError,
+  lastSpoken,
+  edit,
+  quote,
+  compare,
+  liveIntent,
+  revision,
+  comparison,
+}: {
+  draft: JesseDesk['state']['draft'];
+  side: 'buy' | 'sell';
+  unit: 'USDC' | 'scaled-token';
+  inFlight: JesseDesk['inFlight'];
+  liveAvailable: boolean;
+  liveMode: boolean;
+  setLiveMode: (next: boolean) => void;
+  selectedStock: (typeof SOLANA_INSTRUMENTS)[number] | null | undefined;
+  localError: string | null;
+  lastSpoken: string | null;
+  edit: JesseDesk['edit'];
+  quote: JesseDesk['quote'];
+  compare: JesseDesk['compare'];
+  liveIntent: JesseIntent | null;
+  revision: number;
+  comparison: MarketComparison | null;
+}) {
+  return (
+    <>
+      {(localError || lastSpoken) && (
+        <p className={styles.notice} role="alert">{localError ?? lastSpoken}</p>
       )}
       <form onSubmit={e => { e.preventDefault(); void quote(); }}>
         <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
@@ -335,20 +445,19 @@ export const JesseTicket = memo(function JesseTicket({
       </form>
 
       {liveMode && liveAvailable && (
-        <JesseLiveSettle intent={liveIntent} revision={state.revision} />
+        <JesseLiveSettle intent={liveIntent} revision={revision} />
       )}
 
       <EvidenceModule
-        comparison={state.comparison}
+        comparison={comparison}
         loading={inFlight === 'compare'}
         instrumentId={draft.instrumentId}
         onCompare={() => { void compare(); }}
         compareDisabled={!draft.instrumentId || inFlight === 'compare'}
       />
-      </div>
-    </section>
+    </>
   );
-});
+}
 
 /**
  * The three evidence sources as one module: collapsible source cards, then a

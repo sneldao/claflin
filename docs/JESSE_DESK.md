@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer and offering book on first visit; Jesse opens through an eligible Backed xStock offering or the direct `/?desk=jesse` deep link. Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse`; offering-aware entry may include `?offering=<solanaOfferingId>`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer and offering book on first visit; Jesse opens through an eligible Backed xStock offering or the direct `/?desk=jesse` deep link. Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse&view=room`; offering-aware entry may include `?offering=<solanaOfferingId>`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
@@ -21,7 +21,7 @@ The offering chooses the concrete product/mandate/rail/venue. Desk eligibility c
 ## Entry
 
 - Fresh visit → Claflin foyer and house book. An instruction resolves to concrete offerings; a Jesse-covered Backed xStock offering can then open Jesse.
-- Deep link: `/?desk=jesse` (Stocklana submission URL) or `/?desk=hetty`. A deep link remains valid without an offering.
+- Deep link: `/?desk=jesse&view=room` (Stocklana submission URL) or `/?desk=jesse` / `/?desk=hetty`. A deep link remains valid without an offering.
 - Offering context: `/?desk=jesse&offering=<solanaOfferingId>` preselects that instrument through Jesse's controller only when the catalog offering explicitly covers Jesse; mismatched offering parameters are removed.
 - Presentation: `?view=room` or `?view=compact` (per-desk preference in `claflin.presentation.v1.<deskId>`)
 - Canonical Room view: `/?desk=jesse&view=room` (also reached via `/night-desk`)
@@ -119,7 +119,7 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 - Live settle requires both flags; instruction-allowlist / wallet challenge auth from the full R2 plan are not yet complete
 - Hearable Solana-native phrases on the Jesse lead (quote / correct / compare / refuse)
 - Account call-transcript sync stays Hetty-only
-- Stocklana judges should open `/?desk=jesse` — see [STOCKLANA_SUBMISSION.md](STOCKLANA_SUBMISSION.md)
+- Stocklana judges should open `/?desk=jesse&view=room` — see [STOCKLANA_SUBMISSION.md](STOCKLANA_SUBMISSION.md)
 
 ## Flags
 

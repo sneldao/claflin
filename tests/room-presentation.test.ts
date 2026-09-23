@@ -36,6 +36,7 @@ describe('room presentation object navigation', () => {
       presentation: 'room',
       onPresentation: () => {},
       onSwitchDesk: () => {},
+      onLeaveDesk: () => {},
     }, createElement('div', { id: 'on-desk' }))));
 
     const labels = objectButtons().map(button => button.textContent);
@@ -61,12 +62,21 @@ describe('room presentation object navigation', () => {
       presentation: 'room',
       onPresentation: () => {},
       onSwitchDesk: () => {},
+      onLeaveDesk: () => {},
     }, createElement('div'))));
 
     assert.deepEqual(
       objectButtons().map(button => button.textContent),
       ['The two markets', 'Your instruction', 'The ledger'],
     );
+  });
+
+  it('buries Room/Compact chrome and drops icon-led object labels', () => {
+    const room = source('components/desk/RoomPresentation.tsx');
+    assert.doesNotMatch(room, /from 'lucide-react'/);
+    assert.doesNotMatch(room, /Same paper and line/);
+    assert.match(room, /className=\{styles\.viewSwitch\}/);
+    assert.match(room, /\{object\.label\}/);
   });
 
   it('keeps room object labels bound to scene anchors', () => {

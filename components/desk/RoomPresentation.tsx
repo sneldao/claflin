@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BookOpen, FileText, LineChart } from 'lucide-react';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
 import type { NightDeskAnchors } from '@/lib/night-desk-scene';
 import type { HouseDesk, HouseDeskId } from '@/lib/house';
@@ -125,49 +124,46 @@ export function RoomPresentation({
         </Link>
         <nav aria-label="Desk navigation" className={styles.roomViewNav}>
           <HouseDirectory activeDeskId={desk.id} onVisit={onSwitchDesk} onHome={onLeaveDesk} />
-          <div className={styles.presentationToggle} role="group" aria-label="Desk view">
-            <button
-              type="button"
-              className={styles.presentationButton}
-              aria-pressed={presentation === 'room'}
-              onClick={() => onPresentation('room')}
-            >
-              Room
-            </button>
-            <button
-              type="button"
-              className={styles.presentationButton}
-              aria-pressed={presentation === 'compact'}
-              onClick={() => onPresentation('compact')}
-            >
-              Compact
-            </button>
-          </div>
+          <details className={styles.viewSwitch}>
+            <summary>View</summary>
+            <div className={styles.presentationToggle} role="group" aria-label="Desk view">
+              <button
+                type="button"
+                className={styles.presentationButton}
+                aria-pressed={presentation === 'room'}
+                onClick={() => onPresentation('room')}
+              >
+                Room
+              </button>
+              <button
+                type="button"
+                className={styles.presentationButton}
+                aria-pressed={presentation === 'compact'}
+                onClick={() => onPresentation('compact')}
+              >
+                Compact
+              </button>
+            </div>
+          </details>
         </nav>
       </header>
 
       <nav className={sceneStyles.roomLabels} aria-label={`Objects in ${desk.name}'s room`}>
-        {objects.map(object => {
-          const Icon = object.view === 'evidence' ? LineChart : object.view === 'review' ? FileText : BookOpen;
-          return (
-            <button
-              key={object.view}
-              ref={objectRefs[object.view]}
-              type="button"
-              className={sceneStyles.objectLabel}
-              aria-pressed={view === object.view}
-              onClick={() => onView(object.view)}
-            >
-              <Icon size={13} />{object.label}
-            </button>
-          );
-        })}
+        {objects.map(object => (
+          <button
+            key={object.view}
+            ref={objectRefs[object.view]}
+            type="button"
+            className={sceneStyles.objectLabel}
+            aria-pressed={view === object.view}
+            onClick={() => onView(object.view)}
+          >
+            {object.label}
+          </button>
+        ))}
       </nav>
 
       <main id="main-content" tabIndex={-1} ref={mainRef} className={styles.roomViewOverlay}>
-        <p className={styles.roomViewKicker} role="status">
-          Same paper and line · layout only
-        </p>
         {children}
       </main>
     </div>

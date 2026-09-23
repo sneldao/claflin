@@ -17,6 +17,7 @@ import { foregroundGuard, chooseInstrumentResult, nextInstructionDraft, setInstr
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
+import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
 import styles from './WorkingDesk.module.css';
 
@@ -701,6 +702,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
         )}
         {!live && !ringing && captions.length === 0 && (
           <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
+            <span className={styles.ringLamp} aria-hidden="true" />
             Ring Hetty
           </button>
         )}
@@ -758,7 +760,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
         </p>
       )}
       <p className={styles.callFoot} title={auth.enabled ? 'Signed in? A transcript is saved to your account for 30 days; anonymous calls store nothing.' : undefined}>
-        Mic stays off until you ring. Voice fills the slip — only you can sign.
+        {LINE_FOOT}
       </p>
     </section>
   );

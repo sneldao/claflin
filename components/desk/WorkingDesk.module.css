@@ -482,6 +482,65 @@
   text-transform: uppercase;
   color: var(--desk-brass-dim);
 }
+.viewSwitch {
+  position: relative;
+  font: 10px/1.4 var(--font-mono), monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--desk-muted);
+}
+.viewSwitch > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 28px;
+  padding: 4px 0;
+  color: var(--desk-brass-dim);
+}
+.viewSwitch > summary::-webkit-details-marker { display: none; }
+.viewSwitch[open] > summary { color: var(--desk-brass); }
+.viewSwitch .presentationToggle {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 8;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: color-mix(in srgb, var(--desk-deep) 94%, transparent);
+  border: 1px solid var(--desk-brass-dim);
+}
+.roomMarketClock {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font: 10px/1.5 var(--font-mono), monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.clockLamp {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--desk-brass-dim);
+}
+.roomMarketClock[data-exchange='open'] .clockLamp {
+  background: var(--desk-brass);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--desk-brass) 70%, transparent);
+  animation: lampPulse 2.4s ease-in-out infinite;
+}
+.roomMarketClock[data-exchange='closed'] .clockLamp {
+  background: #b98a4e;
+}
+@keyframes lampPulse {
+  0%, 100% { opacity: .65; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roomMarketClock[data-exchange='open'] .clockLamp { animation: none; }
+}
 .roomView .mode {
   padding: 8px 0 16px;
   color: var(--desk-muted);
@@ -490,6 +549,119 @@
   background: color-mix(in srgb, var(--desk-deep) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--desk-brass-dim) 35%, transparent);
   border-radius: 4px;
+}
+/* Line-first Room: the receiver column leads; the blank slip waits quietly. */
+.grid[data-presentation='room'][data-line-first='true'] {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+}
+.grid[data-presentation='room'][data-line-first='true'] .support {
+  padding-top: 4px;
+}
+.grid[data-presentation='room'][data-line-first='true'] .ticket {
+  opacity: .94;
+  box-shadow: 1px 2px 0 var(--desk-paper-edge), 2px 4px 0 var(--desk-paper), 0 10px 22px var(--desk-shadow);
+}
+.grid[data-presentation='room'] .instrumentShell {
+  margin: 8px 0 0;
+  max-width: 320px;
+}
+.blotterHearables {
+  display: grid;
+  gap: 6px;
+  max-width: 380px;
+  margin: 16px 0 8px;
+  padding: 12px 0 4px;
+  border-top: 1px dashed var(--desk-line);
+}
+.blotterHearablesLead {
+  margin: 0 0 4px !important;
+  font: 9px/1.4 var(--font-mono), monospace;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--desk-brass-dim);
+}
+.blotterLine {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  font: italic 400 15px/1.55 var(--font-display), serif;
+  color: var(--desk-paper-light);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-swift), border-color var(--dur-1) var(--ease-swift);
+}
+.blotterLine:hover,
+.blotterLine:focus-visible {
+  color: var(--desk-brass);
+  border-bottom-color: var(--desk-brass-dim);
+  outline: none;
+}
+.blankSlip .ticketSurface {
+  min-height: 220px;
+  justify-content: flex-start;
+}
+.blankSlipNote {
+  margin: 0 0 18px !important;
+  max-width: 28ch;
+  font: 400 16px/1.55 var(--font-display), serif;
+  color: var(--desk-paper-ink);
+  opacity: .85;
+}
+.handForm {
+  margin-top: 8px;
+  border-top: 1px dashed var(--desk-paper-rule);
+  padding-top: 10px;
+}
+.handForm > summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 36px;
+  padding: 8px 0;
+  font: 11px/1.4 var(--font-mono), monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--desk-paper-muted, #7a7164);
+}
+.handForm > summary::-webkit-details-marker { display: none; }
+.handForm[open] > summary { color: var(--desk-paper-ink); margin-bottom: 12px; }
+.ringLamp {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--desk-deep);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--desk-brass) 50%, transparent);
+  animation: ringLampPulse 2.8s ease-in-out infinite;
+}
+@keyframes ringLampPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--desk-brass) 0%, transparent); opacity: .7; }
+  50% { box-shadow: 0 0 10px 2px color-mix(in srgb, var(--desk-brass) 55%, transparent); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ringLamp { animation: none; }
+}
+.callFoot kbd {
+  font: 10px/1 var(--font-mono), monospace;
+  color: var(--desk-brass);
+  border: 1px solid var(--desk-brass-dim);
+  border-radius: 2px;
+  padding: 1px 5px;
+}
+@media (max-width: 760px) {
+  .grid[data-presentation='room'][data-line-first='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .grid[data-presentation='room'] .instrumentShell {
+    max-width: 460px;
+    margin-inline: auto;
+  }
+  .blotterLine {
+    font-size: 14px;
+  }
 }
 .roomViewBoard {
   margin-top: 20px;

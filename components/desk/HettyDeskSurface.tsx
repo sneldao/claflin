@@ -17,7 +17,7 @@ import { DESK_INSTRUMENTS, resolveDeskAlias } from '@/lib/trading/catalog';
 import { LIVE_EXECUTION_ENABLED } from '@/lib/trading/domain';
 import { rememberSlipDedication } from '@/lib/trading/desk-slips';
 import { signalLine } from '@/lib/trading/line-signal';
-import { MODE_HINTS } from '@/lib/desk/ui-copy';
+import { LINE_FOOT, MARKET_LABELS, MODE_HINTS } from '@/lib/desk/ui-copy';
 import { ModeStamp } from './ModeStamp';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import type { HouseDeskId } from '@/lib/house';
@@ -32,13 +32,21 @@ import { TradeTicket } from './TradeTicket';
 import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
-import { DeskInstrument } from './DeskInstrument';
+import { BlotterHearables } from './BlotterHearables';
+import { RoomMarketClock } from './RoomMarketClock';
+import { ReceiverShell } from './ReceiverShell';
 import { DeskObjects, TapeMachine } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import styles from './WorkingDesk.module.css';
 import ticker from "./DeskTicker.module.css";
 
 const NO_MARKS: DeskMark[] = [];
+
+const HETTY_HEARABLES = [
+  'buy $25 of Apple',
+  'what’s moving on the tape?',
+  'explain the estimate before I decide',
+] as const;
 
 const RoomPresentation = dynamic(
   () => import('./RoomPresentation').then(m => m.RoomPresentation),
@@ -54,7 +62,7 @@ function HettyDoorShell() {
       </div>
       <p className={styles.callNote}>Speak your instruction. Review it on the same ticket.</p>
       <div className={styles.callActions}><button type="button" className={styles.callButton} disabled>Preparing the line…</button></div>
-      <p className={styles.callFoot}>Mic stays off until you ring. Voice fills the slip — only you can sign.</p>
+      <p className={styles.callFoot}>{LINE_FOOT}</p>
     </section>
   );
 }
@@ -224,19 +232,22 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     }
   };
 
+  const draftEmpty = desk.state.stage === 'draft' && !desk.state.draft.instrumentId;
+  const lineFirst = roomView && draftEmpty && !hettyLive;
+
   const work = (
     <>
       <ModeStamp
         live={liveMode}
         presentation={presentation}
         hint={liveMode ? MODE_HINTS.hettyLive : MODE_HINTS.hettyPaper}
-        market="COINBASE TOKENIZED STOCKS · BASE"
+        market={MARKET_LABELS.hetty}
       >
         {liveMode && (
-          <span>{auth.walletAddress ? `Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)} · Base` : 'Sign in and link a wallet to trade.'}</span>
+          <span>{auth.walletAddress ? `Wallet ${auth.walletAddress.slice(0, 6)}…${auth.walletAddress.slice(-4)}` : 'Link a wallet to trade live.'}</span>
         )}
         {sharedLoaded && <span role="status">Shared instruction loaded.</span>}
-        {practiceReturn && <span role="status">Back from practice — instruction unchanged.</span>}
+        {practiceReturn && <span role="status">Back from practice.</span>}
         {!roomView && (
           <div className={styles.presentationToggle} role="group" aria-label="Desk presentation">
             <button type="button" className={styles.presentationButton} aria-pressed={false} onClick={() => setMode('room')}>Room</button>
@@ -244,20 +255,24 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           </div>
         )}
       </ModeStamp>
-      {desk.state.stage === 'draft' && !desk.state.draft.instrumentId && (
+      {roomView && <RoomMarketClock clock={clock} />}
+      {!roomView && draftEmpty && (
         <div className={styles.introduction} id="introduction">
           <p className={styles.eyebrow}>THE OFFICE ABOVE THE PIT</p>
           <h1>The desk <span>hears you.</span></h1>
-          <p>No forms to learn. Say the trade — Hetty writes the slip, reads it back, and waits.</p>
-          <div className={styles.voiceSay} role="group" aria-label="Things you can say — tap one and the desk hears it">
-            <span className={styles.voiceSayLead}>Say it — or tap it</span>
-            <button type="button" onClick={() => sayToDesk('buy $25 of Apple')}>“buy $25 of Apple”</button>
-            <button type="button" onClick={() => sayToDesk('what’s moving on the tape?')}>“what’s moving on the tape?”</button>
-            <button type="button" onClick={() => sayToDesk('explain the estimate before I decide')}>“explain the estimate before I decide”</button>
-          </div>
+          <p>Say the trade. Hetty writes the slip.</p>
+          <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />
         </div>
       )}
-      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'} data-ledger="true" data-foreground={foreground.kind} data-live={hettyLive ? 'true' : 'false'} data-presentation={presentation}>
+      <div
+        className={styles.grid}
+        data-review={reviewActive ? 'true' : 'false'}
+        data-ledger="true"
+        data-foreground={foreground.kind}
+        data-live={hettyLive ? 'true' : 'false'}
+        data-presentation={presentation}
+        data-line-first={lineFirst ? 'true' : undefined}
+      >
         {!roomView && (
           <>
             <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
@@ -266,18 +281,15 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         )}
         <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} liveMode={liveMode} take={take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} />
-          {!roomView && (
-            <div className={styles.instrumentShell} data-stage={instrumentStage}>
-              <div className={styles.instrument} data-stage={instrumentStage}>
-                <DeskInstrument eager poster="/desk-receiver.webp" stage={instrumentStage} label={instrumentLabel} reviewing={reviewActive} brokerName="Hetty" lineTargetId="hetty" />
-              </div>
-              {!hettyLive && (
-                <p className={styles.receiverCue}>
-                  Lift the receiver — or press <kbd>H</kbd>. Speak first; the form is only how the desk writes it down.
-                </p>
-              )}
-            </div>
-          )}
+          {lineFirst && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
+          <ReceiverShell
+            stage={instrumentStage}
+            label={instrumentLabel}
+            reviewing={reviewActive}
+            brokerName="Hetty"
+            lineTargetId="hetty"
+            live={hettyLive}
+          />
           <div className={styles.deskInscription}>
             <span>The tape runs all night.</span>
             <p>The house keeps the record.</p>
@@ -295,7 +307,19 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             </div>
           </details>
         </aside>
-        <TradeTicket desk={desk} liveMode={liveMode} onLiveModeChange={setLiveMode} spokenLine={spoken} hettyLine={hettyLive ? hettySaid : null} live={hettyLive} applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null} educationHandoff={practiceReturn} onLiveJournalChange={liveJournal.reload} carriedNote={carriedNote} />
+        <TradeTicket
+          desk={desk}
+          liveMode={liveMode}
+          onLiveModeChange={setLiveMode}
+          spokenLine={spoken}
+          hettyLine={hettyLive ? hettySaid : null}
+          live={hettyLive}
+          applied={hettyLive ? appliedTicketLine(desk.state, desk.foreground) : null}
+          educationHandoff={practiceReturn}
+          onLiveJournalChange={liveJournal.reload}
+          carriedNote={carriedNote}
+          blankSlip={lineFirst}
+        />
         <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
       </div>
       {!roomView && (

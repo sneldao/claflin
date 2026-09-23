@@ -36,6 +36,7 @@ import {
 } from '@/lib/jesse/voice-tools';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
+import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
 import styles from './WorkingDesk.module.css';
 
@@ -516,6 +517,7 @@ function JesseCallInner({
         )}
         {!live && !ringing && captions.length === 0 && (
           <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
+            <span className={styles.ringLamp} aria-hidden="true" />
             Ring Jesse
           </button>
         )}
@@ -565,7 +567,7 @@ function JesseCallInner({
       {endNote && !live && !ringing && <p className={styles.callFoot} role="status">{endNote}</p>}
       {callError && <p className={styles.callError} role="alert">{callError}</p>}
       {!live && !ringing && !endNote && !callError && (
-        <p className={styles.callFoot}>Mic stays off until you ring. Voice fills the slip — only you can sign.</p>
+        <p className={styles.callFoot}>{LINE_FOOT} Press <kbd>H</kbd> to lift the line.</p>
       )}
     </section>
   );

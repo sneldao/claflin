@@ -1,6 +1,6 @@
 # Claflin Roadmap
 
-**Updated: 2026-09-20.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience. Desk-slip provenance (belonging without fake equity) is sequenced in §6 and [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
+**Updated: 2026-09-23.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience. Desk-slip provenance (belonging without fake equity) is sequenced in §6 and [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md).
 
 [Product Direction](docs/PRODUCT_DIRECTION.md) owns jobs, principles, and information hierarchy. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. [Auth and access](docs/AUTH_AND_ACCESS.md) owns identity tiers. This roadmap owns sequencing, known gaps, house-desk order, and release gates.
 
@@ -24,7 +24,7 @@
 
 ## Immediate opportunity: Stocklana
 
-Stocklana remains the Jesse/Solana milestone, confirmed submission deadline **September 25, 2026 at 16:00 ET / 20:00 UTC / 21:00 BST**. The [four-engineer build plan](docs/STOCKLANA_BUILD_PLAN.md) remains the executable/historical brief. The integrated desk now has real xStock/Jupiter paper, dual-env-gated Jupiter live settle, ConvAI and Room/Compact presentation. Do not collapse the house into a desk-first or chain-first selector: the foyer remains offering-led, and `/?desk=jesse` remains the direct deep link. Bounty scope is settled (2026-09-17): main track primary, Pyth secondary, PreStocks sanctioned as an additional secondary on Jesse's desk; Clawpump, Tessera, and Meteora-DBC-as-primary are declined — rationale and constraints live in the build plan's contest-focus section.
+Stocklana remains the Jesse/Solana milestone, confirmed submission deadline **September 25, 2026 at 16:00 ET / 20:00 UTC / 21:00 BST**. The [four-engineer build plan](docs/STOCKLANA_BUILD_PLAN.md) remains the executable/historical brief. The integrated desk now has real xStock/Jupiter paper, dual-env-gated Jupiter live settle, ConvAI and Room/Compact presentation. Do not collapse the house into a desk-first or chain-first selector: the foyer remains offering-led, and `/?desk=jesse&view=room` is the Stocklana judge deep link (`/?desk=jesse` remains valid). House presence grammar (ring first, blank slip until intent, one line foot) is shared across foyer, Hetty, and Jesse — see [Stocklana submission pack](docs/STOCKLANA_SUBMISSION.md). Bounty scope is settled (2026-09-17): main track primary, Pyth secondary, PreStocks sanctioned as an additional secondary on Jesse's desk; Clawpump, Tessera, and Meteora-DBC-as-primary are declined — rationale and constraints live in the build plan's contest-focus section.
 
 Experience decision: Night and direct presentations are available from first use, with the same work/capabilities. The room gains continuity through explicit paper records and watches—not exams, XP, account balance, trade count, or paid-call activity. See [Product Direction](docs/PRODUCT_DIRECTION.md#night-desk-progression-and-presentation).
 

@@ -6,20 +6,22 @@
 ## Deep link judges must open
 
 ```
-https://claflin.trustfall.xyz/?desk=jesse
+https://claflin.trustfall.xyz/?desk=jesse&view=room
 ```
 
 (Replace host with the deployed production URL if different.)
 
+- Canonical Stocklana URL forces **Room** view — Jesse’s night desk with the line first.
 - First visit with no preference → Claflin foyer and house book (instruction → concrete offering → eligible desk).
-- `/?desk=jesse` → Jesse Solana desk immediately.
+- `/?desk=jesse` → Jesse Solana desk (Room by default; Compact if the device prefers it).
+- `/?desk=jesse&view=room` → Jesse Room explicitly (prefer this for judging and demos).
 - `/?desk=hetty` → Hetty Base desk.
-- `?offering=<id>` may be added to a desk link only when that catalog offering covers the desk; direct `?desk=jesse` remains sufficient for judging.
+- `?offering=<id>` may be added to a desk link only when that catalog offering covers the desk.
 - Last open desk is remembered in `claflin.desk.v1.last`.
 
-Do **not** submit bare `/` without `?desk=jesse` for Stocklana — judges may land on the foyer or a remembered Hetty session. Prefer the Jesse deep link.
+Do **not** submit bare `/` without `?desk=jesse` for Stocklana — judges may land on the foyer or a remembered Hetty session. Prefer the Room deep link above.
 
-Optional Room demo: `/?desk=jesse&view=room` (same controller; `/night-desk` redirects there). Do **not** demo `/night-desk?study=1` fixtures as live markets.
+Do **not** demo `/night-desk?study=1` fixtures as live markets (`/night-desk` redirects to the live Room URL).
 
 ## Architecture one-liner
 
@@ -46,21 +48,23 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 ## Demo script (~2–3 minutes)
 
 1. **Problem (10s).** Equity/stock reference and token venue are different markets — hours, units, executable terms.
-2. **Open Jesse.** Load `/?desk=jesse` (or `/?desk=jesse&view=room` for Room view). State: Claflin house, Jesse’s Solana desk, Backed xStocks. If time permits, first show `/` resolving “Apple” into separate `AAPLc`/Base and `AAPLx`/Solana offerings; the eligible desk links carry the selected offering. Room and Compact are the same work.
-3. **Voice-first.** Ring the line (or tap) “buy 100 USDC of AAPLx”. Show the slip: Jupiter · Token-2022 · mint · scaled multiplier.
-4. **Correct.** Tap or speak “make that 50 USDC of AAPLx”. New slip supersedes; old authority gone.
-5. **Evidence.** Show **Pyth Pro** compare when available (equity vs xStock). Otherwise venue duplex / PreStocks — labelled not arbitrage. Never invent a Pyth number.
-6. **Live path (if flags on).** Connect wallet → prepare live order (tiny size) → sign → Solscan. Otherwise state paper-only for this deployment.
-7. **File + return.** File paper record → reload → record still there.
-8. **Refuse.** “buy DOGE on Solana” → clarify/refuse; catalog boundary holds.
-9. **Close.** Architecture one-liner + exact scope: Solana desk with honest duplex; live settle only when dual-flagged.
+2. **Arrive in Jesse’s room.** Load `/?desk=jesse&view=room`. State: Claflin house, Jesse’s Solana desk, night room, blank slip waiting. Market clock on screen.
+3. **Ring first.** Click **Ring Jesse** (or lift the receiver / press `H`). Line lifts; mic stays off until the ring.
+4. **Speak or tap.** Say or tap “buy 100 USDC of AAPLx”. Watch the slip write: Jupiter · Token-2022 · mint · scaled multiplier.
+5. **Correct.** Tap or speak “make that 50 USDC of AAPLx”. New slip supersedes; old authority gone.
+6. **Evidence.** Show **Pyth Pro** compare when available (equity vs xStock). Otherwise venue duplex / PreStocks — labelled not arbitrage. Never invent a Pyth number.
+7. **Live path (if flags on).** Connect wallet → prepare live order (tiny size) → sign → Solscan. Otherwise state paper-only for this deployment.
+8. **File + return.** File paper record → reload → record still there.
+9. **Refuse.** “buy DOGE on Solana” → clarify/refuse; catalog boundary holds.
+10. **Close.** Architecture one-liner + exact scope: Solana desk with honest duplex; live settle only when dual-flagged.
 
-If the mic fails on camera, tap the same hearable phrases — identical controller path.
+If the mic fails on camera, tap the blotter lines under the plate (“Things the desk hears”) — identical controller path.
 
 ## Submission checklist
 
-- [ ] Deployed URL with `?desk=jesse` verified in a fresh browser profile
-- [ ] Video recorded from the script above
+- [ ] Deployed URL with `?desk=jesse&view=room` verified in a fresh browser profile
+- [ ] First viewport reads as a 1920s desk you ring — not a Solana form
+- [ ] Video recorded from the script above (ring before fill)
 - [ ] GitHub link to this repo
 - [ ] Prior-work disclosure included in description
 - [ ] Team members invited on the form

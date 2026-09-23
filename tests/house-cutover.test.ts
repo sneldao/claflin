@@ -43,8 +43,8 @@ describe('one canonical house', () => {
     assert.match(desk, /About Hetty/);
     assert.match(desk, /<ModeStamp/);
     assert.match(source('components/desk/ModeStamp.tsx'), /MODE_LABELS/);
-    assert.match(source('lib/desk/ui-copy.ts'), /PAPER TRADING/);
-    assert.match(source('lib/desk/ui-copy.ts'), /LIVE EXECUTION/);
+    assert.match(source('lib/desk/ui-copy.ts'), /paper: 'PAPER'/);
+    assert.match(source('lib/desk/ui-copy.ts'), /live: 'LIVE'/);
     assert.match(room, /Sound/);
     assert.doesNotMatch(room, /Hear the floor/);
     assert.doesNotMatch(desk, /startCall|auto-ring|autoRing/);
@@ -56,7 +56,7 @@ describe('one canonical house', () => {
        plate, no status prop, no desk map. The line itself is mounted once. */
     assert.doesNotMatch(desk, /<HettyStatus|styles\.hettyPlate|HOUSE_DESKS\.map/);
     assert.equal(desk.match(/<HettyCall\s/g)?.length, 1);
-    assert.ok(desk.indexOf('<HettyCall ') < desk.indexOf('<TradeTicket desk='), 'the line leads the DOM so small screens and focus order are voice first');
+    assert.ok(desk.indexOf('<HettyCall ') < desk.indexOf('<TradeTicket'), 'the line leads the DOM so small screens and focus order are voice first');
     assert.match(source('components/desk/TradeTicket.tsx'), /<h1 id="instruction-title"/);
   });
   it('shows continuity shells with empty states, without hiding storage failures', () => {
@@ -172,8 +172,9 @@ describe('one canonical house', () => {
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');
-    assert.match(desk, /import \{ DeskInstrument \} from '\.\/DeskInstrument'/);
-    assert.match(desk, /<DeskInstrument eager poster="\/desk-receiver\.webp"/);
+    assert.match(desk, /ReceiverShell/);
+    assert.match(source('components/desk/ReceiverShell.tsx'), /DeskInstrument/);
+    assert.match(source('components/desk/ReceiverShell.tsx'), /poster="\/desk-receiver\.webp"/);
     const receiver = source('components/desk/DeskInstrument.tsx');
     assert.match(receiver, /if \(eager\)/);
     assert.match(receiver, /loading="eager"/);
