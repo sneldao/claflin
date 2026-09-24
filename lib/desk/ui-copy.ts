@@ -67,9 +67,24 @@ export const VENUE_DUPLEX_ABOUT =
 export const PRESTOCKS_ABOUT =
   'Issuer mark vs token — PreStocks only; not the xStock paper ticket.';
 
-/** Foyer hero — one lede, one boundary. */
+/** Foyer hero — one lede, one boundary. The lede is the plain sentence
+ *  under the headline: what the house is, without the theme. */
 export const FOYER_LEDE =
-  'Ring a broker, say the trade, watch the slip get written.';
+  'Trade tokenized US stocks by voice, onchain, any hour.';
+
+/** Foyer headline follows the listing exchange's session. `pending` is the
+ *  SSR / first-paint line, before the client knows the time. */
+export const FOYER_HEADLINES = {
+  pending: ['The exchange closes.', 'This book doesn’t.'],
+  closed: ['The floor is dark.', 'The line is open.'],
+  open: ['The floor is loud.', 'The line outlasts the bell.'],
+} as const;
+
+/** Said once per open line so a human name never reads as a human broker. */
+export const LINE_IDENTITY = 'AI broker';
+
+/** What an onchain gap on the wire is measured against. */
+export const WIRE_GAP_REFERENCE = 'vs stock';
 
 export const FOYER_BOUNDARY = 'Paper by default. Only you can sign.';
 

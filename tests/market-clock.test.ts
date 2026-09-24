@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { marketClock } from '../lib/market-clock';
+import { bellLine, formatBellCountdown, marketClock, nextBell } from '../lib/market-clock';
 
 const at = (iso: string) => new Date(iso);
 
@@ -46,5 +46,49 @@ describe('market clock', () => {
   it('maps UTC correctly in EDT', () => {
     // Mon 2026-03-09 09:31 ET — EDT (UTC-4)
     assert.equal(marketClock(at('2026-03-09T13:31:00Z')).exchange, 'open');
+  });
+});
+
+describe('next bell', () => {
+  it('counts down to the close during the session', () => {
+    // Thu 2026-09-24 11:21 ET → 16:00 ET close
+    assert.deepEqual(nextBell(at('2026-09-24T15:21:00Z')), { kind: 'closes', minutes: 279 });
+  });
+
+  it('counts down to the next open overnight', () => {
+    // Thu 2026-09-24 16:00 ET → Fri 09:30 ET
+    assert.deepEqual(nextBell(at('2026-09-24T20:00:00Z')), { kind: 'opens', minutes: 17 * 60 + 30 });
+  });
+
+  it('skips the weekend', () => {
+    // Sat 2026-09-26 11:00 ET → Mon 09:30 ET
+    assert.deepEqual(nextBell(at('2026-09-26T15:00:00Z')), { kind: 'opens', minutes: 46 * 60 + 30 });
+  });
+
+  it('skips a full holiday', () => {
+    // Wed 2026-11-25 16:00 ET → Thanksgiving closed → Fri 11-27 09:30 ET
+    assert.deepEqual(nextBell(at('2026-11-25T21:00:00Z')), { kind: 'opens', minutes: 41 * 60 + 30 });
+  });
+
+  it('knows the early close', () => {
+    // Fri 2026-11-27 12:00 ET → 13:00 ET early close
+    assert.deepEqual(nextBell(at('2026-11-27T17:00:00Z')), { kind: 'closes', minutes: 60 });
+  });
+
+  it('refuses to guess outside the known calendar', () => {
+    assert.equal(nextBell(at('2028-03-01T15:00:00Z')), null);
+  });
+
+  it('formats the countdown in words a kicker can carry', () => {
+    assert.equal(formatBellCountdown(45), '45m');
+    assert.equal(formatBellCountdown(9 * 60 + 12), '9h 12m');
+    assert.equal(formatBellCountdown(2 * 24 * 60 + 3 * 60 + 5), '2d 3h');
+  });
+
+  it('writes the kicker from the bell, or the clock line without one', () => {
+    const now = at('2026-09-24T15:21:00Z');
+    const clock = marketClock(now);
+    assert.equal(bellLine(clock, nextBell(now)), 'NYSE open · closes in 4h 39m');
+    assert.equal(bellLine(clock, null), clock.line);
   });
 });

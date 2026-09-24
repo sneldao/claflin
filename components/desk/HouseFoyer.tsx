@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
-import { useMarketClock } from '@/lib/use-market-clock';
+import { useMarketBell } from '@/lib/use-market-clock';
+import { bellLine } from '@/lib/market-clock';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
 import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
-import { FOYER_BOUNDARY } from '@/lib/desk/ui-copy';
+import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, LINE_IDENTITY, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
 import { entryIntentFromInstruction, type EntryIntent } from '@/lib/house-entry';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
@@ -48,7 +49,9 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
   /* The clock's line needs a Date — null on the server so SSR and first
      paint agree on the fallback kicker. */
-  const clock = useMarketClock();
+  const market = useMarketBell();
+  const clock = market?.clock ?? null;
+  const [headlineTop, headlineBottom] = FOYER_HEADLINES[clock?.exchange ?? 'pending'];
   const jesseOpen = isOpenDesk('jesse');
   const hettyMarks = useReferenceMarks('hetty');
   const jesseMarksRead = useReferenceMarks(jesseOpen ? 'jesse' : 'hetty');
@@ -110,12 +113,13 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           <div className={foyerStyles.copy}>
             <p className={foyerStyles.kicker} data-exchange={clock?.exchange ?? 'pending'}>
               <span className={foyerStyles.clockLamp} aria-hidden="true" />
-              {clock?.line ?? 'THE ONCHAIN BOOK NEVER CLOSES'}
+              {market ? bellLine(market.clock, market.bell) : 'THE ONCHAIN BOOK NEVER CLOSES'}
             </p>
             <h1 id="foyer-title" className={foyerStyles.title}>
-              The exchange closes.<br />
-              This book doesn’t.
+              {headlineTop}<br />
+              {headlineBottom}
             </h1>
+            <p className={foyerStyles.lede}>{FOYER_LEDE}</p>
             {filing && (
               <LastFilingLine
                 filing={filing}
@@ -147,7 +151,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                   <article key={desk.id} className={foyerStyles.lineCard}>
                     <header className={foyerStyles.lineCardHeader}>
                       <h2 className={foyerStyles.lineName}>{desk.shortName}</h2>
-                      <p className={foyerStyles.lineRail}>{desk.market}</p>
+                      <p className={foyerStyles.lineRail}>{desk.market} · {LINE_IDENTITY}</p>
                     </header>
                     <div className={foyerStyles.lineActions}>
                       <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
@@ -189,8 +193,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             <div className={foyerStyles.methodRow}>
               <span className={foyerStyles.methodIndex}>02 / The slip</span>
               <div>
-                <h3>A real price when you ask.</h3>
-                <p>The venue’s estimate lands on the slip — time-stamped, time-limited.</p>
+                <h3>A live estimate when you ask.</h3>
+                <p>The venue’s estimate lands on the slip — time-stamped, and it expires.</p>
               </div>
             </div>
             <div className={foyerStyles.methodRow}>
@@ -208,10 +212,10 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
       <footer className={foyerStyles.footer}>
         <HouseMark small className={foyerStyles.footerMark} />
-        <span>THE TAPE RUNS ALL NIGHT. THE HOUSE KEEPS THE RECORD.</span>
+        <span>THE TAPE RUNS ALL NIGHT. EVERY SLIP ON THE RECORD.</span>
         {planned.length > 0 && (
           <span className={foyerStyles.footerPlanned}>
-            Later — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
+            Coming soon — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
           </span>
         )}
       </footer>
@@ -298,7 +302,7 @@ function WireItem({ wire, tick, disabled, onPick }: { wire: WireMark; tick?: 'up
   const stale = wire.mark.reference.status === 'stale';
   const instruction = instructionForMark(wire.mark);
   const gapBps = wire.mark.reference.status === 'observed' ? Number(wire.mark.stockReference?.differenceBps ?? NaN) : NaN;
-  const gap = Number.isFinite(gapBps) ? `${gapBps > 0 ? '+' : gapBps < 0 ? '−' : ''}${Math.abs(gapBps).toFixed(1)} bps` : null;
+  const gap = Number.isFinite(gapBps) ? `${gapBps > 0 ? '+' : gapBps < 0 ? '−' : ''}${Math.abs(gapBps).toFixed(1)} bps ${WIRE_GAP_REFERENCE}` : null;
   return (
     <button
       type="button"

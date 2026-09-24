@@ -117,7 +117,15 @@ describe('house foyer', () => {
     assert.match(html, /Open Jesse’s desk/);
     assert.match(html, /id="house-method"/);
     assert.match(html, /How the line works\./);
-    assert.match(html, /THE TAPE RUNS ALL NIGHT\. THE HOUSE KEEPS THE RECORD\./);
+    assert.match(html, /THE TAPE RUNS ALL NIGHT\. EVERY SLIP ON THE RECORD\./);
+    assert.doesNotMatch(html, /THE HOUSE KEEPS THE RECORD/);
+    assert.match(html, /Trade tokenized US stocks by voice, onchain, any hour\./, 'plain lede under the headline');
+    assert.match(html, /Base · AI broker/);
+    assert.match(html, /Solana · AI broker/);
+    assert.match(html, /A live estimate when you ask\./);
+    assert.doesNotMatch(html, /A real price when you ask/);
+    assert.match(html, /Coming soon — /);
+    assert.doesNotMatch(html, /Later — /);
     assert.doesNotMatch(html, /ILLUSTRATIVE EXAMPLE/);
     assert.doesNotMatch(html, /0\.490 Apple units/);
     assert.doesNotMatch(html, /0\.245 Apple units/);
@@ -264,7 +272,7 @@ describe('house foyer', () => {
     assert.ok(solItem, 'Solana mark on the wire');
     assert.equal(solItem!.getAttribute('aria-label'), 'AAPLx $227.41 on Solana');
     assert.match(text(solItem), /SOL/);
-    assert.match(text(solItem), /\+13\.6 bps/);
+    assert.match(text(solItem), /\+13\.6 bps vs stock/, 'the gap names what it is measured against');
     const page = text(getRootElement());
     assert.doesNotMatch(page, /Jesse’s take/);
     assert.doesNotMatch(page, /Hetty’s take/);

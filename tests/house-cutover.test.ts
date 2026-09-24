@@ -119,8 +119,10 @@ describe('one canonical house', () => {
     assert.match(entry, /claflin\.desk\.v1\.last/);
     assert.match(entry, /resolveHouseEntry/);
     assert.match(entry, /\?desk=/);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /The exchange closes\./);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /This book doesn’t\./);
+    /* The headline follows the session; its first-paint line lives in shared copy. */
+    assert.match(source('lib/desk/ui-copy.ts'), /The exchange closes\./);
+    assert.match(source('lib/desk/ui-copy.ts'), /This book doesn’t\./);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /FOYER_HEADLINES/);
     /* Foyer desk cards deep-link via `params.set('desk', id)` and still enter
      * through onEnter; the `?desk=` param is parsed back by useTradingDesk. */
     assert.match(source('components/desk/HouseFoyer.tsx'), /params\.set\('desk', id\)/);
