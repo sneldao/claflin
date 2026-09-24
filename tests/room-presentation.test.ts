@@ -1,96 +1,59 @@
 import './jsdom-setup';
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createElement, act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { HOUSE_DESKS } from '../lib/house';
 import { RoomPresentation } from '../components/desk/RoomPresentation';
-import { resetContainer, getRootElement } from './jsdom-setup';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const jesse = HOUSE_DESKS.find(desk => desk.id === 'jesse')!;
 const hetty = HOUSE_DESKS.find(desk => desk.id === 'hetty')!;
 
-function objectButtons() {
-  return Array.from(getRootElement().querySelectorAll('nav[aria-label*="room"] button'));
-}
+const render = (desk: typeof jesse) => renderToStaticMarkup(createElement(RoomPresentation, {
+  desk,
+  stage: 'arrival',
+  view: 'desk',
+  presentation: 'room',
+  onPresentation: () => {},
+  onSwitchDesk: () => {},
+  onLeaveDesk: () => {},
+}, createElement('div', { id: 'on-desk' })));
 
-describe('room presentation object navigation', () => {
-  let root: Root | null = null;
-
-  beforeEach(() => resetContainer());
-
-  afterEach(async () => {
-    if (root) { await act(async () => root!.unmount()); root = null; }
+describe('room presentation', () => {
+  it('renders no floating room object labels for either desk', () => {
+    for (const desk of [hetty, jesse]) {
+      const html = render(desk);
+      assert.doesNotMatch(html, /roomLabels|objectLabel|aria-label="Objects in/);
+      assert.doesNotMatch(html, /The two markets|The working tray|Your instruction|The ledger/);
+    }
   });
 
-  it('uses Hetty-specific object language instead of Jesse’s two-market evidence label', async () => {
-    let selected: string | null = null;
-    root = createRoot(getRootElement());
-    await act(async () => root!.render(createElement(RoomPresentation, {
-      desk: hetty,
-      stage: 'arrival',
-      view: 'desk',
-      onView: view => { selected = view; },
-      presentation: 'room',
-      onPresentation: () => {},
-      onSwitchDesk: () => {},
-      onLeaveDesk: () => {},
-    }, createElement('div', { id: 'on-desk' }))));
-
-    const labels = objectButtons().map(button => button.textContent);
-    assert.deepEqual(labels, ['The working tray', 'Your instruction', 'The ledger']);
-    assert.equal(
-      getRootElement().querySelector('nav[aria-label*="room"]')?.getAttribute('aria-label'),
-      "Objects in Hetty Green's room",
-    );
-
-    await act(async () => objectButtons()[0].dispatchEvent(
-      new (window as any).MouseEvent('click', { bubbles: true, cancelable: true }),
-    ));
-    assert.equal(selected, 'evidence');
+  it('names the desk once in the mast and drops the ROOM suffix', () => {
+    const html = render(jesse);
+    const mast = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    assert.match(mast, /JESSE · SOLANA/);
+    assert.doesNotMatch(mast, /· ROOM/);
   });
 
-  it('keeps Jesse’s market evidence vocabulary', async () => {
-    root = createRoot(getRootElement());
-    await act(async () => root!.render(createElement(RoomPresentation, {
-      desk: jesse,
-      stage: 'arrival',
-      view: 'desk',
-      onView: () => {},
-      presentation: 'room',
-      onPresentation: () => {},
-      onSwitchDesk: () => {},
-      onLeaveDesk: () => {},
-    }, createElement('div'))));
-
-    assert.deepEqual(
-      objectButtons().map(button => button.textContent),
-      ['The two markets', 'Your instruction', 'The ledger'],
-    );
+  it('keeps the desk navigation and view switch in the mast', () => {
+    const html = render(jesse);
+    assert.match(html, /aria-label="Desk navigation"/);
+    assert.match(html, />View</);
+    assert.match(html, /Compact/);
   });
 
-  it('buries Room/Compact chrome and drops icon-led object labels', () => {
+  it('buries Room/Compact chrome and drops the object-label plumbing', () => {
     const room = source('components/desk/RoomPresentation.tsx');
     assert.doesNotMatch(room, /from 'lucide-react'/);
     assert.doesNotMatch(room, /Same paper and line/);
+    assert.doesNotMatch(room, /roomLabels|objectLabel|useHouseSceneAnchors|onAnchors/);
     assert.match(room, /className=\{styles\.viewSwitch\}/);
-    assert.match(room, /\{object\.label\}/);
-  });
-
-  it('keeps room object labels bound to scene anchors', () => {
-    const room = source('components/desk/RoomPresentation.tsx');
-    assert.match(room, /useHouseSceneAnchors\(applyAnchors\)/);
-    assert.match(room, /ref=\{objectRefs\[object\.view\]\}/);
-    assert.match(room, /element\.style\.visibility = anchor\.visible/);
-    const scene = source('lib/night-desk-scene.ts');
-    assert.match(scene, /onAnchors\?\.\(\{/);
-    const provider = source('components/desk/HouseScene.tsx');
-    assert.match(provider, /subscribeAnchors/);
-    const hettySurface = source('components/desk/HettyDeskSurface.tsx');
-    assert.match(hettySurface, /setRoomFocus\(\{ foreground: foreground\.kind, view \}\)/);
-    assert.match(hettySurface, /roomProjection\.view === 'desk' && roomFocus\?\.foreground === foreground\.kind/);
-    assert.match(hettySurface, /view=\{roomSceneView\}/);
+    /* The market clock moved into the mast. */
+    assert.match(room, /useMarketClock/);
+    assert.match(room, /<RoomMarketClock clock=\{clock\} \/>/);
+    assert.doesNotMatch(source('components/desk/JesseDeskSurface.tsx'), /RoomMarketClock/);
+    assert.doesNotMatch(source('components/desk/HettyDeskSurface.tsx'), /RoomMarketClock/);
   });
 });

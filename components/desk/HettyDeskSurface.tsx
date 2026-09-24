@@ -27,7 +27,6 @@ import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
-import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { TradeTicket } from './TradeTicket';
 import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
@@ -35,7 +34,6 @@ import { TickerTape } from './TickerTape';
 import { BlotterHearables } from './BlotterHearables';
 import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
-import { RoomMarketClock } from './RoomMarketClock';
 import { RoomTape } from './RoomTape';
 import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
 import type { ParsedDictation } from '@/lib/dictation/useDictation';
@@ -143,7 +141,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
   const [sharedLoaded, setSharedLoaded] = useState(false);
-  const [roomFocus, setRoomFocus] = useState<{ foreground: typeof foreground.kind; view: NightDeskView } | null>(null);
   const roomView = presentation === 'room';
 
   /* The slip's provenance: every written value can say where it came from.
@@ -326,7 +323,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const applyPresentation = useDeskPresentation('hetty', setPresentation);
   const setMode = useCallback((mode: DeskPresentation) => {
-    if (mode === 'compact') setRoomFocus(null);
     applyPresentation(mode);
   }, [applyPresentation]);
 
@@ -335,24 +331,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     foregroundKind: foreground.kind,
     reviewing: reviewActive,
   }), [desk.state.stage, foreground.kind, reviewActive]);
-  const roomSceneView = roomProjection.view === 'desk' && roomFocus?.foreground === foreground.kind
-    ? roomFocus.view
-    : roomProjection.view;
-
-  const onRoomView = (view: NightDeskView) => {
-    setRoomFocus({ foreground: foreground.kind, view });
-    if (view === 'review') {
-      scrollToDeskTarget('instruction');
-      return;
-    }
-    if (view === 'ledger') {
-      scrollToDeskTarget('paper-ledger');
-      return;
-    }
-    if (view === 'evidence') {
-      scrollToDeskTarget('on-desk');
-    }
-  };
 
   const draftEmpty = desk.state.stage === 'draft'
     && !desk.state.draft.instrumentId
@@ -387,7 +365,6 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           </div>
         )}
       </ModeStamp>
-      {roomView && <RoomMarketClock clock={clock} />}
       {roomView && !reviewActive && (
         <RoomTape
           marks={marks.result?.marks ?? NO_MARKS}
@@ -434,7 +411,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           {blankSlip && filing?.deskId === 'hetty' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => desk.openRecord(filing.recordId)} />
           )}
-          {blankSlip && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
+          {!roomView && blankSlip && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
           <ReceiverShell
             stage={instrumentStage}
             label={instrumentLabel}
@@ -504,8 +481,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       <RoomPresentation
         desk={desk.activeDesk}
         stage={roomProjection.stage}
-        view={roomSceneView}
-        onView={onRoomView}
+        view={roomProjection.view}
         presentation={presentation}
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}

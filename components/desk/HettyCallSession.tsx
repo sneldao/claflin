@@ -20,6 +20,7 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { RingExample } from './RingExample';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
@@ -696,7 +697,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
   return (
     <section id="hetty" className={styles.call} aria-labelledby="call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
-        <h2 id="call-title">Hetty Green <small>The Witch of Wall Street · AI broker on Base</small></h2>
+        <h2 id="call-title" className={compactPlate ? styles.srOnly : undefined}>Hetty Green <small>The Witch of Wall Street · AI broker on Base</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
@@ -719,10 +720,19 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
           </>
         )}
         {!live && !ringing && captions.length === 0 && (
-          <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
-            <span className={styles.ringLamp} aria-hidden="true" />
-            Ring Hetty
-          </button>
+          <>
+            <button
+              type="button"
+              className={styles.callButton}
+              data-cue="idle"
+              aria-label={compactPlate ? 'Ring Hetty' : undefined}
+              onClick={() => void ring('fresh')}
+            >
+              <span className={styles.ringLamp} aria-hidden="true" />
+              {compactPlate ? 'Ring' : 'Ring Hetty'}
+            </button>
+            {compactPlate && <RingExample deskId="hetty" />}
+          </>
         )}
         {ringing && !live && (
           <>

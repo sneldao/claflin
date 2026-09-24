@@ -106,7 +106,7 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
   if (mode === 'receipt') {
     const filedText = quote && instrument ? filedLine(quote, instrument.symbol, vocab) : null;
     return (
-      <div className={styles.writtenSlip}>
+      <div className={styles.writtenSlip} data-mode={mode}>
         {filedText && (
           <>
             <p className={styles.slipSentence}>{filedText}</p>
@@ -236,7 +236,7 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
   const validity = mode === 'review' && quote ? slipValidity(quote.expiresAt, now) : null;
 
   return (
-    <div className={styles.writtenSlip} data-lapsed={validity?.state === 'lapsed' ? 'true' : undefined}>
+    <div className={styles.writtenSlip} data-mode={mode} data-lapsed={validity?.state === 'lapsed' ? 'true' : undefined}>
       {mode === 'review' && freshness !== undefined && (
         <i
           className={styles.slipFresh}

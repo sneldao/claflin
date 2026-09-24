@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { brokerTake } from '../lib/desk/broker-take';
+import { brokerTake, tapeGapLine } from '../lib/desk/broker-take';
 import type { MarketClock } from '../lib/market-clock';
 import type { DeskMark } from '../lib/trading/marks-shared';
 
@@ -53,5 +53,25 @@ describe('broker take', () => {
     const marks = [mark('AAPLx', '80', 'stale'), mark('NVDAx', null)];
     assert.equal(brokerTake('jesse', marks, CLOSED), 'The exchange is shut; the tape here is still printing. Watch the price, not the story.');
     assert.equal(brokerTake('jesse', [], OPEN), 'Both tapes are running. I watch where they disagree.');
+  });
+});
+
+describe('tape gap line', () => {
+  it('names the widest gap over, and notes a shut exchange', () => {
+    const marks = [mark('AAPLx', '12.4'), mark('NVDAx', '42.0'), mark('TSLAx', '5')];
+    assert.equal(tapeGapLine(marks, CLOSED), 'NVDAx is 42.0 bps over its stock while the exchange is shut.');
+  });
+
+  it('names the widest gap under on an open exchange', () => {
+    assert.equal(tapeGapLine([mark('NVDAx', '-13.6')], OPEN), 'NVDAx is 13.6 bps under its stock.');
+  });
+
+  it('calls a sub-basis-point gap quiet', () => {
+    assert.equal(tapeGapLine([mark('AAPLx', '0.4')], OPEN), 'AAPLx is within a basis point of its stock.');
+  });
+
+  it('is null with no observed gap', () => {
+    assert.equal(tapeGapLine([], OPEN), null);
+    assert.equal(tapeGapLine([mark('AAPLx', '80', 'stale'), mark('NVDAx', null)], CLOSED), null);
   });
 });

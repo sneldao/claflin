@@ -22,7 +22,7 @@ import { draftComplete, JESSE_VOCAB, slipOneLine, slipValidity } from '@/lib/des
 import { comparisonTake } from '@/lib/desk/broker-take';
 import { focusLedgerTitle, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { getEducationTopic } from '@/lib/education';
-import { EVIDENCE_DISCLAIMER, BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
+import { EVIDENCE_DISCLAIMER, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
@@ -58,6 +58,7 @@ export const JesseTicket = memo(function JesseTicket({
   carriedNote = null,
   mark = null,
   blankSlip = false,
+  exampleSymbol = 'AAPLx',
   quietEvidence = false,
   roomView = false,
   provenance,
@@ -72,6 +73,8 @@ export const JesseTicket = memo(function JesseTicket({
   mark?: DeskMark | null;
   /** Room first paint: blank blotter until the line (or hand) puts work on it. */
   blankSlip?: boolean;
+  /** The symbol the blank slip's ghost example names — the tape's widest gap. */
+  exampleSymbol?: string;
   /** Room: keep market evidence behind one disclosure until asked. */
   quietEvidence?: boolean;
   /** Room: the written sentence leads; Compact keeps the DraftForm. */
@@ -141,7 +144,7 @@ export const JesseTicket = memo(function JesseTicket({
   if (foreground.kind === 'missing') {
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="missing">
-        <PaperChrome liveMode={false} />
+        <PaperChrome liveMode={false} roomView={roomView} />
         <div className={styles.ticketSurface} key="missing">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <p className={styles.notice} role="status">This paper record is no longer in this browser.</p>
@@ -168,7 +171,7 @@ export const JesseTicket = memo(function JesseTicket({
       : null;
     return (
       <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={record ? 'true' : 'false'}>
-        <PaperChrome liveMode={false} />
+        <PaperChrome liveMode={false} roomView={roomView} />
         {record && <span className={styles.stamp} aria-hidden="true"><span>FILED</span><small>PAPER · SOLANA</small></span>}
         <div className={styles.ticketSurface} key="receipt">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{filed.heading}</h1>
@@ -218,7 +221,7 @@ export const JesseTicket = memo(function JesseTicket({
     const validity = slipValidity(q.expiresAt, reviewNow);
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="review">
-        <PaperChrome liveMode={liveMode && liveAvailable} />
+        <PaperChrome liveMode={liveMode && liveAvailable} roomView={roomView} />
         <div className={styles.ticketSurface} key="review">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
         <SignalCaption captionKey="fuseDrain" />
@@ -304,10 +307,13 @@ export const JesseTicket = memo(function JesseTicket({
         aria-labelledby="instruction-title"
         data-ticket-view="blank"
       >
-        <PaperChrome liveMode={false} />
+        <PaperChrome liveMode={false} roomView={roomView} />
         <div className={styles.ticketSurface} key="blank">
           <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{BLANK_SLIP_TITLE.jesse}</h1>
-          <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>
+          <p className={styles.slipGhost}>
+            <span aria-hidden="true">Buy 100 USDC of {exampleSymbol}<i className={styles.slipCaret} /></span>
+            <span className={styles.srOnly}>For example: buy 100 USDC of {exampleSymbol}.</span>
+          </p>
         </div>
       </section>
     );
@@ -317,7 +323,7 @@ export const JesseTicket = memo(function JesseTicket({
   if (roomView) {
     return (
       <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
-        <PaperChrome liveMode={liveMode && liveAvailable} />
+        <PaperChrome liveMode={liveMode && liveAvailable} roomView={roomView} />
         <div className={styles.ticketSurface} key="draft">
         {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
@@ -345,7 +351,7 @@ export const JesseTicket = memo(function JesseTicket({
 
   return (
     <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title" data-ticket-view="draft">
-      <PaperChrome liveMode={liveMode && liveAvailable} />
+      <PaperChrome liveMode={liveMode && liveAvailable} roomView={roomView} />
       <div className={styles.ticketSurface} key="compact-draft">
       {carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
       <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
@@ -568,14 +574,16 @@ function EvidenceModule({
   );
 }
 
-function PaperChrome({ liveMode }: { liveMode: boolean }) {
+function PaperChrome({ liveMode, roomView = false }: { liveMode: boolean; roomView?: boolean }) {
   return (
     <div className={styles.paperTop}>
       <HouseMark small />
       <span>
         CLAFLIN &amp; CO.
         <small>
-          {liveMode ? 'JESSE · SOLANA DESK / LIVE INSTRUCTION' : 'JESSE · SOLANA DESK / PAPER INSTRUCTION'}
+          {roomView
+            ? (liveMode ? 'LIVE' : 'PAPER')
+            : (liveMode ? 'JESSE · SOLANA DESK / LIVE INSTRUCTION' : 'JESSE · SOLANA DESK / PAPER INSTRUCTION')}
         </small>
       </span>
       <span className={styles.paperNumber}>SOL</span>

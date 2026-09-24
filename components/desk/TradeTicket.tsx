@@ -20,7 +20,7 @@ import { getEducationTopic } from '@/lib/education';
 import { useDictation, type ParsedDictation } from '@/lib/dictation/useDictation';
 import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
-import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
+import { BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import { WrittenSlip } from './WrittenSlip';
 import { SignalCaption } from './SignalCaption';
 import { HETTY_VOCAB, slipOneLine, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
@@ -464,7 +464,7 @@ export const TradeTicket = memo(function TradeTicket({
   const slipActive = Boolean(quote) && (state.stage === 'review' || recorded);
   const view = missing ? 'missing' : openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
-  const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? (liveMode ? 'BASE DESK / LIVE INSTRUCTION' : 'BASE DESK / PAPER INSTRUCTION') : 'BASE DESK / QUOTATION';
+  const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? (roomView ? (liveMode ? 'LIVE' : 'PAPER') : liveMode ? 'BASE DESK / LIVE INSTRUCTION' : 'BASE DESK / PAPER INSTRUCTION') : 'BASE DESK / QUOTATION';
   const filed = recorded ? paperOutcomeCopy({
     sentence: quote ? slipOneLine(quote, HETTY_VOCAB) : null,
     place: auth.authenticated ? 'hetty-account' : 'hetty-browser',
@@ -569,7 +569,12 @@ export const TradeTicket = memo(function TradeTicket({
     {view === 'draft' && carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{showBlank ? BLANK_SLIP_TITLE.hetty : title}</h1>
     {liveOutcome && <p className={styles.quoteBoundary} role="status">{liveEvidence(liveOutcome.status).label}</p>}
-    {showBlank && <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>}
+    {showBlank && (
+      <p className={styles.slipGhost}>
+        <span aria-hidden="true">Buy $25 of Apple<i className={styles.slipCaret} /></span>
+        <span className={styles.srOnly}>For example: buy $25 of Apple.</span>
+      </p>
+    )}
     {/* The dictation rail: the ticket's voice, always at the head of the
         paper. It shows the last words the desk heard — or invites the first. */}
     {view === 'draft' && !showBlank && !roomView && (

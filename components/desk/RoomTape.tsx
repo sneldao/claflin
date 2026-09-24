@@ -32,8 +32,9 @@ export function RoomTape({
   asOf?: number;
   clock: MarketClock | null;
   take?: string | null;
-  /** The broker whose take is attributed under the rows. */
-  brokerName: string;
+  /** The broker whose take is attributed under the rows — omit for a bare
+      factual line with no persona. */
+  brokerName?: string;
   /** What the primary price is: 'on Solana' (Jesse), 'Chainlink reference' (Hetty). */
   priceLabel: string;
   /** What to say when a mark has no second leg — null shows nothing extra. */
@@ -62,7 +63,7 @@ export function RoomTape({
         /* Keyed on the take: a new reading crossfades the broker's line in. */
         <p key={take} className={styles.roomTapeTake}>
           {take}
-          <span className={styles.roomTapeTakeBy}>{brokerName}’s take · a way of looking, not advice</span>
+          {brokerName && <span className={styles.roomTapeTakeBy}>{brokerName}’s take · a way of looking, not advice</span>}
         </p>
       )}
     </section>
@@ -105,6 +106,7 @@ function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
         ) : (
           missingSecondLeg && <span className={styles.roomTapeNoRef}>{missingSecondLeg}</span>
         )}
+        <span className={styles.roomTapeCue} aria-hidden="true">✎</span>
       </button>
     </li>
   );

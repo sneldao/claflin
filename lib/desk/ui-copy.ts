@@ -35,8 +35,12 @@ export const BLANK_SLIP_TITLE = {
   hetty: 'Hetty will write what you say.',
 } as const;
 
-export const BLANK_SLIP_NOTE =
-  'This slip stays blank until there is an instruction — tap a line the desk hears.';
+/** Rotating “try saying” lines under the idle ring button — the action
+ *  shown, not explained. Cycled client-side; the first line is the SSR one. */
+export const RING_EXAMPLES = {
+  jesse: ['what’s on the tape?', 'compare NVIDIA xStock', 'price 50 USDC of TSLAx'],
+  hetty: ['what’s moving on the tape?', 'explain the estimate before I decide'],
+} as const;
 
 /** One action vocabulary for both desks' slips — same verbs, same order. */
 export const SLIP_ACTIONS = {

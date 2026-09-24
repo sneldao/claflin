@@ -40,7 +40,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
         </div>
         <h2 id="ledger-title" className={styles.ledgerTrayTitle} tabIndex={-1}>Your Solana record.</h2>
         <div className={styles.ledgerEmpty}>
-          <p>No paper on file yet — file your first Jesse instruction above. Kept in this browser only.</p>
+          <p>No paper on file yet.</p>
         </div>
       </section>
     );

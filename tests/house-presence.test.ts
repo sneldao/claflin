@@ -111,7 +111,7 @@ describe('house presence grammar', () => {
   it('keeps foyer Ring as hero without Lucide chrome', () => {
     const foyer = source('components/desk/HouseFoyer.tsx');
     assert.doesNotMatch(foyer, /from 'lucide-react'/);
-    assert.match(foyer, /FOYER_LEDE/);
+    assert.doesNotMatch(foyer, /FOYER_LEDE/);
     assert.match(foyer, /FOYER_BOUNDARY/);
     assert.match(foyer, /Type instead/);
   });

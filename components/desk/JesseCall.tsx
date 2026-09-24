@@ -39,6 +39,7 @@ import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { RingExample } from './RingExample';
 import styles from './WorkingDesk.module.css';
 
 type ToolParams = Record<string, unknown>;
@@ -512,7 +513,7 @@ function JesseCallInner({
   return (
     <section id="jesse-line" className={styles.call} aria-labelledby="jesse-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
-        <h2 id="jesse-call-title">Jesse Livermore <small>The Boy Plunger · AI broker on Solana</small></h2>
+        <h2 id="jesse-call-title" className={compactPlate ? styles.srOnly : undefined}>Jesse Livermore <small>The Boy Plunger · AI broker on Solana</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
@@ -535,10 +536,19 @@ function JesseCallInner({
           </>
         )}
         {!live && !ringing && captions.length === 0 && (
-          <button type="button" className={styles.callButton} data-cue="idle" onClick={() => void ring('fresh')}>
-            <span className={styles.ringLamp} aria-hidden="true" />
-            Ring Jesse
-          </button>
+          <>
+            <button
+              type="button"
+              className={styles.callButton}
+              data-cue="idle"
+              aria-label={compactPlate ? 'Ring Jesse' : undefined}
+              onClick={() => void ring('fresh')}
+            >
+              <span className={styles.ringLamp} aria-hidden="true" />
+              {compactPlate ? 'Ring' : 'Ring Jesse'}
+            </button>
+            {compactPlate && <RingExample deskId="jesse" />}
+          </>
         )}
         {ringing && !live && (
           <>

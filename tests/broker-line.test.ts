@@ -36,10 +36,9 @@ describe('broker line plate', () => {
     assert.doesNotMatch(html, /Jesse’s take|not advice/);
   });
 
-  it('keeps the lens and leaves the signature off the compact plate', () => {
-    const raw = renderToStaticMarkup(createElement(BrokerLinePlate, { deskId: 'jesse', take: null, compact: true }));
-    assert.match(textOf(raw), /Reads the tape first/);
-    assert.doesNotMatch(raw, /Why Jesse reads the tape/);
+  it('renders nothing on the compact plate — the mast already named the broker', () => {
+    const raw = renderToStaticMarkup(createElement(BrokerLinePlate, { deskId: 'jesse', take: 'A take.', compact: true }));
+    assert.equal(raw, '');
   });
 });
 

@@ -23,17 +23,7 @@ export function brokerTake(
   }
 
   if (deskId === 'jesse') {
-    let best: { symbol: string; gap: number } | null = null;
-    for (const mark of marks) {
-      if (mark.reference.status !== 'observed') continue;
-      const raw = mark.stockReference?.differenceBps;
-      if (raw === null || raw === undefined) continue;
-      const gap = Number(raw);
-      if (!Number.isFinite(gap)) continue;
-      if (!best || Math.abs(gap) > Math.abs(best.gap)) {
-        best = { symbol: mark.symbol, gap };
-      }
-    }
+    const best = widestGap(marks);
     if (best) {
       const abs = Math.abs(best.gap).toFixed(1);
       if (Number(abs) < 1) {
@@ -47,6 +37,34 @@ export function brokerTake(
   }
 
   return null;
+}
+
+/** The largest |bps| observed mark — the same selection the take makes. */
+export function widestGap(marks: readonly DeskMark[]): { symbol: string; gap: number } | null {
+  let best: { symbol: string; gap: number } | null = null;
+  for (const mark of marks) {
+    if (mark.reference.status !== 'observed') continue;
+    const raw = mark.stockReference?.differenceBps;
+    if (raw === null || raw === undefined) continue;
+    const gap = Number(raw);
+    if (!Number.isFinite(gap)) continue;
+    if (!best || Math.abs(gap) > Math.abs(best.gap)) {
+      best = { symbol: mark.symbol, gap };
+    }
+  }
+  return best;
+}
+
+/** The room tape's factual line for Jesse's desk — the observed gap, stated
+ *  plainly, where the persona take used to sit. */
+export function tapeGapLine(marks: readonly DeskMark[], clock: MarketClock | null): string | null {
+  const best = widestGap(marks);
+  if (!best) return null;
+  const abs = Math.abs(best.gap).toFixed(1);
+  if (Number(abs) < 1) {
+    return `${best.symbol} is within a basis point of its stock.`;
+  }
+  return `${best.symbol} is ${abs} bps ${best.gap > 0 ? 'over' : 'under'} its stock${clock?.exchange === 'closed' ? ' while the exchange is shut' : ''}.`;
 }
 
 /** One gap line for a filed Jesse comparison — the tape at filing, not advice. */

@@ -12,7 +12,6 @@ import { JesseCall } from './JesseCall';
 import { BlotterHearables } from './BlotterHearables';
 import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
-import { RoomMarketClock } from './RoomMarketClock';
 import { RoomTape } from './RoomTape';
 import { ReceiverShell } from './ReceiverShell';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
@@ -35,13 +34,12 @@ import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
-import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { signalLine } from '@/lib/trading/line-signal';
 import { MARKET_LABELS, MODE_HINTS } from '@/lib/desk/ui-copy';
 import { ModeStamp } from './ModeStamp';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import type { DeskMark } from '@/lib/trading/marks-shared';
-import { brokerTake } from '@/lib/desk/broker-take';
+import { brokerTake, tapeGapLine, widestGap } from '@/lib/desk/broker-take';
 import { useMarketClock } from '@/lib/use-market-clock';
 import styles from './WorkingDesk.module.css';
 import ticker from './DeskTicker.module.css';
@@ -210,7 +208,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         ? (selected ? `${selected.symbol} · ON THE LINE` : 'JESSE · ON THE LINE')
         : selected
           ? `${selected.symbol} · ${jesse.foreground.kind === 'pending' || jesse.inFlight === 'quote' ? 'REQUESTING ESTIMATE' : jesse.foreground.kind === 'quotation' ? 'ESTIMATE ON THE SLIP' : 'SOLANA DESK'}`
-          : 'JESSE · SOLANA DESK';
+          : roomView ? 'SOLANA DESK' : 'JESSE · SOLANA DESK';
 
   const roomProjection = useMemo(() => projectJesseToRoom({
     stage: jesse.state.stage,
@@ -237,31 +235,6 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     setHeardNote(result.spokenText);
     scrollToDeskTarget('instruction');
   }, [jesse, recordParsed]);
-
-  const onRoomView = (view: NightDeskView) => {
-    if (view === 'evidence') {
-      const existing = jesse.state.comparison;
-      if (existing) {
-        void jesse.run({ type: 'focus', target: 'evidence', objectId: existing.id });
-        return;
-      }
-      void jesse.compare().then(() => {
-        void jesse.run({ type: 'focus', target: 'evidence', objectId: null });
-      });
-      return;
-    }
-    if (view === 'review') {
-      void jesse.run({ type: 'focus', target: 'instruction', objectId: jesse.state.quote?.id ?? null });
-      scrollToDeskTarget('instruction');
-      return;
-    }
-    if (view === 'ledger') {
-      void jesse.run({ type: 'focus', target: 'record', objectId: null });
-      scrollToDeskTarget('paper-ledger');
-      return;
-    }
-    void jesse.run({ type: 'focus', target: 'desk', objectId: null });
-  };
 
   const blotter = (
     <BlotterHearables
@@ -295,7 +268,6 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </div>
         )}
       </ModeStamp>
-      {roomView && <RoomMarketClock clock={clock} />}
       {roomView && !reviewActive && (
         <RoomTape
           marks={deskMarks}
@@ -303,8 +275,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           failed={marks.failed}
           asOf={marks.result?.asOf}
           clock={clock}
-          take={take}
-          brokerName="Jesse"
+          take={tapeGapLine(deskMarks, clock)}
           priceLabel="on Solana"
           missingSecondLeg="no comparable reference"
           onSelect={id => {
@@ -337,11 +308,11 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           {blankSlip && filing?.deskId === 'jesse' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => jesse.openRecord(filing.recordId)} />
           )}
-          {blankSlip && blotter}
           {roomView ? (
             <details className={styles.typeInstead}>
               <summary>Type instead</summary>
               <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
+              {blotter}
             </details>
           ) : (
             <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
@@ -366,6 +337,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           carriedNote={carriedNote}
           mark={selectedMark}
           blankSlip={blankSlip}
+          exampleSymbol={widestGap(deskMarks)?.symbol ?? 'AAPLx'}
           quietEvidence={roomView}
           roomView={roomView}
           provenance={provenance}
@@ -400,7 +372,6 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         desk={desk.activeDesk}
         stage={roomProjection.stage}
         view={roomProjection.view}
-        onView={onRoomView}
         presentation={presentationMode}
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}

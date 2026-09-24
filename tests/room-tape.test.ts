@@ -59,6 +59,19 @@ describe('room tape', () => {
     assert.match(html, /Jesse’s take · a way of looking, not advice/);
   });
 
+  it('prints a bare line without the not-advice attribution when no broker is named', () => {
+    const html = renderToStaticMarkup(createElement(RoomTape, {
+      marks: [xMark],
+      clock: openClock,
+      take: 'AAPLx is 13.6 bps over its stock.',
+      priceLabel: 'on Solana',
+      onSelect: noop,
+    }));
+    assert.match(html, /AAPLx is 13\.6 bps over its stock\./);
+    assert.doesNotMatch(html, /take · a way of looking, not advice/);
+    assert.doesNotMatch(html, /Jesse/);
+  });
+
   it('renders nothing when the tape failed or nothing was observed', () => {
     assert.equal(renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape, marks: [xMark], failed: true, clock: openClock, onSelect: noop,

@@ -162,9 +162,9 @@ describe('shared house scene', () => {
     assert.match(provider, /data-house-scene=\{scene\.layout\}/);
     assert.match(provider, /subscribeAnchors/);
     assert.match(provider, /onAnchors=\{emitAnchors\}/);
+    /* Room no longer floats labels on scene anchors — the mast carries nav. */
     const room = source('components/desk/RoomPresentation.tsx');
-    assert.match(room, /useHouseSceneAnchors\(applyAnchors\)/);
-    assert.match(room, /<NightDeskScene[\s\S]*onAnchors=\{applyAnchors\}/);
+    assert.doesNotMatch(room, /useHouseSceneAnchors|onAnchors/);
     const compact = source('components/desk/DeskRoom.tsx');
     assert.match(compact, /layout: 'compact'/);
     assert.match(compact, /still: true/);

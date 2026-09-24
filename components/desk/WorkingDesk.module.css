@@ -495,6 +495,22 @@
   padding: 18px clamp(16px, 3vw, 36px) 10px;
   pointer-events: auto;
 }
+.roomViewMast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 20px;
+  margin-left: auto;
+}
+.roomViewMast .roomMarketClock { margin: 0; }
+@media (max-width: 760px) {
+  .roomViewMast {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
 .roomViewNav {
   display: flex;
   flex-wrap: wrap;
@@ -690,12 +706,32 @@
   min-height: 220px;
   justify-content: flex-start;
 }
-.blankSlipNote {
+/* Blank slip ghost: a pencil example on a ruled line, never interactive. */
+.slipGhost {
   margin: 0 0 18px !important;
   max-width: 28ch;
-  font: 400 16px/1.55 var(--font-display), serif;
-  color: var(--desk-paper-ink);
-  opacity: .85;
+  font: italic 400 16px/1.55 var(--font-display), serif;
+  color: var(--desk-paper-muted);
+  opacity: .65;
+}
+.slipGhost > span[aria-hidden='true'] {
+  border-bottom: 1px solid var(--desk-paper-rule);
+}
+.slipCaret {
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--desk-paper-muted);
+  animation: slipCaretBlink 1s steps(1) infinite;
+}
+@keyframes slipCaretBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slipCaret { animation: none; }
 }
 .handForm {
   margin-top: 8px;
@@ -729,6 +765,23 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ringLamp { animation: none; }
+}
+/* Idle ring hint: one rotating example, crossfaded — the action shown. */
+.ringExample {
+  margin: 10px 0 0 !important;
+  font: italic 400 14px/1.5 var(--font-display), serif;
+  color: var(--desk-muted);
+}
+.ringExample > span {
+  display: inline-block;
+  animation: ringExampleIn 420ms ease-out both;
+}
+@keyframes ringExampleIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ringExample > span { animation: none; }
 }
 .callFoot kbd {
   font: 10px/1 var(--font-mono), monospace;
@@ -1703,12 +1756,13 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   cursor: pointer;
 }
 .slipValue {
-  animation: inkWrite 420ms ease-out both;
   /* The values are the slip's most important words — ink, not brass. */
   color: var(--desk-paper-ink);
   text-decoration-color: var(--desk-brass);
   text-decoration-thickness: 2px;
 }
+/* Ink-in only while the slip is being drafted — review and receipt are set. */
+.writtenSlip[data-mode='draft'] .slipValue { animation: inkIn 420ms ease-out both; }
 .slipValue:disabled { cursor: default; }
 .slipBlank {
   color: var(--desk-paper-muted);
@@ -1718,9 +1772,9 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   text-align: left;
 }
 .slipBlank:hover:not(:disabled), .slipValue:hover:not(:disabled) { color: var(--desk-paper-ink); }
-@keyframes inkWrite {
-  from { clip-path: inset(0 100% 0 0); }
-  to { clip-path: inset(0 0 0 0); }
+@keyframes inkIn {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
 }
 /* A thin brass rule draining the quote's seconds — Hetty's slipHeading
    bar, now shared by both desks' review slips. */
@@ -1821,7 +1875,7 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   color: var(--desk-paper-muted);
 }
 @media (prefers-reduced-motion: reduce) {
-  .slipValue, .slipProv, .slipSuperseded s::after { animation: none; }
+  .writtenSlip[data-mode='draft'] .slipValue, .slipProv, .slipSuperseded s::after { animation: none; }
 }
 
 /* ————— Jesse Room: the tape on the blotter ————— */
@@ -1871,6 +1925,18 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
   transition: color var(--dur-1) var(--ease-swift), background var(--dur-1) var(--ease-swift);
 }
 .roomTapeRow:hover, .roomTapeRow:focus-visible { color: var(--desk-brass); background: #c5ac7810; }
+/* Tap-to-fill cue: a faint pencil that appears on hover/focus — always
+   faintly present where hover doesn't exist. */
+.roomTapeCue {
+  opacity: 0;
+  color: var(--desk-brass-dim);
+  transition: opacity var(--dur-1) var(--ease-swift);
+}
+.roomTapeRow:hover .roomTapeCue,
+.roomTapeRow:focus-visible .roomTapeCue { opacity: .85; }
+@media (hover: none) {
+  .roomTapeCue { opacity: .35; }
+}
 .roomTapeRow strong { color: var(--desk-paper-light); font-size: 13px; }
 .roomTapeBps { margin-left: auto; color: var(--desk-brass); }
 .roomTapeNoRef { color: var(--desk-muted); font-style: italic; }
