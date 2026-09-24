@@ -495,7 +495,7 @@ export const TradeTicket = memo(function TradeTicket({
     });
   };
 
-  const showBlank = blankSlip && view === 'draft' && !state.draft.instrumentId;
+  const showBlank = blankSlip && view === 'draft';
 
   /* Hand edits through the Compact form mark only the touched field. */
   const formEdit = (draft: TradeIntent, field?: 'instrument' | 'side' | 'amount' | 'units') => {
@@ -603,7 +603,7 @@ export const TradeTicket = memo(function TradeTicket({
     <div key={view} className={styles.ticketSurface}>
       {missing ? <div className={styles.pendingSlip}>
         <p className={styles.quoteBoundary} role="status">This paper record is no longer in this browser.<span>It may have been deleted in another tab, or storage could not be read. Nothing else on this desk was changed.</span></p>
-      </div> : view === 'draft' ? (roomView ? <>
+      </div> : showBlank ? null : view === 'draft' ? (roomView ? <>
         {/* Room draft: the written sentence leads — the same slip grammar as
             Jesse's, in Hetty's own vocabulary. */}
         <WrittenSlip

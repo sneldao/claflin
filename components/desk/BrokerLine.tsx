@@ -29,15 +29,6 @@ export function BrokerLinePlate({ deskId, take, compact = false }: { deskId: Hou
     return (
       <div className={styles.linePlate}>
         {BROKER_VOICE[deskId] && <p className={styles.lineLens}>{BROKER_VOICE[deskId]!.lens}</p>}
-        {signature && (
-          <details className={styles.typeInstead}>
-            <summary>Why {getHouseDesk(deskId)?.shortName ?? 'the broker'} reads the tape</summary>
-            <blockquote className={styles.lineSignature}>
-              <p>{signature.text}</p>
-              <cite>— {signature.attribution}</cite>
-            </blockquote>
-          </details>
-        )}
         <BrokerTake deskId={deskId} take={take} />
       </div>
     );

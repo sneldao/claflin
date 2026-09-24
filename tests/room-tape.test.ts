@@ -71,15 +71,15 @@ describe('room tape', () => {
     })), '');
   });
 
-  it('leads with percent-vs-stock while keeping full legs in the accessible name', () => {
+  it('leads with basis points while keeping full legs in the accessible name', () => {
     const html = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,
       marks: [xMark],
       clock: openClock,
       onSelect: noop,
     }));
-    /* Visible row: one line, no bps jargon. 13.6 bps -> +0.14% vs stock. */
-    assert.match(html, /\+0\.14% vs stock/);
+    /* Visible row uses the same basis points as the broker's take. */
+    assert.match(html, /\+13\.6 bps vs stock/);
     /* Full venue-vs-reference legs survive in aria-label + title for details. */
     assert.match(html, /aria-label="AAPLx \$227\.41 on Solana/);
     assert.match(html, /stock ref/);
@@ -98,7 +98,7 @@ describe('room tape', () => {
     assert.match(html, /Both tapes are running\./);
   });
 
-  it('keeps the lamp state one tap away with exact words', () => {
+  it('says a stale reading in the tape and keeps the lamp note off the first read', () => {
     const staleHtml = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,
       marks: [xMark],
@@ -107,9 +107,8 @@ describe('room tape', () => {
       asOf: Date.now() - 90_000,
       onSelect: noop,
     }));
-    assert.match(staleHtml, /About this light/);
-    assert.match(staleHtml, /Tape stale — last reading/);
-    assert.match(staleHtml, /room stays cool until fresh marks print/);
+    assert.match(staleHtml, /last reading/);
+    assert.doesNotMatch(staleHtml, /About this light/);
     const freshHtml = renderToStaticMarkup(createElement(RoomTape, {
       ...jesseTape,
       marks: [xMark],
@@ -117,7 +116,7 @@ describe('room tape', () => {
       asOf: Date.now(),
       onSelect: noop,
     }));
-    assert.match(freshHtml, /lamp glows warm while readings land/);
+    assert.doesNotMatch(freshHtml, /About this light/);
   });
 
   it('says Tonight’s tape after the close and labels a stale reading', () => {

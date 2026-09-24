@@ -22,7 +22,7 @@ import { draftComplete, JESSE_VOCAB, slipOneLine, slipValidity } from '@/lib/des
 import { comparisonTake } from '@/lib/desk/broker-take';
 import { focusLedgerTitle, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { getEducationTopic } from '@/lib/education';
-import { EVIDENCE_DISCLAIMER, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
+import { EVIDENCE_DISCLAIMER, BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
@@ -295,7 +295,7 @@ export const JesseTicket = memo(function JesseTicket({
   const liveIntent = intentFromDraft(draft);
   const selectedStock = draft.instrumentId ? SOLANA_INSTRUMENTS.find(s => s.id === draft.instrumentId) : null;
 
-  /* Room first paint: the slip is a sentence with blanks, not a form. */
+  /* Room arrival: empty until this visit speaks or taps a line. */
   if (blankSlip) {
     return (
       <section
@@ -307,23 +307,7 @@ export const JesseTicket = memo(function JesseTicket({
         <PaperChrome liveMode={false} />
         <div className={styles.ticketSurface} key="blank">
           <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{BLANK_SLIP_TITLE.jesse}</h1>
-          <WrittenSlip
-            mode="blank"
-            draft={draft}
-            vocab={JESSE_VOCAB}
-            instruments={SLIP_INSTRUMENTS}
-            instrument={selectedStock}
-            spokenLine={spokenLine}
-            provenance={provenance}
-            superseded={superseded}
-            pending={inFlight === 'quote' || foreground.kind === 'pending'}
-            pendingLabel="Jesse is pricing it at Jupiter…"
-            notice={localError ?? (lastResult?.status === 'clarify' || lastResult?.status === 'rejected' ? lastResult.spokenText : null)}
-            actions={draftComplete(draft) && inFlight !== 'quote' && foreground.kind !== 'pending' ? (
-              <button type="button" className={styles.primary} onClick={() => { void quote(); }}>{SLIP_ACTIONS.price}</button>
-            ) : null}
-            onEdit={onSlipEdit}
-          />
+          <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>
         </div>
       </section>
     );

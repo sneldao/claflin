@@ -100,7 +100,12 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     || jesse.foreground.kind === 'receipt'
     || jesse.foreground.kind === 'archive';
   const lineLed = roomView && !reviewActive && jesse.foreground.kind !== 'missing';
-  const blankSlip = lineLed && draftEmpty && !jesseLive;
+  /* A restored name is not an instruction. The slip stays blank until this
+     visit speaks or taps a line — side, amount, or a mark from that tap. */
+  const instructionStarted = Boolean(spoken)
+    || Object.keys(provenance).length > 0
+    || Boolean(jesse.state.draft.side || jesse.state.draft.amount);
+  const blankSlip = lineLed && !jesseLive && !instructionStarted;
   /* Under review the room stays a room — the slip leads, on the desk. */
   const slipLed = roomView && reviewActive;
 

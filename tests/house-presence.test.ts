@@ -18,7 +18,7 @@ describe('house presence grammar', () => {
   it('keeps Jesse Room line-led beyond an empty draft', () => {
     const surface = source('components/desk/JesseDeskSurface.tsx');
     assert.match(surface, /const lineLed = roomView && !reviewActive/);
-    assert.match(surface, /const blankSlip = lineLed && draftEmpty/);
+    assert.match(surface, /const blankSlip = lineLed && !jesseLive && !instructionStarted/);
     assert.match(surface, /data-line-first=\{lineLed/);
     assert.match(surface, /blankSlip=\{blankSlip\}/);
     assert.match(surface, /quietEvidence=\{roomView\}/);
@@ -44,7 +44,7 @@ describe('house presence grammar', () => {
   it('keeps Hetty Room line-led beyond an empty draft', () => {
     const surface = source('components/desk/HettyDeskSurface.tsx');
     assert.match(surface, /const lineLed = roomView && !reviewActive/);
-    assert.match(surface, /const blankSlip = lineLed && draftEmpty/);
+    assert.match(surface, /const blankSlip = lineLed && !hettyLive && !instructionStarted/);
     assert.match(surface, /data-line-first=\{lineLed/);
     assert.match(surface, /blankSlip=\{blankSlip\}/);
     assert.match(surface, /BlotterHearables/);

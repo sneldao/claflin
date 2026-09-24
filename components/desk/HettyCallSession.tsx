@@ -99,12 +99,14 @@ function receiverClick(): void {
   } catch { /* silence is an acceptable receiver */ }
 }
 
-export function HettyCallSession({ desk, liveMode, take = null, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
+export function HettyCallSession({ desk, liveMode, take = null, compactPlate = false, captions, onCaption, saveState, onSaveState, onClearDiscussion, onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied, endNote, callError, onActivity, onSessionEnded, onSessionFailed }: {
   desk: Desk;
   /** The desk's paper/live boundary — Hetty must speak the same one. */
   liveMode: boolean;
   /** Hetty's take on the tape, computed by the surface from real marks. */
   take?: string | null;
+  /** Room nameplate: lens only, so Ring stays the brass action. */
+  compactPlate?: boolean;
   /** Discussion owned above the resettable provider — survives remounts. */
   captions: Caption[];
   onCaption: (caption: Caption) => void;
@@ -700,7 +702,7 @@ export function HettyCallSession({ desk, liveMode, take = null, captions, onCapt
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
         </span>
       </div>
-      {!live && !ringing && <BrokerLinePlate deskId="hetty" take={take} />}
+      {!live && !ringing && <BrokerLinePlate deskId="hetty" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (

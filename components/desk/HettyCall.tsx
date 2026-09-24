@@ -24,7 +24,7 @@ export { appendCaption, lastCaption, summarizeDiscussion, boundedDiscussionConte
    note, any error, and the discussion itself persist across the remount —
    the line can break; the caller's work does not. The wiring lives in
    HettyCallSession. */
-export const HettyCall = memo(function HettyCall({ desk, liveMode, take = null, onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied }: { desk: Desk; liveMode: boolean; take?: string | null; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void; onLineApplied?: (partial: SlipProvenance) => void }) {
+export const HettyCall = memo(function HettyCall({ desk, liveMode, take = null, compactPlate = false, onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied }: { desk: Desk; liveMode: boolean; take?: string | null; compactPlate?: boolean; onLiveChange: (live: boolean) => void; onUserSpoken?: (text: string) => void; onAgentSpoken?: (text: string) => void; onLineApplied?: (partial: SlipProvenance) => void }) {
   const [sessionKey, setSessionKey] = useState(0);
   const [endNote, setEndNote] = useState<string | null>(null);
   const [callError, setCallError] = useState<string | null>(null);
@@ -56,6 +56,7 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, take = null, 
         desk={desk}
         liveMode={liveMode}
         take={take}
+        compactPlate={compactPlate}
         captions={captions}
         onCaption={handleCaption}
         saveState={saveState}

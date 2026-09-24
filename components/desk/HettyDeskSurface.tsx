@@ -359,7 +359,12 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     && !desk.state.draft.amount;
   /* Room: the line owns attention whenever the slip is not under review. */
   const lineLed = roomView && !reviewActive && foreground.kind !== 'missing';
-  const blankSlip = lineLed && draftEmpty && !hettyLive;
+  /* A restored name is not an instruction. Hetty's side has a default, so
+     the slip stays blank until this visit speaks, taps, or sets an amount. */
+  const instructionStarted = Boolean(spoken)
+    || Object.keys(slipProv).length > 0
+    || Boolean(desk.state.draft.amount);
+  const blankSlip = lineLed && !hettyLive && !instructionStarted;
   const slipLed = roomView && reviewActive;
 
   const work = (
@@ -425,7 +430,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           </>
         )}
         <aside className={styles.support} aria-label="The Base desk’s direct line">
-          <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
+          <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} compactPlate={roomView} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
           {blankSlip && filing?.deskId === 'hetty' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => desk.openRecord(filing.recordId)} />
           )}

@@ -5,7 +5,6 @@ import { markPrice, formatMarkAge } from '@/lib/trading/marks-shared';
 import { formatBps } from '@/lib/desk/format-bps';
 import { useBpsTick } from '@/lib/desk/use-bps-tick';
 import type { MarketClock } from '@/lib/market-clock';
-import { SignalCaption } from './SignalCaption';
 import styles from './WorkingDesk.module.css';
 
 /**
@@ -54,7 +53,6 @@ export function RoomTape({
       {stale && asOf !== undefined && (
         <p className={styles.roomTapeStale} role="status">last reading {formatMarkAge(asOf)} ago</p>
       )}
-      {stale && <SignalCaption captionKey="lampCool" />}
       <ul className={styles.roomTapeRows}>
         {rows.map(mark => (
           <RoomTapeRow key={mark.instrumentId} mark={mark} priceLabel={priceLabel} missingSecondLeg={missingSecondLeg} onSelect={onSelect} />
@@ -67,28 +65,10 @@ export function RoomTape({
           <span className={styles.roomTapeTakeBy}>{brokerName}’s take · a way of looking, not advice</span>
         </p>
       )}
-      {/* The lamp's exact state, one tap away, forever. */}
-      <details className={styles.roomTapeLight}>
-        <summary>About this light</summary>
-        <p>
-          {stale && asOf !== undefined
-            ? `Tape stale — last reading ${formatMarkAge(asOf)} ago. The room stays cool until fresh marks print.`
-            : asOf !== undefined
-              ? 'Tape fresh — the lamp glows warm while readings land.'
-              : 'Waiting on the first reading.'}
-        </p>
-      </details>
     </section>
   );
 }
 
-function formatPctFromBps(raw: string | null): string | null {
-  const value = Number(raw);
-  if (raw === null || !Number.isFinite(value)) return null;
-  const pct = Math.abs(value) / 100;
-  const sign = value > 0 ? '+' : value < 0 ? '−' : '';
-  return `${sign}${pct.toFixed(2)}%`;
-}
 
 function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
   mark: DeskMark;
@@ -105,7 +85,7 @@ function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
   const label = ref
     ? `${mark.symbol} $${price} ${priceLabel} · $${ref.priceUsd} stock ref · ${formatBps(bps, 'lower')}`
     : `${mark.symbol} $${price} ${priceLabel}${missingSecondLeg ? ` · ${missingSecondLeg}` : ''}`;
-  const pct = formatPctFromBps(bps);
+  const gap = bps !== null ? formatBps(bps, 'lower') : null;
   return (
     <li>
       <button
@@ -118,9 +98,9 @@ function RoomTapeRow({ mark, priceLabel, missingSecondLeg, onSelect }: {
       >
         <strong>{mark.symbol}</strong>
         <span>${price}</span>
-        {ref && pct ? (
+        {ref && gap && gap !== '—' ? (
           <span className={styles.roomTapeBps}>
-            {pct} vs stock{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}
+            {gap} vs stock{tick && <i aria-hidden="true">{tick === 'up' ? ' ▲' : ' ▼'}</i>}
           </span>
         ) : (
           missingSecondLeg && <span className={styles.roomTapeNoRef}>{missingSecondLeg}</span>
