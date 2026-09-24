@@ -8,7 +8,7 @@
  */
 'use client';
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { fetchJson } from '@/lib/api-client';
 import {
@@ -21,19 +21,10 @@ import {
 } from '@/lib/hetty/discussion';
 import {
   appliedJesseTicketLine,
-  chooseSolanaInstrumentResult,
-  describeJesseDesk,
-  explainTopicChoices,
   jesseClosingLine,
-  jesseForegroundGuard,
   jesseOpeningLine,
-  jesseSymbol,
-  nextJesseInstructionDraft,
-  resolveExplainTopic,
-  resolveSolanaAlias,
-  setJesseAmountResult,
-  setJesseInstructionResult,
 } from '@/lib/jesse/voice-tools';
+import { jesseToolHandlers } from '@/lib/jesse/desk-tools';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
@@ -131,140 +122,18 @@ function JesseCallInner({
     });
   }, []);
 
-  const waitFor = useCallback((predicate: (d: JesseDesk) => boolean, ms: number) =>
-    new Promise<boolean>(resolve => {
-      const deadline = Date.now() + ms;
-      const tick = () => {
-        if (predicate(jesseRef.current)) return resolve(true);
-        if (Date.now() >= deadline) return resolve(false);
-        setTimeout(tick, 120);
-      };
-      tick();
-    }), []);
-
-  useConversationClientTool<JesseTools>('choose_instrument', async (p) => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    const query = String(p.query ?? '');
-    const instrument = resolveSolanaAlias(query);
-    if (!instrument) return chooseSolanaInstrumentResult(query);
-    const applied = await d.edit({ instrumentId: instrument.id }, 'instrument');
-    if (applied.status === 'applied' || applied.status === 'clarify') markLine('instrument', instrument.id);
-    return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
-  });
-
-  useConversationClientTool<JesseTools>('set_instruction', async (p) => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    const side = String(p.side ?? '');
-    if (side !== 'buy' && side !== 'sell') return setJesseInstructionResult(side);
-    const next = nextJesseInstructionDraft(d.state.draft, side);
-    const applied = await d.edit(next.draft, 'side');
-    if (applied.status === 'applied' || applied.status === 'clarify') markLine('side', side);
-    return setJesseInstructionResult(side, next.amountCleared);
-  });
-
-  useConversationClientTool<JesseTools>('set_amount', async (p) => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    const clean = String(p.amount ?? '').trim();
-    if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
-      return `"${clean || 'That'}" is not a usable amount — say a plain number, like 100 or 0.5.`;
-    }
-    const applied = await d.edit({ amount: clean }, 'amount');
-    if (applied.status === 'applied' || applied.status === 'clarify') markLine('amount', clean);
-    return setJesseAmountResult(d.state.draft.side, clean);
-  });
-
-  useConversationClientTool<JesseTools>('request_estimate', async () => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    if (d.inFlight === 'quote' || d.state.stage === 'quoting') return 'An estimate is already on its way.';
-    const before = d.state.quote?.id;
-    await d.quote();
-    await waitFor(x => x.state.stage === 'review' || (x.state.stage === 'draft' && x.inFlight === null), 8_000);
-    const now = jesseRef.current;
-    if (now.state.stage === 'review' && now.state.quote && now.state.quote.id !== before) {
-      return now.lastResult?.spokenText
-        ?? `Estimate on the slip: spend ${now.state.quote.inputAmount} ${now.state.quote.inputSymbol}, receive ${now.state.quote.outputAmount} ${now.state.quote.outputSymbol}, Jupiter Metis — paper only.`;
-    }
-    return now.lastResult?.spokenText
-      ?? 'The estimate did not come through. Offer to adjust or retry.';
-  });
-
-  useConversationClientTool<JesseTools>('compare_markets', async (p) => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    const query = String(p.query ?? '').trim();
-    if (query) {
-      const instrument = resolveSolanaAlias(query);
-      if (!instrument) return chooseSolanaInstrumentResult(query);
-      const applied = await d.edit({ instrumentId: instrument.id }, 'instrument');
-      if (applied.status === 'applied' || applied.status === 'clarify') markLine('instrument', instrument.id);
-    }
-    if (!jesseRef.current.state.draft.instrumentId) {
-      return 'Which xStock should I compare — Apple, NVIDIA, or Tesla?';
-    }
-    await d.compare();
-    await waitFor(x => x.inFlight === null, 6_000);
-    return jesseRef.current.lastResult?.spokenText
-      ?? 'Comparison is unavailable right now. Say so honestly; independent Jupiter quoting may still work.';
-  });
-
-  useConversationClientTool<JesseTools>('record_paper', async () => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    if (d.foreground.kind === 'receipt') return 'That instruction is already filed.';
-    if (!d.historyReady) return 'Browser storage is unavailable, so nothing can be recorded right now.';
-    const result = await d.file();
-    return result.spokenText;
-  });
-
-  useConversationClientTool<JesseTools>('watch_mark', async (p) => {
-    const d = jesseRef.current;
-    if (d.foreground.kind === 'missing') return 'That paper record is no longer here.';
-    const query = String(p.query ?? '').trim();
-    const instrument = query
-      ? resolveSolanaAlias(query)
-      : (d.state.draft.instrumentId
-        ? resolveSolanaAlias(jesseSymbol(d.state.draft.instrumentId))
-        : null);
-    const id = instrument?.id ?? d.state.draft.instrumentId;
-    if (!id) return 'No instrument to watch — name one, or put an xStock on the ticket first.';
-    const result = await d.watch(id);
-    return result.spokenText || `${jesseSymbol(id)} is watched on this desk.`;
-  });
-
-  useConversationClientTool<JesseTools>('cancel_instruction', async () => {
-    const d = jesseRef.current;
-    const refusal = jesseForegroundGuard(d.foreground);
-    if (refusal) return refusal;
-    const result = await d.cancel();
-    return result.spokenText || 'The ticket is clear.';
-  });
-
-  useConversationClientTool<JesseTools>('describe_desk', async () => {
-    const d = jesseRef.current;
-    return describeJesseDesk(d.state, d.foreground, d.records);
-  });
-
-  useConversationClientTool<JesseTools>('explain_concept', async (p) => {
-    if (jesseRef.current.inFlight === 'quote' || jesseRef.current.state.stage === 'quoting') {
-      return 'Hold the explanation — an estimate is coming in. Ask again in a moment.';
-    }
-    const topic = resolveExplainTopic(String(p.topic ?? ''));
-    if (!topic) {
-      return `I do not have a reviewed explanation for that. I can explain: ${explainTopicChoices()}.`;
-    }
-    const result = await jesseRef.current.run({ type: 'explain', topic });
-    return result.spokenText;
-  });
+  /* One handler table for every provider that carries Jesse's line. */
+  const handlers = useMemo(() => jesseToolHandlers({ desk: () => jesseRef.current, markLine }), [markLine]);
+  useConversationClientTool<JesseTools>('choose_instrument', p => handlers.choose_instrument(p));
+  useConversationClientTool<JesseTools>('set_instruction', p => handlers.set_instruction(p));
+  useConversationClientTool<JesseTools>('set_amount', p => handlers.set_amount(p));
+  useConversationClientTool<JesseTools>('request_estimate', () => handlers.request_estimate({}));
+  useConversationClientTool<JesseTools>('compare_markets', p => handlers.compare_markets(p));
+  useConversationClientTool<JesseTools>('record_paper', () => handlers.record_paper({}));
+  useConversationClientTool<JesseTools>('watch_mark', p => handlers.watch_mark(p));
+  useConversationClientTool<JesseTools>('cancel_instruction', () => handlers.cancel_instruction({}));
+  useConversationClientTool<JesseTools>('describe_desk', () => handlers.describe_desk({}));
+  useConversationClientTool<JesseTools>('explain_concept', p => handlers.explain_concept(p));
 
   const [dialing, setDialing] = useState(false);
   const dialCancelledRef = useRef(false);

@@ -9,6 +9,8 @@ import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
+import { JesseCallAssemblyAI } from './JesseCallAssemblyAI';
+import { JESSE_VOICE_DEFAULT, jesseVoiceProvider, type JesseVoiceProvider } from '@/lib/solana/flags';
 import { BlotterHearables } from './BlotterHearables';
 import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
@@ -69,6 +71,10 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [spoken, setSpoken] = useState<string | null>(null);
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
+  /* Which provider carries the line: the deploy default on first paint,
+     then `?line=` once the client can read the URL. */
+  const [voiceProvider, setVoiceProvider] = useState<JesseVoiceProvider>(JESSE_VOICE_DEFAULT);
+  useEffect(() => { setVoiceProvider(jesseVoiceProvider(window.location.search)); }, []);
   const offeringApplied = useRef<string | null>(null);
 
   /* Slip provenance: where each written value came from. Marks render only
@@ -304,7 +310,9 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           </>
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
-          <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
+          {voiceProvider === 'assemblyai'
+            ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
+            : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />}
           {blankSlip && filing?.deskId === 'jesse' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => jesse.openRecord(filing.recordId)} />
           )}

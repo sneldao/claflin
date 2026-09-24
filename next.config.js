@@ -38,9 +38,10 @@ const nextConfig = {
       // unsafe-inline for styles (CSS-in-JS/runtime styles); unsafe-eval only in dev for HMR.
       `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} blob: data: https://*.elevenlabs.io https://*.walletconnect.com`,
       "style-src 'self' 'unsafe-inline'",
-      // ElevenLabs voice session (wss + https) and same-origin API. Dev adds
-      // same-origin ws for HMR — 'self' already covers wss on modern engines.
-      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io https://*.privy.io wss://*.privy.io https://*.walletconnect.com wss://*.walletconnect.com https://*.base.org wss://*.base.org${isDev ? ' ws://localhost:*' : ''}`,
+      // ElevenLabs and AssemblyAI Voice Agent sessions (wss + https) and
+      // same-origin API. Dev adds same-origin ws for HMR — 'self' already
+      // covers wss on modern engines.
+      `connect-src 'self' wss://*.elevenlabs.io https://*.elevenlabs.io wss://agents.assemblyai.com https://*.privy.io wss://*.privy.io https://*.walletconnect.com wss://*.walletconnect.com https://*.base.org wss://*.base.org${isDev ? ' ws://localhost:*' : ''}`,
       "media-src 'self' blob:", // ConvAI audio + worklet buffers
       "worker-src 'self' blob:", // AudioWorklet / Three.js workers
       "img-src 'self' data: blob: https://*.walletconnect.com",

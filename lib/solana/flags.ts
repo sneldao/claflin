@@ -25,5 +25,22 @@ export function jesseLiveEnabled(): boolean {
   return jesseLiveClientEnabled() && jesseLiveServerEnabled();
 }
 
+/**
+ * Which provider carries Jesse's line. `elevenlabs` (default) is the
+ * accepted ConvAI line; `assemblyai` runs the same prompt and client tools
+ * on AssemblyAI's Voice Agent API. Set NEXT_PUBLIC_JESSE_VOICE=assemblyai
+ * to make it the default; `?line=assemblyai|elevenlabs` overrides per visit
+ * so one deployment can serve both demos without a redeploy.
+ */
+export type JesseVoiceProvider = 'elevenlabs' | 'assemblyai';
+
+export const JESSE_VOICE_DEFAULT: JesseVoiceProvider =
+  process.env.NEXT_PUBLIC_JESSE_VOICE === 'assemblyai' ? 'assemblyai' : 'elevenlabs';
+
+export function jesseVoiceProvider(search: string | null | undefined, fallback: JesseVoiceProvider = JESSE_VOICE_DEFAULT): JesseVoiceProvider {
+  const line = new URLSearchParams(search ?? '').get('line');
+  return line === 'assemblyai' || line === 'elevenlabs' ? line : fallback;
+}
+
 /** Client bundle alias — Next inlines NEXT_PUBLIC_* at build time. */
 export const JESSE_LIVE_CLIENT_ENABLED = process.env.NEXT_PUBLIC_JESSE_LIVE_ENABLED === 'true';
