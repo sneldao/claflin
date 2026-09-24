@@ -46,18 +46,11 @@ describe('house entry', () => {
     });
   });
 
-  it('restores the last open desk when there is no query', () => {
+  it('keeps a bare visit on the foyer even when a last desk is saved', () => {
     const storage = memoryStorage();
     saveLastDesk(storage, 'jesse');
     assert.equal(loadLastDesk(storage), 'jesse');
-    assert.deepEqual(resolveHouseEntry(null, storage), {
-      kind: 'desk',
-      deskId: 'jesse',
-      source: 'preference',
-      offeringId: null,
-      intent: null,
-      recordId: null,
-    });
+    assert.deepEqual(resolveHouseEntry(null, storage), { kind: 'foyer' });
   });
 
   it('shows the foyer when nothing is chosen yet', () => {

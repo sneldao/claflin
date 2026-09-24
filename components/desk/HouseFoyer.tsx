@@ -4,14 +4,12 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketClock } from '@/lib/use-market-clock';
-import { signatureLine } from '@/lib/desk-notes';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
-import { brokerTake } from '@/lib/desk/broker-take';
 import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
-import { FOYER_BOUNDARY, FOYER_LEDE } from '@/lib/desk/ui-copy';
+import { FOYER_BOUNDARY } from '@/lib/desk/ui-copy';
 import { entryIntentFromInstruction, type EntryIntent } from '@/lib/house-entry';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
@@ -20,7 +18,6 @@ import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
-import { BrokerTake } from './BrokerLine';
 import foyerStyles from './HouseFoyer.module.css';
 
 type WireMark = { key: string; rail: 'BASE' | 'SOL'; mark: DeskMark };
@@ -56,9 +53,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
   const hettyMarks = useReferenceMarks('hetty');
   const jesseMarksRead = useReferenceMarks(jesseOpen ? 'jesse' : 'hetty');
   const jesseMarks = jesseOpen ? jesseMarksRead : null;
-  const marksFor = (id: HouseDeskId): readonly DeskMark[] =>
-    (id === 'hetty' ? hettyMarks.result?.marks : id === 'jesse' ? jesseMarks?.result?.marks : undefined) ?? [];
-
   /* The house-book instruction lives here so a wire-mark click can write it. */
   const [wireInstruction, setWireInstruction] = useState('');
   const filing = useLatestFiling();
@@ -109,21 +103,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             <small>THE OFFICE ABOVE THE PIT</small>
           </span>
         </Link>
-        <nav className={foyerStyles.headerNav} aria-label="Foyer">
-          <a href="#house-method">The house method</a>
-          {openDesks.length > 0 && (
-            <details className={foyerStyles.deskMenu}>
-              <summary>Open a desk</summary>
-              <div className={foyerStyles.deskMenuList}>
-                {openDesks.map(desk => (
-                  <a key={desk.id} href={`/?desk=${desk.id}`} onClick={enter(desk.id)}>
-                    {desk.shortName} · {desk.access}
-                  </a>
-                ))}
-              </div>
-            </details>
-          )}
-        </nav>
       </header>
 
       <main id="main-content" tabIndex={-1} ref={mainRef} className={foyerStyles.main}>
@@ -137,9 +116,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               The exchange closes.<br />
               This book doesn’t.
             </h1>
-            <p className={foyerStyles.lede}>
-              {FOYER_LEDE}
-            </p>
             {filing && (
               <LastFilingLine
                 filing={filing}
@@ -151,7 +127,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
               />
             )}
             <label className={foyerStyles.instructionSearch}>
-              <span>The instruction</span>
               <input
                 value={wireInstruction}
                 onChange={event => setWireInstruction(event.target.value)}
@@ -160,11 +135,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                 aria-label="Instruction for the house"
               />
             </label>
-            <div className={foyerStyles.actions}>
-              <a href="#house-offerings" className={foyerStyles.secondary}>
-                Browse the house book
-              </a>
-            </div>
             <p className={foyerStyles.reassurance}>
               {FOYER_BOUNDARY}
             </p>
@@ -173,23 +143,12 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           {lineDesks.length > 0 && (
             <div className={foyerStyles.lines}>
               {lineDesks.map(desk => {
-                const details = BROKER_VOICE[desk.id]!;
-                const signature = signatureLine(desk.id);
-                const take = brokerTake(desk.id, marksFor(desk.id), clock);
                 return (
                   <article key={desk.id} className={foyerStyles.lineCard}>
                     <header className={foyerStyles.lineCardHeader}>
-                      <h2 className={foyerStyles.lineName}>{desk.name}</h2>
-                      <p className={foyerStyles.lineEpithet}>{details.epithet}</p>
+                      <h2 className={foyerStyles.lineName}>{desk.shortName}</h2>
+                      <p className={foyerStyles.lineRail}>{desk.market}</p>
                     </header>
-                    <p className={foyerStyles.lineRail}>{details.rail}</p>
-                    {signature && (
-                      <blockquote className={foyerStyles.lineQuote}>
-                        <p>{signature.text}</p>
-                        <cite>— {signature.attribution}</cite>
-                      </blockquote>
-                    )}
-                    <BrokerTake deskId={desk.id} take={take} className={foyerStyles.lineTake} />
                     <div className={foyerStyles.lineActions}>
                       <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
                         <span className={foyerStyles.lineLamp} aria-hidden="true" />

@@ -97,13 +97,14 @@ describe('house foyer', () => {
     assert.match(html, /The exchange closes\./);
     assert.match(html, /This book doesn’t\./);
     assert.match(html, /id="foyer-title"/);
-    assert.match(html, /href="#house-offerings"/);
-    assert.match(html, /Browse the house book/);
+    assert.doesNotMatch(html, /Browse the house book/);
     assert.match(html, /Paper by default\. Only you can sign\./);
     assert.match(html, /Ring Hetty/);
     assert.match(html, /Ring Jesse/);
-    assert.match(html, /The Witch of Wall Street/);
-    assert.match(html, /The Boy Plunger/);
+    assert.doesNotMatch(html, /The Witch of Wall Street/);
+    assert.doesNotMatch(html, /The Boy Plunger/);
+    assert.doesNotMatch(html, /I buy when things are low/);
+    assert.doesNotMatch(html, /There is only one side to the stock market/);
     assert.match(html, /LIVE REFERENCE MARKS/);
     assert.match(html, /id="house-offerings"/);
     assert.match(html, /Every verified offering\./);
@@ -239,7 +240,7 @@ describe('house foyer', () => {
     assert.doesNotMatch(text(getRootElement()), /TSLAx/);
   });
 
-  it('carries Jesse’s Solana marks on the wire with the stock-reference gap, and gives his card a take', async () => {
+  it('carries Jesse’s Solana marks on the wire with the stock-reference gap', async () => {
     const apple = DESK_INSTRUMENTS.find(stock => stock.symbol === 'AAPLc')!;
     const xApple = SOLANA_INSTRUMENTS.find(stock => stock.symbol === 'AAPLx')!;
     const now = Date.now();
@@ -265,9 +266,8 @@ describe('house foyer', () => {
     assert.match(text(solItem), /SOL/);
     assert.match(text(solItem), /\+13\.6 bps/);
     const page = text(getRootElement());
-    assert.match(page, /Jesse’s take/);
-    assert.match(page, /AAPLx is printing 13\.6 bps over its stock reference on Solana/);
-    assert.match(page, /Hetty’s take/);
+    assert.doesNotMatch(page, /Jesse’s take/);
+    assert.doesNotMatch(page, /Hetty’s take/);
   });
 
   it('keeps Jesse offerings out of the house book when Jesse is gated, even with the live flag on', () => {

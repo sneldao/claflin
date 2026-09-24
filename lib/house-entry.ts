@@ -1,11 +1,11 @@
 /**
- * House entry — foyer vs desk, `?desk=` deep links, last-open preference.
+ * House entry — foyer vs desk, `?desk=` deep links.
  *
- * OPEN_DESK_ID remains Hetty (Base document owner). Entry preference is separate:
- * first visit with no query and no saved preference shows the Claflin foyer.
+ * OPEN_DESK_ID remains Hetty (Base document owner). A bare URL is the foyer.
+ * `?desk=` opens that desk. A saved last desk does not replace the foyer.
  * Deep links may carry `?offering=` when the catalog declares the desk eligible.
  */
-import { getHouseDesk, isOpenDesk, type HouseDeskId } from './house';
+import { getHouseDesk, type HouseDeskId } from './house';
 import { offeringCoversDesk, offeringForId } from './desk/offerings';
 import { parseDictatedTradeIntent } from './trading/dictation-parser';
 
@@ -88,13 +88,12 @@ export function saveLastDesk(storage: Pick<Storage, 'setItem'>, deskId: HouseDes
 }
 
 /**
- * Resolve first paint. Query wins, then last open desk, else foyer.
- * Planned desks from query still enter (closed room); preference only restores open desks
- * so a stale planned visit does not strand a returning client.
+ * Resolve first paint. A desk query opens that desk. A bare visit is the foyer,
+ * even when a last desk is saved. Return to a record is the filing line, not this.
  */
 export function resolveHouseEntry(
   deskQuery: string | null | undefined,
-  storage: Pick<Storage, 'getItem'>,
+  _storage: Pick<Storage, 'getItem'>,
   offeringQuery?: string | null,
   intent: EntryIntent | null = null,
   recordId: string | null = null,
@@ -108,18 +107,6 @@ export function resolveHouseEntry(
       offeringId: parseOfferingQuery(offeringQuery, fromQuery),
       intent,
       recordId: parseRecordQuery(recordId),
-    };
-  }
-
-  const last = loadLastDesk(storage);
-  if (last && isOpenDesk(last)) {
-    return {
-      kind: 'desk',
-      deskId: last,
-      source: 'preference',
-      offeringId: null,
-      intent: null,
-      recordId: null,
     };
   }
 

@@ -121,7 +121,11 @@ describe('one canonical house', () => {
     assert.match(entry, /\?desk=/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /The exchange closes\./);
     assert.match(source('components/desk/HouseFoyer.tsx'), /This book doesn’t\./);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /\/\?desk=/);
+    /* Foyer desk cards deep-link via `params.set('desk', id)` and still enter
+     * through onEnter; the `?desk=` param is parsed back by useTradingDesk. */
+    assert.match(source('components/desk/HouseFoyer.tsx'), /params\.set\('desk', id\)/);
+    assert.match(source('components/desk/HouseFoyer.tsx'), /enter\(desk\.id\)/);
+    assert.match(source('lib/trading/useTradingDesk.ts'), /parseDeskQuery\(params\.get\('desk'\)\)/);
     assert.doesNotMatch(source('components/desk/HouseFoyer.tsx'), /ILLUSTRATIVE EXAMPLE/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /HouseOfferings/);
     assert.match(source('components/desk/HouseOfferings.tsx'), /offeringGroupsForInstruction/);
