@@ -57,6 +57,7 @@ export function proxy(request: NextRequest) {
     '/api/dictation',
     '/api/hetty/session',
     '/api/hetty/transcript',
+    '/api/desk/jesse/voice-agent/token',
     '/api/paper',
     '/api/eligibility',
     '/api/webhooks/elevenlabs',
