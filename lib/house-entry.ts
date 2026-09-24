@@ -7,6 +7,7 @@
  */
 import { getHouseDesk, isOpenDesk, type HouseDeskId } from './house';
 import { offeringCoversDesk, offeringForId } from './desk/offerings';
+import { parseDictatedTradeIntent } from './trading/dictation-parser';
 
 export const HOUSE_DESK_PREFERENCE_KEY = 'claflin.desk.v1.last';
 
@@ -18,6 +19,16 @@ export type HouseEntry =
 export type EntryIntent = { side: 'buy' | 'sell' | null; amount: string | null };
 
 const INTENT_AMOUNT_PATTERN = /^(0|[1-9]\d*)(\.\d+)?$/;
+
+/** Side and amount from a foyer sentence, when the dictation parser can read them. */
+export function entryIntentFromInstruction(instruction: string): EntryIntent | null {
+  const trimmed = instruction.trim();
+  if (!trimmed) return null;
+  const parsed = parseDictatedTradeIntent(trimmed);
+  const side = parsed.intent.side === 'buy' || parsed.intent.side === 'sell' ? parsed.intent.side : null;
+  const amount = parsed.intent.amount && INTENT_AMOUNT_PATTERN.test(parsed.intent.amount) ? parsed.intent.amount : null;
+  return side || amount ? { side, amount } : null;
+}
 
 /**
  * Parse `?side=&amount=` — the carried instruction encoded in a deep link.

@@ -152,15 +152,16 @@ export function useTradingDesk() {
     return () => window.removeEventListener('popstate', onPop);
   }, [hydrateDesk, abortInFlight, clearEntry, showPhase]);
 
-  const enterDesk = useCallback((id: HouseDeskId, offeringId?: string | null, intent?: EntryIntent | null) => {
+  const enterDesk = useCallback((id: HouseDeskId, offeringId?: string | null, intent?: EntryIntent | null, recordId?: string | null) => {
     if (!getHouseDesk(id)) return;
     const offering = offeringId ? offeringForId(offeringId) : null;
     const selectedOfferingId = offering && offeringCoversDesk(offering, id) ? offering.offeringId : null;
+    const selectedRecord = parseRecordQuery(recordId);
     abortInFlight();
     resetSessions();
-    hydrateDesk(id, selectedOfferingId, intent);
+    hydrateDesk(id, selectedOfferingId, selectedRecord ? null : intent, selectedRecord);
     saveLastDesk(window.localStorage, id);
-    syncDeskQuery(id, selectedOfferingId, 'push', intent ?? null);
+    syncDeskQuery(id, selectedOfferingId, 'push', selectedRecord ? null : intent ?? null, selectedRecord);
     showPhase('desk');
   }, [abortInFlight, resetSessions, hydrateDesk, showPhase]);
 

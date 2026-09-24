@@ -153,7 +153,7 @@ async function filePaperRecord(page: Page) {
   await page.getByRole('button', { name: 'Price it' }).click();
   await expect(page.getByText('0.02948502').first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'File paper record' }).click();
-  await expect(page.getByText('Filed to your paper ledger')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Filed. Paper only. Nothing moved.')).toBeVisible({ timeout: 30000 });
   const justFiled = page.locator('[data-just-filed="true"]');
   await expect(justFiled).toBeVisible({ timeout: 30000 });
   await expect(justFiled).toBeInViewport({ ratio: 1 });
@@ -179,7 +179,7 @@ test.describe('desktop filing flow', () => {
     // Returning to draft clears the receipt and restores a clean ticket.
     await page.getByRole('button', { name: 'Start another instruction' }).click();
     await expect(page.getByRole('button', { name: 'Price it' })).toBeVisible();
-    await expect(page.getByText('Filed to your paper ledger')).not.toBeVisible();
+    await expect(page.getByText('Filed. Paper only. Nothing moved.')).not.toBeVisible();
   });
 
   test('files a paper record after inspecting quote details', async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('desktop filing flow', () => {
     await expect(quoteDialog).not.toBeVisible();
 
     await page.getByRole('button', { name: 'File paper record' }).click();
-    await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
+    await expect(page.getByText('Filed. Paper only. Nothing moved.')).toBeVisible();
     const justFiled = page.locator('[data-just-filed="true"]');
     await expect(justFiled).toBeVisible();
     await expect(justFiled).toBeInViewport({ ratio: 1 });
@@ -339,7 +339,7 @@ test.describe('desktop filing flow', () => {
     const ledger = page.locator('#paper-ledger');
     await expect(ledger).toBeVisible();
     await page.locator('#paper-ledger ol > li').first().locator('button').click();
-    await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
+    await expect(page.getByText('Filed. Paper only. Nothing moved.')).toBeVisible();
 
     // Simulate deletion from another tab via storage event.
     await page.evaluate(key => {
@@ -360,7 +360,7 @@ test.describe('mobile filing flow', () => {
     await mockApi(page);
     await page.goto('/');
     await filePaperRecord(page);
-    await expect(page.getByText('Filed to your paper ledger')).toBeVisible();
+    await expect(page.getByText('Filed. Paper only. Nothing moved.')).toBeVisible();
   });
 
   test('drawers render as bottom sheets and do not trap horizontal overflow', async ({ page }) => {

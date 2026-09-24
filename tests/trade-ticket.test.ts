@@ -135,8 +135,10 @@ describe('one working document at a time', () => {
     const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
     assert.doesNotMatch(html, /<form|<input|File paper record|Fresh price/);
-    assert.match(visible(html), /Filed to your paper ledger/);
+    assert.match(visible(html), /Filed\. Paper only\. Nothing moved\./);
+    assert.match(visible(html), /Kept in this browser\./);
     assert.match(visible(html), /This is not a fill, a submission, or a position/);
+    assert.match(visible(html), /Read it in your record/);
     assert.match(visible(html), /Start another instruction/);
     assert.doesNotMatch(visible(html), /This is the same entry as the ledger/);
     assert.doesNotMatch(visible(html), />New instruction</);

@@ -4,6 +4,7 @@ import {
   mandateLabel,
   offeringCapabilityText,
   offeringGroupsForInstruction,
+  soleOfferingForDesk,
   offeringProductGroups,
   openDesksForOffering,
   railLabel,
@@ -14,6 +15,16 @@ import { INSTRUMENT_OFFERINGS } from '../lib/desk/offerings';
 const overlapping = offeringProductGroups().find(group => group.offerings.length > 1)!;
 
 describe('offering presentation', () => {
+  it('gives each desk its own offering when a sentence matches both rails', () => {
+    const hetty = soleOfferingForDesk('buy Apple for 100 USDC', 'hetty');
+    const jesse = soleOfferingForDesk('buy Apple for 100 USDC', 'jesse');
+    assert.ok(hetty);
+    assert.ok(jesse);
+    assert.notEqual(hetty, jesse);
+    assert.equal(soleOfferingForDesk('', 'hetty'), null);
+    assert.equal(soleOfferingForDesk('no such instrument', 'hetty'), null);
+  });
+
   it('resolves an instruction to concrete comparable offerings', () => {
     const groups = offeringGroupsForInstruction('buy Apple for 100 USDC');
     assert.equal(groups.length, 1);

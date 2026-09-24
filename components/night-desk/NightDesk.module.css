@@ -34,6 +34,12 @@
   z-index: 0;
 }
 
+/* While a slip is under review or just filed, the room yields to the paper. */
+.study[data-stage='quote'] .sceneHost,
+.study[data-stage='filed'] .sceneHost {
+  filter: brightness(0.62) saturate(0.85);
+}
+
 .sceneCanvas {
   position: absolute;
   inset: 0;

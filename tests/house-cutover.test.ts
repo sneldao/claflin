@@ -140,7 +140,7 @@ describe('one canonical house', () => {
     const desk = source('lib/trading/useTradingDesk.ts');
     assert.match(desk, /leaveDesk/);
     assert.match(desk, /popstate/);
-    assert.match(desk, /syncDeskQuery\(id, selectedOfferingId, 'push', intent \?\? null\)/);
+    assert.match(desk, /syncDeskQuery\(id, selectedOfferingId, 'push', selectedRecord \? null : intent \?\? null, selectedRecord\)/);
     assert.match(desk, /clearDeskQuery\('push'\)/);
     const room = source('components/desk/DeskRoom.tsx');
     assert.match(room, /onLeaveDesk/);
@@ -155,8 +155,9 @@ describe('one canonical house', () => {
   });
   it('carries a foyer instruction onto the desk ticket', () => {
     const offerings = source('components/desk/HouseOfferings.tsx');
-    assert.match(offerings, /parseDictatedTradeIntent/);
-    assert.match(offerings, /onEnter\(deskId, offering\.offeringId, intent\)/);
+    assert.match(offerings, /entryIntentFromInstruction/);
+    assert.match(offerings, /onEnter\(deskId, offering\.offeringId, entryIntentFromInstruction\(instruction\)\)/);
+    assert.match(source('lib/house-entry.ts'), /parseDictatedTradeIntent/);
     const desk = source('lib/trading/useTradingDesk.ts');
     assert.match(desk, /entryIntent/);
     assert.match(desk, /intent\?: EntryIntent/);
@@ -192,7 +193,7 @@ describe('one canonical house', () => {
     assert.match(source('lib/trading/desk-documents.ts'), /state\.stage === 'saved'/);
     const ticket = source('components/desk/TradeTicket.tsx');
     assert.match(ticket, /paperOutcomeCopy/);
-    assert.match(source('lib/trading/outcomes.ts'), /Filed to your paper ledger/);
+    assert.match(source('lib/trading/outcomes.ts'), /Filed\. Paper only\. Nothing moved\./);
     assert.doesNotMatch(ticket, />New instruction</);
     assert.match(ticket, /Start another instruction/);
     assert.match(source('components/desk/PaperLedger.tsx'), /compactPaperEntry/);

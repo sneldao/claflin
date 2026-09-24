@@ -12,7 +12,7 @@ import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useDeskExecution } from '@/lib/trading/useDeskExecution';
 import { BASE_CHAIN_ID, getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
-import { liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
+import { focusLedgerTitle, liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { shareRecord, shareText, shareUrl } from '@/lib/share';
 import { HouseMark } from './HouseMark';
 import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
@@ -23,7 +23,7 @@ import { dictationTicketLine } from '@/lib/trading/voice-tools';
 import { BLANK_SLIP_NOTE, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import { WrittenSlip } from './WrittenSlip';
 import { SignalCaption } from './SignalCaption';
-import { HETTY_VOCAB, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
+import { HETTY_VOCAB, slipOneLine, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
 import type { SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { SupersededSlip } from '@/lib/desk/superseded';
 import styles from './WorkingDesk.module.css';
@@ -318,6 +318,7 @@ export const TradeTicket = memo(function TradeTicket({
   onHandEdit,
   onSlipEdit,
   onDictated,
+  brokerTake = null,
 }: {
   desk: ReturnType<typeof useTradingDesk>;
   liveMode: boolean;
@@ -342,7 +343,10 @@ export const TradeTicket = memo(function TradeTicket({
   onSlipEdit?: (partial: SlipEditPartial, field: 'instrument' | 'side' | 'amount' | 'units') => void;
   /** Dictation resolved — the surface records said/kept/inferred marks. */
   onDictated?: (parsed: ParsedDictation, transcript: string, priorDraft: TradeIntent) => void;
+  /** Hetty's take, shown once on a fresh filing. */
+  brokerTake?: string | null;
 }) {
+  const auth = useDeskAuth();
   const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
@@ -461,7 +465,10 @@ export const TradeTicket = memo(function TradeTicket({
   const view = missing ? 'missing' : openedRecord || recorded ? 'receipt' : pending ? 'pending' : slipActive ? 'review' : 'draft';
   const paperNumber = recorded ? 'REC' : view === 'draft' ? '01' : 'SLIP';
   const paperSub = missing ? 'PAPER RECORD / UNAVAILABLE' : recorded ? 'PAPER RECORD' : view === 'draft' ? (liveMode ? 'BASE DESK / LIVE INSTRUCTION' : 'BASE DESK / PAPER INSTRUCTION') : 'BASE DESK / QUOTATION';
-  const filed = recorded ? paperOutcomeCopy() : null;
+  const filed = recorded ? paperOutcomeCopy({
+    sentence: quote ? slipOneLine(quote, HETTY_VOCAB) : null,
+    place: auth.authenticated ? 'hetty-account' : 'hetty-browser',
+  }) : null;
   const tapeTopic = getEducationTopic('the-tape');
   const message = error || (view === 'draft' || view === 'pending' || view === 'review' ? state.message : null);
   const backLabel = isUnfinishedWork(state) ? 'Back to your instruction' : 'Back to the ticket';
@@ -561,6 +568,7 @@ export const TradeTicket = memo(function TradeTicket({
     </div>
     {view === 'draft' && carriedNote && <p className={styles.carriedNote}>{carriedNote}</p>}
     <h1 id="instruction-title" ref={review} tabIndex={-1}>{showBlank ? BLANK_SLIP_TITLE.hetty : title}</h1>
+    {liveOutcome && <p className={styles.quoteBoundary} role="status">{liveEvidence(liveOutcome.status).label}</p>}
     {showBlank && <p className={styles.blankSlipNote}>{BLANK_SLIP_NOTE}</p>}
     {/* The dictation rail: the ticket's voice, always at the head of the
         paper. It shows the last words the desk heard — or invites the first. */}
@@ -656,10 +664,14 @@ export const TradeTicket = memo(function TradeTicket({
           filedAt={filedRecord?.createdAt ?? null}
           receiptExtra={<>
             {foreground.kind === 'receipt' && <SignalCaption captionKey="stampThud" />}
-            <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.boundary}</span></p>
+            <p className={styles.quoteBoundary} role="status">{filed!.acknowledgement}<span>{filed!.place} {filed!.boundary}</span></p>
+            {foreground.kind === 'receipt' && brokerTake && <p className={styles.receiptTake}>{brokerTake}</p>}
             {quoteDrawer}
           </>}
           actions={<>
+            {foreground.kind === 'receipt' && (
+              <button type="button" className={styles.secondary} onClick={focusLedgerTitle}>Read it in your record</button>
+            )}
             {!browsing && (
               <button type="button" className={styles.secondary} onClick={() => edit({ instrumentId: '', side: 'buy', amount: '', unit: 'USDC' })}>Start another instruction</button>
             )}

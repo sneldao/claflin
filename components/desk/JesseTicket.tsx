@@ -18,7 +18,9 @@ import { SignalCaption } from './SignalCaption';
 import type { JesseDraft, JesseIntent, MarketComparison } from '@/lib/solana/contracts';
 import type { SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { SupersededSlip } from '@/lib/desk/superseded';
-import { draftComplete, JESSE_VOCAB, slipValidity } from '@/lib/desk/written-slip';
+import { draftComplete, JESSE_VOCAB, slipOneLine, slipValidity } from '@/lib/desk/written-slip';
+import { comparisonTake } from '@/lib/desk/broker-take';
+import { focusLedgerTitle, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { getEducationTopic } from '@/lib/education';
 import { EVIDENCE_DISCLAIMER, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import type { DeskMark } from '@/lib/trading/marks-shared';
@@ -157,12 +159,19 @@ export const JesseTicket = memo(function JesseTicket({
     const receiptInstrument = record?.instrumentSnapshot
       ?? (q ? SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId) : null)
       ?? state.presentedInstrument;
+    const filed = paperOutcomeCopy({
+      sentence: q ? slipOneLine(q, JESSE_VOCAB) : null,
+      place: 'jesse-browser',
+    });
+    const gapTake = record?.comparison && record.comparison.status !== 'unavailable'
+      ? comparisonTake(record.comparison.referenceDifferenceBps)
+      : null;
     return (
       <section id="instruction" className={`${styles.ticket} ${styles.ticketRecorded}`} aria-labelledby="instruction-title" data-ticket-view="receipt" data-acknowledged={record ? 'true' : 'false'}>
         <PaperChrome liveMode={false} />
         {record && <span className={styles.stamp} aria-hidden="true"><span>FILED</span><small>PAPER · SOLANA</small></span>}
         <div className={styles.ticketSurface} key="receipt">
-        <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{title}</h1>
+        <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{filed.heading}</h1>
         {foreground.kind === 'receipt' && <SignalCaption captionKey="stampThud" />}
         <WrittenSlip
           mode="receipt"
@@ -174,16 +183,27 @@ export const JesseTicket = memo(function JesseTicket({
           terms={q ? <>Multiplier {q.scaling.multiplier} · {receiptInstrument?.issuer ?? 'Backed'} · Token-2022 · Jupiter Metis · Solana</> : null}
           filedAt={record?.createdAt ?? null}
           actions={
-            <button type="button" className={styles.secondary} onClick={dismissRecord}>
-              {foreground.kind === 'receipt' ? 'Start another instruction' : 'Back to your instruction'}
-            </button>
-          }
-          receiptExtra={record?.comparison ? (
             <>
-              <MarketEvidence comparison={record.comparison} />
-              <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
+              {foreground.kind === 'receipt' && (
+                <button type="button" className={styles.secondary} onClick={focusLedgerTitle}>Read it in your record</button>
+              )}
+              <button type="button" className={styles.secondary} onClick={dismissRecord}>
+                {foreground.kind === 'receipt' ? 'Start another instruction' : 'Back to your instruction'}
+              </button>
             </>
-          ) : null}
+          }
+          receiptExtra={
+            <>
+              <p className={styles.quoteBoundary} role="status">{filed.acknowledgement}<span>{filed.place} {filed.boundary}</span></p>
+              {gapTake && <p className={styles.receiptTake}>{gapTake}</p>}
+              {record?.comparison ? (
+                <>
+                  <MarketEvidence comparison={record.comparison} />
+                  <p className={evidence.evidenceCaveat}>{EVIDENCE_DISCLAIMER}</p>
+                </>
+              ) : null}
+            </>
+          }
         />
         </div>
       </section>

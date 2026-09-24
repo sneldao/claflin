@@ -58,7 +58,7 @@
   font-family: var(--font-mono), monospace;
   font-size: 0.56rem;
   letter-spacing: 0.22em;
-  color: #9a8a68;
+  color: #d4c4a2;
 }
 
 .headerNav {
@@ -192,8 +192,31 @@
   color: #f2e8d0;
 }
 
+.returnFiling {
+  margin: 0 0 22px;
+  max-width: 42ch;
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: #f2e8d0;
+}
+
+.returnFiling button {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brass);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
 .lede {
-  margin: 0 0 30px;
+  margin: 0 0 22px;
   max-width: 40ch;
   font-size: 1.02rem;
   line-height: 1.65;
@@ -586,7 +609,7 @@
 }
 
 .instructionSearch input {
-  width: min(100%, 360px);
+  width: min(100%, 520px);
   min-height: 48px;
   padding: 12px 14px;
   font: inherit;
@@ -606,7 +629,7 @@
 }
 
 .instructionSearch input::placeholder {
-  color: #7d735c;
+  color: #d4c4a2;
 }
 
 .offeringGroups {

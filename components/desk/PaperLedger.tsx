@@ -67,7 +67,7 @@ export const PaperLedger = memo(function PaperLedger({
           <p className={styles.eyebrow}>YOUR RECORD</p>
           <span className={styles.boardTally}>CLEAR</span>
         </div>
-        <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
+        <h2 id="ledger-title" className={styles.ledgerTrayTitle} tabIndex={-1}>Your record.</h2>
         <div className={styles.ledgerEmpty}>
           <p>No paper on file yet — file your first instruction above. A first filing may leave a commemorative desk slip below.</p>
         </div>
@@ -91,7 +91,7 @@ export const PaperLedger = memo(function PaperLedger({
           </span>
         )}
       </div>
-      <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your record.</h2>
+      <h2 id="ledger-title" className={styles.ledgerTrayTitle} tabIndex={-1}>Your record.</h2>
       {ticketNow && <p className={styles.ledgerMore} role="status">{ticketNow}</p>}
       {liveReconciling && <p className={styles.ledgerMore} role="status">Reconciling open Base transactions — nothing is being resubmitted.</p>}
       {storageError && <div role="alert"><p>{storageError}</p><button type="button" onClick={loadHistory}>Retry reading history</button></div>}

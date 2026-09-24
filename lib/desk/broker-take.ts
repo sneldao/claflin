@@ -48,3 +48,15 @@ export function brokerTake(
 
   return null;
 }
+
+/** One gap line for a filed Jesse comparison — the tape at filing, not advice. */
+export function comparisonTake(differenceBps: string | null | undefined): string | null {
+  if (differenceBps == null || differenceBps === '') return null;
+  const gap = Number(differenceBps);
+  if (!Number.isFinite(gap)) return null;
+  const abs = Math.abs(gap).toFixed(1);
+  if (Number(abs) < 1) {
+    return 'The venue is tracking its stock reference within a basis point. A quiet tape tells you something too.';
+  }
+  return `The venue is ${abs} bps ${gap > 0 ? 'over' : 'under'} its stock reference. The gap is the tape talking — not a promise it closes.`;
+}

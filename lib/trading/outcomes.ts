@@ -60,11 +60,31 @@ export function isPaperSuccess(evidence: PaperEvidence | LiveEvidence): boolean 
   return evidence.kind === 'paper-record' && evidence.status === 'filed';
 }
 
-export function paperOutcomeCopy() {
+export type OutcomePlace = 'hetty-browser' | 'hetty-account' | 'jesse-browser';
+
+const PLACE_LINES: Record<OutcomePlace, string> = {
+  'hetty-browser': 'Kept in this browser.',
+  'hetty-account': 'Kept in this browser, and copied to your sign-in.',
+  'jesse-browser': 'Kept in this browser. Jesse’s book does not leave it.',
+};
+
+/** The filed sentence is the heading. Place says where that sentence lives. */
+export function paperOutcomeCopy(input?: { sentence?: string | null; place?: OutcomePlace }) {
+  const sentence = input?.sentence?.replace(/\s+/g, ' ').trim();
   return {
-    heading: 'Paper recorded.',
-    acknowledgement: 'Filed to your paper ledger. No funds moved.',
+    heading: sentence ? sentence : 'Paper recorded.',
+    acknowledgement: 'Filed. Paper only. Nothing moved.',
+    place: PLACE_LINES[input?.place ?? 'hetty-browser'],
     boundary: 'This is not a fill, a submission, or a position.',
     stamp: 'PAPER · FILED',
   } as const;
+}
+
+/** Move focus to the ledger title so a fresh filing can be read back. */
+export function focusLedgerTitle(): void {
+  if (typeof document === 'undefined') return;
+  const title = document.getElementById('ledger-title');
+  if (!(title instanceof HTMLElement)) return;
+  title.tabIndex = -1;
+  title.focus();
 }

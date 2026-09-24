@@ -33,6 +33,8 @@ import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
 import { TickerTape } from './TickerTape';
 import { BlotterHearables } from './BlotterHearables';
+import { LastFilingLine } from './LastFilingLine';
+import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { RoomMarketClock } from './RoomMarketClock';
 import { RoomTape } from './RoomTape';
 import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
@@ -104,6 +106,7 @@ type Desk = ReturnType<typeof useTradingDesk>;
 
 export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const auth = useDeskAuth();
+  const filing = useLatestFiling();
   const { importAnonymousRecords, anonymousCount, importStatus } = usePaperSync(desk);
   const liveJournal = useLiveJournal(desk.deskId);
   const [hettyLive, setHettyLive] = useState(false);
@@ -423,6 +426,9 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         )}
         <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
+          {blankSlip && filing?.deskId === 'hetty' && (
+            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => desk.openRecord(filing.recordId)} />
+          )}
           {blankSlip && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
           <ReceiverShell
             stage={instrumentStage}
@@ -467,6 +473,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           onHandEdit={handEdit}
           onSlipEdit={slipEdit}
           onDictated={recordDictated}
+          brokerTake={take}
         />
         <PaperLedger desk={desk} liveEntries={liveJournal.entries} liveReady={liveJournal.ready} liveReconciling={liveJournal.reconciling} />
       </div>

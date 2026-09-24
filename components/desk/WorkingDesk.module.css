@@ -359,6 +359,32 @@
 .slipLedger .slipHighlight dd { font-size: 15px; color: var(--desk-paper-ink); letter-spacing: -.01em; }
 .slipLedger .slipHighlight { padding-block: 14px; }
 .grid[data-review="true"] .instrument { opacity: 1; }
+.grid[data-review="true"] .deskSurface,
+.grid[data-foreground="receipt"] .deskSurface { filter: brightness(0.72); }
+.returnFiling {
+  margin: 0 0 14px;
+  max-width: 36ch;
+  color: var(--desk-paper-light);
+  font: 16px/1.45 var(--font-display), serif;
+}
+.returnFiling button {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--desk-brass);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.receiptTake {
+  margin: 10px 0 0;
+  font: 16px/1.5 var(--font-display), serif;
+  color: var(--desk-paper-ink);
+}
 @media (prefers-reduced-motion: reduce) {
   .quotationSlip { transform: none; transition: none; }
   .quotationSlip .slipBody,

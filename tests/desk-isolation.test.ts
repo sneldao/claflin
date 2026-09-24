@@ -50,8 +50,12 @@ describe('paper evidence is not a live outcome', () => {
     assert.equal(evidence.isSubmission, false);
     assert.equal(evidence.isPosition, false);
     const copy = paperOutcomeCopy();
-    assert.match(copy.acknowledgement, /Filed to your paper ledger/);
+    assert.match(copy.acknowledgement, /Filed\. Paper only\. Nothing moved\./);
+    assert.match(copy.place, /Kept in this browser/);
     assert.match(copy.boundary, /not a fill, a submission, or a position/);
+    const sentence = paperOutcomeCopy({ sentence: 'Buy 100 USDC of NVDA.', place: 'jesse-browser' });
+    assert.equal(sentence.heading, 'Buy 100 USDC of NVDA.');
+    assert.match(sentence.place, /Jesse’s book does not leave it/);
     assert.doesNotMatch(copy.heading, /fill|submit/i);
     const filled = liveEvidence('filled');
     assert.equal(filled.kind, 'live-execution');

@@ -10,6 +10,8 @@ import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
 import { JesseCall } from './JesseCall';
 import { BlotterHearables } from './BlotterHearables';
+import { LastFilingLine } from './LastFilingLine';
+import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { RoomMarketClock } from './RoomMarketClock';
 import { RoomTape } from './RoomTape';
 import { ReceiverShell } from './ReceiverShell';
@@ -65,6 +67,7 @@ const HEARABLE_LINES = [
  */
 export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const jesse = desk.jesse;
+  const filing = useLatestFiling();
   const [spoken, setSpoken] = useState<string | null>(null);
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
@@ -326,6 +329,9 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
           <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
+          {blankSlip && filing?.deskId === 'jesse' && (
+            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => jesse.openRecord(filing.recordId)} />
+          )}
           {blankSlip && blotter}
           {roomView ? (
             <details className={styles.typeInstead}>

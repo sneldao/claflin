@@ -129,7 +129,7 @@ describe('mobile filing integration through actual buttons', () => {
     const ledger = container.querySelector('#paper-ledger');
     assert.ok(ledger, 'PaperLedger should appear after filing');
     assert.ok(ledger!.querySelector('[data-just-filed="true"]'), 'the just-filed line should be highlighted');
-    assert.ok(container.textContent?.includes('Filed to your paper ledger'), 'receipt copy should be visible');
+    assert.ok(container.textContent?.includes('Filed. Paper only. Nothing moved.'), 'receipt copy should be visible');
 
     // The filing transition is verified through the actual controls; jsdom does not prove visual layout.
     const main = container.querySelector('main') as HTMLElement | null;

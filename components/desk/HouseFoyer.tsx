@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
-import type { EntryIntent } from '@/lib/house-entry';
 import { useMarketClock } from '@/lib/use-market-clock';
 import { signatureLine } from '@/lib/desk-notes';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
@@ -13,6 +12,10 @@ import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
 import { FOYER_BOUNDARY, FOYER_LEDE } from '@/lib/desk/ui-copy';
+import { entryIntentFromInstruction, type EntryIntent } from '@/lib/house-entry';
+import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
+import { useLatestFiling } from '@/lib/trading/useLatestFiling';
+import { LastFilingLine } from './LastFilingLine';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
@@ -32,7 +35,7 @@ function instructionForMark(mark: DeskMark): string {
  * Claflin foyer — the market and the brokers' lines are the hero: a live
  * market clock, the tape, and one card per desk whose line is connected.
  */
-export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void }) {
+export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null, recordId?: string | null) => void }) {
   const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
   const lineDesks = openDesks.filter(desk => DESK_CAPABILITIES[desk.id].voice && BROKER_VOICE[desk.id]);
@@ -58,22 +61,40 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
   /* The house-book instruction lives here so a wire-mark click can write it. */
   const [wireInstruction, setWireInstruction] = useState('');
+  const filing = useLatestFiling();
 
   const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false });
 
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
 
+  const carried = (id: HouseDeskId) => {
+    const offeringId = soleOfferingForDesk(wireInstruction, id);
+    const intent = entryIntentFromInstruction(wireInstruction);
+    return { offeringId, intent };
+  };
+
+  const deskHref = (id: HouseDeskId, offeringId: string | null, intent: EntryIntent | null) => {
+    const params = new URLSearchParams();
+    params.set('desk', id);
+    if (offeringId) params.set('offering', offeringId);
+    if (intent?.side) params.set('side', intent.side);
+    if (intent?.amount) params.set('amount', intent.amount);
+    return `/?${params.toString()}`;
+  };
+
   const enter = (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     window.scrollTo({ top: 0, behavior: 'instant' });
-    onEnter(id);
+    const { offeringId, intent } = carried(id);
+    onEnter(id, offeringId ?? undefined, intent);
   };
 
   const ring = (id: HouseDeskId) => () => {
     requestRingOnArrival(id);
     window.scrollTo({ top: 0, behavior: 'instant' });
-    onEnter(id);
+    const { offeringId, intent } = carried(id);
+    onEnter(id, offeringId ?? undefined, intent);
   };
 
   return (
@@ -119,6 +140,26 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             <p className={foyerStyles.lede}>
               {FOYER_LEDE}
             </p>
+            {filing && (
+              <LastFilingLine
+                filing={filing}
+                className={foyerStyles.returnFiling}
+                onOpen={() => {
+                  window.scrollTo({ top: 0, behavior: 'instant' });
+                  onEnter(filing.deskId, undefined, null, filing.recordId);
+                }}
+              />
+            )}
+            <label className={foyerStyles.instructionSearch}>
+              <span>The instruction</span>
+              <input
+                value={wireInstruction}
+                onChange={event => setWireInstruction(event.target.value)}
+                placeholder="Try “buy Apple for 100 USDC”"
+                autoComplete="off"
+                aria-label="Instruction for the house"
+              />
+            </label>
             <div className={foyerStyles.actions}>
               <a href="#house-offerings" className={foyerStyles.secondary}>
                 Browse the house book
@@ -152,10 +193,10 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                     <div className={foyerStyles.lineActions}>
                       <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
                         <span className={foyerStyles.lineLamp} aria-hidden="true" />
-                        Ring {desk.shortName}
+                        Ring {desk.shortName}{soleOfferingForDesk(wireInstruction, desk.id) ? ' with this' : ''}
                       </button>
                       <a
-                        href={`/?desk=${desk.id}`}
+                        href={deskHref(desk.id, soleOfferingForDesk(wireInstruction, desk.id), entryIntentFromInstruction(wireInstruction))}
                         className={foyerStyles.typeInstead}
                         onClick={enter(desk.id)}
                       >
@@ -169,15 +210,11 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           )}
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={symbol => {
-          setWireInstruction(symbol);
-          document.getElementById('house-offerings')?.scrollIntoView?.({ block: 'start' });
-        }} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={setWireInstruction} />
 
         <HouseOfferings
           onEnter={onEnter}
           instruction={wireInstruction}
-          onInstructionChange={setWireInstruction}
         />
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">

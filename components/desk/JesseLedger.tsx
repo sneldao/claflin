@@ -38,7 +38,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
           <p className={styles.eyebrow}>YOUR RECORD</p>
           <span className={styles.boardTally}>CLEAR</span>
         </div>
-        <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your Solana record.</h2>
+        <h2 id="ledger-title" className={styles.ledgerTrayTitle} tabIndex={-1}>Your Solana record.</h2>
         <div className={styles.ledgerEmpty}>
           <p>No paper on file yet — file your first Jesse instruction above. Kept in this browser only.</p>
         </div>
@@ -56,7 +56,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
         <p className={styles.eyebrow}>YOUR RECORD</p>
         <span className={styles.boardTally}>{records.length}</span>
       </div>
-      <h2 id="ledger-title" className={styles.ledgerTrayTitle}>Your Solana record.</h2>
+      <h2 id="ledger-title" className={styles.ledgerTrayTitle} tabIndex={-1}>Your Solana record.</h2>
       {storageError && <p className={styles.notice} role="alert">{storageError}</p>}
       {foreground.kind === 'receipt' && (
         <p className={styles.notice} role="status">Just filed — see the highlighted line. Kept in this browser.</p>

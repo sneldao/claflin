@@ -3,7 +3,7 @@
  * concrete product/rail/venue catalog for the foyer without creating a second,
  * UI-specific catalog or turning the homepage into a network picker.
  */
-import { DESK_CAPABILITIES, getHouseDesk, isOpenDesk, type HouseDesk } from '../house';
+import { DESK_CAPABILITIES, getHouseDesk, isOpenDesk, type HouseDesk, type HouseDeskId } from '../house';
 import { MARKET_MANDATES, coverageForOffering, deskRuntimeFor } from './registry';
 import type { InstrumentOffering, RailRef } from './contracts';
 import { INSTRUMENT_OFFERINGS } from './offerings';
@@ -91,10 +91,21 @@ export function offeringProductGroups(): readonly OfferingProductGroup[] {
 }
 
 /**
- * Resolve a natural-language instruction to comparable product groups. The
- * visitor does not pick a chain; the catalog finds concrete offerings and the
- * desk links expose only eligible desk combinations.
+ * The one offering a desk can carry for this sentence.
+ * Two matches stay unresolved — the house book shows both, and the ring does not guess.
  */
+export function soleOfferingForDesk(instruction: string, deskId: HouseDeskId): string | null {
+  const trimmed = instruction.trim();
+  if (!trimmed) return null;
+  const ids: string[] = [];
+  for (const group of offeringGroupsForInstruction(trimmed)) {
+    for (const offering of group.offerings) {
+      if (openDesksForOffering(offering).some(desk => desk.id === deskId)) ids.push(offering.offeringId);
+    }
+  }
+  return ids.length === 1 ? ids[0] : null;
+}
+
 export function offeringGroupsForInstruction(instruction: string): readonly OfferingProductGroup[] {
   const groups = offeringProductGroups();
   const terms = instruction

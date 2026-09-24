@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { HouseDeskId } from '@/lib/house';
 import type { EntryIntent } from '@/lib/house-entry';
 import type { InstrumentOffering } from '@/lib/desk/contracts';
-import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
+import { entryIntentFromInstruction } from '@/lib/house-entry';
 import {
   mandateLabel,
   offeringCapabilityText,
@@ -24,17 +24,10 @@ function offeringHref(offering: InstrumentOffering, deskId: HouseDeskId): string
  * The house book: instruction first, then concrete offerings and only the
  * desks that can actually carry each product/rail/venue combination.
  */
-export function HouseOfferings({ onEnter, instruction: controlledInstruction, onInstructionChange }: {
+export function HouseOfferings({ onEnter, instruction = '' }: {
   onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void;
   instruction?: string;
-  onInstructionChange?: (value: string) => void;
 }) {
-  const [internalInstruction, setInternalInstruction] = useState('');
-  const instruction = controlledInstruction ?? internalInstruction;
-  const setInstruction = (value: string) => {
-    if (onInstructionChange) onInstructionChange(value);
-    else setInternalInstruction(value);
-  };
   const groups = useMemo(() => offeringGroupsForInstruction(instruction), [instruction]);
 
   const enter = (offering: InstrumentOffering, deskId: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -43,11 +36,7 @@ export function HouseOfferings({ onEnter, instruction: controlledInstruction, on
     window.scrollTo({ top: 0, behavior: 'instant' });
     /* The instruction is not just a filter — its side and amount ride along
        onto the ticket the desk opens with. */
-    const parsed = instruction.trim() ? parseDictatedTradeIntent(instruction) : null;
-    const intent: EntryIntent | null = parsed && (parsed.intent.side || parsed.intent.amount)
-      ? { side: parsed.intent.side ?? null, amount: parsed.intent.amount ?? null }
-      : null;
-    onEnter(deskId, offering.offeringId, intent);
+    onEnter(deskId, offering.offeringId, entryIntentFromInstruction(instruction));
   };
 
   return (
@@ -60,15 +49,6 @@ export function HouseOfferings({ onEnter, instruction: controlledInstruction, on
           can carry it. Similar products on different rails are never swapped for
           one another.
         </p>
-        <label className={foyerStyles.instructionSearch}>
-          <span>What would you like to review?</span>
-          <input
-            value={instruction}
-            onChange={event => setInstruction(event.target.value)}
-            placeholder="Try “buy Apple for 100 USDC”"
-            autoComplete="off"
-          />
-        </label>
       </div>
 
       <div className={foyerStyles.offeringGroups} aria-live="polite">
