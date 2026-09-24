@@ -101,10 +101,15 @@ describe('house foyer', () => {
     assert.match(html, /Paper by default\. Only you can sign\./);
     assert.match(html, /Ring Hetty/);
     assert.match(html, /Ring Jesse/);
-    assert.doesNotMatch(html, /The Witch of Wall Street/);
-    assert.doesNotMatch(html, /The Boy Plunger/);
-    assert.doesNotMatch(html, /I buy when things are low/);
-    assert.doesNotMatch(html, /There is only one side to the stock market/);
+    /* Character comes after comprehension (docs/FOYER_LINE.md §4.7): the
+       first screen carries no epithet or quote; "Meet the brokers" below may. */
+    const hero = html.slice(html.indexOf('aria-labelledby="foyer-title"'), html.indexOf('id="house-offerings"'));
+    assert.ok(hero.length > 0, 'hero section found');
+    assert.doesNotMatch(hero, /The Witch of Wall Street/);
+    assert.doesNotMatch(hero, /The Boy Plunger/);
+    assert.doesNotMatch(hero, /I buy when things are low/);
+    assert.doesNotMatch(hero, /There is only one side to the stock market/);
+    assert.ok(html.indexOf('id="house-desks"') > html.indexOf('id="house-offerings"'), 'the desks come after the board');
     assert.match(html, /LIVE REFERENCE MARKS/);
     assert.match(html, /id="house-offerings"/);
     assert.match(html, /Every verified offering\./);

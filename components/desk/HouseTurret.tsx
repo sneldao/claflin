@@ -43,6 +43,17 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
   const [asked, setAsked] = useState(false);
   const holding = useRef(false);
   const spaceReleased = useRef(false);
+  const barRef = useRef<HTMLFormElement>(null);
+  /* The handset: once the talk bar scrolls away on a phone, a thumb-reach
+     copy of the same line docks at the bottom. Same recorder, same words. */
+  const [barAway, setBarAway] = useState(false);
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setBarAway(!entry.isIntersecting && entry.boundingClientRect.top < 0));
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
 
   const reading = readInstruction(instruction);
   const deskIds = lineDesks.map(desk => desk.id);
@@ -129,7 +140,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
   return (
     <div className={foyerStyles.turret}>
-      <form className={foyerStyles.talkBar} onSubmit={submit} data-state={state.status}>
+      <form ref={barRef} className={foyerStyles.talkBar} onSubmit={submit} data-state={state.status}>
         <button
           type="button"
           data-talk
@@ -209,6 +220,27 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
       )}
 
       {boundary}
+
+      <div className={foyerStyles.handset} data-shown={barAway || isRecording || isTranscribing} aria-hidden={!(barAway || isRecording || isTranscribing)}>
+        <p className={foyerStyles.handsetStatus} aria-hidden="true">
+          {reply ?? (heard && instruction === heard ? `${TURRET_COPY.heard} “${heard}”` : TURRET_COPY.handset)}
+        </p>
+        <button
+          type="button"
+          data-talk
+          className={`${foyerStyles.talkButton} ${foyerStyles.handsetButton}`}
+          aria-pressed={isRecording}
+          tabIndex={barAway ? 0 : -1}
+          disabled={isTranscribing}
+          onPointerDown={onPointerDown}
+          onPointerUp={release}
+          onPointerCancel={release}
+          onClick={onClick}
+        >
+          <span className={foyerStyles.talkLamp} aria-hidden="true" />
+          {talkLabel}
+        </button>
+      </div>
     </div>
   );
 }

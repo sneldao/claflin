@@ -89,7 +89,8 @@ describe('house turret (component)', () => {
 
   it('SSR paints one talk button, the lines, and unlit planned lines', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
-    assert.equal((html.match(/data-talk/g) ?? []).length, 1, 'one primary talk action');
+    assert.equal((html.match(/data-talk/g) ?? []).length, 2, 'the talk bar and its handset copy');
+    assert.match(html, /class="handset" data-shown="false" aria-hidden="true"/, 'the handset stays hidden until the bar scrolls away');
     assert.match(html, /Hold to talk/);
     assert.match(html, /Press and hold to talk \(or hold Space\)\. Or just type\./);
     assert.match(html, /LINE 1/);

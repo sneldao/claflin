@@ -19,6 +19,8 @@ import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
 import { HouseTurret } from './HouseTurret';
+import { HouseDesks } from './HouseDesks';
+import { HouseAnswers } from './HouseAnswers';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
 
@@ -186,6 +188,14 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             </div>
           </div>
         </section>
+
+        <HouseDesks
+          desks={lineDesks}
+          deskHref={id => deskHref(id, null, null)}
+          onOpen={enter}
+        />
+
+        <HouseAnswers />
       </main>
 
       <footer className={foyerStyles.footer}>
@@ -196,6 +206,16 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             Coming soon — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
           </span>
         )}
+        <nav className={foyerStyles.footerLinks} aria-label="House">
+          <a href="#house-answers">Straight answers</a>
+          <a href="#house-offerings">Product terms</a>
+          <a href="https://github.com/sneldao/claflin" target="_blank" rel="noreferrer">Source ↗</a>
+        </nav>
+        <p className={foyerStyles.footerRisk}>
+          Tokenized stocks carry issuer, custody, liquidity and smart-contract risk, and their prices can
+          differ from the listed share. Claflin is not a broker-dealer and gives no investment advice.
+          Paper records are simulations.
+        </p>
       </footer>
     </div>
   );

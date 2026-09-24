@@ -1069,10 +1069,243 @@
   color: var(--muted);
 }
 
+/* ————— Meet the brokers · Straight answers ————— */
+
+.desks,
+.answers {
+  position: relative;
+  z-index: 2;
+  padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px);
+  background: var(--night);
+  border-top: 1px solid rgba(179, 144, 90, 0.22);
+}
+
+.sectionIntro {
+  margin-bottom: clamp(24px, 4vh, 40px);
+}
+
+.sectionIntro h2 {
+  margin: 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 56px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: #f2e8d0;
+}
+
+.deskCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.deskCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 26px;
+  color: var(--paper-ink);
+  background: linear-gradient(160deg, #efe5ca, var(--paper));
+  border: 1px solid rgba(120, 95, 55, 0.34);
+  border-top: 3px solid var(--brass-dim);
+  border-radius: 3px;
+}
+
+.deskMeta {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6a5c3e;
+}
+
+.deskName {
+  margin: 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  line-height: 1;
+  color: #241d10;
+}
+
+.deskLens {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: #3a3122;
+}
+
+.deskQuote {
+  margin: 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--brass-dim);
+}
+
+.deskQuote p {
+  margin: 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-style: italic;
+  font-size: 1.04rem;
+  line-height: 1.45;
+  color: #3a3122;
+}
+
+.deskQuote cite {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #7a6c4c;
+}
+
+.deskNamesake {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: #6b634c;
+}
+
+.deskOpen {
+  align-self: flex-start;
+  margin-top: auto;
+  font-size: 0.82rem;
+  color: #2a2416;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.answerList {
+  display: grid;
+  max-width: 78ch;
+}
+
+.answer {
+  border-top: 1px solid rgba(179, 144, 90, 0.25);
+}
+
+.answer:last-child {
+  border-bottom: 1px solid rgba(179, 144, 90, 0.25);
+}
+
+.answer summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.2rem;
+  color: #eee3ca;
+  cursor: pointer;
+  list-style: none;
+}
+
+.answer summary::-webkit-details-marker {
+  display: none;
+}
+
+.answer summary::after {
+  content: '+';
+  font-family: var(--font-mono), monospace;
+  color: var(--brass);
+}
+
+.answer[open] summary::after {
+  content: '−';
+}
+
+.answer p {
+  margin: 0 0 20px;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: #c9bda0;
+}
+
+/* ————— The handset: the house line docked in thumb reach on phones ————— */
+
+.handset {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .handset {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    gap: 8px;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(12, 24, 20, 0.96);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--edge);
+    transform: translateY(110%);
+    transition: transform var(--dur-2, 240ms) var(--ease-swift, ease);
+  }
+
+  .handset[data-shown='true'] {
+    transform: none;
+  }
+
+  .handsetStatus {
+    margin: 0;
+    overflow: hidden;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #e3cf9e;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .handsetButton {
+    width: 100%;
+    min-height: 56px;
+  }
+
+  .foyer:has(.handset[data-shown='true']) .footer {
+    padding-bottom: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handset {
+    transition: none;
+  }
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  letter-spacing: 0.14em;
+}
+
+.footerLinks a {
+  color: #9a8a68;
+  text-underline-offset: 3px;
+}
+
+.footerRisk {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  max-width: 96ch;
+  font-family: var(--font-body), 'IBM Plex Sans', sans-serif;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  color: #7d7359;
+}
+
 .footer {
   position: relative;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   padding: 16px clamp(20px, 4vw, 48px);

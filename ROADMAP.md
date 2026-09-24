@@ -60,7 +60,7 @@ Remaining acceptance work:
 | 1 | Turret: hold-to-talk house line, lamps by offering match, named choice, mic-denied fallback | Shipped |
 | 2 | Board table with provenance and honest gap column; expandable rows showing contract or mint, what the token is, and who it is for | Shipped |
 | 3 | Annotated slip and labelled example call from an accepted real recording | Needs an accepted recording |
-| 4 | Desks, straight answers, footer, mobile handset | — |
+| 4 | Desks, straight answers, footer, mobile handset | Shipped: "Meet the brokers" (AI broker, lens, attributed line, namesake dates); seven straight answers (`lib/desk/foyer-answers.ts`); footer links and risk line; a docked hold-to-talk handset on phones once the talk bar scrolls away |
 | 5 | After-hours pulse (real counters only) and funnel metrics | Needs a documented event source |
 
 **Exit evidence:** a first-time visitor speaks or types an instruction within 30 seconds, reaches a matching desk without choosing a chain, and can say what the token is, which rail it settles on, and that nothing moved.

@@ -94,6 +94,7 @@ export const TURRET_COPY = {
   lampMatch: 'Carries this',
   lampQuiet: 'Not on this line',
   planned: 'coming soon',
+  handset: 'The house line, wherever you are on the page.',
 } as const;
 
 /** What an onchain gap on the wire is measured against. */
