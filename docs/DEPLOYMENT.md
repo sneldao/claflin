@@ -12,8 +12,9 @@ when `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED=true` and paper trading available
 alongside them. With the flag off or unset, the desk is paper-only. Live
 transactions use the client wallet integration, not a server-held signer. Mounted desk
 routes: `/api/stocks/quote` (read-only estimates), `/api/stocks/marks`
-(indicative tape), `/api/hetty/session` (voice signed URL), and — when an
-account is configured — `/api/paper` and `/api/hetty/transcript`.
+(indicative tape), `/api/hetty/session` (voice signed URL),
+`/api/desk/jesse/voice-agent/token` (optional AssemblyAI Voice Agent token),
+and — when an account is configured — `/api/paper` and `/api/hetty/transcript`.
 `/api/eligibility` is a read-only authority-tier check, not a paper-desk
 surface. `/api/webhooks/elevenlabs` is retained call-billing infrastructure
 and is not on the live Hetty path. Retired marketplace APIs (`/api/agents`,
@@ -81,6 +82,17 @@ files paper; the call card reports the line as not connected:
 ELEVENLABS_AGENT_JESSE=
 ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
 ```
+
+Optional AssemblyAI Voice Agent line for Jesse. ElevenLabs remains the default;
+set `NEXT_PUBLIC_JESSE_VOICE=assemblyai` to make AssemblyAI the deployment
+provider, or use `?line=assemblyai` for one visit. The API key stays server-side.
+
+```
+ASSEMBLYAI_API_KEY=
+NEXT_PUBLIC_JESSE_VOICE=assemblyai
+```
+
+The AssemblyAI line is paper-only and does not sign or submit transactions.
 
 Optional Jupiter key (paper quotes work keyless; set for higher rate limits):
 
