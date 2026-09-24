@@ -50,6 +50,21 @@ Remaining acceptance work:
 
 **Exit evidence:** a client can explain the product, amount, paper status, estimate and recorded result, and find that result on a return visit. Live trading is not that evidence. Automated checks supplement rather than substitute for product acceptance.
 
+## 1a. The foyer is the line
+
+**Approved 2026-09-24.** Rebuild `/` as a working dealer turret: a push-to-talk house line over the existing dictation path, desk lamps lit by offering match, a market-aware headline, a dense board with honest gaps, an annotated slip, and a labelled example call. Anatomy and gates: [docs/FOYER_LINE.md](docs/FOYER_LINE.md).
+
+| Phase | Deliverable | When |
+|---|---|---|
+| 0 | Copy truth: session countdown and headline, plain subhead, "AI broker" lines, gap labelled against the stock reference, "estimate" wording, footer | May land before Stocklana if the full suite passes |
+| 1 | Turret: hold-to-talk house line, lamps by offering match, named choice, mic-denied fallback | After 2026-09-25 |
+| 2 | Board table with provenance and honest gap column | After Phase 1 |
+| 3 | Annotated slip and labelled example call from an accepted real recording | Needs an accepted recording |
+| 4 | Desks, straight answers, footer, mobile handset | — |
+| 5 | After-hours pulse (real counters only) and funnel metrics | Needs a documented event source |
+
+**Exit evidence:** a first-time visitor speaks or types an instruction within 30 seconds, reaches a matching desk without choosing a chain, and can say what the token is, which rail it settles on, and that nothing moved.
+
 ## 2. Connect Hetty to the shared instruction
 
 **Delivered (paper scope).** “Ring Hetty” starts a live ElevenLabs ConvAI voice session: `POST /api/hetty/session` mints a short-lived signed URL server-side (API key and `ELEVENLABS_AGENT_HETTY` never reach the client; 10 sessions/minute per instance), and the desk registers nine client tools which execute in the caller's browser against the same `useTradingDesk` draft. Hetty reads back real estimate output, requires explicit confirmation before recording, and cannot sign or submit anything. `share_desk_note` lets her speak the desk's note of the day — exactly the line shown on the desk, with its attribution, once per call, on any foreground including a read-only record; the browser enforces the once-per-call rule even if she calls again. Voice and manual input manipulate one instruction; edits still invalidate review; provider failures surface honest errors rather than fabricated quotes.

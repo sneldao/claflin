@@ -22,6 +22,10 @@ What changes:
 
 Unchanged and non-negotiable: voice cannot sign, submit or reconcile; paper records are never fills; fixtures are never presented as live data; every spoken line is true of what the desk observed; the full journey works without audio, motion or a pointer.
 
+## The foyer is the line
+
+**Approved 2026-09-24.** The foyer's first screen is a working **dealer turret**: one push-to-talk house line (with typing as an equal fallback), lamps for each desk that light when an offering matches what was said, and a headline that follows the NYSE session. The page does not *describe* voice trading. The visitor does it, and the slip, the board and the desks explain what just happened. This is the "work first" rule below applied to voice, not a marketing hero: the turret *is* the instruction input. Lines light from offering coverage, never from a chain preference, and when several offerings match the house names them and the caller chooses. Anatomy, copy and build phases live in [The Foyer Is the Line](FOYER_LINE.md). This document still wins any conflict.
+
 ## Desk views (Room / Compact)
 
 **Approved 2026-09-17; nomenclature locked 2026-09-20.** The room does not unlock; it becomes yours through the work you choose to keep. This decision supersedes older language that treats every spatial object as decorative weather or limits Jesse to a new nameplate and comparison card. It does not weaken trading safeguards.
@@ -87,7 +91,7 @@ Return visits should make it easy to review actual orders/positions, resume a pe
 
 ## Information hierarchy
 
-`/` is the house front door. It is not a landing page with a form attached, and it is not a chain picker. Identity and attention are different layers. When a proposal adds a surface, say which it belongs to.
+`/` is the house front door. It is not a landing page with a form attached, and it is not a chain picker. Its first screen is the house line, the turret described in [The Foyer Is the Line](FOYER_LINE.md), which is the instruction itself spoken or typed. Identity and attention are different layers. When a proposal adds a surface, say which it belongs to.
 
 **Identity** — durable, so later desks can change the nameplate without replacing the house:
 

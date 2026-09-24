@@ -114,6 +114,7 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - [Jesse desk](docs/JESSE_DESK.md): seated Solana paper desk — storage, ports, grammar, evidence honesty.
 - [Stocklana build plan](docs/STOCKLANA_BUILD_PLAN.md): four-engineer Jesse integration brief and remaining acceptance.
 - [Product Direction](docs/PRODUCT_DIRECTION.md): jobs, principles, and information hierarchy — not page anatomy.
+- [The Foyer Is the Line](docs/FOYER_LINE.md): foyer anatomy (voice-first dealer turret) and its build phases.
 - [Roadmap](ROADMAP.md): current state and next release gates.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.
 - [Architecture](docs/AGENTIC_ARCHITECTURE.md): domain boundaries, integration evidence and retained implementation references.
