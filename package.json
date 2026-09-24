@@ -2,6 +2,7 @@
   "name": "claflin",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Claflin — a Deco-futurist brokerage house. Specialist desks for Base (Hetty) and Solana (Jesse): voice-first paper trading, explicit review, and a record you keep.",
   "scripts": {
     "dev": "next dev --webpack",
