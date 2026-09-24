@@ -57,7 +57,7 @@ Remaining acceptance work:
 | Phase | Deliverable | When |
 |---|---|---|
 | 0 | Copy truth: session countdown and headline, plain subhead, "AI broker" lines, gap labelled against the stock reference, "estimate" wording, footer | May land before Stocklana if the full suite passes |
-| 1 | Turret: hold-to-talk house line, lamps by offering match, named choice, mic-denied fallback | After 2026-09-25 |
+| 1 | Turret: hold-to-talk house line, lamps by offering match, named choice, mic-denied fallback | Built on branch `foyer-turret`; merge after 2026-09-25 |
 | 2 | Board table with provenance and honest gap column | After Phase 1 |
 | 3 | Annotated slip and labelled example call from an accepted real recording | Needs an accepted recording |
 | 4 | Desks, straight answers, footer, mobile handset | — |

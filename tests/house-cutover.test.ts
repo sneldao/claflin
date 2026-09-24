@@ -126,7 +126,9 @@ describe('one canonical house', () => {
     /* Foyer desk cards deep-link via `params.set('desk', id)` and still enter
      * through onEnter; the `?desk=` param is parsed back by useTradingDesk. */
     assert.match(source('components/desk/HouseFoyer.tsx'), /params\.set\('desk', id\)/);
-    assert.match(source('components/desk/HouseFoyer.tsx'), /enter\(desk\.id\)/);
+    /* The turret owns the line cards; the foyer hands it the same enter(). */
+    assert.match(source('components/desk/HouseFoyer.tsx'), /onTypeClick=\{enter\}/);
+    assert.match(source('components/desk/HouseTurret.tsx'), /onTypeClick\(desk\.id\)/);
     assert.match(source('lib/trading/useTradingDesk.ts'), /parseDeskQuery\(params\.get\('desk'\)\)/);
     assert.doesNotMatch(source('components/desk/HouseFoyer.tsx'), /ILLUSTRATIVE EXAMPLE/);
     assert.match(source('components/desk/HouseFoyer.tsx'), /HouseOfferings/);

@@ -115,6 +115,8 @@ describe('house presence grammar', () => {
        explain the product (docs/FOYER_LINE.md §4.1). */
     assert.match(foyer, /FOYER_LEDE/);
     assert.match(foyer, /FOYER_BOUNDARY/);
-    assert.match(foyer, /Type instead/);
+    const turret = source('components/desk/HouseTurret.tsx');
+    assert.doesNotMatch(turret, /from 'lucide-react'/);
+    assert.match(turret, /Type instead/);
   });
 });

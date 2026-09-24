@@ -1,6 +1,7 @@
 # The Foyer Is the Line
 
-**Date:** 2026-09-24 · **Status:** Direction approved; build not started · **Owner:** product lead
+**Date:** 2026-09-24 · **Status:** Direction approved; Phase 0 on `main`; Phase 1 (turret) on branch `foyer-turret`, to merge after Stocklana · **Owner:** product lead
+**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3).
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
 This document owns **foyer anatomy and its build sequence**. [Product Direction](PRODUCT_DIRECTION.md) still owns principles and the information hierarchy, and wins any conflict. [ROADMAP.md](../ROADMAP.md) §1a owns sequencing against other work.
@@ -169,7 +170,5 @@ Paid minutes, raw call counts and trading frequency are not success measures.
 
 ## 9. Open decisions
 
-- Space as push-to-talk versus the existing `H` line hotkey inside desks: keep both (Space = house line in the foyer, `H` = the desk line), or unify?
-- Whether a future house-level voice agent should route between desks, or whether dictation plus lamps is enough.
 - The source for a Base stock reference (so Hetty's gap cell can be filled honestly).
 - Which recorded call becomes the example, and who accepts it.

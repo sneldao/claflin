@@ -83,6 +83,19 @@ export const FOYER_HEADLINES = {
 /** Said once per open line so a human name never reads as a human broker. */
 export const LINE_IDENTITY = 'AI broker';
 
+/** The house turret — one line in, lamps out (docs/FOYER_LINE.md §4.1). */
+export const TURRET_COPY = {
+  hold: 'Hold to talk',
+  listening: 'Listening — release to send',
+  transcribing: 'Writing it down…',
+  hint: 'Press and hold to talk (or hold Space). Or just type.',
+  micNote: 'The browser asks for the microphone only while you hold. Typing works the same.',
+  heard: 'Heard:',
+  lampMatch: 'Carries this',
+  lampQuiet: 'Not on this line',
+  planned: 'coming soon',
+} as const;
+
 /** What an onchain gap on the wire is measured against. */
 export const WIRE_GAP_REFERENCE = 'vs stock';
 

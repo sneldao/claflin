@@ -106,13 +106,19 @@ export function soleOfferingForDesk(instruction: string, deskId: HouseDeskId): s
   return ids.length === 1 ? ids[0] : null;
 }
 
-export function offeringGroupsForInstruction(instruction: string): readonly OfferingProductGroup[] {
-  const groups = offeringProductGroups();
-  const terms = instruction
+/** The words in an instruction that can name a product — sides, amounts and
+ *  filler removed. Empty means the sentence names nothing to match. */
+export function instructionTerms(instruction: string): readonly string[] {
+  return instruction
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .split(' ')
     .filter(term => term.length > 0 && !SEARCH_STOP_WORDS.has(term) && !/^\d/.test(term));
+}
+
+export function offeringGroupsForInstruction(instruction: string): readonly OfferingProductGroup[] {
+  const groups = offeringProductGroups();
+  const terms = instructionTerms(instruction);
   if (terms.length === 0) return groups;
   const exact = groups.filter(group => {
     const haystack = searchText(group);

@@ -24,6 +24,9 @@ export interface ParsedDictation {
 
 export interface UseDictationOptions {
   onIntentParsed?: (intent: Partial<TradeIntent>, transcript: string, parsed: ParsedDictation) => void;
+  /** Every clean transcript, parsed or not — the foyer matches words to the
+      house book itself rather than needing a desk intent. */
+  onTranscript?: (transcript: string) => void;
 }
 
 /* The Wake Lock API is not in every TS DOM lib yet — a structural type is
@@ -224,6 +227,8 @@ export function useDictation(options?: UseDictationOptions) {
             error: null,
             provider: result.provider || 'AssemblyAI Dictation',
           });
+
+          options?.onTranscript?.(cleanTranscript);
 
           if (result.parsedIntent && options?.onIntentParsed) {
             options.onIntentParsed(result.parsedIntent, cleanTranscript, {

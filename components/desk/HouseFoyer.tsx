@@ -10,7 +10,7 @@ import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
-import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, LINE_IDENTITY, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
+import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
 import { entryIntentFromInstruction, type EntryIntent } from '@/lib/house-entry';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
@@ -18,6 +18,7 @@ import { LastFilingLine } from './LastFilingLine';
 import { HouseMark } from './HouseMark';
 import { useHouseScene } from './HouseScene';
 import { HouseOfferings } from './HouseOfferings';
+import { HouseTurret } from './HouseTurret';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
 
@@ -79,12 +80,16 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     return `/?${params.toString()}`;
   };
 
-  const enter = (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
+  const enterDesk = (id: HouseDeskId) => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     const { offeringId, intent } = carried(id);
     onEnter(id, offeringId ?? undefined, intent);
+  };
+
+  const enter = (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    enterDesk(id);
   };
 
   const ring = (id: HouseDeskId) => () => {
@@ -130,47 +135,19 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
                 }}
               />
             )}
-            <label className={foyerStyles.instructionSearch}>
-              <input
-                value={wireInstruction}
-                onChange={event => setWireInstruction(event.target.value)}
-                placeholder="Try “buy Apple for 100 USDC”"
-                autoComplete="off"
-                aria-label="Instruction for the house"
-              />
-            </label>
-            <p className={foyerStyles.reassurance}>
-              {FOYER_BOUNDARY}
-            </p>
           </div>
 
-          {lineDesks.length > 0 && (
-            <div className={foyerStyles.lines}>
-              {lineDesks.map(desk => {
-                return (
-                  <article key={desk.id} className={foyerStyles.lineCard}>
-                    <header className={foyerStyles.lineCardHeader}>
-                      <h2 className={foyerStyles.lineName}>{desk.shortName}</h2>
-                      <p className={foyerStyles.lineRail}>{desk.market} · {LINE_IDENTITY}</p>
-                    </header>
-                    <div className={foyerStyles.lineActions}>
-                      <button type="button" className={foyerStyles.ringButton} onClick={ring(desk.id)}>
-                        <span className={foyerStyles.lineLamp} aria-hidden="true" />
-                        Ring {desk.shortName}{soleOfferingForDesk(wireInstruction, desk.id) ? ' with this' : ''}
-                      </button>
-                      <a
-                        href={deskHref(desk.id, soleOfferingForDesk(wireInstruction, desk.id), entryIntentFromInstruction(wireInstruction))}
-                        className={foyerStyles.typeInstead}
-                        onClick={enter(desk.id)}
-                      >
-                        Type instead
-                      </a>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+          <HouseTurret
+            instruction={wireInstruction}
+            onInstruction={setWireInstruction}
+            lineDesks={lineDesks}
+            planned={planned}
+            onRing={id => ring(id)()}
+            onType={enterDesk}
+            deskHref={id => deskHref(id, soleOfferingForDesk(wireInstruction, id), entryIntentFromInstruction(wireInstruction))}
+            onTypeClick={enter}
+            boundary={<p className={foyerStyles.reassurance}>{FOYER_BOUNDARY}</p>}
+          />
         </section>
 
         <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={setWireInstruction} />
