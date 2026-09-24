@@ -155,6 +155,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
         <HouseOfferings
           onEnter={onEnter}
           instruction={wireInstruction}
+          marks={{ hetty: hettyMarks, jesse: jesseMarks }}
         />
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">

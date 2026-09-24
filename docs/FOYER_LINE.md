@@ -1,6 +1,6 @@
 # The Foyer Is the Line
 
-**Date:** 2026-09-24 · **Status:** Direction approved; Phase 0 on `main`; Phase 1 (turret) on branch `foyer-turret`, to merge after Stocklana · **Owner:** product lead
+**Date:** 2026-09-24 · **Status:** Phases 0–2 shipped on `main` for the Stocklana submission (copy truth, turret, board); Phases 3–5 next · **Owner:** product lead
 **Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3).
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
@@ -153,7 +153,7 @@ Material and type follow Product Direction → Art direction (deep green/ink, br
 | **4: Desks, answers, footer, mobile handset** | §4.7–4.9, §5 mobile | Foyer + CSS | Mobile viewport QA |
 | **5: Pulse + metrics** | §4.6 only with real counters; §8 instrumentation | `lib/analytics.ts` / events store | Documented retention |
 
-**Timing:** Stocklana submits 2026-09-25 16:00 ET. Only Phase 0 may land before then, and only if it passes the full test suite; Phases 1+ start after submission.
+**Timing:** Stocklana submits 2026-09-25 16:00 ET. Phases 0–2 are what ships for judging, since the page is frozen while it is judged. The board's product facts (§4.5) come from the issuers' own documents: Coinbase via the Base guide (reviewed 2026-09-05), and Backed via docs.xstocks.fi's product legal overview (fetched 2026-09-24). Re-check both before any later release.
 
 ## 8. How we know it works
 

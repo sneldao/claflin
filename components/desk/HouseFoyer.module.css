@@ -713,8 +713,8 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(28px, 5vw, 72px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(24px, 4vh, 40px);
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px);
   background:
     radial-gradient(circle at 82% 18%, rgba(179, 144, 90, 0.12), transparent 34%),
@@ -723,14 +723,20 @@
 }
 
 .offeringsIntro {
-  align-self: start;
-  position: sticky;
-  top: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 44ch);
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px 48px;
+}
+
+.offeringsIntro .kicker {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 
 .offeringsIntro h2 {
-  margin: 0 0 18px;
-  max-width: 10ch;
+  margin: 0;
   font-family: var(--font-display), Fraunces, serif;
   font-weight: 400;
   font-size: clamp(34px, 4.4vw, 62px);
@@ -782,10 +788,216 @@
   color: #d4c4a2;
 }
 
-.offeringGroups {
-  display: grid;
-  gap: 18px;
+/* ————— The board: one row per verified offering ————— */
+
+.boardWrap {
   min-width: 0;
+  overflow-x: auto;
+}
+
+.board {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  color: #d6c9aa;
+}
+
+.boardCaption {
+  caption-side: bottom;
+  padding-top: 14px;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  text-align: left;
+  color: var(--muted);
+}
+
+.board thead th {
+  padding: 0 12px 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-align: left;
+  text-transform: uppercase;
+  color: #8f8265;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.4);
+}
+
+.boardRow > th,
+.boardRow > td {
+  padding: 14px 12px;
+  vertical-align: top;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.16);
+}
+
+.boardRow[data-expanded='true'] > th,
+.boardRow[data-expanded='true'] > td {
+  border-bottom-color: transparent;
+  background: rgba(232, 230, 217, 0.04);
+}
+
+.board .num {
+  text-align: right;
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.board thead th.num {
+  text-align: right;
+}
+
+.boardToggle {
+  display: grid;
+  gap: 3px;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.boardToggle::after {
+  content: 'Details ▾';
+  margin-top: 4px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+}
+
+.boardToggle[aria-expanded='true']::after {
+  content: 'Hide ▴';
+}
+
+.boardToggle:focus-visible {
+  outline: 2px solid #e3cf9e;
+  outline-offset: 4px;
+}
+
+.boardSymbol {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--brass);
+}
+
+.boardName {
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.04rem;
+  color: #eee3ca;
+}
+
+.boardIssuer {
+  display: block;
+}
+
+.boardSub {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-body), 'IBM Plex Sans', sans-serif;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #8f8265;
+}
+
+.boardMissing {
+  color: #8f8265;
+}
+
+.boardStale {
+  font-weight: 600;
+  color: #d9a566;
+}
+
+.boardGap[data-sign='1'] {
+  color: #a9c98a;
+}
+
+.boardGap[data-sign='-1'] {
+  color: #d99a88;
+}
+
+.boardDesks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.boardDesks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #14100a;
+  background: linear-gradient(180deg, #dfca96, #c3a15f);
+  border-radius: 3px;
+}
+
+.boardDesks a:hover {
+  filter: brightness(1.06);
+}
+
+.boardDetails > td {
+  padding: 4px 12px 20px;
+  background: rgba(232, 230, 217, 0.04);
+  border-bottom: 1px solid rgba(179, 144, 90, 0.16);
+}
+
+.boardDossier {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px 36px;
+}
+
+.boardDossier dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.boardDossier dt {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8f8265;
+}
+
+.boardDossier dd {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #d6c9aa;
+}
+
+.boardDossier a {
+  color: #e3cf9e;
+  text-underline-offset: 3px;
+}
+
+.boardAddress {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.74rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .noOfferings {
@@ -798,139 +1010,6 @@
   border-radius: 4px;
 }
 
-.productGroup {
-  display: grid;
-  grid-template-columns: minmax(80px, 0.28fr) minmax(0, 1fr);
-  gap: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(179, 144, 90, 0.26);
-}
-
-.productHeading {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.productHeading span {
-  font-family: var(--font-display), Fraunces, serif;
-  font-size: clamp(1.5rem, 2.4vw, 2.2rem);
-  line-height: 1;
-  color: #e8ddc2;
-}
-
-.productHeading small {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.58rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #8f8265;
-}
-
-.offeringCards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 14px;
-  min-width: 0;
-}
-
-.offeringCard {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 18px;
-  background: linear-gradient(155deg, rgba(232, 230, 217, 0.075), rgba(232, 230, 217, 0.025));
-  border: 1px solid rgba(179, 144, 90, 0.28);
-  border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(242, 232, 208, 0.05);
-}
-
-.offeringSymbol {
-  margin: 0 0 8px;
-  font-family: var(--font-mono), monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  color: var(--brass);
-}
-
-.offeringCard h3 {
-  margin: 0 0 14px;
-  font-family: var(--font-display), Fraunces, serif;
-  font-weight: 400;
-  font-size: 1.24rem;
-  line-height: 1.15;
-  color: #eee3ca;
-}
-
-.offeringFacts {
-  display: grid;
-  margin: 0;
-}
-
-.offeringFacts div {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  gap: 12px;
-  padding: 7px 0;
-  border-top: 1px dashed rgba(179, 144, 90, 0.22);
-}
-
-.offeringFacts dt {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.56rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #8f8265;
-}
-
-.offeringFacts dd {
-  margin: 0;
-  min-width: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: #d6c9aa;
-}
-
-.offeringNote {
-  margin: 14px 0 0;
-  font-size: 0.74rem;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.offeringDesks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 16px;
-}
-
-.offeringDesks a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 8px 12px;
-  font-family: var(--font-mono), monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-decoration: none;
-  color: #14100a;
-  background: linear-gradient(180deg, #dfca96, #c3a15f);
-  border-radius: 3px;
-}
-
-.offeringDesks a:hover {
-  filter: brightness(1.06);
-}
-
-.offeringClosed {
-  margin: auto 0 0;
-  padding-top: 16px;
-  font-size: 0.74rem;
-  color: #9a8a68;
-}
 
 .method {
   position: relative;
@@ -1150,7 +1229,7 @@
   }
 
   .offeringsIntro {
-    position: static;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .offeringsIntro h2 {
@@ -1165,19 +1244,71 @@
     width: 100%;
   }
 
-  .productGroup {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+  /* On a phone the board reads as one card per row: token and desk first,
+     then the numbers — the table semantics stay for assistive tech. */
+  .board thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
-  .productHeading {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
+  .board,
+  .board tbody,
+  .boardRow,
+  .boardRow > th,
+  .boardRow > td {
+    display: block;
   }
 
-  .offeringCards {
+  .boardRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 14px 0;
+  }
+
+  .boardRow > th {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: 0;
+  }
+
+  .boardRow > td {
+    padding: 0;
+    border: 0;
+  }
+
+  .boardRow > td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .boardRow > td.num {
+    text-align: left;
+  }
+
+  .boardRow > td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8f8265;
+  }
+
+  .boardDetails > td {
+    display: block;
+  }
+
+  .boardCaption {
+    display: block;
+    width: 100%;
+  }
+
+  .boardDossier {
     grid-template-columns: minmax(0, 1fr);
   }
 
