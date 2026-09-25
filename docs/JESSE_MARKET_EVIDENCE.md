@@ -62,8 +62,12 @@ multiplier effective at the token price’s generation time (never twice).
 
 - Trial key entitled **All Access** (excl. 24/7 Pyth Indices) through end
   of trial (Marc Tillement / Pyth, 2026-09-21).
-- Daemon: `scripts/jesse-pyth-feed.ts` → Redis keys
-  `claflin:jesse:pyth:v1:<feedId>`. Env: `PYTH_PRO_API_KEY` plus Upstash.
+- Daemon: `scripts/jesse-pyth-feed.ts` merges Lazer rows in memory and
+  atomically flushes a host-local snapshot file
+  (`/opt/claflin/state/pyth-snapshots.json`, override `PYTH_SNAPSHOT_FILE`)
+  every 8s; the comparison route reads the file. No Redis in this path —
+  it was moved off Upstash after per-row writes exhausted the shared
+  free-tier request quota. Env: `PYTH_PRO_API_KEY` only.
 - Key is server-side only; never shipped to the browser.
 - Public credit: evidence panel links Pyth Pro with Stocklana thanks.
 

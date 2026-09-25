@@ -38,12 +38,12 @@ Claflin is an existing Deco-futurist brokerage house product. Before Stocklana, 
 - Jesse ElevenLabs ConvAI line + deterministic speech grammar (same path as typed commands)
 - Room/Compact live views of the same controller (`NightDeskScene` overlays for Room; seated grid for Compact)
 - Free venue duplex: Backed issuer quote (or Jupiter xStocks stockData) vs Jupiter venue USD — honest labels when Pyth is cold
-- Pyth Pro equity-vs-xStock evidence (Lazer→Redis; raw-token basis verified 2026-09-21 under All Access trial)
+- Pyth Pro equity-vs-xStock evidence (Lazer→host-local snapshot file, batched flush; raw-token basis verified 2026-09-21 under All Access trial)
 - PreStocks issuer-mark vs token-price duplex (evidence only; honest unavailable degradation)
 - Env-gated live Solana settle: Jupiter order(taker) → wallet sign → execute (off unless both live flags are set)
 - House foyer and offering book so Claflin is the institution: instructions resolve to concrete Base/Solana offerings, and only eligible desks can open them
 
-**Not claimed by default:** that live settle is on in production (flags default off), or that `/night-desk?study=1` fixtures are live markets. Pyth Pro compare requires the Lazer daemon + Redis snapshots; when cold, the panel stays honest-unavailable.
+**Not claimed by default:** that live settle is on in production (flags default off), or that `/night-desk?study=1` fixtures are live markets. Pyth Pro compare requires the Lazer daemon + its host-local snapshot file (`/opt/claflin/state/pyth-snapshots.json`); when cold, the panel stays honest-unavailable.
 
 ## Demo script (~2–3 minutes)
 
