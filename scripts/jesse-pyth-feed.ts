@@ -13,13 +13,19 @@
 
 import { getRedis } from '../lib/redis';
 import { allJesseFeedIds } from '../lib/solana/market/feeds';
+import type { FeedSnapshot } from '../lib/solana/market/compare';
 import {
   LAZER_STREAM_URLS,
   buildLazerSubscribeMessage,
   extractLazerFeeds,
   lazerRowToSnapshot,
 } from '../lib/solana/market/lazer';
-import { writeFeedSnapshot, type SnapshotStore } from '../lib/solana/market/snapshots';
+import {
+  JESSE_PYTH_SNAPSHOT_TTL_S,
+  jesseSnapshotKey,
+  writeFeedSnapshot,
+  type SnapshotStore,
+} from '../lib/solana/market/snapshots';
 
 const apiKey = process.env.PYTH_PRO_API_KEY;
 if (!apiKey) {
@@ -30,17 +36,68 @@ if (!apiKey) {
 const feedIds = allJesseFeedIds();
 let endpointIndex = 0;
 let writes = 0;
+let flushes = 0;
 let lastLog = 0;
 
-function redisStore(): SnapshotStore {
-  const redis = getRedis();
-  return {
-    get: (key) => redis.get(key),
-    set: (key, value, opts) => redis.set(key, value as never, opts),
-  };
+/**
+ * Upstash's free tier is request-metered, so this daemon cannot afford a
+ * GET+SET per stream row. Incoming rows merge into an in-memory store using
+ * the same snapshot rules, then a single MSET flushes the changed feeds on a
+ * fixed cadence. A stored generatedAt is at most ~FLUSH_MS old — comfortably
+ * inside the reader's 15s freshness window — and if the daemon dies the rows
+ * age into the honest stale/unavailable states.
+ */
+const FLUSH_MS = 8_000;
+const EXPIRE_REFRESH_MS = 60 * 60 * 1000;
+
+const mem = new Map<string, FeedSnapshot>();
+let dirty = false;
+
+const memStore: SnapshotStore = {
+  get: async (key) => mem.get(key) ?? null,
+  set: async (key, value) => {
+    mem.set(key, value as FeedSnapshot);
+    dirty = true;
+    return 'OK';
+  },
+};
+
+const redis = getRedis();
+
+async function hydrate(): Promise<void> {
+  const keys = feedIds.map(jesseSnapshotKey);
+  try {
+    const rows = (await (redis.mget as (...k: string[]) => Promise<unknown[]>)(...keys)) as unknown[];
+    keys.forEach((key, i) => {
+      const row = rows[i];
+      if (row) mem.set(key, (typeof row === 'string' ? JSON.parse(row) : row) as FeedSnapshot);
+    });
+    console.log(`[jesse-pyth] hydrated ${mem.size}/${keys.length} snapshots from redis`);
+  } catch (err) {
+    console.error('[jesse-pyth] hydrate failed; starting from empty memory', err instanceof Error ? err.message : err);
+  }
 }
 
-const store = redisStore();
+async function flush(): Promise<void> {
+  if (!dirty) return;
+  const entries: Record<string, FeedSnapshot> = {};
+  for (const [key, value] of mem) entries[key] = value;
+  try {
+    await redis.mset(entries);
+    dirty = false;
+    flushes += 1;
+  } catch (err) {
+    console.error('[jesse-pyth] flush failed', err instanceof Error ? err.message : err);
+  }
+}
+
+async function refreshExpiry(): Promise<void> {
+  try {
+    for (const feedId of feedIds) await redis.expire(jesseSnapshotKey(feedId), JESSE_PYTH_SNAPSHOT_TTL_S);
+  } catch (err) {
+    console.error('[jesse-pyth] expire refresh failed', err instanceof Error ? err.message : err);
+  }
+}
 
 function connect(): void {
   const url = LAZER_STREAM_URLS[endpointIndex % LAZER_STREAM_URLS.length]!;
@@ -87,15 +144,15 @@ function connect(): void {
         const snapshot = lazerRowToSnapshot(row, now);
         if (!snapshot) continue;
         try {
-          await writeFeedSnapshot(store, snapshot);
+          await writeFeedSnapshot(memStore, snapshot);
           writes += 1;
         } catch (err) {
-          console.error('[jesse-pyth] write failed', snapshot.feedId, err instanceof Error ? err.message : err);
+          console.error('[jesse-pyth] merge failed', snapshot.feedId, err instanceof Error ? err.message : err);
         }
       }
       if (now - lastLog > 30_000) {
         lastLog = now;
-        console.log(`[jesse-pyth] writes=${writes} lastFeeds=${rows.map(r => r.priceFeedId).join(',')}`);
+        console.log(`[jesse-pyth] writes=${writes} flushes=${flushes} lastFeeds=${rows.map(r => r.priceFeedId).join(',')}`);
       }
     })();
   });
@@ -112,7 +169,15 @@ function connect(): void {
   });
 }
 
-connect();
+setInterval(() => void flush(), FLUSH_MS);
+setInterval(() => void refreshExpiry(), EXPIRE_REFRESH_MS);
+
+void hydrate().then(() => {
+  void flush();
+  connect();
+});
 
 process.on('SIGINT', () => process.exit(0));
-process.on('SIGTERM', () => process.exit(0));
+process.on('SIGTERM', () => {
+  void flush().finally(() => process.exit(0));
+});
