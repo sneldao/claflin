@@ -36,7 +36,7 @@ import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
 import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
-import { signalLine } from '@/lib/trading/line-signal';
+import { signalLine, requestRingOnArrival } from '@/lib/trading/line-signal';
 import { MARKET_LABELS, MODE_HINTS } from '@/lib/desk/ui-copy';
 import { ModeStamp } from './ModeStamp';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
@@ -72,9 +72,29 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
   /* Which provider carries the line: the deploy default on first paint,
-     then `?line=` once the client can read the URL. */
+     then `?line=` once the client can read the URL. A pinned line stays
+     pinned — a demo link must not silently change carriers. */
   const [voiceProvider, setVoiceProvider] = useState<JesseVoiceProvider>(JESSE_VOICE_DEFAULT);
-  useEffect(() => { setVoiceProvider(jesseVoiceProvider(window.location.search)); }, []);
+  const linePinned = useRef(false);
+  const downedLines = useRef<Set<JesseVoiceProvider>>(new Set());
+  useEffect(() => {
+    const search = window.location.search;
+    const line = new URLSearchParams(search).get('line');
+    linePinned.current = line === 'assemblyai' || line === 'elevenlabs';
+    setVoiceProvider(jesseVoiceProvider(search));
+  }, []);
+
+  /* Establishment failover, unpinned visits only: a carrier that cannot
+     open the line hands the pending ring to the other one — one hop per
+     provider, never mid-call, never twice the same provider. */
+  const onLineDown = useCallback((down: JesseVoiceProvider) => {
+    if (linePinned.current || downedLines.current.has(down)) return;
+    downedLines.current.add(down);
+    const fallback: JesseVoiceProvider = down === 'elevenlabs' ? 'assemblyai' : 'elevenlabs';
+    if (downedLines.current.has(fallback)) return;
+    requestRingOnArrival('jesse');
+    setVoiceProvider(current => (current === down ? fallback : current));
+  }, []);
   const offeringApplied = useRef<string | null>(null);
 
   /* Slip provenance: where each written value came from. Marks render only
@@ -311,8 +331,8 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
           {voiceProvider === 'assemblyai'
-            ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />
-            : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} />}
+            ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('assemblyai')} />
+            : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('elevenlabs')} />}
           {blankSlip && filing?.deskId === 'jesse' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => jesse.openRecord(filing.recordId)} />
           )}

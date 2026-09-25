@@ -45,6 +45,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
   onUserSpoken,
   onAgentSpoken,
   onLineApplied,
+  onProviderDown,
 }: {
   jesse: JesseDesk;
   take?: string | null;
@@ -53,6 +54,9 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
   onLineApplied?: (partial: SlipProvenance) => void;
+  /* Establishment failure on this carrier — never mic denial or mid-call
+     drops. The desk decides whether another provider should try. */
+  onProviderDown?: () => void;
 }) {
   const [status, setStatus] = useState<Status>('idle');
   const [speaking, setSpeaking] = useState(false);
@@ -68,8 +72,8 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
   useEffect(() => { captionsRef.current = captions; });
   const sessionRef = useRef<AssemblyAiVoiceSession | null>(null);
   const genRef = useRef(0);
-  const callbacks = useRef({ onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied });
-  useEffect(() => { callbacks.current = { onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied }; });
+  const callbacks = useRef({ onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied, onProviderDown });
+  useEffect(() => { callbacks.current = { onLiveChange, onUserSpoken, onAgentSpoken, onLineApplied, onProviderDown }; });
 
   const live = status === 'live';
   const ringing = status === 'connecting';
@@ -122,6 +126,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       finish(null, e?.retryAfterSeconds
         ? `The line is busy. Try again in about ${Math.max(1, Math.ceil(e.retryAfterSeconds / 5) * 5)} seconds.`
         : e?.message ?? 'Jesse’s line is unavailable. Please try again shortly.');
+      callbacks.current.onProviderDown?.();
       return;
     }
 
@@ -137,8 +142,9 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       priorDiscussion: resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Jesse') : null,
     });
 
+    let established = false;
     const session = new AssemblyAiVoiceSession({
-      onReady: () => { if (genRef.current === gen) setStatus('live'); },
+      onReady: () => { established = true; if (genRef.current === gen) setStatus('live'); },
       onSpeaking: value => setSpeaking(value),
       onUserTranscript: (text, final) => {
         const clean = text.trim();
@@ -172,6 +178,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       onError: message => {
         session.end();
         finish(null, message);
+        if (!established) callbacks.current.onProviderDown?.();
       },
     });
     sessionRef.current = session;
@@ -180,11 +187,14 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
     } catch (err) {
       session.end();
       const raw = err instanceof Error ? `${err.name} ${err.message}` : '';
-      finish(null, /notallowed|permission|denied/i.test(raw)
+      const mic = /notallowed|permission|denied/i.test(raw);
+      const unsupported = err instanceof Error && err.message.startsWith('This browser');
+      finish(null, mic
         ? 'The microphone was not allowed. Grant mic access and ring again.'
-        : err instanceof Error && err.message.startsWith('This browser')
+        : unsupported && err instanceof Error
           ? err.message
           : 'The line could not be opened. Check the microphone permission and ring again.');
+      if (!mic && !unsupported) callbacks.current.onProviderDown?.();
     }
   }, [status, finish, addCaption, handlers]);
 
@@ -201,6 +211,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
     const timer = setTimeout(() => {
       hangUp();
       finish(null, 'The line did not answer. Check the microphone permission and ring again.');
+      callbacks.current.onProviderDown?.();
     }, DIAL_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [ringing, hangUp, finish]);

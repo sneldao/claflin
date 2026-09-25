@@ -88,6 +88,7 @@ function JesseCallInner({
   onActivity,
   onSessionEnded,
   onSessionFailed,
+  onProviderDown,
 }: {
   jesse: JesseDesk;
   take?: string | null;
@@ -104,6 +105,10 @@ function JesseCallInner({
   onActivity: () => void;
   onSessionEnded: (note: string | null) => void;
   onSessionFailed: (message: string) => void;
+  /* Fired when the carrier itself cannot open the line — endpoint errors,
+     dial stalls, transport failure — never for mic denial or mid-call
+     drops. The desk decides whether another provider should try. */
+  onProviderDown?: () => void;
 }) {
   const jesseRef = useRef(jesse);
   useEffect(() => { jesseRef.current = jesse; });
@@ -113,6 +118,8 @@ function JesseCallInner({
   useEffect(() => { onCaptionRef.current = onCaption; });
   const onLineAppliedRef = useRef(onLineApplied);
   useEffect(() => { onLineAppliedRef.current = onLineApplied; });
+  const onProviderDownRef = useRef(onProviderDown);
+  useEffect(() => { onProviderDownRef.current = onProviderDown; });
 
   /* A tool-applied field is marked "from the call" with the caller's latest
      words attached — the slip never pretends the line typed it. */
@@ -140,6 +147,7 @@ function JesseCallInner({
   const ringGenRef = useRef(0);
   const endedByUserRef = useRef(false);
   const sessionActiveRef = useRef(false);
+  const establishingRef = useRef(false);
   const terminalFiredRef = useRef(false);
   const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -147,6 +155,7 @@ function JesseCallInner({
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
+    establishingRef.current = false;
     onSessionEnded(note);
   }, [onSessionEnded]);
 
@@ -154,9 +163,17 @@ function JesseCallInner({
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
+    establishingRef.current = false;
     setDialing(false);
     onSessionFailed(message);
   }, [onSessionFailed]);
+
+  /* Provider-side establishment failure: the ring could not open the line
+     on this carrier. Mic denial stays local — the other carrier would
+     meet the same refusal. */
+  const fireProviderDown = useCallback(() => {
+    onProviderDownRef.current?.();
+  }, []);
 
   const conversation = useConversation({
     onError: (message: unknown, context?: unknown) => {
@@ -165,10 +182,13 @@ function JesseCallInner({
         String((context as { message?: string } | null)?.message ?? ''),
         String((message as { message?: string } | null)?.message ?? message ?? ''),
       ].join(' ');
-      const msg = /notallowed|permission|denied|getusermedia/i.test(haystack)
+      const mic = /notallowed|permission|denied|getusermedia/i.test(haystack);
+      const msg = mic
         ? 'The microphone was not allowed. Grant mic access and ring again.'
         : 'The line dropped. Ring again when you are ready.';
+      const establishing = establishingRef.current;
       fireFailed(msg);
+      if (!mic && establishing) fireProviderDown();
     },
     onMessage: (m: { message: string; role?: string; source?: string }) => {
       const text = typeof m.message === 'string' ? m.message.trim() : '';
@@ -182,6 +202,7 @@ function JesseCallInner({
       }
     },
     onConnect: () => {
+      establishingRef.current = false;
       if (dialCancelledRef.current) {
         hangUp();
         return;
@@ -229,9 +250,10 @@ function JesseCallInner({
     const timer = setTimeout(() => {
       hangUp();
       fireFailed('The line did not answer. Check the microphone permission and ring again.');
+      fireProviderDown();
     }, DIAL_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [ringing, live, hangUp, fireFailed]);
+  }, [ringing, live, hangUp, fireFailed, fireProviderDown]);
 
   useEffect(() => {
     const endForLeave = () => {
@@ -284,6 +306,7 @@ function JesseCallInner({
     dialCancelledRef.current = false;
     endedByUserRef.current = false;
     sessionActiveRef.current = true;
+    establishingRef.current = true;
     const gen = ++ringGenRef.current;
     setDialing(true);
     onActivity();
@@ -298,10 +321,12 @@ function JesseCallInner({
           ? 'Jesse’s line is not connected on this deployment.'
           : e.message;
       fireFailed(msg);
+      fireProviderDown();
       return;
     }
     if (!result.data.signedUrl) {
       fireFailed('Jesse’s line is unavailable. Please try again shortly.');
+      fireProviderDown();
       return;
     }
     const d = jesseRef.current;
@@ -322,9 +347,14 @@ function JesseCallInner({
           discussion_resume: resume ? 'yes' : 'no',
         },
       });
-    } catch {
+    } catch (err) {
       if (dialCancelledRef.current || ringGenRef.current !== gen) return;
-      fireFailed('The line could not be opened. Check the microphone permission and ring again.');
+      const raw = err instanceof Error ? `${err.name} ${err.message}` : String(err ?? '');
+      const mic = /notallowed|permission|denied|getusermedia/i.test(raw);
+      fireFailed(mic
+        ? 'The microphone was not allowed. Grant mic access and ring again.'
+        : 'The line could not be opened. Check the microphone permission and ring again.');
+      if (!mic) fireProviderDown();
     }
   };
 
@@ -483,6 +513,7 @@ export const JesseCall = memo(function JesseCall({
   onUserSpoken,
   onAgentSpoken,
   onLineApplied,
+  onProviderDown,
 }: {
   jesse: JesseDesk;
   take?: string | null;
@@ -491,6 +522,7 @@ export const JesseCall = memo(function JesseCall({
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
   onLineApplied?: (partial: SlipProvenance) => void;
+  onProviderDown?: () => void;
 }) {
   const [sessionKey, setSessionKey] = useState(0);
   const [captions, setCaptions] = useState<Caption[]>([]);
@@ -533,6 +565,7 @@ export const JesseCall = memo(function JesseCall({
           setCallError(message);
           remount();
         }}
+        onProviderDown={onProviderDown}
       />
     </ConversationProvider>
   );
