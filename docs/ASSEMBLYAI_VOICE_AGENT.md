@@ -13,6 +13,18 @@
 
 The flag defaults to ElevenLabs, so the Stocklana judge URL (`/?desk=jesse&view=room`) behaves exactly as before. The AssemblyAI demo URL is `/?desk=jesse&view=room&line=assemblyai`.
 
+### Failover
+
+On an **unpinned** visit (no `?line=`), a carrier that cannot open the
+line — session endpoint error, dial stall, transport failure — hands the
+pending ring to the other carrier once, and the desk stays on whichever
+answered for the rest of the visit. Failover is establishment-only:
+never mid-call, and never on microphone denial, which is a client-side
+refusal both carriers would meet identically. A **pinned** `?line=`
+never fails over: a demo link keeps its honest error rather than
+silently changing providers, so the judge URLs above behave exactly as
+advertised.
+
 ## How a call works
 
 ```

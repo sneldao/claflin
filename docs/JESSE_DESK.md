@@ -110,6 +110,8 @@ node --env-file=.env.local scripts/update-jesse-agent.mjs   # prompt/tools refre
 
 Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../components/desk/JesseCall.tsx) — lift the receiver or press `H`. `DESK_CAPABILITIES.jesse.voice` is `elevenlabs-convai` when paper is open. AssemblyAI dictation/`/api/desk/jesse/voice/token` remains for the Stocklana streaming path.
 
+Jesse has a second carrier too: `JesseCallAssemblyAI` runs the same prompt and client tools on AssemblyAI's Voice Agent API (see [ASSEMBLYAI_VOICE_AGENT.md](ASSEMBLYAI_VOICE_AGENT.md); `?line=` per visit, `NEXT_PUBLIC_JESSE_VOICE` per deployment). On an unpinned visit, a carrier that cannot open the line hands the pending ring to the other once — establishment failures only, never mid-call or mic denial; a pinned `?line=` never swaps.
+
 ## Known limits
 
 - Venue-duplex-derived marks feed the same tape/wire/take/gap-strip as the evidence panel (adapter in `lib/trading/adapters/jupiter-marks.ts`)

@@ -85,6 +85,21 @@ with no error surfaced. The line therefore owns its own lifecycle:
 - **End call is confirmed.** If no disconnect event returns within 2s of
   End call (silently dead socket), the closing note is landed locally.
 
+## Cross-carrier failover (Jesse only)
+
+The lifecycle above is per-carrier. Jesse's desk mounts one of two call
+panels — ElevenLabs ConvAI (`JesseCall`) or AssemblyAI Voice Agent
+(`JesseCallAssemblyAI`) — and the desk surface adds one more recovery
+layer on **unpinned** visits: when a carrier cannot open the line at
+establishment (session endpoint error, dial stall, transport failure),
+the desk marks that provider down, re-arms `requestRingOnArrival`, and
+swaps to the other carrier, which lifts the receiver on mount. Bounds:
+one hop per provider per visit, never mid-call (call state lives inside
+the provider session), never on mic denial (a client-side refusal both
+carriers meet identically), and never when `?line=` pins the provider —
+a demo link keeps its honest error rather than silently changing
+carriers.
+
 ## Client recovery requirements
 
 [Product Direction](PRODUCT_DIRECTION.md) owns the target experience. Recovery should preserve the client's work, state what did and did not happen, and offer a safe next action. The current mascot, skeleton rows, and "redial" wording below are implementation descriptions, not a requirement to preserve the operator-themed presentation.

@@ -31,6 +31,12 @@ export function jesseLiveEnabled(): boolean {
  * on AssemblyAI's Voice Agent API. Set NEXT_PUBLIC_JESSE_VOICE=assemblyai
  * to make it the default; `?line=assemblyai|elevenlabs` overrides per visit
  * so one deployment can serve both demos without a redeploy.
+ *
+ * Establishment failover: on an unpinned visit, a carrier that cannot open
+ * the line (session endpoint error, dial stall, transport failure — never
+ * mic denial or mid-call drops) hands the pending ring to the other
+ * carrier once. A pinned `?line=` never fails over — demo links must not
+ * silently change providers.
  */
 export type JesseVoiceProvider = 'elevenlabs' | 'assemblyai';
 

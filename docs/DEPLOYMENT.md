@@ -86,6 +86,8 @@ ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
 Optional AssemblyAI Voice Agent line for Jesse. ElevenLabs remains the default;
 set `NEXT_PUBLIC_JESSE_VOICE=assemblyai` to make AssemblyAI the deployment
 provider, or use `?line=assemblyai` for one visit. The API key stays server-side.
+On unpinned visits the desk fails a ring over to the other carrier when the
+first cannot open the line (one hop per visit; pinned `?line=` links never swap).
 
 ```
 ASSEMBLYAI_API_KEY=
