@@ -1,6 +1,6 @@
 # Jesse’s Solana desk
 
-**Status:** House foyer and offering book on first visit; Jesse opens through an eligible Backed xStock offering or the direct `/?desk=jesse` deep link. Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse&view=room`; offering-aware entry may include `?offering=<solanaOfferingId>`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→Redis daemon). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
+**Status:** House foyer and offering book on first visit; Jesse opens through an eligible Backed xStock offering or the direct `/?desk=jesse` deep link. Seated paper desk open when `NEXT_PUBLIC_JESSE_PAPER_ENABLED` is not `false` (default on). Stocklana entry: `/?desk=jesse&view=room`; offering-aware entry may include `?offering=<solanaOfferingId>`. Jesse ConvAI line wired; Room/Compact are presentations of the same controller (`/?desk=jesse&view=room|compact`). **Pyth Pro** equity-versus-xStock evidence (raw-token basis verified 2026-09-21; Lazer→file daemon, see `lib/solana/market/snapshot-file.ts`). **Venue duplex** and **PreStocks** remain as free/secondary evidence. **Live settle** (Jupiter order → wallet sign → execute) opens when both `NEXT_PUBLIC_JESSE_LIVE_ENABLED=true` and `JESSE_LIVE_ENABLED=true` are set; the ticket defaults to paper with an explicit live toggle. `/night-desk` redirects to Jesse Room view; fixture study at `/night-desk?study=1` (and `/desk-study` in development).
 
 ## Product bar
 
@@ -47,7 +47,7 @@ Legacy `claflin.paper.v1.*` rows are untouched. Account sync is Hetty-only.
 ## Ports
 
 - Quote: `GET /api/desk/jesse/quote` → Jesse runtime coverage → Jupiter adapter → `parseJesseEstimate` (optional `JUPITER_API_KEY` for higher rate limits; keyless works)
-- Compare (Pyth Pro): `GET /api/desk/jesse/comparison?instrumentId=sol:…` → Redis snapshots from the Lazer daemon; normalizes raw-token prices by mint multiplier; honest `unavailable` when feeds/multiplier missing
+- Compare (Pyth Pro): `GET /api/desk/jesse/comparison?instrumentId=sol:…` → snapshots from the Lazer daemon's host-local file (`PYTH_SNAPSHOT_FILE`, default `/opt/claflin/state/pyth-snapshots.json`); normalizes raw-token prices by mint multiplier; honest `unavailable` when feeds/multiplier missing
 - Venue duplex (free): `GET /api/desk/jesse/venue-duplex?instrumentId=sol:…` → Backed public `price-data` when present, else Jupiter Price v3 `stockData`, versus Jupiter venue `usdPrice` — evidence only, never labelled Pyth
 - Marks: `GET /api/desk/jesse/marks` → Jesse mark adapter ([`lib/trading/adapters/jupiter-marks.ts`](../lib/trading/adapters/jupiter-marks.ts)) → observed marks built from the same venue-duplex read; the venue leg is the mark and a comparable issuer/stock reference rides along as `stockReference` with `differenceBps`. Feeds the desk tape, the foyer wire, Jesse's broker take and the ticket's onchain-versus-reference gap strip, so those surfaces cannot disagree with the evidence panel
 - PreStocks (secondary): `GET /api/desk/jesse/prestocks` → issuer mark vs tokenPrice duplex; evidence only, not paper-filing
@@ -113,7 +113,7 @@ Session mint: `POST /api/desk/jesse/session`. Call surface: [`JesseCall`](../com
 ## Known limits
 
 - Venue-duplex-derived marks feed the same tape/wire/take/gap-strip as the evidence panel (adapter in `lib/trading/adapters/jupiter-marks.ts`)
-- Pyth numerical compare needs the Lazer daemon writing Redis (`PYTH_PRO_API_KEY` + Upstash) — without snapshots the panel stays honest-unavailable
+- Pyth numerical compare needs the Lazer daemon writing the snapshot file (`PYTH_PRO_API_KEY`) — without snapshots the panel stays honest-unavailable
 - Venue duplex is free evidence, not Pyth Pro quality or an exchange print
 - PreStocks is evidence-only — not filed as xStock paper
 - Live settle requires both flags; instruction-allowlist / wallet challenge auth from the full R2 plan are not yet complete

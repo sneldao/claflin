@@ -139,7 +139,25 @@ On Vercel: `NEXT_PUBLIC_APP_URL=https://claflin.trustfall.xyz` and
 `API_PROXY_TARGET=https://api.claflin.trustfall.xyz` (see `docs/DEPLOYMENT.md`).
 ---
 
-## Upstash Redis
+## Redis tiers
+
+Two distinct needs, two tiers:
+
+- **Durable/account tier — managed Upstash.** `UPSTASH_REDIS_*` covers paper
+  sync, transcripts, x402/payment idempotency, rate limits, and the live
+  proposal store (which also has a process-memory fallback). All anonymous
+  judge paths fail open if this is unreachable.
+  - **2026-09-25:** `game-corgi-122374` exhausted its 500k/month free quota
+    (the Pyth daemon was writing ~1.6M commands/day before batching landed).
+    Account-tier features error until the quota resets or a dedicated DB /
+    pay-as-you-go is provisioned — one env swap in `.env.hetzner`, no redeploy.
+- **Pyth snapshot cache — host-local file, no Redis.** `claflin-pyth`
+  (`/opt/claflin/jesse-pyth-feed.cjs`) merges Lazer rows in memory and flushes
+  atomically (tmp+rename) to `/opt/claflin/state/pyth-snapshots.json` every 8s
+  (`PYTH_SNAPSHOT_FILE` overrides). The comparison route reads that file
+  directly; a missing file or dead daemon reads as honest `stale`/`unavailable`.
+
+### Upstash
 
 Current instance: `game-corgi-122374.upstash.io` (Ohio).
 

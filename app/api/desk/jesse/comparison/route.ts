@@ -1,7 +1,7 @@
-import { getRedis } from '@/lib/redis';
 import { isSolanaInstrumentId } from '@/lib/solana/contracts';
 import { feedMappingFor } from '@/lib/solana/market/feeds';
 import { readJesseComparison } from '@/lib/solana/market/reader';
+import { fileSnapshotStore } from '@/lib/solana/market/snapshot-file';
 import type { SnapshotStore } from '@/lib/solana/market/snapshots';
 import { createMintReader } from '@/lib/solana/mint';
 import { getSolanaInstrument } from '@/lib/solana/catalog';
@@ -23,22 +23,13 @@ const comparisonBudget = requestBudget(40);
  * effective at the token generation time normalizes before bps.
  */
 
-/** A store whose every read fails honestly → snapshots read as missing. */
-const unavailableStore: SnapshotStore = {
-  get: () => Promise.reject(new Error('snapshot store unavailable')),
-  set: () => Promise.reject(new Error('snapshot store unavailable')),
-};
-
+/**
+ * Snapshots live in a host-local JSON document the Lazer daemon replaces
+ * atomically (see lib/solana/market/snapshot-file.ts). A missing or corrupt
+ * file reads as `unavailable` — data, not an error.
+ */
 function storeForRequest(): SnapshotStore {
-  try {
-    const redis = getRedis();
-    return {
-      get: (key) => redis.get(key),
-      set: (key, value, opts) => redis.set(key, value as never, opts),
-    };
-  } catch {
-    return unavailableStore;
-  }
+  return fileSnapshotStore();
 }
 
 const readMint = createMintReader({

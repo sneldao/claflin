@@ -130,10 +130,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PYTH_PRO_API_KEY: env.PYTH_PRO_API_KEY || '',
-        UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL || '',
-        UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN || '',
-        UPSTASH_REDIS_URL: env.UPSTASH_REDIS_URL || env.UPSTASH_REDIS_REST_URL || '',
-        UPSTASH_REDIS_TOKEN: env.UPSTASH_REDIS_TOKEN || env.UPSTASH_REDIS_REST_TOKEN || '',
+        PYTH_SNAPSHOT_FILE: env.PYTH_SNAPSHOT_FILE || '/opt/claflin/state/pyth-snapshots.json',
       },
       error_file: '/opt/claflin/logs/pm2-pyth-err.log',
       out_file: '/opt/claflin/logs/pm2-pyth-out.log',
