@@ -100,13 +100,8 @@ function connect(): void {
     headers: { Authorization: `Bearer ${apiKey}` },
   } as unknown as string[]);
 
-  let heartbeat: ReturnType<typeof setInterval> | null = null;
-
   ws.addEventListener('open', () => {
     ws.send(buildLazerSubscribeMessage(feedIds));
-    heartbeat = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
-    }, 25_000);
   });
 
   ws.addEventListener('message', (event) => {
@@ -149,7 +144,6 @@ function connect(): void {
   });
 
   const reconnect = (why: string) => {
-    if (heartbeat) clearInterval(heartbeat);
     console.warn(`[jesse-pyth] ${why}; reconnecting in 2s`);
     setTimeout(connect, 2000);
   };
