@@ -22,8 +22,6 @@ COPY . .
 ENV NEXT_PUBLIC_DEMO_MODE=false
 ENV NEXT_PUBLIC_PAYMENTS_ENABLED=true
 ENV NEXT_PUBLIC_ERC8004_ENABLED=false
-ENV UPSTASH_REDIS_REST_URL=https://placeholder.upstash.io
-ENV UPSTASH_REDIS_REST_TOKEN=placeholder
 
 # Pin production mode explicitly. If NODE_ENV=development leaks in (CI shell,
 # env-file sourcing), `next build` compiles but crashes prerendering Next's
@@ -33,7 +31,12 @@ ENV NODE_ENV=production
 
 # postbuild copies .next/static and public/ into .next/standalone and, in
 # production, prunes the rest of .next — the standalone dir is the output.
-RUN pnpm build
+# Redis placeholders are scoped to this one command (not ENV), so they are
+# never baked into an image layer; real values come from --env-file at run.
+# scripts/ stays in the context: lib/jesse imports scripts/jesse-agent-config.mjs.
+RUN UPSTASH_REDIS_REST_URL=https://placeholder.upstash.io \
+    UPSTASH_REDIS_REST_TOKEN=placeholder \
+    pnpm build
 
 # ── Stage 2: Production ──────────────────────
 FROM node:24-alpine AS runner

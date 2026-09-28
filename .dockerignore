@@ -1,13 +1,18 @@
 node_modules
 .next
 .git
-.env.local
-.env.production
+# No env file with real values may enter the build context.
+.env*
+!.env*.example
 *.md
 tests
-scripts
-!scripts/cleanup-standalone.sh
+test-results
 .kilocode
 .junie
 .vercel
 deploy.tar.gz
+# Media and render caches the app never imports.
+*.mp4
+demo-video
+.render_cache
+.remotion
