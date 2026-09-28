@@ -1,11 +1,19 @@
 /**
  * Shared voice settings for the house brokers (Hetty, Jesse).
  *
- * TTS model: Eleven v4 Turbo — the v4 real-time variant built for agents
- * (~100 ms median inference). It replaces eleven_turbo_v2, which ElevenLabs
- * now lists as deprecated (suggested replacement: eleven_flash_v2).
- * Override with ELEVENLABS_TTS_MODEL (e.g. eleven_flash_v2) to fall back
- * without a code change if an agent update is refused or a voice regresses.
+ * TTS model: Eleven v4 Turbo is primary — the v4 real-time variant built for
+ * agents (~100 ms median inference). Eleven v3 Conversational is the
+ * fallback — the previous real-time generation, the same expressive tag
+ * handling. Both replace eleven_turbo_v2, which ElevenLabs lists as
+ * deprecated.
+ *
+ *   ELEVENLABS_TTS_MODEL unset       → eleven_v4_turbo
+ *   ELEVENLABS_TTS_MODEL=fallback    → eleven_v3_conversational
+ *   ELEVENLABS_TTS_MODEL=<model id>  → that model
+ *
+ * Roll back with no code change:
+ *   ELEVENLABS_TTS_MODEL=fallback node --env-file=.env.local scripts/update-hetty-agent.mjs
+ *   ELEVENLABS_TTS_MODEL=fallback node --env-file=.env.local scripts/update-jesse-agent.mjs
  * Docs: https://elevenlabs.io/docs/models
  *       https://elevenlabs.io/docs/overview/capabilities/text-to-speech/eleven-v4
  *
@@ -15,7 +23,38 @@
  * numbers written the way they should be said.
  */
 
-export const AGENT_TTS_MODEL = process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4_turbo';
+export const AGENT_TTS_PRIMARY = 'eleven_v4_turbo';
+export const AGENT_TTS_FALLBACK = 'eleven_v3_conversational';
+
+export function resolveAgentTtsModel(requested = process.env.ELEVENLABS_TTS_MODEL) {
+  const value = (requested ?? '').trim();
+  if (!value) return AGENT_TTS_PRIMARY;
+  if (value === 'fallback') return AGENT_TTS_FALLBACK;
+  return value;
+}
+
+export const AGENT_TTS_MODEL = resolveAgentTtsModel();
+
+/**
+ * After a PATCH, read the agent back and confirm the TTS model the server
+ * actually kept — an agent can accept an update and still keep another
+ * model. Exits non-zero on a mismatch so a rollout never reports success
+ * it did not get.
+ */
+export async function confirmAgentTtsModel(url, headers, expected, label) {
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    console.error(`${label}: could not read the agent back (${res.status}).`);
+    process.exit(1);
+  }
+  const agent = await res.json();
+  const kept = agent?.conversation_config?.tts?.model_id ?? null;
+  if (kept !== expected) {
+    console.error(`${label}: asked for ${expected}, the agent kept ${kept}. Roll back with ELEVENLABS_TTS_MODEL=fallback.`);
+    process.exit(1);
+  }
+  console.log(`${label} TTS model confirmed: ${kept}`);
+}
 
 export const SPOKEN_STYLE = `
 HOW YOU SOUND ON THE LINE

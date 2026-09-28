@@ -9,6 +9,7 @@
  */
 
 import { body } from './jesse-agent-config.mjs';
+import { confirmAgentTtsModel } from './agent-voice.mjs';
 
 const apiKey = process.env.ELEVENLABS_API_KEY;
 const agentId = process.env.ELEVENLABS_AGENT_JESSE;
@@ -26,6 +27,7 @@ if (!currentRes.ok) {
   process.exit(1);
 }
 const current = await currentRes.json();
+const previousModel = current?.conversation_config?.tts?.model_id ?? null;
 const platformSettings = current.platform_settings ?? {};
 const currentOverrides = platformSettings.overrides ?? {};
 const currentConfigOverride = currentOverrides.conversation_config_override ?? {};
@@ -59,3 +61,5 @@ console.log('Updated Jesse agent:', agentId);
 console.log('first_message override:', mergedPlatformSettings.overrides.conversation_config_override.agent.first_message);
 console.log('Tools now:', body.conversation_config.agent.prompt.tools.map((t) => t.name).join(', '));
 console.log('Voice:', body.conversation_config.tts.voice_id);
+await confirmAgentTtsModel(url, headers, body.conversation_config.tts.model_id, 'Jesse');
+console.log('TTS model was:', previousModel);

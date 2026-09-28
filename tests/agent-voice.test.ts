@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { AGENT_TTS_MODEL, SPOKEN_STYLE } from '../scripts/agent-voice.mjs';
+import { AGENT_TTS_FALLBACK, AGENT_TTS_MODEL, AGENT_TTS_PRIMARY, resolveAgentTtsModel, SPOKEN_STYLE } from '../scripts/agent-voice.mjs';
 import { body as hetty, SYSTEM_PROMPT as HETTY_PROMPT } from '../scripts/hetty-agent-config.mjs';
 import { body as jesse, SYSTEM_PROMPT as JESSE_PROMPT } from '../scripts/jesse-agent-config.mjs';
 
@@ -18,6 +18,15 @@ describe('broker voice (Eleven v4 Turbo)', () => {
     }
     assert.match(SPOKEN_STYLE, /Never write bracketed stage directions/);
     assert.match(SPOKEN_STYLE, /Write numbers the way a broker says them/);
+  });
+
+  it('v4 Turbo is primary, v3 Conversational is the named fallback', () => {
+    assert.equal(AGENT_TTS_PRIMARY, 'eleven_v4_turbo');
+    assert.equal(AGENT_TTS_FALLBACK, 'eleven_v3_conversational');
+    assert.equal(resolveAgentTtsModel(undefined), 'eleven_v4_turbo');
+    assert.equal(resolveAgentTtsModel('  '), 'eleven_v4_turbo');
+    assert.equal(resolveAgentTtsModel('fallback'), 'eleven_v3_conversational');
+    assert.equal(resolveAgentTtsModel('eleven_flash_v2'), 'eleven_flash_v2');
   });
 
   it('sets no v2-only voice controls v4 does not support', () => {
