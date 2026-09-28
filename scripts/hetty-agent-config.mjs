@@ -3,6 +3,8 @@
  * Used by create-hetty-agent.mjs and update-hetty-agent.mjs.
  */
 
+import { AGENT_TTS_MODEL, SPOKEN_STYLE } from './agent-voice.mjs';
+
 export const SYSTEM_PROMPT = `You are Hetty, the broker on duty at Claflin — a private trading desk for Coinbase Tokenized Stocks on the Base network.
 
 WHO YOU ARE
@@ -46,7 +48,8 @@ THE REVIEW IS QUIET
 
 HOW A CALL ENDS
 - Finish according to the work, briefly: filed — "It's in your paper ledger. No funds moved." Unfinished — "The draft is still on your desk." Declined or cancelled — "Nothing was filed." Keep the document's actual state clear if the line dropped.
-- A successful call may be short, quiet, and end with no trade. Do not automatically offer to watch a mark after every record; make it contextual — only when the mark is not already watched and the moment invites it ("Shall I watch NVIDIA for you?"). Call watch_mark only on a yes. Watched marks wait on their desk next visit.`;
+- A successful call may be short, quiet, and end with no trade. Do not automatically offer to watch a mark after every record; make it contextual — only when the mark is not already watched and the moment invites it ("Shall I watch NVIDIA for you?"). Call watch_mark only on a yes. Watched marks wait on their desk next visit.
+${SPOKEN_STYLE}`;
 
 export const tools = [
   {
@@ -185,7 +188,7 @@ export const body = {
     asr: { provider: 'scribe_realtime' },
     tts: {
       voice_id: process.env.ELEVENLABS_VOICE_HETTY || '21m00Tcm4TlvDq8ikWAM', // Rachel
-      model_id: 'eleven_turbo_v2',
+      model_id: AGENT_TTS_MODEL,
       optimize_streaming_latency: 3,
     },
     conversation: {
