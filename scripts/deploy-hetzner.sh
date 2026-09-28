@@ -36,15 +36,22 @@ RELEASE_PATH="$RELEASES_DIR/$TIMESTAMP"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "=== Step 0: Node runtime preflight ==="
-# The bundle is built with the local Node and run by the server's Node
-# (PM2). Both must be the major pinned in .nvmrc, or native/ABI and API
-# differences surface only after the symlink swap.
+# The bundle is built with the local Node and run by the server's PINNED
+# interpreter under PM2 (ecosystem.config.js → NODE_24), not the server's
+# system Node — that stays 22 for the other apps on this shared box. Both
+# the local Node and that pinned interpreter must be the .nvmrc major.
 REQUIRED_NODE_MAJOR="$(tr -dc '0-9' < "$LOCAL_DIR/.nvmrc")"
 LOCAL_NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-REMOTE_NODE_MAJOR="$(ssh "$REMOTE_HOST" "node -p 'process.versions.node.split(\".\")[0]'" 2>/dev/null || echo "none")"
-echo "Required Node $REQUIRED_NODE_MAJOR · local $LOCAL_NODE_MAJOR · server $REMOTE_NODE_MAJOR"
-if [ "$LOCAL_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ] || [ "$REMOTE_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ]; then
-  echo "❌ Node major mismatch. Install Node $REQUIRED_NODE_MAJOR locally and on $REMOTE_HOST, then retry."
+CLAFLIN_NODE="${CLAFLIN_NODE:-/home/deploy/.nvm/versions/node/v24.21.0/bin/node}"
+REMOTE_NODE_MAJOR="$(ssh "$REMOTE_HOST" "'$CLAFLIN_NODE' -p 'process.versions.node.split(\".\")[0]'" 2>/dev/null || echo "none")"
+echo "Required Node $REQUIRED_NODE_MAJOR · local $LOCAL_NODE_MAJOR · server pinned ($CLAFLIN_NODE) $REMOTE_NODE_MAJOR"
+if [ "$LOCAL_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ]; then
+  echo "❌ Local Node is $LOCAL_NODE_MAJOR, need $REQUIRED_NODE_MAJOR. nvm use $REQUIRED_NODE_MAJOR, then retry."
+  exit 1
+fi
+if [ "$REMOTE_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ]; then
+  echo "❌ Server's pinned interpreter is not Node $REQUIRED_NODE_MAJOR at $CLAFLIN_NODE."
+  echo "   Install it for the deploy user (nvm install $REQUIRED_NODE_MAJOR) or set CLAFLIN_NODE, and match ecosystem.config.js. The system Node is intentionally left alone."
   exit 1
 fi
 

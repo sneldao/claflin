@@ -35,11 +35,19 @@ function loadEnv(envPath) {
 
 const env = loadEnv(ENV_PATH);
 
+/* Claflin runs on Node 24 (see .nvmrc / package.json engines). The server's
+ * system Node is 22 and shared with other PM2 apps, so we do NOT change it —
+ * only these two apps are pinned to the deploy user's nvm-managed Node 24.
+ * Override with CLAFLIN_NODE if the nvm version path changes; deploy-hetzner.sh
+ * verifies this interpreter is Node 24 before restarting PM2. */
+const NODE_24 = process.env.CLAFLIN_NODE || '/home/deploy/.nvm/versions/node/v24.21.0/bin/node';
+
 module.exports = {
   apps: [
     {
       name: 'claflin',
       script: '/opt/claflin/current/server.js',
+      interpreter: NODE_24,
       cwd: '/opt/claflin/current',
       instances: 1,
       exec_mode: 'fork',
@@ -124,6 +132,7 @@ module.exports = {
     {
       name: 'claflin-pyth',
       script: '/opt/claflin/jesse-pyth-feed.cjs',
+      interpreter: NODE_24,
       cwd: '/opt/claflin',
       instances: 1,
       exec_mode: 'fork',
