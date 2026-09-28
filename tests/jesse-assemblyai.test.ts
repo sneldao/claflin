@@ -174,7 +174,12 @@ describe('Jesse on AssemblyAI — browser session protocol', () => {
   });
 
   afterEach(() => {
-    for (const [key, value] of Object.entries(saved)) (globalThis as Record<string, unknown>)[key] = value;
+    /* Restore only globals the runtime really had. Node 20 has no global
+       WebSocket; deleting the fake would crash session.end()'s deferred
+       close (a 3 s timer that reads WebSocket.OPEN) after the test ends. */
+    for (const [key, value] of Object.entries(saved)) {
+      if (value !== undefined) (globalThis as Record<string, unknown>)[key] = value;
+    }
   });
 
   it('opens with the token, sends the agent, runs tools after reply.done, and ends cleanly', async () => {
