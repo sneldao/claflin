@@ -25,7 +25,7 @@ set -euo pipefail
 #
 # Prerequisites:
 #   - Access to the `snel-bot` SSH host configured
-#   - Node + pnpm locally
+#   - Node (major in .nvmrc) + pnpm locally and Node on the server
 # ================================================
 
 REMOTE_HOST="snel-bot"
@@ -35,6 +35,20 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RELEASE_PATH="$RELEASES_DIR/$TIMESTAMP"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+echo "=== Step 0: Node runtime preflight ==="
+# The bundle is built with the local Node and run by the server's Node
+# (PM2). Both must be the major pinned in .nvmrc, or native/ABI and API
+# differences surface only after the symlink swap.
+REQUIRED_NODE_MAJOR="$(tr -dc '0-9' < "$LOCAL_DIR/.nvmrc")"
+LOCAL_NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+REMOTE_NODE_MAJOR="$(ssh "$REMOTE_HOST" "node -p 'process.versions.node.split(\".\")[0]'" 2>/dev/null || echo "none")"
+echo "Required Node $REQUIRED_NODE_MAJOR · local $LOCAL_NODE_MAJOR · server $REMOTE_NODE_MAJOR"
+if [ "$LOCAL_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ] || [ "$REMOTE_NODE_MAJOR" != "$REQUIRED_NODE_MAJOR" ]; then
+  echo "❌ Node major mismatch. Install Node $REQUIRED_NODE_MAJOR locally and on $REMOTE_HOST, then retry."
+  exit 1
+fi
+
+echo ""
 echo "=== Step 1: Install dependencies (local) ==="
 cd "$LOCAL_DIR"
 pnpm install --no-frozen-lockfile

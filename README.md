@@ -43,7 +43,10 @@ A selected offering may preselect the instrument, but it never preselects an amo
 
 ## Local development
 
+Node 24 (pinned in `.nvmrc` and `package.json` `engines`; CI, Docker and the Hetzner deploy preflight read the same major). pnpm comes from `packageManager` via `corepack enable`.
+
 ```bash
+nvm use        # or any manager that reads .nvmrc
 pnpm install
 pnpm dev
 ```

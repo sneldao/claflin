@@ -5,18 +5,17 @@
 # Usage:
 #   docker build -t claflin .
 #   docker run -p 3000:3000 --env-file .env.local claflin
+#
+# Node major is pinned to match .nvmrc / package.json "engines".
+# pnpm comes from package.json "packageManager" via corepack.
 
-# ── Stage 1: Dependencies ────────────────────
-FROM node:20-alpine AS deps
+# ── Stage 1: Build ───────────────────────────
+FROM node:24-alpine AS builder
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-# ── Stage 2: Build ───────────────────────────
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+# postbuild runs scripts/cleanup-standalone.sh under bash.
+RUN apk add --no-cache bash libc6-compat && corepack enable
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 
 # Next.js needs these at build time — provide safe defaults
@@ -32,28 +31,28 @@ ENV UPSTASH_REDIS_REST_TOKEN=placeholder
 # See package.json "build" script — same fix, defense in depth.
 ENV NODE_ENV=production
 
-RUN npm run build
+# postbuild copies .next/static and public/ into .next/standalone and, in
+# production, prunes the rest of .next — the standalone dir is the output.
+RUN pnpm build
 
-# ── Stage 3: Production ──────────────────────
-FROM node:20-alpine AS runner
+# ── Stage 2: Production ──────────────────────
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy only what's needed
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 USER nextjs
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/sdk/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
 CMD ["node", "server.js"]

@@ -174,9 +174,10 @@ describe('Jesse on AssemblyAI — browser session protocol', () => {
   });
 
   afterEach(() => {
-    /* Restore only globals the runtime really had. Node 20 has no global
-       WebSocket; deleting the fake would crash session.end()'s deferred
-       close (a 3 s timer that reads WebSocket.OPEN) after the test ends. */
+    /* Restore only globals the runtime really had. On a runtime without a
+       global WebSocket, deleting the fake would crash session.end()'s
+       deferred close (a 3 s timer that reads WebSocket.OPEN) after the
+       test ends. Reproduce with NODE_OPTIONS=--no-experimental-websocket. */
     for (const [key, value] of Object.entries(saved)) {
       if (value !== undefined) (globalThis as Record<string, unknown>)[key] = value;
     }

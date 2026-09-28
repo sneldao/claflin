@@ -13,13 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4   # version from package.json "packageManager"
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
@@ -37,13 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4   # version from package.json "packageManager"
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
@@ -58,13 +54,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4   # version from package.json "packageManager"
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
@@ -85,13 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4   # version from package.json "packageManager"
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
@@ -118,6 +110,27 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build image
+        run: docker build -t claflin:ci .
+
+      - name: Serve and answer
+        run: |
+          docker run -d --name claflin -p 3000:3000 claflin:ci
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)
+            if [ "$code" = "200" ]; then echo "Served / with 200"; break; fi
+            sleep 2
+          done
+          docker exec claflin node -p '"Node " + process.versions.node'
+          [ "$code" = "200" ] || { docker logs claflin; exit 1; }
 
   secret-scan:
     name: Secret Scan

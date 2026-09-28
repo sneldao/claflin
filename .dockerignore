@@ -6,6 +6,7 @@ node_modules
 *.md
 tests
 scripts
+!scripts/cleanup-standalone.sh
 .kilocode
 .junie
 .vercel

@@ -2,6 +2,10 @@
   "name": "claflin",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "license": "MIT",
   "description": "Claflin — a Deco-futurist brokerage house. Specialist desks for Base (Hetty) and Solana (Jesse): voice-first paper trading, explicit review, and a record you keep.",
   "scripts": {
@@ -33,7 +37,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19",
     "@types/three": "0.180.0",
