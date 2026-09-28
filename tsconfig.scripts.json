@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"]
+  },
+  "include": [
+    "scripts/probe-aerodrome-pools.mts",
+    "scripts/funnel-report.mts",
+    "lib/trading/pool-unlock.ts",
+    "lib/funnel/report.ts",
+    "lib/funnel/store.ts"
+  ]
+}
