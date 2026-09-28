@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { accountFromRequest } from '@/lib/auth';
 import { getRedis } from '@/lib/redis';
+import { busyResponse, clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,18 @@ const recordSchema = z.object({
 const bodySchema = z.object({ records: z.array(recordSchema).max(100) });
 const MAX_RECORDS = 100;
 
+/* Sync is a handful of calls per session (sign-in pull, post-file push).
+   Budgets are checked before auth so a flood of bad tokens can't spend
+   Privy verifications either; the per-account budget follows auth. */
+const instanceBudget = requestBudget(600);
+const ipBudget = keyedBudget(60);
+const accountBudget = keyedBudget(30);
+
+function overBudget(req: NextRequest): Response | null {
+  if (!instanceBudget() || !ipBudget(clientKeyFromRequest(req))) return busyResponse('Too many record sync requests. Please wait a moment.');
+  return null;
+}
+
 async function requireAccount(req: NextRequest): Promise<{ userId: string } | Response> {
   let userId: string | null;
   try {
@@ -32,10 +45,13 @@ async function requireAccount(req: NextRequest): Promise<{ userId: string } | Re
     return Response.json({ error: 'unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
   }
   if (!userId) return Response.json({ error: 'sign_in_required' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+  if (!accountBudget(`user:${userId}`)) return busyResponse('Too many record sync requests. Please wait a moment.');
   return { userId };
 }
 
 export async function GET(req: NextRequest): Promise<Response> {
+  const busy = overBudget(req);
+  if (busy) return busy;
   const auth = await requireAccount(req);
   if (auth instanceof Response) return auth;
   try {
@@ -48,6 +64,8 @@ export async function GET(req: NextRequest): Promise<Response> {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const busy = overBudget(req);
+  if (busy) return busy;
   const auth = await requireAccount(req);
   if (auth instanceof Response) return auth;
   let parsed: z.infer<typeof bodySchema>;

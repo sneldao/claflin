@@ -168,11 +168,13 @@ export async function POST(req: NextRequest): Promise<Response> {
           message: 'That recording came in a format the transcription service cannot read. Try again — or type the instruction below.',
         }, { status: 502, headers });
       }
-      const errorText = await response.text();
+      /* The upstream body can carry provider internals — log it server-side,
+         never forward it. The client only needs the manual-entry fallback. */
+      const errorText = await response.text().catch(() => '');
+      console.warn('[dictation] upstream failed', response.status, errorText.slice(0, 500));
       return Response.json({
         error: 'dictation_failed',
-        message: 'AssemblyAI dictation returned status 400. Manual entry is available.',
-        details: errorText,
+        message: 'Transcription did not go through. Manual entry is available.',
       }, { status: 502, headers });
     }
 
@@ -234,9 +236,10 @@ export async function POST(req: NextRequest): Promise<Response> {
       desk,
     }, { headers });
   } catch (err) {
+    console.warn('[dictation] failed', err instanceof Error ? err.message : err);
     return Response.json({
       error: 'server_error',
-      message: err instanceof Error ? err.message : 'Failed to process dictation audio',
+      message: 'Failed to process dictation audio.',
     }, { status: 500, headers });
   }
 }

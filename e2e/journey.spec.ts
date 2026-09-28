@@ -1,0 +1,99 @@
+import { test, expect, type Page } from '@playwright/test';
+import { mockApi, PAPER_PREFIX } from './fixtures';
+
+/**
+ * The primary journey, end to end in a browser — the acceptance test CI
+ * gates on. A bare visit opens the foyer; an instruction lights the line
+ * that carries it; typing into that desk carries the instruction onto the
+ * ticket; the desk prices and files a paper record; the house home shows
+ * the last filing and reopens it.
+ *
+ * Every selector here is a role or accessible name taken from the source:
+ *   HouseTurret   — textbox "Instruction for the house", list "The house lines",
+ *                   link "Type instead", data-lamp on each line
+ *   HouseFoyer    — region "Live reference marks"
+ *   SLIP_ACTIONS  — "Price it", "File paper record"
+ *   outcomes.ts   — "Filed. Paper only. Nothing moved."
+ *   DeskRoom / RoomPresentation — link "Claflin home"
+ *   LastFilingLine — button "Open that record"
+ *
+ * Reduced motion pins the Compact view (shouldPreferCompactView) and keeps
+ * WebGL out of the run, so the test is deterministic in headless CI.
+ */
+
+const INSTRUCTION = 'buy Apple for 100 USDC';
+const FILED = 'Filed. Paper only. Nothing moved.';
+
+async function openFoyer(page: Page) {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockApi(page);
+  await page.goto('/');
+}
+
+function hettyLine(page: Page) {
+  return page.getByRole('list', { name: 'The house lines' }).getByRole('listitem').filter({ hasText: 'Hetty' });
+}
+
+test.describe('house journey', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('a bare visit opens the foyer, not a desk', async ({ page }) => {
+    await openFoyer(page);
+    await expect(page.getByRole('textbox', { name: 'Instruction for the house' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Live reference marks' })).toBeVisible();
+    await expect(page).not.toHaveURL(/desk=/);
+    /* Nothing prices or files from the foyer. */
+    await expect(page.getByRole('button', { name: 'Price it' })).toHaveCount(0);
+  });
+
+  test('an instruction lights the line that carries it', async ({ page }) => {
+    await openFoyer(page);
+    await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
+    await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
+  });
+
+  test('foyer → desk → price → file → return → reopen', async ({ page }) => {
+    await openFoyer(page);
+
+    // Foyer: say what you want, then take the lit line.
+    await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
+    await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
+    await hettyLine(page).getByRole('link', { name: 'Type instead' }).click();
+
+    // Desk: the instruction came with us — no chain chosen, no re-typing.
+    await expect(page).toHaveURL(/desk=hetty/);
+    await expect(page).toHaveURL(/side=buy/);
+    await expect(page).toHaveURL(/amount=100/);
+
+    await page.getByRole('button', { name: 'Price it' }).first().click();
+    await page.getByRole('button', { name: 'File paper record' }).first().click();
+    await expect(page.getByText(FILED).first()).toBeVisible();
+
+    // The record is kept in this browser.
+    const kept = await page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).length, PAPER_PREFIX);
+    expect(kept).toBe(1);
+
+    // Return to the house: the foyer remembers the last filing.
+    await page.getByRole('link', { name: 'Claflin home' }).first().click();
+    await expect(page.getByRole('textbox', { name: 'Instruction for the house' })).toBeVisible();
+    const reopen = page.getByRole('button', { name: 'Open that record' });
+    await expect(reopen).toBeVisible();
+
+    // Reopen it: back on the desk, looking at the same filed record.
+    await reopen.click();
+    await expect(page).toHaveURL(/desk=hetty/);
+    await expect(page).toHaveURL(/record=/);
+    await expect(page.getByText(FILED).first()).toBeVisible();
+  });
+
+  test('the same journey on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openFoyer(page);
+    await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
+    await hettyLine(page).getByRole('link', { name: 'Type instead' }).click();
+    await expect(page).toHaveURL(/desk=hetty/);
+    await page.getByRole('button', { name: 'Price it' }).first().click();
+    await page.getByRole('button', { name: 'File paper record' }).first().click();
+    await expect(page.getByText(FILED).first()).toBeVisible();
+  });
+});
