@@ -151,7 +151,7 @@ Material and type follow Product Direction → Art direction (deep green/ink, br
 | **2: The board** | Table + expandable rows; per-number provenance; honest gap column | `HouseOfferings.tsx` → board, offering metadata for rights/eligibility | Offering tests; no gap from mismatched sources |
 | **3: The slip, annotated + example call** | Annotated slip; labelled example call from an accepted real recording | New foyer section; reuse `WrittenSlip` | Recording accepted and labelled; captions |
 | **4: Desks, answers, footer, mobile handset** | §4.7–4.9, §5 mobile | Foyer + CSS | Mobile viewport QA |
-| **5: Pulse + metrics** | §4.6 only with real counters; §8 instrumentation | `lib/analytics.ts` / events store | Documented retention |
+| **5: Pulse + metrics** | §4.6 only with real counters; §8 instrumentation | `lib/funnel/*`, `POST /api/funnel`, `scripts/funnel-report.mts` (see FUNNEL_METRICS.md) | Documented retention (90-day TTL) |
 
 **Timing:** Stocklana submits 2026-09-25 16:00 ET. Phases 0–2 are what ships for judging, since the page is frozen while it is judged. The board's product facts (§4.5) come from the issuers' own documents: Coinbase via the Base guide (reviewed 2026-09-05), and Backed via docs.xstocks.fi's product legal overview (fetched 2026-09-24). Re-check both before any later release.
 

@@ -4,6 +4,26 @@ Claflin API server. App directory: `/opt/claflin` — Port **3042** (loopback on
 
 ---
 
+## Node runtime (shared box)
+
+`snel-bot` runs ~12 PM2 apps on **system Node 22** (NodeSource apt). Claflin
+targets **Node 24** (`.nvmrc`, `package.json` engines). We do **not** change
+the system Node — that would move every other app on the box on its next
+restart. Instead, only `claflin` and `claflin-pyth` are pinned to Node 24
+via a PM2 `interpreter` in `ecosystem.config.js`:
+
+```
+interpreter: /home/deploy/.nvm/versions/node/v24.x/bin/node   (override: CLAFLIN_NODE)
+```
+
+Node 24 is installed for the `deploy` user via nvm. If `nvm install 24` later
+resolves a newer 24.x, the interpreter path changes — update it in
+`ecosystem.config.js` or set `CLAFLIN_NODE`. `deploy-hetzner.sh` step 0
+verifies both the local build Node and this pinned interpreter are the
+`.nvmrc` major before uploading, and aborts on a mismatch.
+
+---
+
 ## Quick Deploy
 
 ```bash
@@ -26,8 +46,9 @@ NODE_ENV=production pnpm build      → build standalone
         • removes .next/{cache,server,static,types,trace}  (~1.2 GB saved)
         • preserves .git + source files for next deploy
 rsync .next/standalone/ → snel-bot:/opt/claflin/releases/<timestamp>/
+rsync ecosystem.config.js + jesse-pyth-feed.cjs → /opt/claflin/
 ln -sfn releases/<timestamp> /opt/claflin/current   (atomic swap)
-pm2 delete + start ecosystem.config.js                    (reload)
+pm2 delete + start ecosystem.config.js                    (reload, Node 24 interpreter)
 pm2 save                                                  (persist)
 ```
 

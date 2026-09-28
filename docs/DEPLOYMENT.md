@@ -15,6 +15,8 @@ routes: `/api/stocks/quote` (read-only estimates), `/api/stocks/marks`
 (indicative tape), `/api/hetty/session` (voice signed URL),
 `/api/desk/jesse/voice-agent/token` (optional AssemblyAI Voice Agent token),
 and — when an account is configured — `/api/paper` and `/api/hetty/transcript`.
+`/api/funnel` is a write-only, anonymous, enum-only product-funnel beacon
+(no read endpoint; see [Funnel Metrics](FUNNEL_METRICS.md)).
 `/api/eligibility` is a read-only authority-tier check, not a paper-desk
 surface. `/api/webhooks/elevenlabs` is retained call-billing infrastructure
 and is not on the live Hetty path. Retired marketplace APIs (`/api/agents`,
@@ -83,6 +85,10 @@ ELEVENLABS_AGENT_JESSE=
 ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
 ```
 
+Both brokers' ConvAI agents speak on **Eleven v4 Turbo** (`eleven_v4_turbo`);
+the model lives in the agent config, not this deployment. See
+[Broker voice](#broker-voice-eleven-v4-turbo) below.
+
 Optional AssemblyAI Voice Agent line for Jesse. ElevenLabs remains the default;
 set `NEXT_PUBLIC_JESSE_VOICE=assemblyai` to make AssemblyAI the deployment
 provider, or use `?line=assemblyai` for one visit. The API key stays server-side.
@@ -95,6 +101,26 @@ NEXT_PUBLIC_JESSE_VOICE=assemblyai
 ```
 
 The AssemblyAI line is paper-only and does not sign or submit transactions.
+
+### Broker voice (Eleven v4 Turbo)
+
+Hetty and Jesse's ElevenLabs ConvAI agents run **`eleven_v4_turbo`** — the
+v4 real-time variant for agents — replacing the deprecated `eleven_turbo_v2`.
+This is agent-side config on ElevenLabs, not a deployment env var; changing
+it is an API call, not a VPS/Vercel deploy.
+
+- Model + speaking rules: `scripts/agent-voice.mjs` (shared by both brokers).
+  `ELEVENLABS_TTS_MODEL=fallback` selects `eleven_v3_conversational`; any
+  other value is used as a literal model id.
+- Apply to the live agents:
+  ```
+  node --env-file=.env.local scripts/update-hetty-agent.mjs
+  node --env-file=.env.local scripts/update-jesse-agent.mjs
+  ```
+  Each script reads the agent back and fails if the model the server kept
+  isn't the one requested. Roll back by re-running with
+  `ELEVENLABS_TTS_MODEL=fallback`.
+- Rolled out 2026-09-28 (both agents confirmed on `eleven_v4_turbo`).
 
 Optional Jupiter key (paper quotes work keyless; set for higher rate limits):
 
