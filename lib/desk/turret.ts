@@ -53,6 +53,13 @@ export function litDesks(reading: TurretReading, deskIds: readonly HouseDeskId[]
   return deskIds.filter(id => lampFor(reading, id) === 'match');
 }
 
+/** How many offerings the house book found — the funnel's "offering resolved". Null when nothing was said. */
+export function instructionMatch(reading: TurretReading): 'none' | 'one' | 'several' | null {
+  if (reading.kind === 'empty') return null;
+  if (reading.kind === 'unmatched') return 'none';
+  return reading.matches.length === 1 ? 'one' : 'several';
+}
+
 const MAX_NAMED_MATCHES = 3;
 
 /**

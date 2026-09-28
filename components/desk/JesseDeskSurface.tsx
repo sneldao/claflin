@@ -45,6 +45,7 @@ import { brokerTake, tapeGapLine, widestGap } from '@/lib/desk/broker-take';
 import { useMarketClock } from '@/lib/use-market-clock';
 import styles from './WorkingDesk.module.css';
 import ticker from './DeskTicker.module.css';
+import { countRetrieval } from '@/lib/funnel/client';
 
 const NO_MARKS: DeskMark[] = [];
 
@@ -334,7 +335,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('assemblyai')} />
             : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('elevenlabs')} />}
           {blankSlip && filing?.deskId === 'jesse' && (
-            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => jesse.openRecord(filing.recordId)} />
+            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('jesse', 'last_filing'); jesse.openRecord(filing.recordId); }} />
           )}
           {roomView ? (
             <details className={styles.typeInstead}>

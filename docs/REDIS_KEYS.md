@@ -11,6 +11,8 @@ historical source, not a current product store.
 | `paper:{userId}` | JSON array | none | Account-bound paper records (schema-validated, max 100). Local browser storage stays authoritative; this is a best-effort copy. Deletes are not propagated. |
 | `transcript:{userId}:{conversationId}` | JSON object | 30 days | Write-only Hetty call transcript. No client GET. |
 | `transcripts:{userId}` | Set | none | Conversation ids stored for that account. No expiry companion to the transcript TTL — treat as a known gap. |
+| `funnel:counts:{day}` | Hash | 90 days | Anonymous funnel counters (enum dims only). See docs/FUNNEL_METRICS.md. |
+| `funnel:reach:{day}:{step}:{new\|returning}` | HyperLogLog | 90 days | Approximate unique visits per funnel step. |
 
 These JSON blobs are intentional. Do not rewrite them as hashes without a
 migration. In-process rate limits for quotes and Hetty sessions are not

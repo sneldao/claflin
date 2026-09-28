@@ -7,6 +7,7 @@ import { downloadJesseLedger, type JesseLedgerFormat } from '@/lib/solana/ledger
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { loadDeskSlips, type DeskSlip } from '@/lib/trading/desk-slips';
 import styles from './WorkingDesk.module.css';
+import { countRetrieval } from '@/lib/funnel/client';
 
 export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDesk }) {
   const { records, historyReady, storageError, viewedRecordId, openRecord, removeRecord, foreground } = jesse;
@@ -75,7 +76,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
                       type="button"
                       className={styles.ledgerLine}
                       aria-current={active ? 'true' : undefined}
-                      onClick={() => openRecord(record.id)}
+                      onClick={() => { countRetrieval('jesse', 'ledger'); openRecord(record.id); }}
                     >
                       <strong>{entry.side.toUpperCase()} {entry.symbol}</strong>
                       <span>{entry.amount}</span>
@@ -99,7 +100,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
               const entry = compactJesseEntry(record);
               return (
                 <li key={record.id}>
-                  <button type="button" className={styles.ledgerLine} onClick={() => openRecord(record.id)}>
+                  <button type="button" className={styles.ledgerLine} onClick={() => { countRetrieval('jesse', 'ledger'); openRecord(record.id); }}>
                     <strong>{entry.side.toUpperCase()} {entry.symbol}</strong>
                     <span>{entry.amount}</span>
                     <small>{formatRecordedTime(entry.createdAt)}</small>

@@ -9,6 +9,7 @@ import { loadDeskSlips, type DeskSlip } from '@/lib/trading/desk-slips';
 import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { PaperHistory } from './PaperHistory';
 import styles from './WorkingDesk.module.css';
+import { countRetrieval } from '@/lib/funnel/client';
 
 const EMPTY_LIVE_ENTRIES: readonly LiveJournalEntry[] = [];
 
@@ -174,7 +175,7 @@ export const PaperLedger = memo(function PaperLedger({
                   const justFiled = entry.id === justFiledId;
                   return (
                     <li key={entry.id} data-current={current ? 'true' : 'false'} data-just-filed={justFiled ? 'true' : 'false'}>
-                      <button type="button" onClick={() => openRecord(entry.id)} aria-current={current ? 'true' : undefined}>
+                      <button type="button" onClick={() => { countRetrieval(deskId, 'ledger'); openRecord(entry.id); }} aria-current={current ? 'true' : undefined}>
                         <strong>{entry.symbol} · {entry.action}{justFiled ? ' · Just filed' : ''}</strong>
                         <span>{entry.exchange}</span>
                         <time dateTime={new Date(entry.recordedAt).toISOString()}>{formatRecordedTime(entry.recordedAt)}</time>

@@ -13,6 +13,8 @@ import { offeringForInstrument } from '@/lib/desk/offerings';
 import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
 import { entryIntentFromInstruction, type EntryIntent } from '@/lib/house-entry';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
+import { instructionMatch, readInstruction } from '@/lib/desk/turret';
+import { trackFunnel, trackInstruction } from '@/lib/funnel/client';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { LastFilingLine } from './LastFilingLine';
 import { HouseMark } from './HouseMark';
@@ -63,6 +65,21 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
   const [wireInstruction, setWireInstruction] = useState('');
   const filing = useLatestFiling();
 
+  /* The funnel counts each distinct instruction once, however it arrived.
+     Only the house book's answer (none/one/several) is sent, never the words. */
+  const committed = useRef<string | null>(null);
+  const commitInstruction = (text: string, source: 'spoken' | 'typed' | 'picked') => {
+    const key = text.trim().toLowerCase();
+    const matched = instructionMatch(readInstruction(text));
+    if (!key || !matched || key === committed.current) return;
+    committed.current = key;
+    trackInstruction(source, matched);
+  };
+  const pickFromWire = (instruction: string) => {
+    setWireInstruction(instruction);
+    commitInstruction(instruction, 'picked');
+  };
+
   const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false });
 
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
@@ -83,6 +100,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
   };
 
   const enterDesk = (id: HouseDeskId) => {
+    commitInstruction(wireInstruction, 'typed');
     window.scrollTo({ top: 0, behavior: 'instant' });
     const { offeringId, intent } = carried(id);
     onEnter(id, offeringId ?? undefined, intent);
@@ -95,6 +113,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
   };
 
   const ring = (id: HouseDeskId) => () => {
+    commitInstruction(wireInstruction, 'typed');
     requestRingOnArrival(id);
     window.scrollTo({ top: 0, behavior: 'instant' });
     const { offeringId, intent } = carried(id);
@@ -149,13 +168,18 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
             deskHref={id => deskHref(id, soleOfferingForDesk(wireInstruction, id), entryIntentFromInstruction(wireInstruction))}
             onTypeClick={enter}
             boundary={<p className={foyerStyles.reassurance}>{FOYER_BOUNDARY}</p>}
+            onCommit={commitInstruction}
+            onMicUnavailable={reason => trackFunnel({ event: 'mic_blocked', reason })}
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={setWireInstruction} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={pickFromWire} />
 
         <HouseOfferings
-          onEnter={onEnter}
+          onEnter={(...args: Parameters<typeof onEnter>) => {
+            commitInstruction(wireInstruction, 'typed');
+            onEnter(...args);
+          }}
           instruction={wireInstruction}
           marks={{ hetty: hettyMarks, jesse: jesseMarks }}
         />

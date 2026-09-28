@@ -27,6 +27,9 @@ export interface UseDictationOptions {
   /** Every clean transcript, parsed or not — the foyer matches words to the
       house book itself rather than needing a desk intent. */
   onTranscript?: (transcript: string) => void;
+  /** The microphone could not be opened or was taken away — the reason
+      only, never the audio. The foyer counts this for the mic-denied rate. */
+  onMicUnavailable?: (reason: 'denied' | 'no_device' | 'unsupported' | 'interrupted' | 'other') => void;
 }
 
 /* The Wake Lock API is not in every TS DOM lib yet — a structural type is
@@ -87,6 +90,7 @@ export function useDictation(options?: UseDictationOptions) {
   }, [acquireWakeLock]);
 
   const startRecording = useCallback(async () => {
+    const unsupported = typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia;
     try {
       cleanup();
       playSolenoidClick('engage');
@@ -97,7 +101,7 @@ export function useDictation(options?: UseDictationOptions) {
         provider: null,
       });
 
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      if (unsupported) {
         throw new Error('This browser cannot access the microphone. Type the instruction below instead — dictation is optional.');
       }
 
@@ -116,6 +120,7 @@ export function useDictation(options?: UseDictationOptions) {
       stream.getAudioTracks().forEach(track => {
         track.addEventListener('ended', () => {
           cleanup();
+          options?.onMicUnavailable?.('interrupted');
           setState({
             status: 'error',
             transcript: null,
@@ -148,9 +153,12 @@ export function useDictation(options?: UseDictationOptions) {
     } catch (err) {
       cleanup();
       const raw = err instanceof Error ? err.message : 'Microphone access denied or unavailable.';
-      const friendly = /denied|permission|not allowed|notallowed|secure/i.test(raw)
+      const denied = /denied|permission|not allowed|notallowed|secure/i.test(raw);
+      const noDevice = !denied && /not found|no device|notfound|devices/i.test(raw);
+      options?.onMicUnavailable?.(unsupported ? 'unsupported' : denied ? 'denied' : noDevice ? 'no_device' : 'other');
+      const friendly = denied
         ? 'Microphone is blocked — allow microphone access in the browser address bar, then try again. Or type the instruction below; dictation is optional.'
-        : /not found|no device|notfound|devices/i.test(raw)
+        : noDevice
           ? 'No microphone found on this device. Type the instruction below instead.'
           : raw;
       setState({
@@ -160,7 +168,7 @@ export function useDictation(options?: UseDictationOptions) {
         provider: null,
       });
     }
-  }, [cleanup, acquireWakeLock]);
+  }, [cleanup, acquireWakeLock, options]);
 
   const stopRecording = useCallback(async () => {
     const recorder = mediaRecorderRef.current;

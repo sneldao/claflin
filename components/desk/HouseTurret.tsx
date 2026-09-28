@@ -6,6 +6,7 @@ import { HOUSE_DESKS, type HouseDesk, type HouseDeskId } from '@/lib/house';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { lampFor, litDesks, readInstruction, turretReply, type LineLamp } from '@/lib/desk/turret';
 import { LINE_IDENTITY, TURRET_COPY } from '@/lib/desk/ui-copy';
+import type { MicReason } from '@/lib/funnel/events';
 import foyerStyles from './HouseFoyer.module.css';
 
 /** Keys already doing a job on these targets keep that job. */
@@ -28,17 +29,39 @@ export interface HouseTurretProps {
   onTypeClick: (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void;
   /** Rendered between the talk bar and the lines — the one boundary line. */
   boundary: ReactNode;
+  /** An instruction settled on the line — spoken on transcript, typed after a pause. */
+  onCommit?: (instruction: string, source: 'spoken' | 'typed') => void;
+  onMicUnavailable?: (reason: MicReason) => void;
 }
+
+/** A typed instruction counts once the caller stops typing for this long. */
+const TYPED_SETTLE_MS = 1500;
 
 /**
  * The house turret — one line into the house (hold to talk, or type), and a
  * lamp per desk that lights when it carries what was said. The turret never
  * rings a desk on its own and never picks between two lit lines.
  */
-export function HouseTurret({ instruction, onInstruction, lineDesks, planned, onRing, onType, deskHref, onTypeClick, boundary }: HouseTurretProps) {
+export function HouseTurret({ instruction, onInstruction, lineDesks, planned, onRing, onType, deskHref, onTypeClick, boundary, onCommit, onMicUnavailable }: HouseTurretProps) {
+  /* Ref mirrors — the foyer re-renders on every mark tick, which must not
+     restart the typed-settle timer. Synced in an effect, not during render. */
+  const commitRef = useRef(onCommit);
+  const micRef = useRef(onMicUnavailable);
+  useEffect(() => { commitRef.current = onCommit; micRef.current = onMicUnavailable; });
+  const typedRef = useRef(false);
   const { state, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
-    onTranscript: onInstruction,
+    onTranscript: transcript => {
+      typedRef.current = false;
+      onInstruction(transcript);
+      commitRef.current?.(transcript, 'spoken');
+    },
+    onMicUnavailable: reason => micRef.current?.(reason),
   });
+  useEffect(() => {
+    if (!typedRef.current) return;
+    const handle = setTimeout(() => commitRef.current?.(instruction, 'typed'), TYPED_SETTLE_MS);
+    return () => clearTimeout(handle);
+  }, [instruction]);
   const [heard, setHeard] = useState<string | null>(null);
   const [asked, setAsked] = useState(false);
   const holding = useRef(false);
@@ -159,7 +182,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
         <label className={foyerStyles.instructionSearch}>
           <input
             value={instruction}
-            onChange={event => onInstruction(event.target.value)}
+            onChange={event => { typedRef.current = true; onInstruction(event.target.value); }}
             placeholder="Try “buy Apple for 100 USDC”"
             autoComplete="off"
             aria-label="Instruction for the house"

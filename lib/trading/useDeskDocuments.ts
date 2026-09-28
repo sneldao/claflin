@@ -13,6 +13,8 @@ import { mintFirstPaperSlip } from './desk-slips';
 import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, type ParkedDesk } from './desk-mandate';
+import { trackFunnel } from '@/lib/funnel/client';
+import { isFunnelDesk } from '@/lib/funnel/events';
 
 /** The legacy reducer engine's document session — the shared contract plus
  *  the v1 document pipeline's own verbs and fields. */
@@ -197,8 +199,11 @@ export function useDeskDocuments({
       if (!estimateUsable(result, Date.now())) throw new Error('The estimate expired while loading. Please retry.');
       if (!canReviewOnDesk(result, originDesk)) throw new Error('This quotation belongs to another desk.');
       dispatch({ type: 'quoted', requestId, quote: result });
+      if (isFunnelDesk(originDesk)) trackFunnel({ event: 'estimate_returned', desk: originDesk, outcome: 'quoted' });
     } catch (e) {
       if (requestGenRef.current !== gen || deskIdRef.current !== originDesk) return;
+      /* A caller's own cancel is not an unavailable estimate. */
+      if (isFunnelDesk(originDesk) && !controller.signal.aborted) trackFunnel({ event: 'estimate_returned', desk: originDesk, outcome: 'unavailable' });
       dispatch({ type: 'failed', requestId, message: controller.signal.aborted ? 'The request was cancelled or timed out. You can retry.' : e instanceof Error ? e.message : 'An estimate is unavailable.' });
     } finally { clearTimeout(timeout); }
   }, [deskId, deskIdRef, knownRecords, state, viewedRecordId, requestRef, requestGenRef]);
@@ -220,6 +225,7 @@ export function useDeskDocuments({
       setViewedRecordId(saved.id);
       dispatch({ type: 'saved', quoteId: saved.id, now: saved.createdAt });
       setError(null);
+      if (isFunnelDesk(deskId)) trackFunnel({ event: 'record_filed', desk: deskId });
     } catch { setError('Not filed. Your quotation is still here. The estimate may have expired, or browser storage may be unavailable.'); }
     finally { saveLock.current = false; }
   }, [authenticated, userId, deskId, historyReady, knownRecords, state, viewedRecordId]);

@@ -53,6 +53,7 @@ import { DeskObjects, TapeMachine } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import styles from './WorkingDesk.module.css';
 import ticker from "./DeskTicker.module.css";
+import { countRetrieval } from '@/lib/funnel/client';
 
 const NO_MARKS: DeskMark[] = [];
 
@@ -409,7 +410,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         <aside className={styles.support} aria-label="The Base desk’s direct line">
           <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} compactPlate={roomView} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
           {blankSlip && filing?.deskId === 'hetty' && (
-            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => desk.openRecord(filing.recordId)} />
+            <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('hetty', 'last_filing'); desk.openRecord(filing.recordId); }} />
           )}
           {!roomView && blankSlip && <BlotterHearables lines={HETTY_HEARABLES} onSay={sayToDesk} />}
           <ReceiverShell

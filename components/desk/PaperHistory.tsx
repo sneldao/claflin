@@ -5,6 +5,7 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { compactPaperEntry, formatRecordedWhen } from '@/lib/trading/desk-documents';
 import styles from './WorkingDesk.module.css';
+import { countRetrieval } from '@/lib/funnel/client';
 
 export const PaperHistory = memo(function PaperHistory({ desk, embedded = false }: { desk: ReturnType<typeof useTradingDesk>; embedded?: boolean }) {
   const { records, focusedRecordId, openRecord, removeRecord } = desk;
@@ -28,7 +29,7 @@ export const PaperHistory = memo(function PaperHistory({ desk, embedded = false 
           <h3>{entry.symbol} · {entry.action}</h3>
           <p>{entry.exchange}</p>
         </div>
-        {!embedded && <button type="button" onClick={() => openRecord(record.id)}>Open this record</button>}
+        {!embedded && <button type="button" onClick={() => { countRetrieval(desk.deskId, 'ledger'); openRecord(record.id); }}>Open this record</button>}
         <details><summary>Record details</summary>
           <p>{record.quote.assumptions}</p>
           <p>Quoted {new Date(record.quote.quotedAt).toLocaleString()} · Recorded {new Date(record.createdAt).toLocaleString()}</p>

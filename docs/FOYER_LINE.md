@@ -1,6 +1,6 @@
 # The Foyer Is the Line
 
-**Date:** 2026-09-24 · **Status:** Phases 0–2 and 4 shipped on `main` for the Stocklana submission (copy truth, turret, board, desks/answers/footer/handset). Phase 3 waits on an accepted real recording; Phase 5 waits on a real event source · **Owner:** product lead
+**Date:** 2026-09-24 · **Status:** Phases 0–2 and 4 shipped on `main` for the Stocklana submission (copy truth, turret, board, desks/answers/footer/handset). Phase 3 waits on an accepted real recording; Phase 5 funnel source is in (docs/FUNNEL_METRICS.md); the pulse still waits on real counters · **Owner:** product lead
 **Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3).
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
@@ -157,7 +157,7 @@ Material and type follow Product Direction → Art direction (deep green/ink, br
 
 ## 8. How we know it works
 
-Establish baselines first; do not invent targets (Product Direction → evaluation).
+Establish baselines first; do not invent targets (Product Direction → evaluation). Event source, fields and retention: docs/FUNNEL_METRICS.md.
 
 - Time to first instruction (spoken or typed) on a first visit
 - Share of instructions spoken versus typed, and the mic-denied rate

@@ -59,6 +59,7 @@ export function proxy(request: NextRequest) {
     '/api/hetty/transcript',
     '/api/desk/jesse/voice-agent/token',
     '/api/paper',
+    '/api/funnel',
     '/api/eligibility',
     '/api/webhooks/elevenlabs',
   ].some(path => route === path || route.startsWith(`${path}/`));

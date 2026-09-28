@@ -15,6 +15,15 @@ import { useJesseDesk } from '@/lib/solana/useJesseDesk';
 import { useDeskEntry } from './useDeskEntry';
 import { useDeskSession } from './useDeskSession';
 import { useDeskDocuments } from './useDeskDocuments';
+import { trackFunnel, trackVisit } from '@/lib/funnel/client';
+import { isFunnelDesk } from '@/lib/funnel/events';
+
+/** Funnel: a desk was entered, and whether it came with a carried instruction or record. */
+function countEntry(id: HouseDeskId, via: 'foyer' | 'link' | 'returning' | 'switch', carried: boolean, recordId: string | null, recordVia: 'foyer' | 'link') {
+  if (!isFunnelDesk(id)) return;
+  trackFunnel({ event: 'desk_entered', desk: id, via, carried });
+  if (recordId) trackFunnel({ event: 'record_retrieved', desk: id, via: recordVia });
+}
 
 export type { HouseEntryPhase } from './useDeskEntry';
 
@@ -111,6 +120,7 @@ export function useTradingDesk() {
       parseEntryIntent(params.get('side'), params.get('amount')),
       parseRecordQuery(params.get('record')),
     );
+    trackVisit(resolved.kind);
     if (resolved.kind === 'foyer') {
       clearEntry();
       showPhase('foyer');
@@ -118,6 +128,13 @@ export function useTradingDesk() {
       return abortInFlight;
     }
     hydrateDesk(resolved.deskId, resolved.offeringId, resolved.intent, resolved.recordId);
+    countEntry(
+      resolved.deskId,
+      resolved.source === 'query' ? 'link' : 'returning',
+      Boolean(resolved.offeringId || resolved.intent),
+      resolved.recordId,
+      'link',
+    );
     if (resolved.source === 'query' || !loadLastDesk(window.localStorage)) {
       saveLastDesk(window.localStorage, resolved.deskId);
     }
@@ -160,6 +177,7 @@ export function useTradingDesk() {
     abortInFlight();
     resetSessions();
     hydrateDesk(id, selectedOfferingId, selectedRecord ? null : intent, selectedRecord);
+    countEntry(id, 'foyer', Boolean(selectedOfferingId || (!selectedRecord && (intent?.side || intent?.amount))), selectedRecord, 'foyer');
     saveLastDesk(window.localStorage, id);
     syncDeskQuery(id, selectedOfferingId, 'push', selectedRecord ? null : intent ?? null, selectedRecord);
     showPhase('desk');
@@ -195,6 +213,7 @@ export function useTradingDesk() {
     } catch { /* An unreachable guard violation must not crash the desk switch; the destination starts fresh. */ }
     setDesk(entered.deskId);
     restoreDocuments(entered.deskId, entered);
+    countEntry(entered.deskId, 'switch', false, null, 'foyer');
     saveLastDesk(window.localStorage, entered.deskId);
     syncDeskQuery(entered.deskId, null, 'replace', null, null);
     clearEntry();

@@ -25,6 +25,7 @@ import {
 } from './controller';
 import { jesseForeground, type JesseForeground } from './desk-documents';
 import { createJesseComparePort, createJesseQuotePort } from './desk-ports';
+import { trackFunnel } from '../funnel/client';
 import {
   deleteJessePaperRecord,
   loadJessePaperRecords,
@@ -211,7 +212,11 @@ export function createJesseDeskSession(opts: {
       try {
         const result = await controller.applyJesseCommand(command, expected());
         lastResult = result;
+        if (command.type === 'draft' && command.quote && result.status === 'applied' && result.quoteId) {
+          trackFunnel({ event: 'estimate_returned', desk: 'jesse', outcome: 'quoted' });
+        }
         if (command.type === 'file-paper' && result.status === 'applied' && result.quoteId) {
+          trackFunnel({ event: 'record_filed', desk: 'jesse' });
           viewedRecordId = result.quoteId;
           reloadRecords();
         } else {
@@ -331,9 +336,21 @@ export function createJesseDeskSession(opts: {
 
 export type JesseDeskSession = ReturnType<typeof createJesseDeskSession>;
 
+/** Funnel: a venue that did not answer is an unavailable estimate. Quoted
+ *  estimates are counted in run(), once the controller accepts them. */
+function countUnavailable(port: JesseControllerPorts['quote']): JesseControllerPorts['quote'] {
+  return async intent => {
+    try { return await port(intent); }
+    catch (error) {
+      trackFunnel({ event: 'estimate_returned', desk: 'jesse', outcome: 'unavailable' });
+      throw error;
+    }
+  };
+}
+
 export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
   const portsRef = useRef<JesseControllerPorts>({
-    quote: ports?.quote ?? createJesseQuotePort(),
+    quote: countUnavailable(ports?.quote ?? createJesseQuotePort()),
     compare: ports?.compare ?? createJesseComparePort(),
     formatSpoken: ports?.formatSpoken,
   });
