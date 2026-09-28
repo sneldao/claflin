@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { compactPaperEntry, formatRecordedTime, groupRecordsByDay, ledgerPreview } from '@/lib/trading/desk-documents';
 import { downloadLedger, downloadLiveJournal, type LedgerFormat } from '@/lib/trading/ledger-export';
@@ -8,6 +8,8 @@ import { compactLiveEntry, type LiveJournalEntry } from '@/lib/trading/live-jour
 import { loadDeskSlips, type DeskSlip } from '@/lib/trading/desk-slips';
 import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { PaperHistory } from './PaperHistory';
+import { PaperTally } from './PaperTally';
+import { baseFill, safeFills, tallyPaper } from '@/lib/desk/paper-tally';
 import styles from './WorkingDesk.module.css';
 import { countRetrieval } from '@/lib/funnel/client';
 
@@ -27,6 +29,7 @@ export const PaperLedger = memo(function PaperLedger({
   const { deskId, records, historyReady, storageError, loadHistory, focusedRecordId, openRecord, foreground } = desk;
   const [exportNote, setExportNote] = useState<string | null>(null);
   const [slips, setSlips] = useState<DeskSlip[]>([]);
+  const tally = useMemo(() => tallyPaper(safeFills(records, baseFill)), [records]);
   const takeCopy = (format: LedgerFormat) => {
     const ok = downloadLedger(records, format);
     setExportNote(ok ? 'A paper copy is in your downloads.' : 'The copy could not be made here.');
@@ -189,6 +192,7 @@ export const PaperLedger = memo(function PaperLedger({
         </div>
       )}
       {historyReady && older > 0 && <p className={styles.ledgerMore}>{older} older paper in the archive</p>}
+      {historyReady && <PaperTally rows={tally} place="in this browser" />}
       {exportNote && <p role="status" className={styles.ledgerMore}>{exportNote}</p>}
       {historyReady && records.length > 0 && (
         <details className={styles.ledgerArchive}>

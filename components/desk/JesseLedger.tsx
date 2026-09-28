@@ -1,18 +1,21 @@
 'use client';
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import { compactJesseEntry, groupJesseRecordsByDay } from '@/lib/solana/desk-documents';
 import { downloadJesseLedger, type JesseLedgerFormat } from '@/lib/solana/ledger-export';
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
 import { loadDeskSlips, type DeskSlip } from '@/lib/trading/desk-slips';
 import styles from './WorkingDesk.module.css';
+import { PaperTally } from './PaperTally';
+import { jesseFill, safeFills, tallyPaper } from '@/lib/desk/paper-tally';
 import { countRetrieval } from '@/lib/funnel/client';
 
 export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDesk }) {
   const { records, historyReady, storageError, viewedRecordId, openRecord, removeRecord, foreground } = jesse;
   const [exportNote, setExportNote] = useState<string | null>(null);
   const [slips, setSlips] = useState<DeskSlip[]>([]);
+  const tally = useMemo(() => tallyPaper(safeFills(records, jesseFill)), [records]);
   const justFiledId = foreground.kind === 'receipt' ? foreground.recordId : null;
 
   useEffect(() => {
@@ -111,6 +114,7 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
           </ul>
         </details>
       )}
+      {historyReady && <PaperTally rows={tally} place="in this browser" />}
       {slips.length > 0 && (
         <div className={styles.deskSlips}>
           <p className={styles.eyebrow}>DESK SLIPS</p>

@@ -73,6 +73,12 @@ test.describe('house journey', () => {
     const kept = await page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).length, PAPER_PREFIX);
     expect(kept).toBe(1);
 
+    // The ledger adds it up per instrument — labelled as paper, not a holding.
+    const tally = page.locator('[data-paper-tally="true"]');
+    await tally.locator('summary', { hasText: 'Paper tally · 1 instrument' }).click();
+    await expect(tally.getByRole('rowheader', { name: 'AAPLc' })).toBeVisible();
+    await expect(tally.getByText(/not wallet holdings/)).toBeVisible();
+
     // Return to the house: the foyer remembers the last filing.
     await page.getByRole('link', { name: 'Claflin home' }).first().click();
     await expect(page.getByRole('textbox', { name: 'Instruction for the house' })).toBeVisible();
