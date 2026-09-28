@@ -1577,3 +1577,13 @@
     margin-right: 10px;
   }
 }
+
+/* Forced colors: lamps are the turret's state, so draw them in system
+   colours instead of letting the UA erase the fill. Lamp words still
+   carry the same state in text. */
+@media (forced-colors: active) {
+  .keyLamp, .talkLamp { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .lineKey[data-lamp='match'] .keyLamp,
+  .talkButton[aria-pressed='true'] .talkLamp { background: Highlight; border-color: Highlight; }
+  .lineKey[data-lamp='match'] { outline: 2px solid Highlight; outline-offset: 2px; }
+}

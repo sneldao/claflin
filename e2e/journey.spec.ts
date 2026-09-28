@@ -92,6 +92,9 @@ test.describe('house journey', () => {
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
     await hettyLine(page).getByRole('link', { name: 'Type instead' }).click();
     await expect(page).toHaveURL(/desk=hetty/);
+    /* Both views are reachable from the first visit, including from
+       Compact on a phone (reduced motion lands here in Compact). */
+    await expect(page.getByRole('group', { name: 'Desk presentation' }).getByRole('button', { name: 'Room' })).toBeVisible();
     await page.getByRole('button', { name: 'Price it' }).first().click();
     await page.getByRole('button', { name: 'File paper record' }).first().click();
     await expect(page.getByText(FILED).first()).toBeVisible();

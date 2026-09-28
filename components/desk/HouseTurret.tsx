@@ -36,6 +36,8 @@ export interface HouseTurretProps {
 
 /** A typed instruction counts once the caller stops typing for this long. */
 const TYPED_SETTLE_MS = 1500;
+/** Space held at least this long opens the line; a shorter tap scrolls the page. */
+export const SPACE_HOLD_MS = 250;
 
 /**
  * The house turret — one line into the house (hold to talk, or type), and a
@@ -104,33 +106,59 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
     void stopRecording();
   };
 
-  /* Space is the house line anywhere it is not already typing or pressing
-     something. Held = talking; released = sent. */
+  /* Space is the house line while the talk bar is on screen and focus is not
+     already typing or pressing something. Held = talking; released = sent.
+     A quick tap is still a page scroll: the mic opens only once Space has
+     been held past SPACE_HOLD_MS, and a shorter press scrolls exactly as the
+     browser would. Once the talk bar has scrolled away, Space is left to the
+     browser entirely — the docked handset stays a pointer/focus control. */
+  const lineRef = useRef({ begin, release, barAway });
+  useEffect(() => { lineRef.current = { begin, release, barAway }; });
   useEffect(() => {
     const ownsSpace = (target: EventTarget | null) => (target as HTMLElement | null)?.closest?.(OWNS_SPACE);
+    let pending: ReturnType<typeof setTimeout> | null = null;
+    let pressed = false;
     const down = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (ownsSpace(event.target)) return;
+      if (event.code !== 'Space' || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (ownsSpace(event.target) || lineRef.current.barAway) return;
       event.preventDefault();
-      begin();
+      if (event.repeat || pressed) return;
+      pressed = true;
+      pending = setTimeout(() => {
+        pending = null;
+        lineRef.current.begin();
+      }, SPACE_HOLD_MS);
     };
     const up = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || !holding.current) return;
+      if (event.code !== 'Space' || !pressed) return;
+      pressed = false;
       event.preventDefault();
+      if (pending) {
+        /* A tap, not a hold: do what Space does on a page. */
+        clearTimeout(pending);
+        pending = null;
+        window.scrollBy?.({ top: (event.shiftKey ? -1 : 1) * window.innerHeight * 0.85, behavior: 'auto' });
+        return;
+      }
       spaceReleased.current = true;
       setTimeout(() => { spaceReleased.current = false; }, 0);
-      release();
+      lineRef.current.release();
     };
-    const blur = () => release();
+    const blur = () => {
+      pressed = false;
+      if (pending) { clearTimeout(pending); pending = null; }
+      lineRef.current.release();
+    };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     window.addEventListener('blur', blur);
     return () => {
+      if (pending) clearTimeout(pending);
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
       window.removeEventListener('blur', blur);
     };
-  });
+  }, []);
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;

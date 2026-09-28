@@ -127,6 +127,27 @@ describe('house turret (component)', () => {
     assert.equal(micCalls, 0);
   });
 
+  it('a quick tap of Space scrolls the page and never asks for the mic', async () => {
+    await mount();
+    const scrolls: number[] = [];
+    const original = window.scrollBy;
+    (window as any).scrollBy = (options: ScrollToOptions) => { scrolls.push(options.top ?? 0); };
+    try {
+      await act(async () => {
+        window.dispatchEvent(new (window as any).KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
+        window.dispatchEvent(new (window as any).KeyboardEvent('keyup', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
+        window.dispatchEvent(new (window as any).KeyboardEvent('keydown', { code: 'Space', key: ' ', shiftKey: true, bubbles: true, cancelable: true }));
+        window.dispatchEvent(new (window as any).KeyboardEvent('keyup', { code: 'Space', key: ' ', shiftKey: true, bubbles: true, cancelable: true }));
+        await new Promise(resolve => setTimeout(resolve, 300));
+      });
+      assert.equal(micCalls, 0, 'a tap is a scroll, not a call');
+      assert.equal(scrolls.length, 2);
+      assert.ok(scrolls[0]! > 0 && scrolls[1]! < 0, 'Space pages down, Shift+Space pages up');
+    } finally {
+      (window as any).scrollBy = original;
+    }
+  });
+
   it('a release before the mic arrives still ends the hold — never stuck listening', async () => {
     let grant: (stream: unknown) => void = () => {};
     const track = { stop: () => {}, addEventListener: () => {} };
@@ -149,7 +170,8 @@ describe('house turret (component)', () => {
       await mount();
       const down = () => window.dispatchEvent(new (window as any).KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
       const up = () => window.dispatchEvent(new (window as any).KeyboardEvent('keyup', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
-      await act(async () => { down(); });
+      /* Held past the tap threshold, then let go before the mic arrives. */
+      await act(async () => { down(); await new Promise(resolve => setTimeout(resolve, 300)); });
       await act(async () => { up(); });
       await act(async () => {
         grant({ getTracks: () => [track], getAudioTracks: () => [track] });
@@ -167,7 +189,7 @@ describe('house turret (component)', () => {
     await mount();
     await act(async () => {
       window.dispatchEvent(new (window as any).KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 300));
     });
     assert.equal(micCalls, 1);
     const page = getRootElement().textContent ?? '';

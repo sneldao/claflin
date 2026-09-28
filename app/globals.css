@@ -40,3 +40,12 @@ section[id], div[id] { scroll-margin-top: 24px; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Windows High Contrast / forced colors: the house signals state with
+   fills and glows, which the UA removes. Put state back as system-colour
+   outlines so pressed toggles, the current record and focus stay visible. */
+@media (forced-colors: active) {
+  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
+  button[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  [aria-current="true"], [aria-current="page"] { outline: 1px solid Highlight; }
+}

@@ -1481,16 +1481,23 @@
 .shareFeedback { color: var(--desk-paper-muted); font-size: 11px; line-height: 1.6; }
 
 /* ————— Live execution on the slip ————— */
-.liveBox { margin: 14px 0 6px; padding: 14px 16px 8px; border: 1px solid var(--desk-brass-dim); }
+/* The live box carries the consent to move real money. Its inks are paper
+   inks, so it brings its own paper instead of inheriting whatever sits
+   behind the slip (on the dark room, paper-muted fell to 2.46:1). On
+   --desk-paper: ink 9.58:1, muted 4.87:1, eyebrow #6b5a35 5.03:1. */
+.liveBox { margin: 14px 0 6px; padding: 14px 16px 8px; border: 1px solid var(--desk-brass-dim); background: var(--desk-paper); color: var(--desk-paper-ink); }
+.liveBox .eyebrow { color: #6b5a35; }
 .liveBox[data-outcome="filled"] { border: 2px solid #5f7d5b; }
-.liveBox[data-outcome="failed"] { border-color: #c98f7a; }
-.liveTitle { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 10px !important; color: var(--desk-paper-ink); font: 9px/1.4 var(--font-mono), monospace; letter-spacing: .14em; }
-.liveTitle > span { color: var(--desk-paper-muted); letter-spacing: .06em; text-align: right; }
+.liveBox[data-outcome="failed"] { border: 2px solid var(--desk-error); }
+.liveTitle { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 10px !important; color: var(--desk-paper-ink); font: 10px/1.4 var(--font-mono), monospace; letter-spacing: .14em; }
+.liveTitle > span { color: var(--desk-paper-ink); font-weight: 600; letter-spacing: .06em; text-align: right; }
 .liveRow { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
 .liveRow .amountChips { margin: 0; }
-.liveRowLabel { color: var(--desk-paper-muted); font-size: 11px; }
-.liveMeta { margin: 10px 0 0 !important; color: var(--desk-paper-muted); font-size: 10px; line-height: 1.6; }
-.liveMeta code { font-size: 10px; overflow-wrap: anywhere; }
+.liveRowLabel { color: var(--desk-paper-ink); font-size: 12px; }
+.liveMeta { margin: 10px 0 0 !important; color: var(--desk-paper-muted); font-size: 12px; line-height: 1.6; }
+/* The sentence that says real funds move — full ink, never the quiet line. */
+.liveConsent { margin: 10px 0 0 !important; color: var(--desk-paper-ink); font-size: 13px; font-weight: 600; line-height: 1.5; }
+.liveMeta code { font-size: 11px; overflow-wrap: anywhere; }
 .liveMeta a { color: var(--desk-paper-ink); }
 .liveBox .primary { margin-top: 12px; }
 .liveBox .secondary { font-size: 11px; }

@@ -157,7 +157,7 @@ export const JesseTicket = memo(function JesseTicket({
   }
 
   if (foreground.kind === 'archive' || foreground.kind === 'receipt') {
-    const record = jesse.records.find(r => r.id === (foreground.kind === 'receipt' ? foreground.recordId : foreground.recordId));
+    const record = jesse.records.find(r => r.id === foreground.recordId);
     const q = record?.quote ?? state.quote;
     const receiptInstrument = record?.instrumentSnapshot
       ?? (q ? SOLANA_INSTRUMENTS.find(s => s.id === q.intent.instrumentId) : null)
@@ -279,7 +279,7 @@ export const JesseTicket = memo(function JesseTicket({
                 {' '}Live execution on Solana
               </label>
               {liveMode && (
-                <p className={styles.liveMeta}>
+                <p className={styles.liveConsent}>
                   Real USDC and xStock move when you sign. Paper filing stays available.
                 </p>
               )}
@@ -496,7 +496,7 @@ function DraftForm({
               {' '}Live execution on Solana
             </label>
             {liveMode && (
-              <p className={styles.liveMeta}>
+              <p className={styles.liveConsent}>
                 Real Jupiter settlement on Solana after signing. Paper stays available.
               </p>
             )}
