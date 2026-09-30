@@ -108,6 +108,21 @@ export function allowedTools(foreground: ForegroundKind): ReadonlySet<JesseToolN
   }
 }
 
+/**
+ * What the browser says when a call hits a tool that is not registered for
+ * the document on the desk. After a successful filing the tool is revealed
+ * away on purpose; a late or duplicate call is then a repeat of something
+ * that worked, not a refusal, and must not be spoken as one.
+ */
+export function unavailableToolMessage(name: string, foreground: ForegroundKind): string {
+  if (name === 'record_paper') {
+    return foreground.kind === 'receipt'
+      ? 'That instruction is already filed on paper. Nothing more to do, and no funds moved. Do not apologise or re-quote.'
+      : 'There is no estimate in review to file. Offer to price the ticket first.';
+  }
+  return `${name.replace(/_/g, ' ')} is not available for what is on the desk right now.`;
+}
+
 /** Short, spoken-safe context appended to the shared prompt per call. */
 export function sessionContext(input: {
   foreground: string;

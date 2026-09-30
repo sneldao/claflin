@@ -3,6 +3,7 @@
  * Policy lives here so the call surface cannot forget archive/missing guards
  * or invent Solana catalog aliases.
  */
+import { spokenAmount } from '../solana/controller';
 import { SOLANA_INSTRUMENTS } from '../solana/catalog';
 import type { JesseDeskState } from '../solana/controller';
 import type { JesseForeground } from '../solana/desk-documents';
@@ -161,14 +162,14 @@ export function describeJesseDesk(
     if (record) {
       const q = record.quote;
       parts.push(
-        `The ticket is showing a filed paper record, read-only: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${q.outputAmount} ${q.outputSymbol}. Return to the instruction to quote or file.`,
+        `The ticket is showing a filed paper record, read-only: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${spokenAmount(q.outputAmount)} ${q.outputSymbol}. Return to the instruction to quote or file.`,
       );
     } else {
       parts.push(RECORD_MISSING);
     }
   } else if (foreground.kind === 'receipt' && state.quote) {
     const q = state.quote;
-    parts.push(`The current instruction is filed: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${q.outputAmount} ${q.outputSymbol}.`);
+    parts.push(`The current instruction is filed: ${q.intent.side} ${q.inputAmount} ${q.inputSymbol} for ${spokenAmount(q.outputAmount)} ${q.outputSymbol}.`);
   } else {
     const draft = state.draft;
     parts.push(draft.instrumentId ? `Instrument: ${jesseSymbol(draft.instrumentId)}.` : 'No instrument chosen.');
@@ -181,7 +182,7 @@ export function describeJesseDesk(
     }
     if (foreground.kind === 'quotation' && state.quote) {
       const q = state.quote;
-      parts.push(`Estimate under review: spend ${q.inputAmount} ${q.inputSymbol}, receive ${q.outputAmount} ${q.outputSymbol}, Jupiter Metis.`);
+      parts.push(`Estimate under review: spend ${q.inputAmount} ${q.inputSymbol}, receive ${spokenAmount(q.outputAmount)} ${q.outputSymbol}, Jupiter Metis.`);
     }
     if (foreground.kind === 'pending') parts.push('A Jupiter estimate is on its way.');
     if (state.comparison) {
@@ -196,7 +197,7 @@ export function describeJesseDesk(
 export function appliedJesseTicketLine(state: JesseDeskState, foreground: JesseForeground): string | null {
   if (foreground.kind === 'quotation' && state.quote) {
     const q = state.quote;
-    return `On the ticket: spend ${q.inputAmount} ${q.inputSymbol}, receive ${q.outputAmount} ${q.outputSymbol} (Jupiter · Metis · paper).`;
+    return `On the ticket: spend ${q.inputAmount} ${q.inputSymbol}, receive ${spokenAmount(q.outputAmount)} ${q.outputSymbol} (Jupiter · Metis · paper).`;
   }
   const d = state.draft;
   if (!d.instrumentId && !d.side && !d.amount) return null;

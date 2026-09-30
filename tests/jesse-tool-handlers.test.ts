@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createJesseDeskSession, type JesseDesk } from '../lib/solana/useJesseDesk.ts';
 import { jesseForeground } from '../lib/solana/desk-documents.ts';
 import { jesseToolHandlers } from '../lib/jesse/desk-tools.ts';
+import { unavailableToolMessage } from '../lib/jesse/assemblyai-agent.ts';
+import { spokenAmount } from '../lib/solana/controller.ts';
 import { SOLANA_INSTRUMENTS } from '../lib/solana/catalog.ts';
 import { COMPARISON_UNAVAILABLE_FIXTURE } from '../lib/solana/fixtures.ts';
 import type { JesseIntent, MarketComparison, SolanaPaperEstimate } from '../lib/solana/contracts.ts';
@@ -67,12 +69,12 @@ function estimate(overrides: Partial<SolanaPaperEstimate> = {}): SolanaPaperEsti
 
 /** A desk whose render snapshot never advances — the browser before React
  *  re-renders between tool calls. Methods still act on the live controller. */
-function laggingDesk() {
+function laggingDesk(outputAmount?: string) {
   const session = createJesseDeskSession({
     storage: memoryStorage(),
     now: () => T0,
     ports: {
-      quote: async () => estimate(),
+      quote: async () => estimate(outputAmount ? { outputAmount } : {}),
       compare: async () => COMPARISON_UNAVAILABLE_FIXTURE as MarketComparison,
     },
   });
@@ -140,5 +142,46 @@ describe('jesse tool handlers with a lagging snapshot', () => {
     const spoken = await handlers.request_estimate({});
     assert.notEqual(session.getSnapshot().state.stage, 'review');
     assert.ok(spoken.length > 0);
+  });
+});
+
+describe('spoken amounts', () => {
+  it('rounds long token decimals to something a voice can read', () => {
+    assert.equal(spokenAmount('0.0873111311615924929009'), '0.08731');
+    assert.equal(spokenAmount('123.456789'), '123.5');
+    assert.equal(spokenAmount('20'), '20');
+    assert.equal(spokenAmount('0.5'), '0.5');
+    assert.equal(spokenAmount('100.000'), '100');
+  });
+
+  it('leaves unparseable and tiny values alone rather than inventing one', () => {
+    assert.equal(spokenAmount('not-a-number'), 'not-a-number');
+    assert.equal(spokenAmount('0'), '0');
+    assert.equal(spokenAmount('0.0000000001234'), '0.0000000001234');
+  });
+
+  it('keeps the stored estimate exact while the spoken line is short', async () => {
+    const long = '0.0873111311615924929009';
+    const long2 = laggingDesk(long);
+    await long2.handlers.choose_instrument({ query: 'Apple' });
+    await long2.handlers.set_instruction({ side: 'buy' });
+    await long2.handlers.set_amount({ amount: '100' });
+    const spoken = await long2.handlers.request_estimate({});
+    assert.ok(!spoken.includes(long), spoken);
+    assert.match(spoken, /0\.08731/);
+    assert.equal(long2.session.getSnapshot().state.quote?.outputAmount, long);
+  });
+});
+
+describe('unavailable tool messages', () => {
+  it('does not refuse a filing that already succeeded', () => {
+    const msg = unavailableToolMessage('record_paper', { kind: 'receipt' });
+    assert.match(msg, /already filed/i);
+    assert.ok(!/no estimate in review/i.test(msg));
+  });
+
+  it('still refuses honestly when nothing is in review', () => {
+    assert.match(unavailableToolMessage('record_paper', { kind: 'draft' }), /no estimate in review/i);
+    assert.match(unavailableToolMessage('watch_mark', { kind: 'pending' }), /not available/i);
   });
 });

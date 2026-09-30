@@ -22,7 +22,7 @@ import {
 } from '@/lib/hetty/discussion';
 import { appliedJesseTicketLine, jesseClosingLine, jesseOpeningLine } from '@/lib/jesse/voice-tools';
 import { jesseToolHandlers } from '@/lib/jesse/desk-tools';
-import { allowedTools, jesseSessionUpdate, jesseToolUpdate, type JesseToolName } from '@/lib/jesse/assemblyai-agent';
+import { allowedTools, jesseSessionUpdate, jesseToolUpdate, unavailableToolMessage, type JesseToolName } from '@/lib/jesse/assemblyai-agent';
 import { AssemblyAiVoiceSession } from '@/lib/jesse/assemblyai-session';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
@@ -165,9 +165,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
         if (!allowed.has(name as JesseToolName)) {
           /* The reveal is re-sent on every change, but a call can race it.
              Refuse here too — the browser is the last word, not the model. */
-          return name === 'record_paper'
-            ? 'There is no estimate in review to file. Offer to price the ticket first.'
-            : `${name.replace(/_/g, ' ')} is not available for what is on the desk right now.`;
+          return unavailableToolMessage(name, jesseRef.current.foreground);
         }
         return handlers[name as JesseToolName](args);
       },

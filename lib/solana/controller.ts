@@ -85,6 +85,16 @@ export interface JesseControllerPorts {
   formatSpoken?(event: SpokenEvent): string;
 }
 
+/** A decimal short enough to read aloud. Token amounts arrive with up to 22
+ *  digits; a voice model mangles those. Spoken text only — never stored. */
+export function spokenAmount(raw: string): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n === 0) return raw;
+  const rounded = n.toPrecision(4);
+  if (rounded.includes('e')) return raw;
+  return rounded.includes('.') ? rounded.replace(/0+$/, '').replace(/\.$/, '') : rounded;
+}
+
 export function defaultJesseSpoken(event: SpokenEvent): string {
   switch (event.kind) {
     case 'draft': {
@@ -98,7 +108,7 @@ export function defaultJesseSpoken(event: SpokenEvent): string {
     }
     case 'quote-presented': {
       const q = event.quote;
-      return `Paper estimate for ${event.instrument.symbol}: spend ${q.inputAmount} ${q.inputSymbol}, receive about ${q.outputAmount} ${q.outputSymbol}. Review it, then say "file this paper record" to keep it.`;
+      return `Paper estimate for ${event.instrument.symbol}: spend ${q.inputAmount} ${q.inputSymbol}, receive about ${spokenAmount(q.outputAmount)} ${q.outputSymbol}. Review it, then say "file this paper record" to keep it.`;
     }
     case 'quote-failed':
       return `I couldn't get that estimate — ${event.reason}. Nothing was changed.`;
@@ -480,7 +490,7 @@ export function createJesseController(opts: {
     }
     if (state.stage === 'quoting') parts.push('An estimate is on its way.');
     if (state.stage === 'review' && state.quote) {
-      parts.push(`Under review: spend ${state.quote.inputAmount} ${state.quote.inputSymbol}, receive about ${state.quote.outputAmount} ${state.quote.outputSymbol}. Nothing is filed yet.`);
+      parts.push(`Under review: spend ${state.quote.inputAmount} ${state.quote.inputSymbol}, receive about ${spokenAmount(state.quote.outputAmount)} ${state.quote.outputSymbol}. Nothing is filed yet.`);
     }
     if (state.stage === 'saved' && state.quote) parts.push('That instruction was filed as a paper record.');
     if (state.stage === 'cancelled') parts.push('The last estimate was set aside; nothing was filed.');
