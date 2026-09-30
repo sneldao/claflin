@@ -13,6 +13,7 @@
  * billed.
  */
 import { AAI_WIRE_RATE, AAI_WS_URL, ToolResultQueue } from './assemblyai-agent';
+import type { QuoteReadback } from '../desk/contracts';
 
 export type AaiServerEvent = { type: string; [key: string]: unknown };
 
@@ -24,7 +25,27 @@ export interface AaiSessionHandlers {
   onToolCall: (name: string, args: Record<string, unknown>) => Promise<string>;
   onEnded: (reason: 'ended' | 'dropped') => void;
   onError: (message: string) => void;
+  onSpeechStarted?: () => void;
 }
+
+export interface VoiceDiagnosticEntry {
+  event: 'tool_result_sent' | 'agent_transcript' | 'quote_readback';
+  at: number;
+  callId?: string;
+  name?: string;
+  text?: string;
+  quoteId?: string;
+  revision?: number;
+  expiresAt?: number;
+  inputAmount?: string;
+  inputSymbol?: string;
+  outputAmount?: string;
+  outputSymbol?: string;
+  outcome?: string;
+}
+
+export const VOICE_DIAGNOSTICS_LIMIT = 50;
+export const VOICE_DEBUG_WINDOW_KEY = '__jesseVoiceDiagnostics';
 
 /* Capture: float at the device rate → PCM16 at 24 kHz (linear resample). */
 const CAPTURE_WORKLET = `
@@ -128,8 +149,15 @@ export class AssemblyAiVoiceSession {
   private closed = false;
   private endedCleanly = false;
   private queue: ToolResultQueue | null = null;
+  private replyActive = false;
+  private replyWaiters: ((reason: 'idle' | 'abort') => void)[] = [];
+  private dropAgentAudio = false;
+  private readbackGen = 0;
+  private localSpeaking = false;
+  private diag: VoiceDiagnosticEntry[] | null = null;
+  private diagNames = new Map<string, string>();
 
-  constructor(private readonly handlers: AaiSessionHandlers) {}
+  constructor(private readonly handlers: AaiSessionHandlers, private readonly opts: { debug?: boolean } = {}) {}
 
   /** Must be called from a user gesture (Safari gates audio on it). */
   async start(token: string, firstUpdate: object): Promise<void> {
@@ -152,7 +180,25 @@ export class AssemblyAiVoiceSession {
     url.searchParams.set('token', token);
     const ws = new WebSocket(url);
     this.ws = ws;
-    this.queue = new ToolResultQueue(message => { if (ws.readyState === WebSocket.OPEN) ws.send(message); });
+    this.replyActive = false;
+    this.replyWaiters = [];
+    this.dropAgentAudio = false;
+    this.diagNames = new Map();
+    if (this.opts.debug && typeof window !== 'undefined') {
+      this.diag = [];
+      (window as unknown as Record<string, unknown>)[VOICE_DEBUG_WINDOW_KEY] = this.diag;
+    }
+    this.queue = new ToolResultQueue(message => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+        if (this.diag) {
+          let callId: string | undefined;
+          try { callId = (JSON.parse(message) as { call_id?: string }).call_id; } catch { callId = undefined; }
+          this.recordDiag({ event: 'tool_result_sent', at: Date.now(), callId, name: callId ? this.diagNames.get(callId) : undefined, text: message });
+          if (callId) this.diagNames.delete(callId);
+        }
+      }
+    });
 
     capture.port.onmessage = ({ data }: MessageEvent<ArrayBuffer>) => {
       if (!this.ready || this.muted || ws.readyState !== WebSocket.OPEN) return;
@@ -189,7 +235,91 @@ export class AssemblyAiVoiceSession {
     }
     this.playback?.port.postMessage('stop');
     this.stopAudio();
+    this.releaseWaiters('abort');
+    this.readbackGen += 1;
+    this.dropAgentAudio = false;
+    this.localSpeaking = false;
+    this.clearDiag();
     if (!ws) this.handlers.onEnded('ended');
+  }
+
+  getDiagnostics(): readonly VoiceDiagnosticEntry[] {
+    return this.diag ?? [];
+  }
+
+  get isLocalSpeaking(): boolean {
+    return this.localSpeaking;
+  }
+
+  recordReadbackDiagnostic(payload: QuoteReadback, text: string | null, outcome: string): void {
+    if (!this.diag) return;
+    this.recordDiag({
+      event: 'quote_readback',
+      at: Date.now(),
+      quoteId: payload.quoteId,
+      revision: payload.revision,
+      expiresAt: payload.expiresAt,
+      inputAmount: payload.inputAmount,
+      inputSymbol: payload.inputSymbol,
+      outputAmount: payload.outputAmount,
+      outputSymbol: payload.outputSymbol,
+      text: text ?? undefined,
+      outcome,
+    });
+  }
+
+  private recordDiag(entry: VoiceDiagnosticEntry): void {
+    if (!this.diag) return;
+    if (this.diag.length >= VOICE_DIAGNOSTICS_LIMIT) this.diag.shift();
+    this.diag.push(entry);
+  }
+
+  private clearDiag(): void {
+    if (this.diag && typeof window !== 'undefined'
+      && (window as unknown as Record<string, unknown>)[VOICE_DEBUG_WINDOW_KEY] === this.diag) {
+      delete (window as unknown as Record<string, unknown>)[VOICE_DEBUG_WINDOW_KEY];
+    }
+    this.diag = null;
+  }
+
+  private releaseWaiters(reason: 'idle' | 'abort'): void {
+    const waiters = this.replyWaiters;
+    this.replyWaiters = [];
+    for (const resolve of waiters) resolve(reason);
+  }
+
+  stopPlayback(): void {
+    this.playback?.port.postMessage('stop');
+    this.releaseWaiters('abort');
+    this.handlers.onSpeechStarted?.();
+  }
+
+  async runReadback<T extends string>(task: () => Promise<T>): Promise<T | 'cancelled' | 'unavailable'> {
+    const gen = ++this.readbackGen;
+    if (this.closed) return 'cancelled';
+    if (this.replyActive) {
+      let waitResolve: ((reason: 'idle' | 'abort') => void) | null = null;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const waited = new Promise<'idle' | 'abort'>(resolve => { waitResolve = resolve; this.replyWaiters.push(resolve); });
+      const timeout = new Promise<'timeout'>(resolve => { timer = setTimeout(() => resolve('timeout'), 5_000); });
+      const outcome = await Promise.race([waited, timeout]);
+      clearTimeout(timer);
+      if (waitResolve) this.replyWaiters = this.replyWaiters.filter(w => w !== waitResolve);
+      if (outcome === 'timeout') return 'unavailable';
+      if (outcome === 'abort' || this.closed) return 'cancelled';
+    }
+    if (gen !== this.readbackGen || this.closed) return 'cancelled';
+    this.playback?.port.postMessage('stop');
+    this.dropAgentAudio = true;
+    this.localSpeaking = true;
+    try {
+      return await task();
+    } finally {
+      if (gen === this.readbackGen) {
+        this.dropAgentAudio = false;
+        this.localSpeaking = false;
+      }
+    }
   }
 
   private async handle(event: AaiServerEvent): Promise<void> {
@@ -203,19 +333,23 @@ export class AssemblyAiVoiceSession {
            blocks tool.result. The agent may be waiting on a result right
            now, and it starts no reply until it gets one — holding here
            deadlocks the call until the tool times out. */
-        this.playback?.port.postMessage('stop');
+        this.stopPlayback();
         return;
       case 'reply.started':
+        this.replyActive = true;
         this.queue?.busy();
         this.handlers.onSpeaking(true);
         return;
       case 'reply.audio':
+        if (this.dropAgentAudio) return;
         if (typeof event.data === 'string') {
           const buffer = fromBase64(event.data);
           this.playback?.port.postMessage(buffer, [buffer]);
         }
         return;
       case 'reply.done':
+        this.replyActive = false;
+        this.releaseWaiters('idle');
         if (event.status === 'interrupted') this.playback?.port.postMessage('stop');
         this.handlers.onSpeaking(false);
         this.queue?.done(typeof event.status === 'string' ? event.status : undefined);
@@ -227,11 +361,15 @@ export class AssemblyAiVoiceSession {
         if (typeof event.text === 'string') this.handlers.onUserTranscript(event.text, true);
         return;
       case 'transcript.agent':
-        if (typeof event.text === 'string') this.handlers.onAgentTranscript(event.text, event.interrupted === true);
+        if (typeof event.text === 'string') {
+          if (this.diag) this.recordDiag({ event: 'agent_transcript', at: Date.now(), text: event.text });
+          if (!this.dropAgentAudio) this.handlers.onAgentTranscript(event.text, event.interrupted === true);
+        }
         return;
       case 'tool.call': {
         const callId = String(event.call_id ?? '');
         const name = String(event.name ?? '');
+        if (this.diag) this.diagNames.set(callId, name);
         const args = (event.arguments && typeof event.arguments === 'object') ? event.arguments as Record<string, unknown> : {};
         try {
           const result = await this.handlers.onToolCall(name, args);
@@ -269,7 +407,13 @@ export class AssemblyAiVoiceSession {
 
   private teardown(): void {
     this.ready = false;
+    this.replyActive = false;
+    this.dropAgentAudio = false;
+    this.localSpeaking = false;
+    this.readbackGen += 1;
+    this.releaseWaiters('abort');
     this.stopAudio();
     this.ws = null;
+    this.clearDiag();
   }
 }

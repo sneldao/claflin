@@ -22,8 +22,30 @@ import {
 } from './voice-tools';
 import type { JesseToolName } from './assemblyai-agent';
 
+import type { QuoteReadback } from '../desk/contracts';
+import type { ReadbackOutcome } from './quote-readback';
+
 export type ToolParams = Record<string, unknown>;
 export type JesseToolHandler = (params: ToolParams) => Promise<string>;
+
+const READBACK_COMPLETED =
+  'The paper estimate is on the slip and its amounts were read aloud. Do not repeat or convert the amounts. Ask whether the caller wants to save this paper record.';
+const READBACK_UNAVAILABLE =
+  'The browser could not read the estimate aloud. Ask the caller to inspect the written amounts on the slip before deciding whether to save. Do not speak or guess the amounts.';
+const READBACK_INTERRUPTED =
+  'The readback was interrupted or the instruction changed. Check the current desk; do not ask to file the previous estimate.';
+const READBACK_EXPIRED =
+  'The estimate expired before its readback completed. Offer a fresh estimate; do not ask to file this one.';
+
+function readbackMessage(outcome: ReadbackOutcome): string {
+  switch (outcome) {
+    case 'completed': return READBACK_COMPLETED;
+    case 'expired': return READBACK_EXPIRED;
+    case 'stale':
+    case 'cancelled': return READBACK_INTERRUPTED;
+    default: return READBACK_UNAVAILABLE;
+  }
+}
 
 export interface JesseToolContext {
   /** The desk as it is right now — read fresh on every call. */
@@ -34,6 +56,7 @@ export interface JesseToolContext {
    *  only by a caller turn that came after it was proposed; a line that
    *  cannot count turns cannot delete by voice. */
   userTurn?: () => number;
+  onQuoteReadback?: (payload: QuoteReadback) => Promise<ReadbackOutcome>;
 }
 
 const DELETE_CONFIRM_WINDOW_MS = 60_000;
@@ -61,7 +84,7 @@ function findEntry(desk: JesseDesk, query: string): Entry | null {
   return entries.find(e => (!instrument || e.symbol === instrument.symbol) && (!side || e.side.toLowerCase() === side)) ?? null;
 }
 
-export function jesseToolHandlers({ desk, markLine, userTurn }: JesseToolContext): Record<JesseToolName, JesseToolHandler> {
+export function jesseToolHandlers({ desk, markLine, userTurn, onQuoteReadback }: JesseToolContext): Record<JesseToolName, JesseToolHandler> {
   const applied = (status: string) => status === 'applied' || status === 'clarify';
   let pendingDelete: { id: string; turn: number; at: number } | null = null;
 
@@ -128,6 +151,9 @@ export function jesseToolHandlers({ desk, markLine, userTurn }: JesseToolContext
          quote that has already landed. */
       const result = await d.quote();
       if (result.status === 'applied' && result.quoteId) {
+        if (result.quoteReadback && onQuoteReadback) {
+          return readbackMessage(await onQuoteReadback(result.quoteReadback));
+        }
         return result.spokenText || 'Estimate on the slip — paper only.';
       }
       return result.spokenText || 'The estimate did not come through. Offer to adjust or retry.';
@@ -227,6 +253,18 @@ export function jesseToolHandlers({ desk, markLine, userTurn }: JesseToolContext
 
     async describe_desk() {
       const d = desk();
+      if (d.foreground.kind === 'quotation' && d.state.quote && onQuoteReadback) {
+        const q = d.state.quote;
+        return readbackMessage(await onQuoteReadback({
+          quoteId: q.id,
+          revision: d.state.revision,
+          expiresAt: q.expiresAt,
+          inputAmount: q.inputAmount,
+          inputSymbol: q.inputSymbol,
+          outputAmount: q.outputAmount,
+          outputSymbol: q.outputSymbol,
+        }));
+      }
       return describeJesseDesk(d.state, d.foreground, d.records);
     },
 

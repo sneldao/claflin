@@ -48,6 +48,7 @@ export type JesseDraftEdit = Partial<JesseDraft> | ((current: JesseDraft) => Par
  *  (a serialized command controller) differs; the lifecycle does not. */
 export interface JesseDesk extends DeskDocumentSession {
   state: JesseDeskState;
+  getCurrentState: () => Readonly<JesseDeskState>;
   inFlight: JesseInFlight;
   lastResult: CommandResult | null;
   records: JessePaperRecord[];
@@ -351,6 +352,7 @@ export function createJesseDeskSession(opts: {
     setPresentationMode,
     reloadRecords,
     dispose,
+    getCurrentState: () => controller.getState(),
   };
 }
 
@@ -457,8 +459,11 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     return session.setPresentationMode(mode);
   }, [session]);
 
+  const getCurrentState = useCallback((): Readonly<JesseDeskState> => session?.getSnapshot().state ?? SSR_STATE, [session]);
+
   return useMemo((): JesseDesk => ({
     state: snapshot.state,
+    getCurrentState,
     inFlight: snapshot.inFlight,
     lastResult: snapshot.lastResult,
     records: snapshot.records,
@@ -477,5 +482,5 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     removeRecord,
     setPresentationMode,
     run,
-  }), [snapshot, foreground, edit, quote, compare, file, cancel, watch, openRecord, dismissRecord, removeRecord, setPresentationMode, run]);
+  }), [snapshot, foreground, getCurrentState, edit, quote, compare, file, cancel, watch, openRecord, dismissRecord, removeRecord, setPresentationMode, run]);
 }

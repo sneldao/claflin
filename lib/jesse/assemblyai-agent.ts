@@ -145,6 +145,7 @@ export function sessionContext(input: {
     `- desk_mode: paper. desk_foreground: ${input.foreground}. desk_stage: ${input.stage}. desk_instrument: ${input.instrument || 'none'}.`,
     '- Only the tools you can see exist right now. If filing is not available, there is no quotation in review — say so and offer an estimate.',
     '- Speak in short sentences for a voice call. No lists, no markdown, no exclamation marks.',
+    '- Quote amounts are read aloud by the browser, not by you. Never restate, calculate, convert, or guess the estimated received amount. After the browser readback, ask briefly whether the caller wants to save the paper record.',
   ];
   if (input.priorDiscussion) {
     lines.push(`- discussion_resume: yes. prior_discussion: ${input.priorDiscussion}`);

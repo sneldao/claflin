@@ -168,12 +168,23 @@ export interface DeskRevision<TDeskId extends string = string> {
   sessionGeneration: number;
 }
 
+export interface QuoteReadback {
+  quoteId: string;
+  revision: number;
+  expiresAt: number;
+  inputAmount: string;
+  inputSymbol: string;
+  outputAmount: string;
+  outputSymbol: string;
+}
+
 export type CommandResult = {
   status: 'applied' | 'clarify' | 'rejected' | 'stale';
   revision: number;
   quoteId: string | null;
   evidenceId: string | null;
   spokenText: string;
+  quoteReadback?: QuoteReadback;
 };
 
 export type DeskForegroundKind = 'draft' | 'pending' | 'quotation' | 'receipt' | 'archive' | 'missing';

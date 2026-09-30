@@ -410,7 +410,18 @@ export function createJesseController(opts: {
     state.stage = 'review';
     state.requestRevision = null;
     state.revision += 1;
-    return result('applied', speak({ kind: 'quote-presented', quote, instrument }), { quoteId: quote.id });
+    return {
+      ...result('applied', speak({ kind: 'quote-presented', quote, instrument }), { quoteId: quote.id }),
+      quoteReadback: {
+        quoteId: quote.id,
+        revision: state.revision,
+        expiresAt: quote.expiresAt,
+        inputAmount: quote.inputAmount,
+        inputSymbol: quote.inputSymbol,
+        outputAmount: quote.outputAmount,
+        outputSymbol: quote.outputSymbol,
+      },
+    };
   };
 
   const onClarify = (command: Extract<JesseCommand, { type: 'clarify' }>): CommandResult => {

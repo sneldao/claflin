@@ -23,6 +23,8 @@ import { appliedJesseTicketLine, jesseClosingLine, jesseOpeningLine } from '@/li
 import { jesseToolHandlers } from '@/lib/jesse/desk-tools';
 import { allowedTools, jesseSessionUpdate, jesseToolUpdate, unavailableToolMessage, type JesseToolName } from '@/lib/jesse/assemblyai-agent';
 import { AssemblyAiVoiceSession } from '@/lib/jesse/assemblyai-session';
+import { createQuoteReadback, quoteReadbackUtterance, QUOTE_READBACK_FALLBACK } from '@/lib/jesse/quote-readback';
+import type { QuoteReadback } from '@/lib/desk/contracts';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
@@ -84,12 +86,29 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
     });
   }, []);
   const userTurnsRef = useRef(0);
+  const readbackRef = useRef<ReturnType<typeof createQuoteReadback> | null>(null);
+  const addCaption = useCallback((caption: Caption) => setCaptions(prev => appendCaption(prev, caption)), []);
+
   const handlers = useMemo(
-    () => jesseToolHandlers({ desk: () => jesseRef.current, markLine, userTurn: () => userTurnsRef.current }),
+    () => jesseToolHandlers({
+      desk: () => jesseRef.current,
+      markLine,
+      userTurn: () => userTurnsRef.current,
+      onQuoteReadback: async (payload: QuoteReadback) => {
+        const session = sessionRef.current;
+        const readback = readbackRef.current;
+        if (!session || !readback) return 'unavailable';
+        const outcome = await session.runReadback(() => readback.speak(payload));
+        session.recordReadbackDiagnostic(payload, quoteReadbackUtterance(payload), outcome);
+        return outcome;
+      },
+    }),
     [markLine],
   );
 
-  const addCaption = useCallback((caption: Caption) => setCaptions(prev => appendCaption(prev, caption)), []);
+  useEffect(() => {
+    readbackRef.current?.cancelIfStale();
+  }, [jesse.state.revision, jesse.state.quote?.id]);
 
   /* Progressive reveal: whenever the document kind changes mid-call, the
      agent's tool list is replaced to match it. */
@@ -99,6 +118,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
   }, [live, foregroundKind]);
 
   const finish = useCallback((note: string | null, error: string | null = null) => {
+    readbackRef.current?.cancel();
     sessionRef.current = null;
     setStatus('idle');
     setSpeaking(false);
@@ -145,13 +165,30 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       priorDiscussion: resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Jesse') : null,
     });
 
+    const debug = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('voiceDebug') === '1';
+    readbackRef.current?.cancel();
+    readbackRef.current = createQuoteReadback({
+      isCurrent: payload => {
+        const s = jesseRef.current.getCurrentState();
+        return s.revision === payload.revision && s.quote?.id === payload.quoteId && Date.now() < payload.expiresAt;
+      },
+      onStart: text => {
+        addCaption({ role: 'agent', text: text.slice(0, 600), at: Date.now() });
+        callbacks.current.onAgentSpoken?.(text.slice(0, 600));
+      },
+      onFallback: () => {
+        addCaption({ role: 'agent', text: QUOTE_READBACK_FALLBACK, at: Date.now() });
+      },
+    });
+
     let established = false;
     const session = new AssemblyAiVoiceSession({
       onReady: () => { established = true; if (genRef.current === gen) setStatus('live'); },
       onSpeaking: value => setSpeaking(value),
+      onSpeechStarted: () => readbackRef.current?.cancel(),
       onUserTranscript: (text, final) => {
         const clean = text.trim();
-        if (!final) { setHearing(clean || null); return; }
+        if (!final) { readbackRef.current?.cancel(); setHearing(clean || null); return; }
         setHearing(null);
         if (!clean) return;
         userTurnsRef.current += 1;
@@ -182,7 +219,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
         finish(null, message);
         if (!established) callbacks.current.onProviderDown?.();
       },
-    });
+    }, { debug });
     sessionRef.current = session;
     try {
       await session.start(token.data.token, firstUpdate);
@@ -220,7 +257,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
 
   /* Leaving the page ends the session (and its billing) immediately. */
   useEffect(() => {
-    const leave = () => sessionRef.current?.end();
+    const leave = () => { readbackRef.current?.cancel(); sessionRef.current?.end(); };
     const onVisibility = () => { if (document.visibilityState === 'hidden') leave(); };
     window.addEventListener('pagehide', leave);
     document.addEventListener('visibilitychange', onVisibility);

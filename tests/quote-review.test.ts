@@ -10,6 +10,7 @@ import { SOLANA_INSTRUMENTS } from '../lib/solana/catalog';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import type { JesseDesk } from '../lib/solana/useJesseDesk';
+import type { JesseDeskState } from '../lib/solana/controller';
 import type { SolanaPaperEstimate } from '../lib/solana/contracts';
 
 const apple = SOLANA_INSTRUMENTS.find(i => i.symbol === 'AAPLx')!;
@@ -186,7 +187,19 @@ describe('quote review — shared breakdown', () => {
 describe('quote review — ticket wiring', () => {
   function reviewedDesk(quote: SolanaPaperEstimate): JesseDesk {
     const applied = { status: 'applied' as const, revision: 3, quoteId: null, evidenceId: null, spokenText: '' };
+    const state: JesseDeskState = {
+      revision: 2,
+      sessionGeneration: 1,
+      draft: { instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '100' },
+      stage: 'review',
+      quote,
+      presentedInstrument: null,
+      comparison: null,
+      presentation: { mode: 'compact', focus: 'desk', objectId: null },
+      watches: [],
+    };
     return {
+      getCurrentState: () => state,
       foreground: { kind: 'quotation', quoteId: quote.id, recordId: null, instrumentId: apple.id, actionable: true, readonly: false },
       historyReady: true,
       storageError: null,
@@ -194,17 +207,7 @@ describe('quote review — ticket wiring', () => {
       openRecord: () => {},
       dismissRecord: () => {},
       removeRecord: () => {},
-      state: {
-        revision: 2,
-        sessionGeneration: 1,
-        draft: { instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '100' },
-        stage: 'review',
-        quote,
-        presentedInstrument: null,
-        comparison: null,
-        presentation: { mode: 'compact', focus: 'desk', objectId: null },
-        watches: [],
-      },
+      state,
       inFlight: null,
       lastResult: null,
       records: [],
