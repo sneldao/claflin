@@ -190,13 +190,9 @@ export function useDeskDocuments({
     setSideRequired(!explicitSide);
     dispatch({
       type: 'edit',
-      draft: {
-        ...emptyDraft(),
-        instrumentId: partial.instrumentId ?? '',
-        side: explicitSide ?? 'buy',
-        unit: explicitSide === 'sell' ? 'token' : 'USDC',
-        amount: partial.amount ?? '',
-      },
+      draft: explicitSide === 'sell'
+        ? { instrumentId: partial.instrumentId ?? '', side: 'sell', unit: 'token', amount: partial.amount ?? '' }
+        : { instrumentId: partial.instrumentId ?? '', side: 'buy', unit: 'USDC', amount: partial.amount ?? '' },
     });
     return true;
   }, [knownRecords, state, viewedRecordId, requestRef, requestGenRef]);
