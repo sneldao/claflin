@@ -201,7 +201,7 @@ export class ToolResultQueue {
 
   constructor(private readonly send: (message: string) => void) {}
 
-  /** reply.started / input.speech.started — a turn is in flight. */
+  /** reply.started — the agent is speaking a reply. */
   busy(): void { this.idle = false; }
 
   /** reply.done — flush unless the user barged in. */

@@ -205,6 +205,35 @@ describe('Jesse on AssemblyAI — browser session protocol', () => {
     }
   });
 
+  it('delivers a slow tool result that finishes after reply.done, even if the caller has started speaking', async () => {
+    let finish: (value: string) => void = () => undefined;
+    const session = new AssemblyAiVoiceSession({
+      onReady: () => undefined,
+      onUserTranscript: () => undefined,
+      onAgentTranscript: () => undefined,
+      onSpeaking: () => undefined,
+      onToolCall: () => new Promise<string>(resolve => { finish = resolve; }),
+      onEnded: () => undefined,
+      onError: () => undefined,
+    });
+    await session.start('tok_slow', { type: 'session.update', session: {} });
+    const ws = FakeSocket.last!;
+    await new Promise(r => setTimeout(r, 5));
+    ws.emit({ type: 'session.ready', session_id: 's-slow' });
+    ws.emit({ type: 'reply.started', reply_id: 'r1' });
+    ws.emit({ type: 'tool.call', call_id: 'est', name: 'request_estimate', arguments: {} });
+    ws.emit({ type: 'reply.done', reply_id: 'r1', status: 'completed' });
+    /* The agent is now waiting on us. A cough, the caller, or the speaker's
+       own echo opens the mic — no new reply comes until our result does. */
+    ws.emit({ type: 'input.speech.started' });
+    finish('Paper estimate for AAPLx: spend 10 USDC.');
+    await new Promise(r => setTimeout(r, 5));
+    const result = ws.sent.find(m => m.type === 'tool.result');
+    assert.ok(result, 'the result is sent instead of waiting for a reply.done that never comes');
+    assert.equal(result!.call_id, 'est');
+    session.end();
+  });
+
   it('opens with the token, sends the agent, runs tools after reply.done, and ends cleanly', async () => {
     const calls: string[] = [];
     const heard: string[] = [];

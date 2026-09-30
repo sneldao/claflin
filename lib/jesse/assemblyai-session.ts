@@ -199,8 +199,11 @@ export class AssemblyAiVoiceSession {
         this.handlers.onReady();
         return;
       case 'input.speech.started':
+        /* Cut playback, but do not hold results: only an in-flight reply
+           blocks tool.result. The agent may be waiting on a result right
+           now, and it starts no reply until it gets one — holding here
+           deadlocks the call until the tool times out. */
         this.playback?.port.postMessage('stop');
-        this.queue?.busy();
         return;
       case 'reply.started':
         this.queue?.busy();
