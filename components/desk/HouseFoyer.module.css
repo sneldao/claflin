@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px clamp(20px, 4vw, 48px);
+  padding: 10px clamp(20px, 4vw, 48px);
 }
 
 .brand {
@@ -59,6 +59,10 @@
   font-size: 0.56rem;
   letter-spacing: 0.22em;
   color: #d4c4a2;
+}
+
+.graphicsControl {
+  margin-left: auto;
 }
 
 .headerNav {
@@ -258,6 +262,162 @@
   font-size: 0.8rem;
   line-height: 1.6;
   color: var(--muted);
+}
+
+.mobilePromise {
+  display: none;
+}
+
+.matches {
+  margin: 4px 0 0;
+  padding: 16px 18px;
+  background: rgba(12, 24, 20, 0.9);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(197, 172, 120, 0.45);
+  border-radius: 4px;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.5);
+}
+
+.matchesTitle {
+  margin: 0 0 12px;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  color: #f2e8d0;
+}
+
+.matchList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matchItem {
+  padding-top: 14px;
+  border-top: 1px solid rgba(179, 144, 90, 0.16);
+}
+
+.matchItem:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.matchIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.matchName {
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.06rem;
+  color: #eee3ca;
+}
+
+.matchSymbol {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--brass);
+}
+
+.matchIssuer {
+  font-size: 0.72rem;
+  color: #8f8265;
+}
+
+.matchMeta {
+  margin: 4px 0 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.matchTerms {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #c9bda0;
+}
+
+.matchTerms summary {
+  cursor: pointer;
+  color: var(--brass);
+}
+
+.matchTerms p {
+  margin: 8px 0 0;
+}
+
+.matchTerms a {
+  color: #e3cf9e;
+  text-underline-offset: 3px;
+}
+
+.matchWhat {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #d6c9aa;
+}
+
+.plannedLines {
+  margin: 4px 0 0;
+}
+
+.plannedLines > summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.plannedLines > summary:hover {
+  color: var(--ink);
+}
+
+.matchActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.matchChoose {
+  min-height: 44px;
+  padding: 10px 18px;
+  font-size: 0.86rem;
+  color: #1b1408;
+  background: linear-gradient(180deg, #e3cf9e, var(--brass));
+  border: 1px solid rgba(20, 16, 10, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.matchChoose:hover {
+  filter: brightness(1.06);
+}
+
+.brokerLines {
+  margin: 4px 0 0;
+}
+
+.brokerLines > summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.brokerLines > summary:hover {
+  color: var(--ink);
 }
 
 /* ————— The turret: one line into the house, a lamp per desk ————— */
@@ -1255,11 +1415,23 @@
   .handsetStatus {
     margin: 0;
     overflow: hidden;
-    font-size: 0.72rem;
+    font-size: 13px;
     line-height: 1.4;
     color: #e3cf9e;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .matchWhat,
+  .matchIssuer,
+  .matchTerms,
+  .talkHint {
+    font-size: 14px;
+  }
+
+  .matchMeta,
+  .keyRail {
+    font-size: 13px;
   }
 
   .handsetButton {
@@ -1437,7 +1609,8 @@
   }
 
   .hero {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     width: min(100% - 32px, 1480px);
     min-height: 0;
   }
@@ -1448,8 +1621,24 @@
   }
 
   .copy {
-    padding-top: 40px;
-    max-width: none;
+    display: contents;
+  }
+
+  .copy > * {
+    order: 5;
+  }
+
+  .mobilePromise {
+    display: block;
+    margin: 24px 0 12px;
+    max-width: 40ch;
+    font-size: 1.02rem;
+    line-height: 1.5;
+    color: #f2e8d0;
+  }
+
+  .title {
+    margin-top: 40px;
   }
 
   .wireItem {
@@ -1475,6 +1664,22 @@
 
   .instructionSearch input {
     width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .talkBar .instructionSearch input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .keyType,
+  .matchTerms summary,
+  .brokerLines > summary,
+  .plannedLines > summary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
   }
 
   /* On a phone the board reads as one card per row: token and desk first,

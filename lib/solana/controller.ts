@@ -420,7 +420,7 @@ export function createJesseController(opts: {
     }
     state.draft = draft;
     clearQuoteAuthority(); // any quote under review is now obsolete
-    if (state.stage === 'review' || state.stage === 'quoting') {
+    if (state.stage !== 'draft') {
       state.stage = 'draft';
       state.requestRevision = null;
     }

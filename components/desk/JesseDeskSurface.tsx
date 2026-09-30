@@ -23,6 +23,7 @@ import type { CommandResult, JesseDraft, SolanaInstrumentId } from '@/lib/solana
 import { parseJesseUtterance, type JesseSpeechParse } from '@/lib/jesse/speech';
 import {
   carriedMarks,
+  entryInstructionMarks,
   handMarks,
   mergeProvenance,
   type SlipProvenance,
@@ -70,6 +71,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const jesse = desk.jesse;
   const filing = useLatestFiling();
   const [spoken, setSpoken] = useState<string | null>(null);
+  const [entryWords, setEntryWords] = useState<string | null>(null);
   const [heardNote, setHeardNote] = useState<string | null>(null);
   const [jesseLive, setJesseLive] = useState(false);
   /* Which provider carries the line: the deploy default on first paint,
@@ -96,7 +98,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     requestRingOnArrival('jesse');
     setVoiceProvider(current => (current === down ? fallback : current));
   }, []);
-  const offeringApplied = useRef<string | null>(null);
+  const offeringApplied = useRef(-1);
 
   /* Slip provenance: where each written value came from. Marks render only
      while the slip still holds the value they were recorded for. */
@@ -142,8 +144,17 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   useEffect(() => {
     if (draftFieldsEmpty) {
       setProvenance(prev => (Object.keys(prev).length > 0 ? {} : prev));
+      setEntryWords(null);
     }
   }, [draftFieldsEmpty]);
+
+  useEffect(() => {
+    const kind = jesse.foreground.kind;
+    if (kind === 'receipt' || kind === 'archive' || kind === 'missing') {
+      setEntryWords(null);
+      setSpoken(null);
+    }
+  }, [jesse.foreground.kind]);
 
   /* Fresh estimates strike the old price through on the same slip. */
   const prevSlipRef = useRef<{ quote: typeof jesse.state.quote; stage: typeof jesse.state.stage }>({
@@ -164,10 +175,11 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     }, Date.now()));
   }, [jesse.state.quote, jesse.state.stage, draftFieldsEmpty]);
 
-  const recordParsed = useCallback((parse: JesseSpeechParse, result: CommandResult, priorDraft: JesseDraft) => {
+  const recordParsed = useCallback((parse: JesseSpeechParse, result: CommandResult, priorDraft: JesseDraft, source: 'spoken' | 'typed' | 'picked' = 'spoken') => {
     if (result.status === 'stale') return;
     if (parse.command?.type !== 'draft' && parse.command?.type !== 'clarify') return;
-    setProvenance(prev => mergeProvenance(prev, provenanceFromParse(parse, priorDraft)));
+    setProvenance(prev => mergeProvenance(prev, provenanceFromParse(parse, priorDraft, source)));
+    if (source === 'spoken') setEntryWords(null);
   }, []);
 
   const onLineApplied = useCallback((partial: SlipProvenance) => {
@@ -202,13 +214,43 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   const entryIntent = desk.entryIntent;
 
   useEffect(() => {
-    const key = `${entryInstrumentId ?? ''}|${entryIntent?.side ?? ''}|${entryIntent?.amount ?? ''}`;
-    if (key === '||') {
-      offeringApplied.current = null;
+    const gen = desk.entryGen;
+    if (!jesse.historyReady || offeringApplied.current === gen) return;
+    if (desk.entryRecordId) {
+      offeringApplied.current = gen;
       return;
     }
-    if (!jesse.historyReady || offeringApplied.current === key) return;
-    offeringApplied.current = key;
+    const readonlyForeground = jesse.foreground.kind === 'archive'
+      || jesse.foreground.kind === 'missing'
+      || jesse.foreground.kind === 'receipt';
+    const instruction = entryIntent?.instruction;
+    if (instruction) {
+      offeringApplied.current = gen;
+      jesse.dismissRecord();
+      setEntryWords(instruction.source === 'spoken' ? null : instruction.text);
+      setSpoken(instruction.source === 'spoken' ? instruction.text : null);
+      setProvenance(prev => mergeProvenance(prev, entryInstructionMarks(entryIntent, entryInstrumentId)));
+      const side = entryIntent?.side ?? null;
+      const partial: Partial<JesseDraft> = {
+        instrumentId: entryInstrumentId,
+        side,
+        unit: side === 'buy' ? 'USDC' : side === 'sell' ? 'scaled-token' : null,
+        amount: entryIntent?.amount ?? null,
+      };
+      void jesse.edit(partial, side ? 'side' : 'instrument');
+      return;
+    }
+    if (readonlyForeground) {
+      offeringApplied.current = gen;
+      return;
+    }
+    if (!entryInstrumentId && !entryIntent?.side && !entryIntent?.amount) {
+      offeringApplied.current = gen;
+      setEntryWords(null);
+      return;
+    }
+    offeringApplied.current = gen;
+    setEntryWords(null);
     const partial: Partial<JesseDraft> = {};
     if (entryInstrumentId && jesse.state.draft.instrumentId !== entryInstrumentId) partial.instrumentId = entryInstrumentId;
     if (entryIntent?.side) partial.side = entryIntent.side;
@@ -216,7 +258,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
     if (Object.keys(partial).length === 0) return;
     setProvenance(prev => mergeProvenance(prev, carriedMarks(partial)));
     void jesse.edit(partial, partial.side ? 'side' : partial.amount ? 'amount' : 'instrument');
-  }, [entryInstrumentId, entryIntent, jesse]);
+  }, [desk.entryGen, desk.entryRecordId, entryInstrumentId, entryIntent, jesse]);
 
   const carriedNote = carriedIntentNote(entryIntent, jesse.state.draft);
   const instrumentStage = jesseLive
@@ -247,18 +289,29 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
 
   useLineHotkey();
 
+  const onTyped = useCallback((text: string) => {
+    setEntryWords(text);
+    setSpoken(null);
+  }, []);
+
+  const onUserSpoken = useCallback((text: string) => {
+    setSpoken(text);
+    setEntryWords(null);
+  }, []);
+
   const sayToDesk = useCallback(async (phrase: string) => {
-    setSpoken(phrase);
+    setSpoken(null);
+    setEntryWords(phrase);
     setHeardNote(null);
     const priorDraft = jesse.state.draft;
     const parsed = parseJesseUtterance(phrase, priorDraft, jesse.state.quote?.id ?? null);
     if (!parsed.command) {
-      setHeardNote('I didn’t catch a supported xStock instruction. Try “buy 100 USDC of AAPLx”.');
+      setHeardNote(parsed.issue ?? 'I didn’t catch a supported xStock instruction. Try “buy 100 USDC of AAPLx”.');
       signalLine();
       return;
     }
     const result = await jesse.run(parsed.command);
-    recordParsed(parsed, result, priorDraft);
+    recordParsed(parsed, result, priorDraft, 'picked');
     setHeardNote(result.spokenText);
     scrollToDeskTarget('instruction');
   }, [jesse, recordParsed]);
@@ -332,19 +385,19 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         )}
         <aside className={styles.support} aria-label="Jesse’s desk">
           {voiceProvider === 'assemblyai'
-            ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('assemblyai')} />
-            : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={setSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('elevenlabs')} />}
+            ? <JesseCallAssemblyAI jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={onUserSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('assemblyai')} />
+            : <JesseCall jesse={jesse} take={roomView ? null : take} compactPlate={roomView} onLiveChange={setJesseLive} onUserSpoken={onUserSpoken} onLineApplied={onLineApplied} onProviderDown={() => onLineDown('elevenlabs')} />}
           {blankSlip && filing?.deskId === 'jesse' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('jesse', 'last_filing'); jesse.openRecord(filing.recordId); }} />
           )}
           {roomView ? (
             <details className={styles.typeInstead}>
               <summary>Type instead</summary>
-              <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
+              <JesseCommandBar jesse={jesse} onHeard={onTyped} onParsed={(parse, result, priorDraft) => recordParsed(parse, result, priorDraft, 'typed')} />
               {blotter}
             </details>
           ) : (
-            <JesseCommandBar jesse={jesse} onHeard={setSpoken} onParsed={recordParsed} />
+            <JesseCommandBar jesse={jesse} onHeard={onTyped} onParsed={(parse, result, priorDraft) => recordParsed(parse, result, priorDraft, 'typed')} />
           )}
           <ReceiverShell
             stage={instrumentStage}
@@ -363,6 +416,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         <JesseTicket
           jesse={jesse}
           spokenLine={spoken}
+          entryWords={entryWords}
           carriedNote={carriedNote}
           mark={selectedMark}
           blankSlip={blankSlip}

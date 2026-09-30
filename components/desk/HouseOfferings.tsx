@@ -3,7 +3,8 @@
 import { Fragment, useMemo, useState, type MouseEvent } from 'react';
 import { getHouseDesk, type HouseDeskId } from '@/lib/house';
 import type { EntryIntent } from '@/lib/house-entry';
-import { entryIntentFromInstruction } from '@/lib/house-entry';
+import { entryIntentWithInstruction } from '@/lib/house-entry';
+import { instructionIssue } from '@/lib/trading/instruction-safety';
 import type { InstrumentOffering } from '@/lib/desk/contracts';
 import {
   offeringCapabilityText,
@@ -27,9 +28,10 @@ type MarksRead = { result: MarksResult | null; failed: boolean };
  * between them — with each number's source and time, and a row that opens
  * to show the contract, what the token legally is, and who may hold it.
  */
-export function HouseOfferings({ onEnter, instruction = '', marks }: {
+export function HouseOfferings({ onEnter, instruction = '', instructionSource = 'typed', marks }: {
   onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null) => void;
   instruction?: string;
+  instructionSource?: 'spoken' | 'typed' | 'picked';
   /** Marks already read by the foyer, keyed by desk; the board never fetches. */
   marks?: Partial<Record<HouseDeskId, MarksRead | null>>;
 }) {
@@ -55,13 +57,16 @@ export function HouseOfferings({ onEnter, instruction = '', marks }: {
     ? offeringCapabilityText(allOfferings[0], allOfferings.flatMap(o => openDesksForOffering(o).map(d => d.id)))
     : null;
 
+  const unsafe = Boolean(instructionIssue(instruction));
+
   const enter = (offering: Pick<InstrumentOffering, 'offeringId'>, deskId: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
+    if (unsafe) return;
     window.scrollTo({ top: 0, behavior: 'instant' });
     /* The instruction is not just a filter — its side and amount ride along
        onto the ticket the desk opens with. */
-    onEnter(deskId, offering.offeringId, entryIntentFromInstruction(instruction));
+    onEnter(deskId, offering.offeringId, entryIntentWithInstruction(instruction, instructionSource));
   };
 
   return (
@@ -136,7 +141,7 @@ export function HouseOfferings({ onEnter, instruction = '', marks }: {
                         <span className={foyerStyles.boardSub}>{row.gapBps != null ? 'vs stock' : row.gapNote}</span>
                       </td>
                       <td>
-                        <DeskLinks row={row} enter={enter} />
+                        <DeskLinks row={row} enter={enter} unsafe={unsafe} />
                       </td>
                     </tr>
                     <tr id={detailsId} className={foyerStyles.boardDetails} hidden={!expanded}>
@@ -179,7 +184,7 @@ function MarkCell({ row }: { row: BoardRow }) {
   );
 }
 
-function DeskLinks({ row, enter }: { row: BoardRow; enter: (offering: Pick<InstrumentOffering, 'offeringId'>, deskId: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void }) {
+function DeskLinks({ row, enter, unsafe = false }: { row: BoardRow; enter: (offering: Pick<InstrumentOffering, 'offeringId'>, deskId: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void; unsafe?: boolean }) {
   if (row.deskIds.length === 0) return <span className={foyerStyles.boardMissing}>No open desk</span>;
   return (
     <span className={foyerStyles.boardDesks}>
@@ -190,6 +195,7 @@ function DeskLinks({ row, enter }: { row: BoardRow; enter: (offering: Pick<Instr
             key={id}
             href={offeringHref(row.offeringId, id)}
             aria-label={`Open ${desk?.shortName ?? id}’s desk for ${row.symbol}`}
+            aria-disabled={unsafe || undefined}
             onClick={enter(row, id)}
           >
             Open {desk?.shortName ?? id}’s desk

@@ -25,12 +25,14 @@ export type DraftCheckpoint = {
   revision: number;
   updatedAt: number;
   complete: boolean;
+  sideRequired?: boolean;
 };
 
 const draftMetaSchema = z.object({
   revision: z.number().int().nonnegative(),
   updatedAt: z.number().int().positive(),
   complete: z.boolean(),
+  sideRequired: z.boolean().optional(),
 }).strict();
 
 /** A draft worth persisting — complete, or a partial with something to resume.
@@ -121,6 +123,7 @@ export function writeDraftCheckpoint(
   state: DeskState,
   deskId: HouseDeskId = OPEN_DESK_ID,
   now: number = Date.now(),
+  sideRequired: boolean = false,
 ): void {
   const key = draftStorageKey(deskId);
   const metaKey = `${DRAFT_META_KEY}.${deskId}`;
@@ -138,7 +141,12 @@ export function writeDraftCheckpoint(
   let complete = false;
   try { parseIntent(draft); complete = true; } catch { /* partial stays partial */ }
   storage.setItem(key, JSON.stringify(draft));
-  storage.setItem(metaKey, JSON.stringify({ revision: revision + 1, updatedAt: now, complete } satisfies DraftCheckpoint));
+  storage.setItem(metaKey, JSON.stringify({
+    revision: revision + 1,
+    updatedAt: now,
+    complete: complete && !sideRequired,
+    sideRequired: sideRequired || undefined,
+  } satisfies DraftCheckpoint));
 }
 
 export function writePersistedDraft(
@@ -146,8 +154,9 @@ export function writePersistedDraft(
   state: DeskState,
   deskId: HouseDeskId = OPEN_DESK_ID,
   now: number = Date.now(),
+  sideRequired: boolean = false,
 ): void {
-  writeDraftCheckpoint(storage, state, deskId, now);
+  writeDraftCheckpoint(storage, state, deskId, now, sideRequired);
 }
 
 export function compactPaperEntry(record: PaperRecord) {

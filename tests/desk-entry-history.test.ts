@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useTradingDesk } from '../lib/trading/useTradingDesk';
+import { writeDraftCheckpoint } from '../lib/trading/desk-documents';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { resetContainer, getRootElement } from './jsdom-setup';
@@ -236,5 +237,26 @@ describe('desk entry and history behavior', () => {
     const params = new URLSearchParams(window.location.search);
     assert.equal(params.get('desk'), 'jesse');
     assert.equal(params.get('record'), null, '?record= must not leak onto another desk');
+  });
+
+  it('restores a persisted unchosen direction when the destination was never parked', async () => {
+    window.history.replaceState({}, '', '/?desk=jesse');
+    writeDraftCheckpoint(window.localStorage, {
+      draft: { instrumentId: stock.id, side: 'buy', amount: '10', unit: 'USDC' } as TradeIntent,
+      stage: 'draft',
+      requestId: null,
+      quote: null,
+      message: null,
+    }, 'hetty', Date.now(), true);
+    await render();
+    assert.equal(desk!.deskId, 'jesse');
+
+    await act(async () => desk!.switchDesk('hetty'));
+    await act(async () => {});
+
+    assert.equal(desk!.deskId, 'hetty');
+    assert.equal(desk!.sideRequired, true);
+    assert.equal(desk!.state.draft.amount, '10');
+    assert.equal(desk!.state.draft.side, 'buy');
   });
 });

@@ -133,6 +133,47 @@ describe('finished work is not in progress', () => {
     assert.equal(restored!.instrumentId, intent.instrumentId);
     assert.equal(restored!.amount, '');
   });
+  it('checkpoints an unchosen side and stays readable for checkpoints written before the flag existed', () => {
+    const store = new Map<string, string>();
+    const draftStore = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    };
+    const partial = { ...initialDesk(intent), draft: { instrumentId: intent.instrumentId, side: 'buy' as const, amount: '25', unit: 'USDC' as const } };
+    writeDraftCheckpoint(draftStore, partial, 'hetty', 1000, true);
+    const checkpoint = readDraftCheckpoint(draftStore, 'hetty');
+    assert.equal(checkpoint!.meta.sideRequired, true);
+    assert.equal(checkpoint!.meta.complete, false, 'an unchosen direction is never a complete checkpoint');
+    writeDraftCheckpoint(draftStore, partial, 'hetty', 2000);
+    assert.equal(readDraftCheckpoint(draftStore, 'hetty')!.meta.sideRequired, undefined);
+    store.set('claflin.draft-meta.v1.hetty', JSON.stringify({ revision: 3, updatedAt: 3000, complete: false }));
+    const legacy = readDraftCheckpoint(draftStore, 'hetty');
+    assert.ok(legacy, 'a checkpoint from before the flag still reads');
+    assert.equal(legacy!.meta.sideRequired, undefined);
+    assert.equal(legacy!.meta.complete, false);
+  });
+  it('persists an unchosen direction with its amount for a later visit', () => {
+    const store = new Map<string, string>();
+    const draftStore = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    };
+    const partial = {
+      ...initialDesk(intent),
+      draft: { instrumentId: intent.instrumentId, side: 'buy', amount: '25', unit: 'USDC' } as TradeIntent,
+    };
+    writeDraftCheckpoint(draftStore, partial, 'hetty', 1000, true);
+    const checkpoint = readDraftCheckpoint(draftStore, 'hetty');
+    assert.ok(checkpoint, 'a draft missing only its side is not lost');
+    assert.equal(checkpoint!.meta.sideRequired, true);
+    assert.equal(checkpoint!.meta.complete, false);
+    assert.equal(checkpoint!.draft.amount, '25');
+    const restored = readRestorableDraft(draftStore, 'hetty');
+    assert.ok(restored);
+    assert.equal(restored!.amount, '25');
+  });
   it('increments the revision and honours the newest checkpoint on the desk', () => {
     const store = new Map<string, string>();
     const draftStore = {

@@ -138,11 +138,39 @@ describe('jesse desk session', () => {
     const quotePromise = session.run({ type: 'draft', intent: BUY_INTENT, quote: true });
     await Promise.resolve();
     assert.equal(session.getSnapshot().inFlight, 'quote');
-    await session.cancel();
+    const cancelled = await session.cancel();
+    assert.equal(cancelled.status, 'applied');
+    assert.equal(session.getSnapshot().inFlight, null, 'cancel clears the obsolete request at once');
     release(makeQuote());
     const result = await quotePromise;
     assert.equal(result.status, 'stale');
     assert.notEqual(session.getSnapshot().state.stage, 'review');
+    assert.equal(session.getSnapshot().lastResult, cancelled, 'a late quote must not overwrite the cancel result');
+    assert.equal(session.getSnapshot().inFlight, null);
+    session.dispose();
+  });
+
+  it('keeps the reviewed quote untouched when a malformed correction is rejected', async () => {
+    const storage = memoryStorage();
+    const session = createJesseDeskSession({
+      storage,
+      now: () => T0,
+      ports: { quote: async () => makeQuote(), compare: async () => null },
+    });
+    await session.run({ type: 'draft', intent: BUY_INTENT, quote: true });
+    assert.equal(session.getSnapshot().state.stage, 'review');
+    const quoteId = session.getSnapshot().state.quote?.id;
+
+    const rejected = await session.run({
+      type: 'clarify',
+      draft: { instrumentId: instrument.id, side: 'sell', unit: null, amount: '50' },
+      field: 'units',
+      question: 'USDC buys and scaled-unit sells are different instructions — say which you meant.',
+    });
+    assert.equal(rejected.status, 'rejected');
+    assert.equal(session.getSnapshot().state.stage, 'review');
+    assert.equal(session.getSnapshot().state.quote?.id, quoteId);
+    assert.equal(session.getSnapshot().state.draft.side, 'buy');
     session.dispose();
   });
 
@@ -160,6 +188,117 @@ describe('jesse desk session', () => {
     assert.equal(second.getSnapshot().state.draft.amount, '25');
     assert.equal(second.getSnapshot().state.draft.instrumentId, instrument.id);
     second.dispose();
+  });
+  it('applies a newer instruction while an older quote is pending and ignores the late result', async () => {
+    const storage = memoryStorage();
+    const gates: Array<{ promise: Promise<SolanaPaperEstimate>; resolve: (q: SolanaPaperEstimate) => void }> = [];
+    const session = createJesseDeskSession({
+      storage,
+      now: () => T0,
+      ports: {
+        quote: () => {
+          let resolve!: (q: SolanaPaperEstimate) => void;
+          const promise = new Promise<SolanaPaperEstimate>(r => { resolve = r; });
+          gates.push({ promise, resolve });
+          return promise;
+        },
+        compare: async () => null,
+      },
+    });
+
+    const first = session.run({ type: 'draft', intent: BUY_INTENT, quote: true });
+    assert.equal(gates.length, 1);
+    assert.equal(session.getSnapshot().inFlight, 'quote');
+
+    await session.edit({ amount: '50' }, 'amount');
+    assert.equal(session.getSnapshot().state.draft.amount, '50');
+    assert.equal(session.getSnapshot().inFlight, null, 'a committed edit clears the obsolete request at once');
+    const second = session.quote();
+    assert.equal(gates.length, 2);
+    assert.equal(session.getSnapshot().inFlight, 'quote');
+
+    gates[0].resolve(makeQuote({ intent: BUY_INTENT }));
+    const firstResult = await first;
+    assert.equal(firstResult.status, 'stale');
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(session.getSnapshot().inFlight, 'quote');
+    assert.equal(session.getSnapshot().state.quote, null);
+    assert.equal(session.getSnapshot().state.draft.amount, '50');
+
+    const secondQuote = makeQuote({
+      id: 'q-desk-2',
+      intent: { ...BUY_INTENT, amount: '50' },
+      amountInRaw: '50000000',
+      amountOutRaw: '15000',
+      inputAmount: '50',
+      outputAmount: '0.15',
+      effectiveScaledAmount: '0.15049051875',
+      minOutputRaw: '14925',
+    });
+    gates[1].resolve(secondQuote);
+    const secondResult = await second;
+    assert.equal(secondResult.status, 'applied');
+    assert.equal(session.getSnapshot().state.stage, 'review');
+    assert.equal(session.getSnapshot().state.quote?.id, 'q-desk-2');
+    assert.equal(session.getSnapshot().inFlight, null);
+    session.dispose();
+  });
+
+  it('lets view and describe proceed without cancelling an in-flight quote', async () => {
+    const storage = memoryStorage();
+    let release!: (q: SolanaPaperEstimate) => void;
+    const gate = new Promise<SolanaPaperEstimate>(r => { release = r; });
+    const session = createJesseDeskSession({
+      storage,
+      now: () => T0,
+      ports: { quote: () => gate, compare: async () => null },
+    });
+    void session.run({ type: 'draft', intent: BUY_INTENT, quote: true });
+    assert.equal(session.getSnapshot().inFlight, 'quote');
+
+    session.openRecord('no-such-record');
+    const described = await session.run({ type: 'describe' });
+    assert.notEqual(described.status, 'stale');
+    assert.equal(session.getSnapshot().inFlight, 'quote');
+
+    release(makeQuote());
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(session.getSnapshot().state.stage, 'review');
+    session.dispose();
+  });
+
+  it('never calls the quote provider while the draft is incomplete', async () => {
+    const storage = memoryStorage();
+    let calls = 0;
+    const session = createJesseDeskSession({
+      storage,
+      now: () => T0,
+      ports: {
+        quote: async () => { calls += 1; return makeQuote(); },
+        compare: async () => null,
+      },
+    });
+    const res = await session.quote();
+    assert.equal(res.status, 'clarify');
+    assert.equal(calls, 0);
+
+    await session.edit({ instrumentId: instrument.id, side: null, unit: null, amount: null }, 'instrument');
+    await session.quote();
+    assert.equal(calls, 0);
+    session.dispose();
+  });
+
+  it('ignores a run after dispose and never marks it in-flight', async () => {
+    const storage = memoryStorage();
+    const session = createJesseDeskSession({
+      storage,
+      now: () => T0,
+      ports: { quote: async () => makeQuote(), compare: async () => null },
+    });
+    session.dispose();
+    const res = await session.run({ type: 'draft', intent: BUY_INTENT, quote: true });
+    assert.equal(res.status, 'rejected');
+    assert.equal(session.getSnapshot().inFlight, null);
   });
 });
 

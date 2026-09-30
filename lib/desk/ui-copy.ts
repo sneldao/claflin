@@ -46,7 +46,7 @@ export const RING_EXAMPLES = {
 export const SLIP_ACTIONS = {
   price: 'Price it',
   fresh: 'Fresh price',
-  file: 'File paper record',
+  file: 'Save paper record',
   setAside: 'Set aside',
   compare: 'Compare markets',
 } as const;
@@ -85,10 +85,10 @@ export const LINE_IDENTITY = 'AI broker';
 
 /** The house turret — one line in, lamps out (docs/FOYER_LINE.md §4.1). */
 export const TURRET_COPY = {
-  hold: 'Hold to talk',
+  hold: 'Hold to dictate',
   listening: 'Listening — release to send',
   transcribing: 'Writing it down…',
-  hint: 'Press and hold to talk (or hold Space). Or just type.',
+  hint: 'Hold to dictate an instruction, or type. Then choose a product.',
   micNote: 'The browser asks for the microphone only while you hold. Typing works the same.',
   heard: 'Heard:',
   lampMatch: 'Carries this',

@@ -7,7 +7,8 @@ import type { HouseDesk, HouseDeskId } from '@/lib/house';
 import { HouseDirectory } from './HouseDirectory';
 import { HouseMark } from './HouseMark';
 import { RoomMarketClock } from './RoomMarketClock';
-import { useHouseScene } from './HouseScene';
+import { useHouseGraphics, useHouseScene } from './HouseScene';
+import { GraphicsControl } from './GraphicsControl';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import { useMarketClock } from '@/lib/use-market-clock';
 import type { DeskPresentation } from '@/lib/desk-presentation';
@@ -44,6 +45,7 @@ export function RoomPresentation({
   children: ReactNode;
 }) {
   const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false, tape, tapeAt });
+  const graphics = useHouseGraphics();
   const clock = useMarketClock();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -63,7 +65,7 @@ export function RoomPresentation({
       data-view={view}
       data-tape={tape}
     >
-      {!sharedScene && <NightDeskScene view={view} stage={stage} tape={tape} tapeAt={tapeAt} />}
+      {!sharedScene && <NightDeskScene view={view} stage={stage} tape={tape} tapeAt={tapeAt} still={!graphics.ready || graphics.lightweight} />}
 
       <header className={styles.roomViewHeader}>
         <Link
@@ -86,6 +88,7 @@ export function RoomPresentation({
           <RoomMarketClock clock={clock} />
           <nav aria-label="Desk navigation" className={styles.roomViewNav}>
             <HouseDirectory activeDeskId={desk.id} onVisit={onSwitchDesk} onHome={onLeaveDesk} />
+            <GraphicsControl />
             <details className={styles.viewSwitch}>
               <summary>View</summary>
               <div className={styles.presentationToggle} role="group" aria-label="Desk view">

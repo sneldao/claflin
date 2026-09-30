@@ -8,6 +8,7 @@ import {
   createBrowserSolanaWallet,
   type SolanaWalletPort,
 } from '@/lib/solana/wallet';
+import { SolanaProposalCosts } from './QuoteReview';
 import styles from './WorkingDesk.module.css';
 
 type LivePhase =
@@ -189,6 +190,9 @@ export function JesseLiveSettle({
           about {proposal.reviewedEstimate.outputAmount} {proposal.reviewedEstimate.outputSymbol}
           {' · '}Jupiter Metis · {proposal.slippageBps} bps slippage
         </p>
+      )}
+      {proposal && (phase === 'review' || phase === 'signing' || phase === 'submitting') && (
+        <SolanaProposalCosts feeSummary={proposal.feeSummary} />
       )}
       {note && <p className={styles.notice} role="status">{note}</p>}
       {solscanUrl && (

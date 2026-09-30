@@ -131,6 +131,7 @@ export function createJesseDeskSession(opts: {
   controller.restore();
 
   let inFlight: JesseInFlight = null;
+  let inFlightOwner: number | null = null;
   let lastResult: CommandResult | null = null;
   let viewedRecordId: string | null = null;
   let records: JessePaperRecord[] = [];
@@ -138,7 +139,7 @@ export function createJesseDeskSession(opts: {
   let storageError: string | null = null;
   let disposed = false;
   const listeners = new Set<() => void>();
-  let queue: Promise<unknown> = Promise.resolve();
+  let operationId = 0;
 
   const notify = () => {
     for (const listener of listeners) listener();
@@ -176,44 +177,42 @@ export function createJesseDeskSession(opts: {
     /* Cancel must interrupt an in-flight quote: the controller drops late
        responses when revision moves. Serializing cancel behind the quote
        await would deadlock the UI. */
-    if (command.type === 'cancel') {
-      return (async () => {
-        if (disposed) {
-          return {
-            status: 'rejected' as const,
-            revision: controller.getState().revision,
-            quoteId: null,
-            evidenceId: null,
-            spokenText: 'The desk session has ended.',
-          };
-        }
-        const result = await controller.applyJesseCommand(command, expected());
-        lastResult = result;
-        inFlight = null;
-        notify();
-        return result;
-      })();
+    if (disposed) {
+      return Promise.resolve({
+        status: 'rejected' as const,
+        revision: controller.getState().revision,
+        quoteId: null,
+        evidenceId: null,
+        spokenText: 'The desk session has ended.',
+      });
     }
-
-    const task = queue.then(async () => {
-      if (disposed) {
-        return {
-          status: 'rejected' as const,
-          revision: controller.getState().revision,
-          quoteId: null,
-          evidenceId: null,
-          spokenText: 'The desk session has ended.',
-        };
-      }
-      if (command.type === 'draft' && command.quote) inFlight = 'quote';
-      else if (command.type === 'compare') inFlight = 'compare';
-      else inFlight = null;
-      notify();
-      try {
-        const result = await controller.applyJesseCommand(command, expected());
-        lastResult = result;
-        if (command.type === 'draft' && command.quote && result.status === 'applied' && result.quoteId) {
-          trackFunnel({ event: 'estimate_returned', desk: 'jesse', outcome: 'quoted' });
+    const isProviderOp = (command.type === 'draft' && command.quote) || command.type === 'compare';
+    const isPresentation = command.type === 'explain' || command.type === 'describe' || command.type === 'focus';
+    let ownId: number | null = null;
+    if (!isPresentation) ownId = ++operationId;
+    if (isProviderOp) {
+      inFlight = command.type === 'compare' ? 'compare' : 'quote';
+      inFlightOwner = ownId;
+    }
+    const exp = expected();
+    const pending = controller.applyJesseCommand(command, exp);
+    if (!isProviderOp && !isPresentation && controller.getState().revision !== exp.revision) {
+      inFlight = null;
+      inFlightOwner = null;
+    }
+    notify();
+    return pending.then(
+      (result) => {
+        const current = ownId === null || ownId === operationId;
+        if (current) {
+          lastResult = result;
+          if (isProviderOp && command.type === 'draft' && command.quote && result.status === 'applied' && result.quoteId) {
+            trackFunnel({ event: 'estimate_returned', desk: 'jesse', outcome: 'quoted' });
+          }
+        }
+        if (ownId !== null && inFlightOwner === ownId) {
+          inFlight = null;
+          inFlightOwner = null;
         }
         if (command.type === 'file-paper' && result.status === 'applied' && result.quoteId) {
           trackFunnel({ event: 'record_filed', desk: 'jesse' });
@@ -223,13 +222,16 @@ export function createJesseDeskSession(opts: {
           notify();
         }
         return result;
-      } finally {
-        inFlight = null;
-        notify();
-      }
-    });
-    queue = task.then(() => undefined, () => undefined);
-    return task;
+      },
+      (error) => {
+        if (ownId !== null && inFlightOwner === ownId) {
+          inFlight = null;
+          inFlightOwner = null;
+          notify();
+        }
+        throw error;
+      },
+    );
   };
 
   const edit = (partial: Partial<JesseDraft>, field: ClarifyField) => {

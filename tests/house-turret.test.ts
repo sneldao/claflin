@@ -26,7 +26,7 @@ describe('turret reading (pure)', () => {
     const reply = turretReply(reading, OPEN)!;
     assert.match(reply, /AAPLc on Base \(Hetty\)/);
     assert.match(reply, /AAPLx on Solana \(Jesse\)/);
-    assert.match(reply, /Pick a line\./);
+    assert.match(reply, /Choose a product below\./);
   });
 
   it('lights one line for a single-rail product and says nothing extra', () => {
@@ -91,8 +91,8 @@ describe('house turret (component)', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
     assert.equal((html.match(/data-talk/g) ?? []).length, 2, 'the talk bar and its handset copy');
     assert.match(html, /class="handset" data-shown="false" aria-hidden="true"/, 'the handset stays hidden until the bar scrolls away');
-    assert.match(html, /Hold to talk/);
-    assert.match(html, /Press and hold to talk \(or hold Space\)\. Or just type\./);
+    assert.match(html, /Hold to dictate/);
+    assert.match(html, /Hold to dictate an instruction, or type\. Then choose a product\./);
     assert.match(html, /LINE 1/);
     assert.match(html, /data-lamp="planned"/);
     assert.match(html, /Robinhood Chain · coming soon/);
@@ -183,6 +183,123 @@ describe('house turret (component)', () => {
     } finally {
       (globalThis as any).MediaRecorder = originalRecorder;
     }
+  });
+
+  it('offers a named product to continue with when the instruction names one', async () => {
+    const entered: { desk: string; offering?: string }[] = [];
+    resetContainer();
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, {
+      onEnter: (desk: string, offering?: string) => { entered.push({ desk, offering }); },
+    })));
+    await type('buy Tesla');
+    const matches = getRootElement().querySelector('[aria-label="Matching products"]');
+    assert.ok(matches, 'a named product gets its own choice region');
+    assert.match(matches!.textContent ?? '', /Continue with TSLAx/);
+    const button = Array.from(matches!.querySelectorAll('button')).find(b => /Continue with/.test(b.textContent ?? ''))!;
+    await act(async () => { button.dispatchEvent(new (window as any).MouseEvent('click', { bubbles: true })); });
+    assert.equal(entered.length, 1);
+    assert.equal(entered[0]?.desk, 'jesse');
+    assert.ok(entered[0]?.offering, 'the chosen offering rides along');
+    assert.equal(micCalls, 0, 'typing and choosing never ask for the mic');
+  });
+
+  it('requires an explicit pick when an instruction names several products — Enter does not choose', async () => {
+    const entered: { desk: string; offering?: string }[] = [];
+    resetContainer();
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, {
+      onEnter: (desk: string, offering?: string) => { entered.push({ desk, offering }); },
+    })));
+    await type('buy Apple');
+    const matches = getRootElement().querySelector('[aria-label="Matching products"]');
+    assert.ok(matches);
+    assert.match(matches!.textContent ?? '', /Choose the product you mean/);
+    const buttons = Array.from(matches!.querySelectorAll('button')).filter(b => /Continue with/.test(b.textContent ?? ''));
+    assert.ok(buttons.length > 1, 'each candidate offers its own continuation');
+    const form = getRootElement().querySelector('form.talkBar') as HTMLFormElement;
+    assert.ok(form, 'the talk bar is a form');
+    await act(async () => {
+      form.dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
+    });
+    assert.equal(entered.length, 0, 'Enter never picks between products');
+  });
+
+  it('Enter continues only a single product on a single desk — never a guess at a line', async () => {
+    const entered: { desk: string; offering?: string }[] = [];
+    resetContainer();
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, {
+      onEnter: (desk: string, offering?: string) => { entered.push({ desk, offering }); },
+    })));
+    const form = () => getRootElement().querySelector('form.talkBar') as HTMLFormElement;
+
+    await type('buy Tesla');
+    assert.equal(getRootElement().querySelectorAll('[aria-label="Matching products"] button').length >= 1, true);
+    await act(async () => {
+      form().dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
+    });
+    assert.equal(entered.length, 1, 'one product on one desk continues on Enter');
+    assert.equal(entered[0]?.desk, 'jesse');
+    assert.ok(entered[0]?.offering);
+
+    entered.length = 0;
+    await type('buy Apple');
+    await act(async () => {
+      form().dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
+    });
+    assert.equal(entered.length, 0, 'several products refuse Enter');
+  });
+
+  it('keeps the words’ origin: typed stays typed', async () => {
+    const entered: { intent?: { instruction?: { text: string; source: string } } | null }[] = [];
+    resetContainer();
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, {
+      onEnter: (_desk: string, _offering: string | undefined, intent: any) => { entered.push({ intent }); },
+    })));
+    await type('buy Tesla');
+    const matches = getRootElement().querySelector('[aria-label="Matching products"]')!;
+    const button = Array.from(matches.querySelectorAll('button')).find(b => /Continue with/.test(b.textContent ?? ''))!;
+    await act(async () => { button.dispatchEvent(new (window as any).MouseEvent('click', { bubbles: true })); });
+    assert.equal(entered[0]?.intent?.instruction?.source, 'typed');
+    assert.equal(entered[0]?.intent?.instruction?.text, 'buy Tesla');
+  });
+
+  it('refuses continuation for unsupported instructions but still lets the caller erase and explore', async () => {
+    const entered: { desk: string }[] = [];
+    resetContainer();
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, {
+      onEnter: (desk: string) => { entered.push({ desk }); },
+    })));
+
+    await type('buy Apple when it dips');
+    const page = getRootElement();
+    assert.match(page.textContent ?? '', /one immediate buy or sell instruction/);
+    assert.equal(page.querySelector('[aria-label="Matching products"]'), null, 'no continuation choices for an unsafe instruction');
+    assert.equal(Array.from(page.querySelectorAll('button')).some(b => /Talk with/.test(b.textContent ?? '')), false, 'no broker line offered');
+    assert.equal(Array.from(page.querySelectorAll('a')).some(a => /Type instead/.test(a.textContent ?? '')), false, 'no desk continuation links');
+    for (const a of Array.from(page.querySelectorAll('a')).filter(a => /Open .*’s desk/.test(a.textContent ?? ''))) {
+      assert.equal(a.getAttribute('aria-disabled'), 'true', 'board desk links are disabled for an unsafe instruction');
+    }
+    const form = page.querySelector('form.talkBar') as HTMLFormElement;
+    await act(async () => {
+      form.dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
+    });
+    assert.equal(entered.length, 0, 'Enter cannot act on an unsupported instruction');
+
+    await type('sell 5 Apple and buy 10 Tesla');
+    assert.equal(entered.length, 0, 'a multileg instruction cannot click through');
+
+    await type('');
+    assert.equal(lamps().Hetty, 'idle', 'erasing restores the exploratory line');
+    await type('buy Tesla');
+    const matches = getRootElement().querySelector('[aria-label="Matching products"]');
+    assert.ok(matches, 'a clean instruction continues normally after an unsafe one');
+    const button = Array.from(matches!.querySelectorAll('button')).find(b => /Continue with/.test(b.textContent ?? ''))!;
+    await act(async () => { button.dispatchEvent(new (window as any).MouseEvent('click', { bubbles: true })); });
+    assert.equal(entered.length, 1);
   });
 
   it('holding Space asks for the mic; a denial falls back to typing, honestly', async () => {

@@ -175,7 +175,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     const query = String(p.query ?? '');
     const instrument = resolveDeskAlias(query);
     if (!instrument) return chooseInstrumentResult(query);
-    d.edit({ ...d.state.draft, instrumentId: instrument.id });
+    d.edit({ ...d.state.draft, instrumentId: instrument.id }, 'instrument');
     markLine('instrument', instrument.id);
     return `${instrument.symbol} (${instrument.name}) is on the ticket.`;
   });
@@ -187,7 +187,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     const side = String(p.side ?? '');
     if (side !== 'buy' && side !== 'sell') return setInstructionResult(side);
     const next = nextInstructionDraft(d.state.draft, side);
-    d.edit(next.draft);
+    d.edit(next.draft, 'side');
     markLine('side', side);
     return setInstructionResult(side, next.amountCleared);
   });
@@ -200,7 +200,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
       return `"${clean || 'That'}" is not a usable amount — say a plain number, like 25 or 0.5.`;
     }
-    d.edit({ ...d.state.draft, amount: clean });
+    d.edit({ ...d.state.draft, amount: clean }, 'amount');
     markLine('amount', clean);
     return setAmountResult(d.state.draft.side, clean);
   });

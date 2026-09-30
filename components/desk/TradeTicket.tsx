@@ -19,9 +19,11 @@ import { DeskTerm, EducationTopicTrigger } from './EducationTopic';
 import { getEducationTopic } from '@/lib/education';
 import { useDictation, type ParsedDictation } from '@/lib/dictation/useDictation';
 import { createDictationProvenance, type DictationProvenance } from '@/lib/trading/dictation-provenance';
+import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
 import { BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import { WrittenSlip } from './WrittenSlip';
+import { QuoteReview } from './QuoteReview';
 import { SignalCaption } from './SignalCaption';
 import { HETTY_VOCAB, slipOneLine, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
 import type { SlipProvenance } from '@/lib/desk/slip-provenance';
@@ -315,6 +317,7 @@ export const TradeTicket = memo(function TradeTicket({
   roomView = false,
   provenance = {},
   superseded = [],
+  entryWords = null,
   onHandEdit,
   onSlipEdit,
   onDictated,
@@ -324,6 +327,7 @@ export const TradeTicket = memo(function TradeTicket({
   liveMode: boolean;
   onLiveModeChange: (live: boolean) => void;
   spokenLine?: string | null;
+  entryWords?: string | null;
   hettyLine?: string | null;
   live?: boolean;
   applied?: string | null;
@@ -347,7 +351,7 @@ export const TradeTicket = memo(function TradeTicket({
   brokerTake?: string | null;
 }) {
   const auth = useDeskAuth();
-  const { state, records, historyReady, error, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
+  const { state, records, historyReady, error, sideRequired, edit, requestQuote, save, cancel, watched, watch, unwatch, viewedRecordId, dismissRecord, foreground } = desk;
   const openedRecord = viewedRecordId ? records.find(record => record.id === viewedRecordId) : undefined;
   const filedRecord = openedRecord ?? (state.stage === 'saved' && state.quote
     ? records.find(record => record.id === state.quote!.id)
@@ -396,33 +400,46 @@ export const TradeTicket = memo(function TradeTicket({
     if (state.stage === 'review') setTermsReminder(true);
   };
   const { state: dictState, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
-    onIntentParsed: (parsedIntent, cleanTranscript, parsed) => {
+    onIntentParsed: (_parsedIntent, cleanTranscript, parsed) => {
       const priorDraft = state.draft;
-      onDictated?.(parsed, cleanTranscript, priorDraft);
       // Dictation never inherits a stale amount: if the parser heard no
       // amount, the amount box is cleared so a previous figure can never be
       // announced back as if the caller said it.
-      const nextSide = parsedIntent.side ?? state.draft.side;
-      const nextAmount = parsedIntent.amount ?? '';
-      const nextUnit = parsedIntent.unit ?? (nextSide === 'sell' ? 'token' : 'USDC');
-      const nextInstrumentId = parsedIntent.instrumentId ?? state.draft.instrumentId;
+      const current = sideRequired
+        ? { instrumentId: state.draft.instrumentId } as Partial<TradeIntent>
+        : state.draft;
+      const reparsed = parseDictatedTradeIntent(cleanTranscript, current);
+      if (reparsed.issue) {
+        setDictationReadback(reparsed.issue);
+        return;
+      }
+      const resolved = reparsed.intent;
+      const nextSide = resolved.side ?? null;
+      const nextAmount = resolved.amount ?? '';
+      const nextUnit = resolved.unit ?? (nextSide === 'sell' ? 'token' : 'USDC');
+      const nextInstrumentId = resolved.instrumentId ?? null;
       const symbol = DESK_INSTRUMENTS.find(i => i.id === nextInstrumentId)?.symbol ?? 'Stock';
 
-      edit({
-        instrumentId: nextInstrumentId,
-        side: nextSide,
+      const applied = desk.applyInstruction({
+        ...(nextInstrumentId ? { instrumentId: nextInstrumentId } : {}),
+        ...(nextSide ? { side: nextSide } : {}),
         amount: nextAmount,
-        unit: nextUnit,
-      } as TradeIntent);
+      });
+      if (!applied) return;
 
+      onDictated?.({ ...parsed, intent: reparsed.intent, spans: reparsed.spans ?? parsed.spans }, cleanTranscript, priorDraft);
       if (nextInstrumentId) {
-        const prov = createDictationProvenance(cleanTranscript, symbol, nextSide, nextAmount || '—');
+        const prov = createDictationProvenance(cleanTranscript, symbol, nextSide ?? 'unspecified', nextAmount || '—');
         setDictationProvenance(prov);
+      }
+      if (nextSide) {
         setDictationReadback(dictationTicketLine(nextSide, nextAmount, nextUnit, symbol));
-        if (!nextAmount) {
-          // Put the cursor where the missing piece goes.
-          setTimeout(() => document.getElementById('amount')?.focus({ preventScroll: true }), 50);
-        }
+      } else {
+        setDictationReadback(null);
+      }
+      if (nextInstrumentId && !nextAmount) {
+        // Put the cursor where the missing piece goes.
+        setTimeout(() => document.getElementById('amount')?.focus({ preventScroll: true }), 50);
       }
     },
   });
@@ -481,7 +498,9 @@ export const TradeTicket = memo(function TradeTicket({
       : pending
         ? 'Hetty is pricing it.'
         : slipActive
-          ? 'Read it twice. Then it’s yours.'
+          ? liveMode
+            ? 'Review your instruction. Nothing moves until you sign.'
+            : 'Review this paper estimate.'
           : live
             ? 'Hetty has it. Keep talking.'
             : liveMode
@@ -583,9 +602,11 @@ export const TradeTicket = memo(function TradeTicket({
           ? 'Listening… release when you’re done.'
           : spokenLine
             ? <>You said: <em>{spokenLine}</em></>
-            : dictationReadback
-              ? <>On the ticket: <em>{dictationReadback}</em></>
-              : 'Speak your instruction — “buy $25 of Apple” — or type below.'}
+            : entryWords
+              ? <>Your instruction: <em>{entryWords}</em></>
+              : dictationReadback
+                ? <>On the ticket: <em>{dictationReadback}</em></>
+                : 'Speak your instruction — “buy $25 of Apple” — or type below.'}
       </p>
     )}
     {/* Room draft shows the caller's words verbatim on the slip itself; the
@@ -613,15 +634,15 @@ export const TradeTicket = memo(function TradeTicket({
             Jesse's, in Hetty's own vocabulary. */}
         <WrittenSlip
           mode={showBlank ? 'blank' : 'draft'}
-          draft={state.draft}
+          draft={sideRequired ? { ...state.draft, side: null } : state.draft}
           vocab={HETTY_VOCAB}
           instruments={slipInstruments}
           instrument={instrument ?? null}
-          spokenLine={spokenLine ?? null}
+          spokenLine={spokenLine ?? entryWords ?? null}
           provenance={provenance}
           superseded={superseded}
           instrumentBlankLabel="Choose stock"
-          actions={draftComplete(state.draft) ? (
+          actions={draftComplete(state.draft) && !sideRequired ? (
             <button type="button" className={styles.primary} onClick={() => { void requestQuote(); }}>{SLIP_ACTIONS.price}<span aria-hidden="true">→</span></button>
           ) : null}
           onEdit={onSlipEdit}
@@ -645,6 +666,7 @@ export const TradeTicket = memo(function TradeTicket({
           provenance={dictationProvenance}
           setTyping={setTyping}
           liveMode={liveMode}
+          sideRequired={sideRequired}
           remindAfterEducation={remindAfterEducation}
         />
       )) : pending ? <div className={styles.pendingSlip}>
@@ -699,7 +721,7 @@ export const TradeTicket = memo(function TradeTicket({
           instruments={slipInstruments}
           quote={quote}
           instrument={instrument ?? null}
-          spokenLine={spokenLine ?? null}
+          spokenLine={spokenLine ?? entryWords ?? null}
           provenance={provenance}
           superseded={superseded}
           now={now}
@@ -731,6 +753,15 @@ export const TradeTicket = memo(function TradeTicket({
           </>}
           onEdit={onSlipEdit}
         >
+          <QuoteReview
+            quote={quote}
+            issuer={instrument ? 'Coinbase' : null}
+            productName={instrument?.name ?? null}
+            fees="Pool swap fees included; separate fee amount not itemized."
+            slippage={liveMode
+              ? 'Network fees apply; see the live proposal'
+              : 'Not applied to paper records'}
+          />
           <SignalCaption captionKey="fuseDrain" />
           {liveMode ? (
             <p className={styles.quoteBoundary} data-live="true">Live execution enabled.<span>This is a real onchain swap. Funds will move from the connected wallet. Pool fees, gas and <DeskTerm term="slippage" topicId="the-travelling-instruction" onDismiss={remindAfterEducation} /> apply.</span></p>
@@ -745,8 +776,8 @@ export const TradeTicket = memo(function TradeTicket({
             {LIVE_EXECUTION_ENABLED && !expired && (
               <div className={styles.liveBox}>
                 <label className={styles.liveRowLabel}>
-                  <input type="checkbox" checked={liveMode} onChange={() => onLiveModeChange(!liveMode)} aria-label="Toggle live execution on Base" />
-                  Live execution on Base
+                  <input type="checkbox" checked={liveMode} onChange={() => onLiveModeChange(!liveMode)} aria-label="Review live trade on Base" />
+                  Review live trade
                 </label>
                 <p className={styles.liveMeta}>{liveMode ? 'Real tokens and USDC will move when you execute.' : 'Paper estimate only — no funds move.'}</p>
               </div>
@@ -778,6 +809,7 @@ function HettyDraftForm({
   provenance,
   setTyping,
   liveMode,
+  sideRequired = false,
   remindAfterEducation,
 }: {
   state: ReturnType<typeof useTradingDesk>['state'];
@@ -796,11 +828,12 @@ function HettyDraftForm({
   provenance: DictationProvenance | null;
   setTyping: (next: boolean) => void;
   liveMode: boolean;
+  sideRequired?: boolean;
   remindAfterEducation: () => void;
 }) {
   return (
     <>
-      <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
+      <form onSubmit={e => { e.preventDefault(); if (!sideRequired) void requestQuote(); }}>
         <fieldset id="stock" className={styles.plaques} tabIndex={-1}>
           <legend>Stock</legend>
           {DESK_INSTRUMENTS.filter(stock => stock.quoteSupported).map(stock => (
@@ -829,9 +862,11 @@ function HettyDraftForm({
             <select
               id="side"
               data-flash={flash === 'side' ? 'true' : undefined}
-              value={state.draft.side}
+              value={sideRequired ? '' : state.draft.side}
+              required={sideRequired}
               onChange={e => edit({ ...state.draft, side: e.target.value as 'buy' | 'sell', unit: e.target.value === 'buy' ? 'USDC' : 'token', amount: '' } as TradeIntent, 'side')}
             >
+              {sideRequired && <option value="" disabled>Buy or sell</option>}
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
             </select>
@@ -867,7 +902,7 @@ function HettyDraftForm({
             </button>
           ))}
         </div>
-        <button className={styles.primary} type="submit">{SLIP_ACTIONS.price}<span aria-hidden="true">→</span></button>
+        <button className={styles.primary} type="submit" disabled={sideRequired}>{SLIP_ACTIONS.price}<span aria-hidden="true">→</span></button>
       </form>
       <Drawer
         className={styles.productDetails}

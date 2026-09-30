@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { GRAPHICS_STORAGE_KEY, parseGraphicsPreference, shouldUseLightweightGraphics, type GraphicsPreference } from '@/lib/desk/graphics';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
 import type { NightDeskAnchors, NightDeskLayout } from '@/lib/night-desk-scene';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
@@ -28,8 +29,75 @@ const INITIAL_SCENE: HouseSceneState = { visible: true, layout: 'foyer', view: '
 
 const HouseSceneContext = createContext<HouseSceneApi | null>(null);
 
+type HouseGraphicsApi = {
+  preference: GraphicsPreference;
+  setPreference(preference: GraphicsPreference): void;
+  lightweight: boolean;
+  ready: boolean;
+  inside: boolean;
+};
+
+const HouseGraphicsContext = createContext<HouseGraphicsApi | null>(null);
+const OUTSIDE_PROVIDER_GRAPHICS: HouseGraphicsApi = { preference: 'auto', setPreference: () => {}, lightweight: true, ready: false, inside: false };
+
+function readSaveData(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const connection = (navigator as { connection?: { saveData?: unknown } }).connection;
+  return connection?.saveData === true;
+}
+
+function useGraphicsState(): HouseGraphicsApi {
+  const [preference, setPreferenceState] = useState<GraphicsPreference>('auto');
+  const [ready, setReady] = useState(false);
+  const [signals, setSignals] = useState({ reducedMotion: false, coarsePointer: false, saveData: false });
+
+  useEffect(() => {
+    const stored = (() => {
+      try { return window.localStorage.getItem(GRAPHICS_STORAGE_KEY); } catch { return null; }
+    })();
+    setPreferenceState(parseGraphicsPreference(stored));
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const pointer = window.matchMedia('(pointer: coarse)');
+    const update = () => setSignals({
+      reducedMotion: motion.matches,
+      coarsePointer: pointer.matches,
+      saveData: readSaveData(),
+    });
+    update();
+    const connection = (navigator as { connection?: { addEventListener?: (t: string, l: () => void) => void; removeEventListener?: (t: string, l: () => void) => void } }).connection;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === GRAPHICS_STORAGE_KEY) setPreferenceState(parseGraphicsPreference(event.newValue));
+    };
+    motion.addEventListener('change', update);
+    pointer.addEventListener('change', update);
+    connection?.addEventListener?.('change', update);
+    window.addEventListener('storage', onStorage);
+    setReady(true);
+    return () => {
+      motion.removeEventListener('change', update);
+      pointer.removeEventListener('change', update);
+      connection?.removeEventListener?.('change', update);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  const setPreference = useCallback((next: GraphicsPreference) => {
+    setPreferenceState(next);
+    try { window.localStorage.setItem(GRAPHICS_STORAGE_KEY, next); } catch {}
+  }, []);
+
+  return useMemo(() => ({
+    preference,
+    setPreference,
+    lightweight: shouldUseLightweightGraphics(preference, signals),
+    ready,
+    inside: true,
+  }), [preference, setPreference, signals, ready]);
+}
+
 export function HouseSceneProvider({ children }: { children: ReactNode }) {
   const [scene, setScene] = useState(INITIAL_SCENE);
+  const graphics = useGraphicsState();
   const anchorListeners = useRef(new Set<(anchors: NightDeskAnchors) => void>());
   const update = useCallback((next: HouseSceneState) => setScene(old =>
     old.visible === next.visible
@@ -49,20 +117,22 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
   const api = useMemo<HouseSceneApi>(() => ({ update, subscribeAnchors }), [update, subscribeAnchors]);
   return (
     <HouseSceneContext.Provider value={api}>
-      <div className={styles.house} data-house-scene={scene.layout}>
-        <div className={styles.scene} hidden={!scene.visible} aria-hidden="true">
-          <NightDeskScene
-            view={scene.view}
-            stage={scene.stage}
-            layout={scene.layout}
-            still={scene.still}
-            tape={scene.tape}
-            tapeAt={scene.tapeAt}
-            onAnchors={emitAnchors}
-          />
+      <HouseGraphicsContext.Provider value={graphics}>
+        <div className={styles.house} data-house-scene={scene.layout}>
+          <div className={styles.scene} hidden={!scene.visible} aria-hidden="true">
+            <NightDeskScene
+              view={scene.view}
+              stage={scene.stage}
+              layout={scene.layout}
+              still={scene.still || !graphics.ready || graphics.lightweight}
+              tape={scene.tape}
+              tapeAt={scene.tapeAt}
+              onAnchors={emitAnchors}
+            />
+          </div>
+          <div className={styles.content}>{children}</div>
         </div>
-        <div className={styles.content}>{children}</div>
-      </div>
+      </HouseGraphicsContext.Provider>
     </HouseSceneContext.Provider>
   );
 }
@@ -72,6 +142,10 @@ export function useHouseScene(state: HouseSceneState) {
   const { visible, layout, view, stage, still, tape, tapeAt } = state;
   useEffect(() => { api?.update({ visible, layout, view, stage, still, tape, tapeAt }); }, [api, visible, layout, view, stage, still, tape, tapeAt]);
   return api !== null;
+}
+
+export function useHouseGraphics(): HouseGraphicsApi {
+  return useContext(HouseGraphicsContext) ?? OUTSIDE_PROVIDER_GRAPHICS;
 }
 
 export function useHouseSceneAnchors(onAnchors?: (anchors: NightDeskAnchors) => void) {

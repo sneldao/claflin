@@ -5,11 +5,13 @@
 import { SOLANA_INSTRUMENTS } from '../solana/catalog';
 import type { JesseCommand, JesseDraft, JesseIntent, SolanaInstrumentId } from '../solana/contracts';
 import { isJesseIntent } from '../solana/contracts';
+import { instructionCorrection, instructionIssue } from '../trading/instruction-safety';
 
 export type JesseSpeechParse = {
   command: JesseCommand | null;
   confidence: 'full' | 'partial' | 'none';
   heard: string;
+  issue?: string;
   /** Literal matched substrings of `heard` (original casing) that set each
    *  draft field — set only on draft/clarify parses. */
   spans?: { instrument?: string; side?: string; amount?: string };
@@ -61,6 +63,28 @@ function detectSide(text: string): { side: 'buy' | 'sell'; span: string } | null
   if (sell) return { side: 'sell', span: sell[0] };
   const buy = text.match(/\bbuy\b|\bpurchase\b|\bget\b/i);
   if (buy) return { side: 'buy', span: buy[0] };
+  return null;
+}
+
+const INSTRUMENT_SKIP_WORDS = new Set([
+  'usdc', 'usd', 'dollar', 'dollars', 'bucks', 'token', 'tokens', 'scaled', 'unit', 'units',
+  'share', 'shares', 'solana', 'jupiter', 'some', 'the', 'a', 'an', 'it', 'that', 'this',
+  'more', 'less', 'worth', 'each', 'now', 'please', 'again', 'desk', 'xstock', 'xstocks',
+]);
+
+function unknownInstrumentMention(text: string): string | null {
+  const patterns = [
+    /\b(?:of|in|into|on)\s+([a-zA-Z][a-zA-Z0-9]{1,11})\b/g,
+    /\b(?:buy|sell|purchase|get)\s+(?:\$?\s*\d+(?:\.\d+)?\s*(?:usdc|dollars?|bucks|scaled|units?|tokens?)?\s*(?:of|in|into|on)?\s+)?([a-zA-Z][a-zA-Z0-9]{1,11})\b/gi,
+  ];
+  for (const re of patterns) {
+    for (const match of text.matchAll(re)) {
+      const word = match[1];
+      if (INSTRUMENT_SKIP_WORDS.has(word.toLowerCase())) continue;
+      if (ALIASES[word.toLowerCase()]) continue;
+      return word;
+    }
+  }
   return null;
 }
 
@@ -123,13 +147,90 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
     return { command: { type: 'watch', instrumentId }, confidence: 'full', heard };
   }
 
+  const safetyIssue = instructionIssue(heard);
+  if (safetyIssue) {
+    return { command: null, confidence: 'none', heard, issue: safetyIssue };
+  }
+
+  const correction = instructionCorrection(heard);
+  if (correction) {
+    const replacement = correction.replacement;
+    const amountSpan = heard.slice(correction.replacementIndex, correction.replacementIndex + replacement.length);
+    const sideMatch = detectSide(heard);
+    const side = sideMatch?.side ?? currentDraft?.side ?? null;
+    let unknownMention = unknownInstrumentMention(heard);
+    if (!unknownMention) {
+      const tail = heard.slice(correction.replacementIndex + replacement.length)
+        .replace(/^\s*(?:usdc|usd|dollars?|bucks?|tokens?|shares?|units?|scaled)\b/i, '');
+      const tailWord = /^\s*(?:of\s+|in\s+|into\s+|on\s+)?([a-zA-Z][a-zA-Z0-9]{1,11})\b/.exec(tail)?.[1];
+      if (tailWord && !INSTRUMENT_SKIP_WORDS.has(tailWord.toLowerCase()) && !ALIASES[tailWord.toLowerCase()] && !matchInstrument(tailWord)) {
+        unknownMention = tailWord;
+      }
+    }
+    const reuseInstrument = instrumentId ?? (unknownMention ? null : currentDraft?.instrumentId ?? null);
+    const draft: JesseDraft = {
+      instrumentId: reuseInstrument,
+      side,
+      unit: side === 'buy' ? 'USDC' : side === 'sell' ? 'scaled-token' : null,
+      amount: replacement,
+    };
+    const unitWord = correction.unitWord?.toLowerCase() ?? null;
+    const wantsUsdc = Boolean(unitWord && /^(usdc|dollars?|bucks)$/.test(unitWord));
+    const wantsToken = Boolean(unitWord && /^(scaled|units?|tokens?|shares?)$/.test(unitWord));
+    if ((side === 'sell' && wantsUsdc) || (side === 'buy' && wantsToken)) {
+      return {
+        command: null,
+        confidence: 'none',
+        heard,
+        issue: 'USDC buys and scaled-unit sells are different instructions — say which you meant.',
+        spans: { amount: amountSpan },
+      };
+    }
+    if (!side) {
+      return {
+        command: { type: 'clarify', draft, field: 'side', question: 'Buy or sell?' },
+        confidence: 'partial',
+        heard,
+        spans: { amount: amountSpan },
+      };
+    }
+    if (!reuseInstrument) {
+      return {
+        command: {
+          type: 'clarify',
+          draft,
+          field: 'instrument',
+          question: unknownMention
+            ? `${unknownMention} is outside Jesse’s verified catalog — the desk covers ${SOLANA_INSTRUMENTS.filter(s => s.quoteSupported).map(s => s.symbol).join(', ')}.`
+            : 'Which xStock did you mean?',
+        },
+        confidence: 'partial',
+        heard,
+        spans: { amount: amountSpan },
+      };
+    }
+    const intent: JesseIntent = side === 'buy'
+      ? { instrumentId: reuseInstrument, side: 'buy', unit: 'USDC', amount: replacement }
+      : { instrumentId: reuseInstrument, side: 'sell', unit: 'scaled-token', amount: replacement };
+    if (!isJesseIntent(intent)) {
+      return { command: null, confidence: 'none', heard };
+    }
+    return {
+      command: { type: 'draft', intent, quote: true },
+      confidence: 'full',
+      heard,
+      spans: { ...(instrumentMatch ? { instrument: instrumentMatch.matched } : {}), ...(sideMatch ? { side: sideMatch.span } : {}), amount: amountSpan },
+    };
+  }
+
   const amountMatch = parseAmount(heard);
   const amount = amountMatch?.value ?? null;
   const sideMatch = detectSide(heard);
-  const side = sideMatch?.side
-    ?? (/\b(make that|change (it|that) to|actually)\b/i.test(heard) && amount ? 'buy' : null);
+  const side = sideMatch?.side ?? null;
+  const unknownMention = unknownInstrumentMention(heard);
   const reuseInstrument = instrumentId
-    ?? (/\b(that|it|this|make that|change (it|that) to)\b/i.test(heard) ? currentDraft?.instrumentId ?? null : null);
+    ?? (unknownMention ? null
+      : /\b(that|it|this|make that|make it|change (it|that) to|actually|i meant)\b/i.test(heard) ? currentDraft?.instrumentId ?? null : null);
 
   /* Provenance spans: only the literal words that set each field, in the
      speaker's casing. Reused/assumed values get no span so the slip can
@@ -164,7 +265,9 @@ export function parseJesseSpeech(transcript: string, currentDraft: JesseDraft | 
     };
     const field = !reuseInstrument ? 'instrument' : !side ? 'side' : 'amount';
     const question = !reuseInstrument
-      ? 'Which xStock did you mean?'
+      ? unknownMention
+        ? `${unknownMention} is outside Jesse’s verified catalog — the desk covers ${SOLANA_INSTRUMENTS.filter(s => s.quoteSupported).map(s => s.symbol).join(', ')}.`
+        : 'Which xStock did you mean?'
       : !side
         ? 'Buy or sell?'
         : 'How much? Buy spends USDC; sell uses scaled units.';

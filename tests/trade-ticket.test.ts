@@ -57,7 +57,7 @@ describe('one working document at a time', () => {
     assert.match(html, /<form/);
     assert.match(html, /id="amount"/);
     assert.match(html, /Price it/);
-    assert.doesNotMatch(html, /File paper record/);
+    assert.doesNotMatch(html, /Save paper record/);
   });
   it('replaces the draft with the quotation rather than appending it', () => {
     const html = render(reviewed());
@@ -72,14 +72,14 @@ describe('one working document at a time', () => {
     assert.match(html, /Aerodrome/);
     assert.match(html, /0\.02948502/);
     assert.match(html, /GOOGLc/);
-    assert.match(visible(html), /File paper record/);
+    assert.match(visible(html), /Save paper record/);
     assert.match(visible(html), /Edit instruction/);
     assert.match(visible(html), /No funds move/);
     assert.match(visible(html), /anyone using this browser profile/i);
   });
   it('states the boundary and consent before the consequential actions', () => {
     const html = render(reviewed());
-    const file = html.indexOf('File paper record');
+    const file = html.indexOf('Save paper record');
     assert.ok(file > 0);
     assert.ok(html.indexOf('Paper only') < file, 'the paper boundary precedes filing');
     assert.ok(html.indexOf('Recording saves a simulation') < file, 'the consent precedes filing');
@@ -96,12 +96,12 @@ describe('one working document at a time', () => {
   it('offers refresh instead of a recording action when the estimate expires', () => {
     const html = render(reviewed(), { time: quote.expiresAt });
     assert.match(visible(html), /Fresh price/);
-    assert.doesNotMatch(visible(html), /File paper record/);
+    assert.doesNotMatch(visible(html), /Save paper record/);
     assert.match(html, /Lapsed|data-lapsed/);
   });
   it('disables recording and explains when storage is unavailable', () => {
     const html = render(reviewed(), { historyReady: false });
-    assert.match(html, /<button[^>]*disabled=""[^>]*>File paper record/);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Save paper record/);
     assert.match(visible(html), /storage/i);
   });
   it('replaces cleared quotes with a waiting slip during an initial request or refresh', () => {
@@ -109,7 +109,7 @@ describe('one working document at a time', () => {
       const pending = deskReducer(state, { type: 'request', requestId: 'next-quote' });
       const html = render(pending);
       assert.match(html, /data-ticket-view="pending"/);
-      assert.doesNotMatch(html, /<form|id="amount"|0\.02948502|File paper record/);
+      assert.doesNotMatch(html, /<form|id="amount"|0\.02948502|Save paper record/);
       assert.match(html, /Cancel instruction/);
       assert.match(html, /10/);
       assert.match(html, /GOOGLc/);
@@ -125,7 +125,7 @@ describe('one working document at a time', () => {
       const html = render(state);
       assert.match(html, /data-ticket-view="draft"/);
       assert.match(html, /id="amount"[^>]*value="10"/);
-      assert.doesNotMatch(html, /0\.02948502|File paper record/);
+      assert.doesNotMatch(html, /0\.02948502|Save paper record/);
     }
     assert.match(render(states[2]), /Venue unavailable/);
   });
@@ -134,7 +134,7 @@ describe('one working document at a time', () => {
     const record = { version: 1 as const, id: quote.id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1, quote };
     const html = render(saved, { records: [record], focusedRecordId: quote.id });
     assert.match(html, /data-ticket-view="receipt"/);
-    assert.doesNotMatch(html, /<form|<input|File paper record|Fresh price/);
+    assert.doesNotMatch(html, /<form|<input|Save paper record|Fresh price/);
     assert.match(visible(html), /Filed\. Paper only\. Nothing moved\./);
     assert.match(visible(html), /Kept in this browser\./);
     assert.match(visible(html), /This is not a fill, a submission, or a position/);
@@ -162,7 +162,7 @@ describe('one working document at a time', () => {
     const record = { version: 1 as const, id: filed.id, mode: 'paper' as const, deskId: 'hetty' as const, owner: 'anonymous' as const, createdAt: now + 1, quote: filed };
     const html = render(reviewed(), { records: [record], viewedRecordId: filed.id, focusedRecordId: filed.id });
     assert.match(html, /data-foreground="archive"/);
-    assert.doesNotMatch(visible(html), /File paper record/);
+    assert.doesNotMatch(visible(html), /Save paper record/);
     assert.match(visible(html), /Back to your instruction/);
     assert.doesNotMatch(visible(html), /Start another instruction/);
   });
@@ -175,7 +175,7 @@ describe('one working document at a time', () => {
     assert.match(visible(html), /Back to your instruction/);
     assert.doesNotMatch(visible(html), /Paper recorded/);
     assert.doesNotMatch(visible(html), /0\.02948502/);
-    assert.doesNotMatch(visible(html), /File paper record/);
+    assert.doesNotMatch(visible(html), /Save paper record/);
     assert.doesNotMatch(html, /data-acknowledged="true"/);
   });
   it('keeps sell inputs and outputs in their actual units', () => {

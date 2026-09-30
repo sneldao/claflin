@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useDictation } from '@/lib/dictation/useDictation';
 import { HOUSE_DESKS, type HouseDesk, type HouseDeskId } from '@/lib/house';
-import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
-import { lampFor, litDesks, readInstruction, turretReply, type LineLamp } from '@/lib/desk/turret';
+import { offeringForId } from '@/lib/desk/offerings';
+import { PRODUCT_FACTS } from '@/lib/desk/board';
+import { offeringCapabilityText, openDesksForOffering, railLabel, soleOfferingForDesk, venueLabel } from '@/lib/desk/offerings-presentation';
+import { lampFor, readInstruction, turretReply, type LineLamp } from '@/lib/desk/turret';
 import { LINE_IDENTITY, TURRET_COPY } from '@/lib/desk/ui-copy';
 import type { MicReason } from '@/lib/funnel/events';
 import foyerStyles from './HouseFoyer.module.css';
@@ -20,7 +22,7 @@ const LAMP_WORDS: Record<LineLamp, string | null> = {
 
 export interface HouseTurretProps {
   instruction: string;
-  onInstruction: (instruction: string) => void;
+  onInstruction: (instruction: string, source: 'spoken' | 'typed') => void;
   lineDesks: readonly HouseDesk[];
   planned: readonly HouseDesk[];
   onRing: (id: HouseDeskId) => void;
@@ -31,6 +33,7 @@ export interface HouseTurretProps {
   boundary: ReactNode;
   /** An instruction settled on the line — spoken on transcript, typed after a pause. */
   onCommit?: (instruction: string, source: 'spoken' | 'typed') => void;
+  onChooseOffering: (offeringId: string, deskId: HouseDeskId) => void;
   onMicUnavailable?: (reason: MicReason) => void;
 }
 
@@ -44,7 +47,7 @@ export const SPACE_HOLD_MS = 250;
  * lamp per desk that lights when it carries what was said. The turret never
  * rings a desk on its own and never picks between two lit lines.
  */
-export function HouseTurret({ instruction, onInstruction, lineDesks, planned, onRing, onType, deskHref, onTypeClick, boundary, onCommit, onMicUnavailable }: HouseTurretProps) {
+export function HouseTurret({ instruction, onInstruction, lineDesks, planned, onRing, deskHref, onTypeClick, boundary, onCommit, onChooseOffering, onMicUnavailable }: HouseTurretProps) {
   /* Ref mirrors — the foyer re-renders on every mark tick, which must not
      restart the typed-settle timer. Synced in an effect, not during render. */
   const commitRef = useRef(onCommit);
@@ -54,7 +57,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
   const { state, isRecording, isTranscribing, startRecording, stopRecording } = useDictation({
     onTranscript: transcript => {
       typedRef.current = false;
-      onInstruction(transcript);
+      onInstruction(transcript, 'spoken');
       commitRef.current?.(transcript, 'spoken');
     },
     onMicUnavailable: reason => micRef.current?.(reason),
@@ -83,7 +86,6 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
   const reading = readInstruction(instruction);
   const deskIds = lineDesks.map(desk => desk.id);
   const reply = turretReply(reading, deskIds);
-  const lit = litDesks(reading, deskIds);
 
   if (state.status === 'success' && state.transcript && state.transcript !== heard) {
     setHeard(state.transcript);
@@ -180,7 +182,9 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (lit.length === 1) onType(lit[0]);
+    if (reading.kind !== 'matched' || reading.matches.length !== 1) return;
+    const match = reading.matches[0];
+    if (match.deskIds.length === 1) onChooseOffering(match.offeringId, match.deskIds[0]);
   };
 
   const talkLabel = isRecording
@@ -210,8 +214,9 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
         <label className={foyerStyles.instructionSearch}>
           <input
             value={instruction}
-            onChange={event => { typedRef.current = true; onInstruction(event.target.value); }}
+            onChange={event => { typedRef.current = true; onInstruction(event.target.value, 'typed'); }}
             placeholder="Try “buy Apple for 100 USDC”"
+            maxLength={1000}
             autoComplete="off"
             aria-label="Instruction for the house"
           />
@@ -228,35 +233,95 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
         {reply && <p className={foyerStyles.turretReply}>{reply}</p>}
       </div>
 
-      {(lineDesks.length > 0 || planned.length > 0) && (
-        <ol className={foyerStyles.turretLines} aria-label="The house lines">
-          {lineDesks.map(desk => {
-            const lamp = lampFor(reading, desk.id);
-            const words = LAMP_WORDS[lamp];
-            return (
-              <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
-                <span className={foyerStyles.keyLamp} aria-hidden="true" />
-                <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
-                <div className={foyerStyles.keyIdentity}>
-                  <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
-                  <p className={foyerStyles.keyRail}>
-                    {desk.market} · {LINE_IDENTITY}
-                    {words && <span className={foyerStyles.lampWords}> · {words}</span>}
+      {reading.kind === 'matched' && reading.matches.length > 0 && (
+        <section className={foyerStyles.matches} aria-label="Matching products">
+          {reading.matches.length > 1 && (
+            <h2 className={foyerStyles.matchesTitle}>Choose the product you mean</h2>
+          )}
+          <ul className={foyerStyles.matchList}>
+            {reading.matches.map(match => {
+              const offering = offeringForId(match.offeringId);
+              if (!offering) return null;
+              const facts = PRODUCT_FACTS[offering.mandateId] ?? null;
+              const desks = openDesksForOffering(offering);
+              return (
+                <li key={match.offeringId} className={foyerStyles.matchItem}>
+                  <div className={foyerStyles.matchIdentity}>
+                    <span className={foyerStyles.matchName}>{offering.name} <span className={foyerStyles.matchSymbol}>{offering.symbol}</span></span>
+                    {offering.issuer && <span className={foyerStyles.matchIssuer}>{offering.issuer}</span>}
+                  </div>
+                  <p className={foyerStyles.matchMeta}>
+                    {railLabel(offering.rail)} · {venueLabel(offering.venue)} · quoted in {offering.quoteAsset ?? 'USDC'} · {offeringCapabilityText(offering, desks.map(desk => desk.id))}
                   </p>
-                </div>
-                <div className={foyerStyles.keyActions}>
-                  <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
-                    Ring {desk.shortName}{soleOfferingForDesk(instruction, desk.id) ? ' with this' : ''}
-                  </button>
-                  <a href={deskHref(desk.id)} className={foyerStyles.keyType} onClick={onTypeClick(desk.id)}>
-                    Type instead
-                  </a>
-                </div>
-              </li>
-            );
-          })}
-          {planned.length > 0 && (
-            <li className={foyerStyles.plannedKeys}>
+                  {facts && (
+                    <>
+                      <p className={foyerStyles.matchWhat}>{facts.what}</p>
+                      <details className={foyerStyles.matchTerms}>
+                        <summary>Product terms</summary>
+                        <p>{facts.rights}</p>
+                        <p>{facts.eligibility}</p>
+                        <p><a href={facts.sourceUrl} target="_blank" rel="noreferrer">{facts.sourceLabel}</a></p>
+                      </details>
+                    </>
+                  )}
+                  <div className={foyerStyles.matchActions}>
+                    {desks.map(desk => (
+                      <button
+                        key={desk.id}
+                        type="button"
+                        className={foyerStyles.matchChoose}
+                        onClick={() => onChooseOffering(offering.offeringId, desk.id)}
+                      >
+                        Continue with {offering.symbol}{desks.length > 1 ? ` · ${desk.shortName}` : ''}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {(lineDesks.length > 0 || planned.length > 0) && (() => {
+        const matched = reading.kind === 'matched';
+        const lines = (
+          <ol className={foyerStyles.turretLines} aria-label="The house lines">
+            {lineDesks.map(desk => {
+              const lamp = lampFor(reading, desk.id);
+              const words = LAMP_WORDS[lamp];
+              const sole = soleOfferingForDesk(instruction, desk.id);
+              const canAct = reading.kind === 'empty' || (matched && sole !== null);
+              return (
+                <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
+                  <span className={foyerStyles.keyLamp} aria-hidden="true" />
+                  <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
+                  <div className={foyerStyles.keyIdentity}>
+                    <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
+                    <p className={foyerStyles.keyRail}>
+                      {desk.market} · {LINE_IDENTITY}
+                      {words && <span className={foyerStyles.lampWords}> · {words}</span>}
+                    </p>
+                  </div>
+                  {canAct && (
+                    <div className={foyerStyles.keyActions}>
+                      <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
+                        Talk with {desk.shortName}
+                      </button>
+                      <a href={deskHref(desk.id)} className={foyerStyles.keyType} onClick={onTypeClick(desk.id)}>
+                        Type instead
+                      </a>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        );
+        const plannedKeys = planned.length > 0 ? (
+          <details className={foyerStyles.plannedLines}>
+            <summary>Planned lines</summary>
+            <span className={foyerStyles.plannedKeys}>
               {planned.map(desk => (
                 <span key={desk.id} className={foyerStyles.plannedKey} data-lamp="planned">
                   <span className={foyerStyles.keyLamp} aria-hidden="true" />
@@ -265,10 +330,19 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
                   <span className={foyerStyles.keyRail}>{desk.market} · {TURRET_COPY.planned}</span>
                 </span>
               ))}
-            </li>
-          )}
-        </ol>
-      )}
+            </span>
+          </details>
+        ) : null;
+        return matched ? (
+          <>
+            <details className={foyerStyles.brokerLines}>
+              <summary>Talk with a broker</summary>
+              {lines}
+            </details>
+            {plannedKeys}
+          </>
+        ) : <>{lines}{plannedKeys}</>;
+      })()}
 
       {boundary}
 

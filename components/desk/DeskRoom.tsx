@@ -9,6 +9,7 @@ import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { HouseMark } from './HouseMark';
 import { BrokerageRoom } from './BrokerageRoom';
 import { HouseDirectory } from './HouseDirectory';
+import { GraphicsControl } from './GraphicsControl';
 import { useHouseScene } from './HouseScene';
 import styles from './WorkingDesk.module.css';
 import scene from "./DeskScene.module.css";
@@ -139,6 +140,7 @@ export function DeskRoom({
         </Link>
         <nav aria-label="Desk navigation">
           <HouseDirectory activeDeskId={deskId} onVisit={onSwitchDesk} onHome={onLeaveDesk} />
+          <GraphicsControl />
           <button
             type="button"
             className={scene.toneToggle}
@@ -183,7 +185,7 @@ export function DeskRoom({
                 ? "Optional. Keeps your paper record and Hetty's saved lines on your account instead of only this browser."
                 : 'Optional account sign-in. Jesse paper records stay in this browser.'}
             >
-              Sign in to keep your record
+              {showPaperImport ? 'Sign in to keep your record' : 'Sign in'}
             </button>
           ))}
         </nav>

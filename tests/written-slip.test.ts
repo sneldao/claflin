@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WrittenSlip } from '../components/desk/WrittenSlip';
+import { entryInstructionMarks } from '../lib/desk/slip-provenance';
+import { entryIntentWithInstruction } from '../lib/house-entry';
 import { HETTY_VOCAB, JESSE_VOCAB, filedLine, slipOneLine, slipValidity } from '../lib/desk/written-slip';
 import { SLIP_ACTIONS } from '../lib/desk/ui-copy';
 import {
@@ -71,10 +73,10 @@ describe('written slip — review', () => {
     assert.match(html, /100 USDC/);
     assert.match(html, /Apple xStock \(fixture\) \(AAPLx\)/);
     assert.match(html, /about 0\.4312 AAPLx at Jupiter’s price just now\./);
-    assert.match(html, /Good for 20 seconds\./);
+    assert.match(html, /Estimate expires in 20 seconds\./);
     assert.match(html, /Multiplier 1\.1/);
     assert.match(html, /paper estimate/);
-    assert.match(html, /File paper record/);
+    assert.match(html, /Save paper record/);
     assert.doesNotMatch(html, /<select/);
     assert.doesNotMatch(html, /type="radio"/);
   });
@@ -89,7 +91,7 @@ describe('written slip — review', () => {
       now: buyQuote.expiresAt + 1_000,
     }));
     assert.match(html, /data-lapsed="true"/);
-    assert.match(html, /Lapsed — ask for a fresh price\./);
+    assert.match(html, /Expired — request a fresh estimate/);
   });
 });
 
@@ -148,6 +150,37 @@ describe('written slip — provenance', () => {
     assert.match(html, /From what you said: “buy 100 USDC of AAPLx”/);
   });
 
+  it('labels keyed text as typed, never as speech', () => {
+    const html = renderToStaticMarkup(createElement(WrittenSlip, {
+      mode: 'draft',
+      draft: buyDraft,
+      ...jesse,
+      instrument: AAPLX_FIXTURE,
+      provenance: {
+        amount: { kind: 'typed' as const, phrase: 'buy 100 USDC of AAPLx', excerpt: '100 USDC', value: '100' },
+      },
+    }));
+    assert.match(html, /← “100 USDC”/);
+    assert.match(html, /From what you typed: “buy 100 USDC of AAPLx”/);
+    assert.doesNotMatch(html, /From what you said/);
+  });
+
+  it('marks a foyer- or URL-carried value as carried, never said', () => {
+    const html = renderToStaticMarkup(createElement(WrittenSlip, {
+      mode: 'draft',
+      draft: buyDraft,
+      ...jesse,
+      instrument: AAPLX_FIXTURE,
+      provenance: {
+        side: { kind: 'carried' as const, value: 'buy' },
+        instrument: { kind: 'carried' as const, value: JESSE_BUY_INTENT.instrumentId },
+      },
+    }));
+    assert.match(html, /← from the foyer/);
+    assert.match(html, /Carried in from the foyer/);
+    assert.doesNotMatch(html, /From what you said|From what you typed/);
+  });
+
   it('never renders a mark whose value the slip no longer holds', () => {
     const html = renderToStaticMarkup(createElement(WrittenSlip, {
       mode: 'draft',
@@ -194,6 +227,53 @@ describe('slip vocabulary — Hetty speaks Aerodrome and tokens', () => {
       filedLine(quote, 'GOOGL', HETTY_VOCAB),
       /^Filed on paper: sell 3 .* — Aerodrome estimated about 743\.21 USDC\. Nothing moved\.$/,
     );
+  });
+});
+
+describe('entry instruction marks', () => {
+  it('marks spoken side and amount as said only with literal spans', () => {
+    const intent = entryIntentWithInstruction('buy $25 of Apple', 'spoken')!;
+    const marks = entryInstructionMarks(intent, 'aaplc');
+    assert.equal(marks.instrument?.kind, 'carried');
+    assert.equal(marks.side?.kind, 'said');
+    assert.equal(marks.side?.kind === 'said' && marks.side.excerpt, 'buy');
+    assert.equal(marks.amount?.kind, 'said');
+  });
+
+  it('marks typed values as typed and picked context as carried', () => {
+    const typed = entryIntentWithInstruction('buy $25 of Apple', 'typed')!;
+    const typedMarks = entryInstructionMarks(typed, 'aaplc');
+    assert.equal(typedMarks.side?.kind, 'typed');
+    assert.equal(typedMarks.amount?.kind, 'typed');
+    const picked = entryIntentWithInstruction('buy $25 of Apple', 'picked')!;
+    assert.equal(entryInstructionMarks(picked, 'aaplc').side?.kind, 'carried');
+  });
+
+  it('never mints said marks for a URL-only entry', () => {
+    const marks = entryInstructionMarks({ side: 'buy', amount: '25' }, 'aaplc');
+    assert.equal(marks.side?.kind, 'carried');
+    assert.equal(marks.amount?.kind, 'carried');
+  });
+
+  it('falls back to carried when a claimed span is not literally in the phrase', () => {
+    const spoken = entryInstructionMarks({
+      side: null,
+      amount: '25',
+      instruction: { text: 'twenty five dollars of Apple', source: 'spoken', spans: { amount: '25' } },
+    }, 'aaplc');
+    assert.equal(spoken.amount?.kind, 'carried', 'the normalized figure was never literally said');
+    const typed = entryInstructionMarks({
+      side: null,
+      amount: '25',
+      instruction: { text: 'twenty five dollars of Apple', source: 'typed' },
+    }, 'aaplc');
+    assert.equal(typed.amount?.kind, 'carried', 'a typed mark needs its literal span');
+    const fabric = entryInstructionMarks({
+      side: 'buy',
+      amount: null,
+      instruction: { text: 'sell Apple', source: 'spoken', spans: { side: 'buy' } },
+    }, 'aaplc');
+    assert.equal(fabric.side?.kind, 'carried', 'a span that is not in the text is no quote');
   });
 });
 

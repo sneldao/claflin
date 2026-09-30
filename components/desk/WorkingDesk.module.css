@@ -1859,6 +1859,23 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 }
 .writtenSlip[data-lapsed="true"] .slipSentence,
 .writtenSlip[data-lapsed="true"] .slipTerms { opacity: .55; }
+.quoteReview {
+  margin: 14px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--desk-paper-rule);
+  display: grid;
+  gap: 6px;
+}
+.quoteReviewRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 16px;
+  font: 14px/1.6 var(--font-body), sans-serif;
+}
+.quoteReviewRow dt { color: var(--desk-paper-muted); letter-spacing: .05em; margin: 0; }
+.quoteReviewRow dd { margin: 0; color: inherit; text-align: right; font-family: var(--font-mono), monospace; }
+.quoteReviewRow:nth-child(-n+2) dd { font-size: 16px; }
 .slipSuperseded {
   list-style: none;
   margin: 12px 0 0;
@@ -1891,6 +1908,24 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 }
 @media (prefers-reduced-motion: reduce) {
   .writtenSlip[data-mode='draft'] .slipValue, .slipProv, .slipSuperseded s::after { animation: none; }
+}
+
+@media (max-width: 760px) {
+  .quoteReviewRow { font-size: 14px; flex-direction: column; gap: 0; }
+  .quoteReviewRow dd { text-align: left; }
+  .quoteReviewRow:nth-child(-n+2) dd { font-size: 16px; }
+  .slipEditor input { font-size: 16px; min-height: 44px; }
+  .slipEditor button { min-height: 44px; }
+  .slipTerms { font-size: 13px; }
+  .slipProv { font-size: 12px; }
+  .notice { font-size: 14px; }
+  .quoteBoundary { font-size: 14px; }
+  .slipConsent { font-size: 14px; }
+  .liveMeta { font-size: 14px; }
+  .quoteReviewRow dd, .slipProv, .liveMeta, .authLabel { min-width: 0; overflow-wrap: anywhere; }
+  .ticket input, .ticket select, .jesseCommandBar input { font-size: 16px; min-height: 44px; }
+  .amountChip, .amountChips button, .slipActions .secondary, .receiptTools .secondary, .presentationButton, .signalDismiss { min-height: 44px; }
+  .ticket .primary, .ticket .secondary { font-size: 14px; }
 }
 
 /* ————— Jesse Room: the tape on the blotter ————— */

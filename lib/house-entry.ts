@@ -8,6 +8,7 @@
 import { getHouseDesk, type HouseDeskId } from './house';
 import { offeringCoversDesk, offeringForId } from './desk/offerings';
 import { parseDictatedTradeIntent } from './trading/dictation-parser';
+import { instructionIssue } from './trading/instruction-safety';
 
 export const HOUSE_DESK_PREFERENCE_KEY = 'claflin.desk.v1.last';
 
@@ -16,9 +17,20 @@ export type HouseEntry =
   | { kind: 'desk'; deskId: HouseDeskId; source: 'query' | 'preference'; offeringId: string | null; intent: EntryIntent | null; recordId: string | null };
 
 /** The part of a foyer instruction that survives entry: side and amount. */
-export type EntryIntent = { side: 'buy' | 'sell' | null; amount: string | null };
+export type EntryIntent = {
+  side: 'buy' | 'sell' | null;
+  amount: string | null;
+  instruction?: {
+    text: string;
+    source: 'spoken' | 'typed' | 'picked';
+    spans?: { side?: string; amount?: string };
+    issue?: string;
+  };
+};
 
 const INTENT_AMOUNT_PATTERN = /^(0|[1-9]\d*)(\.\d+)?$/;
+
+const ENTRY_INSTRUCTION_MAX = 1000;
 
 /** Side and amount from a foyer sentence, when the dictation parser can read them. */
 export function entryIntentFromInstruction(instruction: string): EntryIntent | null {
@@ -28,6 +40,38 @@ export function entryIntentFromInstruction(instruction: string): EntryIntent | n
   const side = parsed.intent.side === 'buy' || parsed.intent.side === 'sell' ? parsed.intent.side : null;
   const amount = parsed.intent.amount && INTENT_AMOUNT_PATTERN.test(parsed.intent.amount) ? parsed.intent.amount : null;
   return side || amount ? { side, amount } : null;
+}
+
+export function entryIntentWithInstruction(
+  instruction: string,
+  source: 'spoken' | 'typed' | 'picked',
+): EntryIntent | null {
+  const text = instruction.trim().slice(0, ENTRY_INSTRUCTION_MAX);
+  if (!text) return null;
+  const issue = instructionIssue(text);
+  if (issue) {
+    return {
+      side: null,
+      amount: null,
+      instruction: { text, source, issue },
+    };
+  }
+  const parsed = parseDictatedTradeIntent(text);
+  const side = parsed.intent.side === 'buy' || parsed.intent.side === 'sell' ? parsed.intent.side : null;
+  const amount = parsed.intent.amount && INTENT_AMOUNT_PATTERN.test(parsed.intent.amount) ? parsed.intent.amount : null;
+  const spans: { side?: string; amount?: string } = {};
+  if (side && parsed.spans?.side) spans.side = parsed.spans.side;
+  if (amount && parsed.spans?.amount) spans.amount = parsed.spans.amount;
+  return {
+    side,
+    amount,
+    instruction: {
+      text,
+      source,
+      ...(Object.keys(spans).length > 0 ? { spans } : {}),
+      ...(parsed.issue ? { issue: parsed.issue } : {}),
+    },
+  };
 }
 
 /**

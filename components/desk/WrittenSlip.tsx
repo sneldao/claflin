@@ -274,9 +274,9 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
         <>
           {terms && <p className={styles.slipTerms}>{terms}</p>}
           <p role="status" className={styles.notice} data-urgent={validity?.state === 'closing' ? 'true' : undefined}>
-            {validity?.state === 'open' && `Good for ${validity.secondsLeft} seconds.`}
-            {validity?.state === 'closing' && 'Closing — too late to file. Ask for a fresh price.'}
-            {validity?.state === 'lapsed' && 'Lapsed — ask for a fresh price.'}
+            {validity?.state === 'open' && `Estimate expires in ${validity.secondsLeft} seconds.`}
+            {validity?.state === 'closing' && 'Nearly expired — request a fresh estimate'}
+            {validity?.state === 'lapsed' && 'Expired — request a fresh estimate'}
           </p>
           {quote.assumptions && <p className={styles.assumptions}>{quote.assumptions}</p>}
         </>
@@ -303,6 +303,10 @@ function ProvMark({ mark }: { mark: SlipMark }) {
     case 'said':
       text = `← “${mark.excerpt}”`;
       label = `From what you said: “${mark.phrase}”`;
+      break;
+    case 'typed':
+      text = `← “${mark.excerpt}”`;
+      label = `From what you typed: “${mark.phrase}”`;
       break;
     case 'kept':
       text = '← kept from the slip';

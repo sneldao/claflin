@@ -1,5 +1,6 @@
 import { DESK_INSTRUMENTS } from './catalog';
 import type { TradeIntent } from './domain';
+import { instructionCorrection, instructionIssue } from './instruction-safety';
 
 export interface DictatedIntentResult {
   intent: Partial<TradeIntent>;
@@ -7,6 +8,7 @@ export interface DictatedIntentResult {
   confidence: 'full' | 'partial' | 'none';
   explanation: string;
   detectedLanguage?: string;
+  issue?: string;
   multiLegs?: Array<{ intent: Partial<TradeIntent>; explanation: string }>;
   triggerPrice?: string;
   isWatch?: boolean;
@@ -118,12 +120,83 @@ function wordNumberSpan(text: string): string | undefined {
   return text.slice(start, end);
 }
 
+const INSTRUMENT_SKIP_WORDS = new Set([
+  'usdc', 'usd', 'dollar', 'dollars', 'bucks', 'buck', 'euro', 'euros', 'token', 'tokens',
+  'share', 'shares', 'unit', 'units', 'scaled', 'stock', 'stocks', 'some', 'the', 'a', 'an',
+  'it', 'that', 'this', 'more', 'less', 'worth', 'each', 'now', 'please', 'again',
+]);
+
+function unknownInstrumentMention(text: string, isKnown: (word: string) => boolean): string | null {
+  const patterns = [
+    /\b(?:of|in|into|on)\s+([a-zA-Z][a-zA-Z0-9]{1,11})\b/g,
+    /\b(?:buy|sell|purchase|get|grab)\s+(?:[\$¥€£]?\s*\d+(?:\.\d+)?\s*(?:usdc|dollars?|bucks|tokens?|shares|units)?\s*(?:of|in|into|on)?\s+)?([a-zA-Z][a-zA-Z0-9]{1,11})\b/gi,
+  ];
+  for (const re of patterns) {
+    for (const match of text.matchAll(re)) {
+      const word = match[1];
+      if (INSTRUMENT_SKIP_WORDS.has(word.toLowerCase())) continue;
+      if (isKnown(word)) continue;
+      return word;
+    }
+  }
+  return null;
+}
+
+// Check known common aliases (including localized names)
+const ALIASES: Record<string, string> = {
+  nvidia: 'NVDAc',
+  apple: 'AAPLc',
+  tesla: 'TSLAc',
+  google: 'GOOGLc',
+  alphabet: 'GOOGLc',
+  meta: 'METAc',
+  facebook: 'METAc',
+  coinbase: 'COINc',
+  microsoft: 'MSFTc',
+  amazon: 'AMZNc',
+  microstrategy: 'MSTRc',
+  // Multilingual company names
+  'アップル': 'AAPLc',
+  'テスラ': 'TSLAc',
+  'エヌビディア': 'NVDAc',
+  'グーグル': 'GOOGLc',
+  '苹果': 'AAPLc',
+  '特斯拉': 'TSLAc',
+  '英伟达': 'NVDAc',
+  '谷歌': 'GOOGLc',
+};
+
+export function resolveDeskAlias(text: string): (typeof DESK_INSTRUMENTS)[number] | undefined {
+  const byIdentity = DESK_INSTRUMENTS.find(inst => {
+    const symbolClean = inst.symbol.toLowerCase().replace(/c$/, '');
+    return new RegExp(`\\b(${inst.symbol.toLowerCase()}|${symbolClean})\\b`, 'i').test(text)
+      || new RegExp(`\\b${inst.name.toLowerCase()}\\b`, 'i').test(text);
+  });
+  if (byIdentity) return byIdentity;
+  const lower = text.toLowerCase();
+  for (const [alias, targetSymbol] of Object.entries(ALIASES)) {
+    if (lower.includes(alias.toLowerCase())) {
+      const found = DESK_INSTRUMENTS.find(s => s.symbol.toLowerCase() === targetSymbol.toLowerCase());
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+function knownInstrumentWord(word: string): boolean {
+  const w = word.toLowerCase();
+  return DESK_INSTRUMENTS.some(inst => {
+    const symbolClean = inst.symbol.toLowerCase().replace(/c$/, '');
+    return w === inst.symbol.toLowerCase() || w === symbolClean || w === inst.name.toLowerCase();
+  }) || ALIASES[w] !== undefined;
+}
+
 /**
  * Normalizes speech input and extracts structured trade intent.
  * AssemblyAI Dictation provides clean transcripts across 18 languages
  * with filler words (ums/ahs) already stripped.
  */
-export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentResult {
+function parseDictatedTradeIntentCore(rawTranscript: string, currentDraft: Partial<TradeIntent> | null = null): DictatedIntentResult {
   const text = rawTranscript.trim();
   if (!text) {
     return {
@@ -142,6 +215,85 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
   else if (/\b(comprar|vender|compro|vendo|dólares|acciones)\b/i.test(lower)) detectedLanguage = 'es';
   else if (/\b(acheter|vendre|achète|vends|euros|actions)\b/i.test(lower)) detectedLanguage = 'fr';
   else if (/\b(kaufen|verkaufen|kaufe|verkaufe|aktien)\b/i.test(lower)) detectedLanguage = 'de';
+
+  const correction = instructionCorrection(text);
+  if (correction) {
+    const replacement = correction.replacement;
+    const amountSpan = text.slice(correction.replacementIndex, correction.replacementIndex + replacement.length);
+    const buyHit = /\b(buy|purchase|acquire|get|grab|pick up|bid|invest in)\b/i.exec(text);
+    const sellHit = /\b(sell|dump|liquidate|dispose|unload|sell off)\b/i.exec(text);
+    const explicitSide = buyHit ? 'buy' as const : sellHit ? 'sell' as const : undefined;
+    const explicitSideSpan = (buyHit ?? sellHit)?.[0];
+    const side = explicitSide ?? (currentDraft?.side === 'buy' || currentDraft?.side === 'sell' ? currentDraft.side : undefined);
+    let unknownMention = unknownInstrumentMention(text, knownInstrumentWord);
+    if (!unknownMention) {
+      const tail = text.slice(correction.replacementIndex + replacement.length)
+        .replace(/^\s*(?:usdc|usd|dollars?|bucks?|euros?|tokens?|shares?|units?|scaled)\b/i, '');
+      const tailWord = /^\s*(?:of\s+|in\s+|into\s+|on\s+)?([a-zA-Z][a-zA-Z0-9]{1,11})\b/.exec(tail)?.[1];
+      if (tailWord && !INSTRUMENT_SKIP_WORDS.has(tailWord.toLowerCase()) && !knownInstrumentWord(tailWord)) {
+        unknownMention = tailWord;
+      }
+    }
+    const keepInstrument = unknownMention ? undefined : resolveDeskAlias(text);
+    const instrumentId = unknownMention
+      ? undefined
+      : keepInstrument?.id ?? currentDraft?.instrumentId ?? undefined;
+    const correctionSpans: { instrument?: string; side?: string; amount?: string } = { amount: amountSpan };
+    if (explicitSideSpan) correctionSpans.side = explicitSideSpan;
+    if (keepInstrument) {
+      const aliasTerms = [
+        keepInstrument.symbol.toLowerCase(),
+        keepInstrument.symbol.toLowerCase().replace(/c$/, ''),
+        keepInstrument.name.toLowerCase(),
+        ...Object.keys(ALIASES).filter(a => ALIASES[a] === keepInstrument.symbol),
+      ];
+      for (const term of aliasTerms) {
+        const wordy = /^[a-z0-9 ]+$/i.test(term);
+        const hit = new RegExp(wordy ? `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b` : term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').exec(text);
+        if (hit) { correctionSpans.instrument = hit[0]; break; }
+      }
+    }
+    const unitWord = correction.unitWord?.toLowerCase() ?? null;
+    const wantsUsdc = Boolean(unitWord && /^(usdc|dollars?|bucks)$/.test(unitWord));
+    const wantsToken = Boolean(unitWord && /^(tokens?|shares?|units?|scaled)$/.test(unitWord));
+    if ((side === 'sell' && wantsUsdc) || (side === 'buy' && wantsToken)) {
+      return {
+        intent: {},
+        confidence: 'none',
+        explanation: 'USDC buys and token-quantity sells are different instructions — say which you meant.',
+        issue: 'USDC buys and token-quantity sells are different instructions — say which you meant.',
+        detectedLanguage,
+        spans: correctionSpans,
+      };
+    }
+    const intent: Partial<TradeIntent> = {};
+    if (side) { intent.side = side; intent.unit = side === 'sell' ? 'token' : 'USDC'; }
+    if (instrumentId) intent.instrumentId = instrumentId;
+    intent.amount = replacement;
+    if (!side) {
+      return {
+        intent,
+        matchedInstrument: keepInstrument,
+        confidence: 'partial',
+        explanation: 'Buy or sell?',
+        detectedLanguage,
+        spans: correctionSpans,
+      };
+    }
+    const full = Boolean(instrumentId);
+    return {
+      intent,
+      matchedInstrument: keepInstrument,
+      confidence: full ? 'full' : 'partial',
+      explanation: full
+        ? `${side === 'buy' ? 'Buy' : 'Sell'} ${replacement} ${intent.unit} of ${keepInstrument?.symbol ?? instrumentId}`
+        : unknownMention
+          ? `${unknownMention} is outside this desk's coverage — the book lists ${DESK_INSTRUMENTS.map(s => s.symbol).join(', ')}.`
+          : 'Which stock did you mean?',
+      detectedLanguage,
+      spans: correctionSpans,
+    };
+  }
 
   // Check for multi-leg instructions ("and", "then", "y", "et", "und", "そして", "然后")
   const splitMatch = text.match(/\b(?:and then|and|then|y luego|y|et ensuite|et|und dann|und|そして|然后)\b/i);
@@ -182,7 +334,7 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
 
   // 1. Detect side across multiple languages (EN, ES, FR, DE, JA, ZH)
   const BUY_RES = [
-    /\b(buy|purchase|acquire|get|grab|pick up|long|bid|invest in)\b/i,
+    /\b(buy|purchase|acquire|get|grab|pick up|bid|invest in)\b/i,
     /\b(comprar|compro|adquirir)\b/i, // Spanish
     /\b(acheter|achète|acquérir)\b/i, // French
     /\b(kaufen|kaufe|erwerben)\b/i,   // German
@@ -190,7 +342,7 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
     /(买|购买|买入|做多)/,               // Chinese
   ];
   const SELL_RES = [
-    /\b(sell|dump|short|liquidate|dispose|unload|sell off)\b/i,
+    /\b(sell|dump|liquidate|dispose|unload|sell off)\b/i,
     /\b(vender|vendo|liquidar)\b/i,    // Spanish
     /\b(vendre|vends|liquider)\b/i,    // French
     /\b(verkaufen|verkaufe|abstoßen)\b/i, // German
@@ -211,49 +363,18 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
 
   // 2. Detect instrument — keep the literal words as written for the mark.
   let instrumentSpan: string | undefined;
-  let matchedInstrument = DESK_INSTRUMENTS.find(inst => {
-    const symbolClean = inst.symbol.toLowerCase().replace(/c$/, '');
-    const symbolRegex = new RegExp(`\\b(${inst.symbol.toLowerCase()}|${symbolClean})\\b`, 'i');
-    const nameRegex = new RegExp(`\\b${inst.name.toLowerCase()}\\b`, 'i');
-    const hit = symbolRegex.exec(text) ?? nameRegex.exec(text);
-    if (hit) instrumentSpan = hit[0];
-    return Boolean(hit);
-  });
-
-  if (!matchedInstrument) {
-    // Check known common aliases (including localized names)
-    const aliases: Record<string, string> = {
-      nvidia: 'NVDAc',
-      apple: 'AAPLc',
-      tesla: 'TSLAc',
-      google: 'GOOGLc',
-      alphabet: 'GOOGLc',
-      meta: 'METAc',
-      facebook: 'METAc',
-      coinbase: 'COINc',
-      microsoft: 'MSFTc',
-      amazon: 'AMZNc',
-      microstrategy: 'MSTRc',
-      // Multilingual company names
-      'アップル': 'AAPLc',
-      'テスラ': 'TSLAc',
-      'エヌビディア': 'NVDAc',
-      'グーグル': 'GOOGLc',
-      '苹果': 'AAPLc',
-      '特斯拉': 'TSLAc',
-      '英伟达': 'NVDAc',
-      '谷歌': 'GOOGLc',
-    };
-
-    for (const [alias, targetSymbol] of Object.entries(aliases)) {
-      const idx = text.toLowerCase().indexOf(alias.toLowerCase());
-      if (idx >= 0) {
-        matchedInstrument = DESK_INSTRUMENTS.find(s => s.symbol.toLowerCase() === targetSymbol.toLowerCase());
-        if (matchedInstrument) {
-          instrumentSpan = text.slice(idx, idx + alias.length);
-          break;
-        }
-      }
+  const matchedInstrument = resolveDeskAlias(text);
+  if (matchedInstrument) {
+    const terms = [
+      matchedInstrument.symbol.toLowerCase(),
+      matchedInstrument.symbol.toLowerCase().replace(/c$/, ''),
+      matchedInstrument.name.toLowerCase(),
+      ...Object.keys(ALIASES).filter(a => ALIASES[a] === matchedInstrument.symbol),
+    ];
+    for (const term of terms) {
+      const wordy = /^[a-z0-9 ]+$/i.test(term);
+      const hit = new RegExp(wordy ? `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b` : term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').exec(text);
+      if (hit) { instrumentSpan = hit[0]; break; }
     }
   }
 
@@ -296,6 +417,7 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
 
   const isFull = Boolean(intent.side && intent.instrumentId && intent.amount);
   const isPartial = Boolean(intent.side || intent.instrumentId || intent.amount);
+  const unknownMention = matchedInstrument ? null : unknownInstrumentMention(text, knownInstrumentWord);
 
   let explanation = '';
   if (isWatch && matchedInstrument) {
@@ -309,6 +431,9 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
     if (intent.amount) parts.push(`amount: ${intent.amount}`);
     if (triggerPrice) parts.push(`trigger: $${triggerPrice}`);
     explanation = `Partially recognized (${parts.join(', ')})`;
+    if (unknownMention) explanation += ` ${unknownMention} is outside this desk's coverage — the book lists ${DESK_INSTRUMENTS.map(s => s.symbol).join(', ')}.`;
+  } else if (unknownMention) {
+    explanation = `${unknownMention} is outside this desk's coverage — the book lists ${DESK_INSTRUMENTS.map(s => s.symbol).join(', ')}.`;
   } else {
     explanation = 'Could not parse trade instruction.';
   }
@@ -322,6 +447,22 @@ export function parseDictatedTradeIntent(rawTranscript: string): DictatedIntentR
     triggerPrice,
     isWatch,
     spans: { instrument: instrumentSpan, side: sideSpan, amount: amountSpan },
+  };
+}
+
+export function parseDictatedTradeIntent(
+  rawTranscript: string,
+  currentDraft: Partial<TradeIntent> | null = null,
+): DictatedIntentResult {
+  const result = parseDictatedTradeIntentCore(rawTranscript, currentDraft);
+  const issue = instructionIssue(rawTranscript);
+  if (!issue) return result;
+  return {
+    ...result,
+    intent: {},
+    confidence: 'none',
+    explanation: issue,
+    issue,
   };
 }
 

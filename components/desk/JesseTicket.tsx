@@ -13,6 +13,7 @@ import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
 import { WrittenSlip } from './WrittenSlip';
+import { QuoteReview } from './QuoteReview';
 import { GapStrip } from './GapStrip';
 import { SignalCaption } from './SignalCaption';
 import type { JesseDraft, JesseIntent, MarketComparison } from '@/lib/solana/contracts';
@@ -55,6 +56,7 @@ function intentFromDraft(draft: {
 export const JesseTicket = memo(function JesseTicket({
   jesse,
   spokenLine = null,
+  entryWords = null,
   carriedNote = null,
   mark = null,
   blankSlip = false,
@@ -68,6 +70,7 @@ export const JesseTicket = memo(function JesseTicket({
 }: {
   jesse: JesseDesk;
   spokenLine?: string | null;
+  entryWords?: string | null;
   carriedNote?: string | null;
   /** The venue mark for the drafted instrument — its stock-reference gap heads the slip. */
   mark?: DeskMark | null;
@@ -122,7 +125,9 @@ export const JesseTicket = memo(function JesseTicket({
       : foreground.kind === 'pending' || inFlight === 'quote'
         ? 'Jesse is pricing it.'
         : foreground.kind === 'quotation'
-          ? 'Read it twice. Then it’s yours.'
+          ? liveMode && liveAvailable
+            ? 'Review your instruction. Nothing moves until you sign.'
+            : 'Review this paper estimate.'
           : BLANK_SLIP_TITLE.jesse;
 
   const onFile = async () => {
@@ -232,7 +237,7 @@ export const JesseTicket = memo(function JesseTicket({
           instruments={SLIP_INSTRUMENTS}
           quote={q}
           instrument={instrument}
-          spokenLine={spokenLine}
+          spokenLine={spokenLine ?? entryWords}
           provenance={provenance}
           superseded={superseded}
           now={reviewNow}
@@ -267,6 +272,17 @@ export const JesseTicket = memo(function JesseTicket({
           }
           onEdit={onSlipEdit}
         >
+          <QuoteReview
+            quote={q}
+            scaled
+            sellUnit={`${q.inputSymbol} scaled units`}
+            issuer={instrument?.issuer ?? null}
+            productName={instrument?.name ?? null}
+            fees={q.feeBps === null ? 'Fee breakdown unavailable' : `Venue fee: ${q.feeBps} bps`}
+            slippage={liveMode && liveAvailable
+              ? `${q.slippageBps} bps quote tolerance; network fees apply — see the live proposal`
+              : `${q.slippageBps} bps quote tolerance; paper record does not execute`}
+          />
           {liveAvailable && (
             <div className={styles.liveBox}>
               <label className={styles.liveRowLabel}>
@@ -274,9 +290,9 @@ export const JesseTicket = memo(function JesseTicket({
                   type="checkbox"
                   checked={liveMode}
                   onChange={() => setLiveMode(!liveMode)}
-                  aria-label="Toggle live execution on Solana"
+                  aria-label="Review live trade on Solana"
                 />
-                {' '}Live execution on Solana
+                {' '}Review live trade
               </label>
               {liveMode && (
                 <p className={styles.liveConsent}>
@@ -333,7 +349,7 @@ export const JesseTicket = memo(function JesseTicket({
           vocab={JESSE_VOCAB}
           instruments={SLIP_INSTRUMENTS}
           instrument={selectedStock}
-          spokenLine={spokenLine}
+          spokenLine={spokenLine ?? entryWords}
           provenance={provenance}
           superseded={superseded}
           pending={inFlight === 'quote' || foreground.kind === 'pending'}
@@ -360,7 +376,9 @@ export const JesseTicket = memo(function JesseTicket({
           ? 'Getting a Jupiter paper estimate…'
           : spokenLine
             ? <>You said: <em>{spokenLine}</em></>
-            : 'Speak or type an instruction, e.g. “buy 100 USDC of AAPLx”.'}
+            : entryWords
+              ? <>Your instruction: <em>{entryWords}</em></>
+              : 'Speak or type an instruction, e.g. “buy 100 USDC of AAPLx”.'}
       </p>
       <DraftForm
         draft={draft}
@@ -491,9 +509,9 @@ function DraftForm({
                 type="checkbox"
                 checked={liveMode}
                 onChange={() => setLiveMode(!liveMode)}
-                aria-label="Toggle live execution on Solana"
+                aria-label="Review live trade on Solana"
               />
-              {' '}Live execution on Solana
+              {' '}Review live trade
             </label>
             {liveMode && (
               <p className={styles.liveConsent}>

@@ -8,7 +8,7 @@ import type { DeskDocumentSession } from '@/lib/desk/contracts';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
 import { clearDeskQuery, loadLastDesk, parseDeskQuery, parseEntryIntent, parseOfferingQuery, parseRecordQuery, resolveHouseEntry, saveLastDesk, syncDeskQuery, type EntryIntent } from '@/lib/house-entry';
 import { useRecordUrl } from '@/lib/desk/use-record-url';
-import { readRestorableDraft, writePersistedDraft } from './desk-documents';
+import { readDraftCheckpoint, readRestorableDraft, writePersistedDraft } from './desk-documents';
 import { emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 import { initialDesk } from './workflow';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
@@ -60,9 +60,9 @@ export function useTradingDesk() {
     resolved: entryResolved,
   });
   const {
-    state, records, error, watched, viewedRecordId, focusedRecordId,
+    state, records, error, watched, viewedRecordId, focusedRecordId, sideRequired,
     hydrate: hydrateDocuments, restore: restoreDocuments, markHistoryReady, loadHistory,
-    edit, requestQuote, save, cancel, watch, unwatch,
+    applyInstruction, edit, requestQuote, save, cancel, watch, unwatch,
   } = documents;
   /* The controller session — Jesse's serialized command engine. It mounts
      once and outlives surface mounts, so a desk switch parks its work by
@@ -177,7 +177,7 @@ export function useTradingDesk() {
     abortInFlight();
     resetSessions();
     hydrateDesk(id, selectedOfferingId, selectedRecord ? null : intent, selectedRecord);
-    countEntry(id, 'foyer', Boolean(selectedOfferingId || (!selectedRecord && (intent?.side || intent?.amount))), selectedRecord, 'foyer');
+    countEntry(id, 'foyer', Boolean(selectedOfferingId || (!selectedRecord && (intent?.side || intent?.amount || intent?.instruction))), selectedRecord, 'foyer');
     saveLastDesk(window.localStorage, id);
     syncDeskQuery(id, selectedOfferingId, 'push', selectedRecord ? null : intent ?? null, selectedRecord);
     showPhase('desk');
@@ -198,18 +198,29 @@ export function useTradingDesk() {
     }
     abortInFlight();
     if (usesLegacyDeskDocuments(deskId)) {
-      try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
+      try { writePersistedDraft(window.localStorage, state, deskId, Date.now(), Boolean(sideRequired)); } catch { /* draft resume is optional */ }
     }
-    let entered: ParkedDesk = { deskId: id, state: initialDesk(usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft()), viewedRecordId: null, error: null };
+    const destinationCheckpoint = usesLegacyDeskDocuments(id) ? readDraftCheckpoint(window.localStorage, id) : null;
+    const destinationDraft = usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) : null;
+    let entered: ParkedDesk = {
+      deskId: id,
+      state: initialDesk(destinationDraft ?? emptyDraft()),
+      viewedRecordId: null,
+      error: null,
+      sideRequired: Boolean(destinationCheckpoint?.meta.sideRequired),
+    };
     try {
       const result = switchDeskSession(
-        { deskId, state, viewedRecordId, error },
+        { deskId, state, viewedRecordId, error, sideRequired: Boolean(sideRequired) },
         id,
         sessions.current,
         usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) : null,
       );
       parkSessions(result.parked);
       entered = result.entered;
+      if (!sessions.current[id] && destinationCheckpoint?.meta.sideRequired) {
+        entered = { ...entered, sideRequired: true };
+      }
     } catch { /* An unreachable guard violation must not crash the desk switch; the destination starts fresh. */ }
     setDesk(entered.deskId);
     restoreDocuments(entered.deskId, entered);
@@ -217,7 +228,7 @@ export function useTradingDesk() {
     saveLastDesk(window.localStorage, entered.deskId);
     syncDeskQuery(entered.deskId, null, 'replace', null, null);
     clearEntry();
-  }, [deskId, enterDesk, entryPhase, state, viewedRecordId, error, sessions, setDesk, restoreDocuments, clearEntry, abortInFlight, parkSessions]);
+  }, [deskId, enterDesk, entryPhase, state, viewedRecordId, error, sideRequired, sessions, setDesk, restoreDocuments, clearEntry, abortInFlight, parkSessions]);
 
   const activeDesk = getHouseDesk(deskId) ?? getHouseDesk(OPEN_DESK_ID)!;
   const open = isOpenDesk(deskId);
@@ -238,16 +249,16 @@ export function useTradingDesk() {
       dismissRecord: sessionDismissRecord,
       removeRecord: documentSession.removeRecord,
       /* Legacy-engine surface — Hetty's pipeline fields. */
-      state, records, error,
-      edit, requestQuote, save, cancel,
+      state, records, error, sideRequired,
+      applyInstruction, edit, requestQuote, save, cancel,
       loadHistory, watched, watch, unwatch,
       focusedRecordId,
     }),
     [entryPhase, enterDesk, leaveDesk, entryOfferingId, entryIntent, entryRecordId, entryGen,
      deskId, activeDesk, open, switchDesk,
      documentSession, jesse, sessionViewedRecordId, sessionHistoryReady, sessionOpenRecord, sessionDismissRecord,
-     state, records, error,
-     edit, requestQuote, save, cancel,
+     state, records, error, sideRequired,
+     applyInstruction, edit, requestQuote, save, cancel,
      loadHistory, watched, watch, unwatch,
      focusedRecordId],
   );

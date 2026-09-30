@@ -10,7 +10,7 @@ import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate, type DeskState } from './workflow';
 import { deletePaperRecord, loadPaperRecords, PAPER_OWNER_ANONYMOUS, recordVisibleToAccount, savePaperRecord, type PaperRecord } from './paper-records';
 import { mintFirstPaperSlip } from './desk-slips';
-import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readRestorableDraft, watchStorageKey, writePersistedDraft } from './desk-documents';
+import { activeRecordId, canFileForeground, foregroundDocument, instructionLockMessage, instructionLocked, readDraftCheckpoint, watchStorageKey, writePersistedDraft } from './desk-documents';
 import { DESK_INSTRUMENTS } from './catalog';
 import { canReviewOnDesk, emptyDraft, type ParkedDesk } from './desk-mandate';
 import { trackFunnel } from '@/lib/funnel/client';
@@ -29,7 +29,9 @@ export interface LegacyDeskDocuments extends DeskDocumentSession {
   restore: (id: HouseDeskId, parked: ParkedDesk) => void;
   markHistoryReady: () => void;
   loadHistory: () => void;
-  edit: (draft: TradeIntent) => void;
+  sideRequired?: boolean;
+  applyInstruction: (partial: Partial<TradeIntent>) => boolean;
+  edit: (draft: TradeIntent, field?: 'instrument' | 'side' | 'amount' | 'units') => void;
   requestQuote: () => Promise<void>;
   save: () => void;
   cancel: () => void;
@@ -89,6 +91,7 @@ export function useDeskDocuments({
   const [error, setError] = useState<string | null>(null);
   const [watched, setWatched] = useState<string[]>([]);
   const [viewedRecordId, setViewedRecordId] = useState<string | null>(null);
+  const [sideRequired, setSideRequired] = useState(false);
   const saveLock = useRef(false);
   const userIdRef = useRef(userId);
   /* Ref mirror for async callbacks — synced in an effect, not during render. */
@@ -116,18 +119,21 @@ export function useDeskDocuments({
 
   /** Fresh desk, fresh document — persisted draft restored, entry intent carried in. */
   const hydrate = useCallback((id: HouseDeskId, instrumentId: string | null, intent: EntryIntent | null, recordId: string | null) => {
-    const persisted = usesLegacyDeskDocuments(id) ? readRestorableDraft(window.localStorage, id) ?? emptyDraft() : emptyDraft();
+    const fresh = Boolean(intent?.instruction);
+    const checkpoint = !fresh && usesLegacyDeskDocuments(id) ? readDraftCheckpoint(window.localStorage, id) : null;
+    const persisted = checkpoint
+      ? { instrumentId: checkpoint.draft.instrumentId, side: checkpoint.draft.side, amount: checkpoint.draft.amount, unit: checkpoint.draft.unit } as TradeIntent
+      : emptyDraft();
     let draft = instrumentId && usesLegacyDeskDocuments(id)
       ? { ...persisted, instrumentId }
       : persisted;
     if (usesLegacyDeskDocuments(id) && intent) {
-      /* Carry the foyer's instruction onto the ticket — offering picks the
-         instrument, the instruction's side and amount come with it. */
       if (intent.side === 'sell') draft = { ...draft, side: 'sell', unit: 'token' };
       else if (intent.side === 'buy') draft = { ...draft, side: 'buy', unit: 'USDC' };
       if (intent.amount) draft = { ...draft, amount: intent.amount };
     }
     dispatch({ type: 'hydrate', state: initialDesk(draft) });
+    setSideRequired(!intent?.side && (fresh || Boolean(checkpoint?.meta.sideRequired)));
     setViewedRecordId(recordId);
     setError(null);
     reloadDeskData(id);
@@ -136,6 +142,7 @@ export function useDeskDocuments({
   /** Swap in a parked (or fresh) desk document after a switch. */
   const restore = useCallback((id: HouseDeskId, parked: ParkedDesk) => {
     dispatch({ type: 'hydrate', state: parked.state });
+    setSideRequired(parked.sideRequired ?? false);
     setViewedRecordId(parked.viewedRecordId);
     setError(parked.error);
     reloadDeskData(id);
@@ -152,21 +159,46 @@ export function useDeskDocuments({
 
   useEffect(() => {
     if (!resolved || !active || !usesLegacyDeskDocuments(deskId)) return;
-    try { writePersistedDraft(window.localStorage, state, deskId); } catch { /* draft resume is optional */ }
-  }, [resolved, active, deskId, state]);
+    try { writePersistedDraft(window.localStorage, state, deskId, Date.now(), sideRequired); } catch { /* draft resume is optional */ }
+  }, [resolved, active, deskId, state, sideRequired]);
 
   const knownRecords = historyReady ? records : undefined;
 
-  const edit = useCallback((draft: TradeIntent) => {
+  const edit = useCallback((draft: TradeIntent, field?: 'instrument' | 'side' | 'amount' | 'units') => {
     if (instructionLocked(state, viewedRecordId, knownRecords)) {
       setError(instructionLockMessage(state, viewedRecordId, knownRecords));
       return;
     }
+    if (field === 'side' || field === 'units' || draft.side !== state.draft.side) setSideRequired(false);
     requestRef.current?.abort();
     requestGenRef.current += 1;
     setError(null);
     setViewedRecordId(null);
     dispatch({ type: 'edit', draft });
+  }, [knownRecords, state, viewedRecordId, requestRef, requestGenRef]);
+
+  const applyInstruction = useCallback((partial: Partial<TradeIntent>): boolean => {
+    if (instructionLocked(state, viewedRecordId, knownRecords)) {
+      setError(instructionLockMessage(state, viewedRecordId, knownRecords));
+      return false;
+    }
+    requestRef.current?.abort();
+    requestGenRef.current += 1;
+    setError(null);
+    setViewedRecordId(null);
+    const explicitSide = partial.side === 'buy' || partial.side === 'sell' ? partial.side : undefined;
+    setSideRequired(!explicitSide);
+    dispatch({
+      type: 'edit',
+      draft: {
+        ...emptyDraft(),
+        instrumentId: partial.instrumentId ?? '',
+        side: explicitSide ?? 'buy',
+        unit: explicitSide === 'sell' ? 'token' : 'USDC',
+        amount: partial.amount ?? '',
+      },
+    });
+    return true;
   }, [knownRecords, state, viewedRecordId, requestRef, requestGenRef]);
 
   const requestQuote = useCallback(async () => {
@@ -176,6 +208,10 @@ export function useDeskDocuments({
     }
     if (instructionLocked(state, viewedRecordId, knownRecords)) {
       setError(instructionLockMessage(state, viewedRecordId, knownRecords));
+      return;
+    }
+    if (sideRequired) {
+      setError('Choose buy or sell before asking for an estimate.');
       return;
     }
     setError(null);
@@ -206,7 +242,7 @@ export function useDeskDocuments({
       if (isFunnelDesk(originDesk) && !controller.signal.aborted) trackFunnel({ event: 'estimate_returned', desk: originDesk, outcome: 'unavailable' });
       dispatch({ type: 'failed', requestId, message: controller.signal.aborted ? 'The request was cancelled or timed out. You can retry.' : e instanceof Error ? e.message : 'An estimate is unavailable.' });
     } finally { clearTimeout(timeout); }
-  }, [deskId, deskIdRef, knownRecords, state, viewedRecordId, requestRef, requestGenRef]);
+  }, [deskId, deskIdRef, knownRecords, sideRequired, state, viewedRecordId, requestRef, requestGenRef]);
 
   const save = useCallback(() => {
     if (saveLock.current || !historyReady) return;
@@ -298,8 +334,8 @@ export function useDeskDocuments({
 
   return useMemo((): LegacyDeskDocuments => ({
     state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords,
-    foreground, focusedRecordId,
+    foreground, focusedRecordId, sideRequired,
     hydrate, restore, markHistoryReady, loadHistory,
-    edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch,
-  }), [state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords, foreground, focusedRecordId, hydrate, restore, markHistoryReady, loadHistory, edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch]);
+    applyInstruction, edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch,
+  }), [state, records, historyReady, storageError, error, watched, viewedRecordId, knownRecords, foreground, focusedRecordId, sideRequired, hydrate, restore, markHistoryReady, loadHistory, applyInstruction, edit, requestQuote, save, cancel, openRecord, dismissRecord, removeRecord, watch, unwatch]);
 }

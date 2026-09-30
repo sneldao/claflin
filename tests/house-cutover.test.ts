@@ -163,8 +163,8 @@ describe('one canonical house', () => {
   });
   it('carries a foyer instruction onto the desk ticket', () => {
     const offerings = source('components/desk/HouseOfferings.tsx');
-    assert.match(offerings, /entryIntentFromInstruction/);
-    assert.match(offerings, /onEnter\(deskId, offering\.offeringId, entryIntentFromInstruction\(instruction\)\)/);
+    assert.match(offerings, /entryIntentWithInstruction/);
+    assert.match(offerings, /onEnter\(deskId, offering\.offeringId, entryIntentWithInstruction\(instruction, instructionSource\)\)/);
     assert.match(source('lib/house-entry.ts'), /parseDictatedTradeIntent/);
     const desk = source('lib/trading/useTradingDesk.ts');
     assert.match(desk, /entryIntent/);
@@ -178,6 +178,12 @@ describe('one canonical house', () => {
     const entry = source('lib/house-entry.ts');
     assert.match(entry, /parseEntryIntent/);
     assert.match(entry, /url\.searchParams\.set\('side'/);
+  });
+  it('hydrates Jesse’s draft from a fresh instruction with every field explicit', () => {
+    const surface = source('components/desk/JesseDeskSurface.tsx');
+    assert.match(surface, /side,\s*\n\s*unit: side === 'buy' \? 'USDC' : side === 'sell' \? 'scaled-token' : null,\s*\n\s*amount: entryIntent\?\.amount \?\? null/);
+    assert.match(surface, /desk\.entryRecordId/);
+    assert.match(surface, /entryInstructionMarks\(entryIntent, entryInstrumentId\)/);
   });
   it('renders the receiver poster immediately and reveals WebGL only after its first frame', () => {
     const desk = source('components/desk/HettyDeskSurface.tsx');

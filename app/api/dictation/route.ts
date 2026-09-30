@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
+import { instructionIssue } from '@/lib/trading/instruction-safety';
 import { quoteBudget } from '@/lib/trading/http';
 
 export const dynamic = 'force-dynamic';
@@ -86,35 +87,10 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     // If API key is not configured, provide mock transcription for local dev/testing
     if (!apiKey) {
-      const mockText = desk === 'jesse' ? 'Buy 100 USDC of Apple' : 'Buy 100 USDC of NVDA';
-      if (desk === 'jesse') {
-        return Response.json({
-          ok: true,
-          transcript: mockText,
-          confidence: 0.98,
-          parsedIntent: null,
-          matchedInstrument: null,
-          disfluencyFiltered: true,
-          provider: 'AssemblyAI Dictation (dev simulated)',
-          desk,
-        }, { headers });
-      }
-      const parsed = parseDictatedTradeIntent(mockText);
       return Response.json({
-        ok: true,
-        transcript: mockText,
-        confidence: 0.98,
-        parsedIntent: parsed.intent,
-        parsedSpans: parsed.spans ?? null,
-        matchedInstrument: parsed.matchedInstrument ? {
-          id: parsed.matchedInstrument.id,
-          symbol: parsed.matchedInstrument.symbol,
-          name: parsed.matchedInstrument.name,
-        } : null,
-        disfluencyFiltered: true,
-        provider: 'AssemblyAI Dictation (dev simulated)',
-        desk,
-      }, { headers });
+        error: 'dictation_unavailable',
+        message: 'Dictation is unavailable. Type your instruction instead.',
+      }, { status: 503, headers });
     }
 
     // Call AssemblyAI Dictation API.
@@ -210,6 +186,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         confidence: data.confidence ?? 0.95,
         parsedIntent: null,
         matchedInstrument: null,
+        issue: instructionIssue(transcript) ?? null,
         disfluencyFiltered: true,
         provider: 'AssemblyAI Dictation',
         desk,
@@ -225,6 +202,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       cleanedUp: usedRewrite,
       confidence: data.confidence ?? 0.95,
       parsedIntent: parsed.intent,
+      issue: parsed.issue ?? instructionIssue(transcript) ?? null,
       parsedSpans: parsed.spans ?? null,
       matchedInstrument: parsed.matchedInstrument ? {
         id: parsed.matchedInstrument.id,

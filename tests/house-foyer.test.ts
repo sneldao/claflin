@@ -99,8 +99,8 @@ describe('house foyer', () => {
     assert.match(html, /id="foyer-title"/);
     assert.doesNotMatch(html, /Browse the house book/);
     assert.match(html, /Paper by default\. Only you can sign\./);
-    assert.match(html, /Ring Hetty/);
-    assert.match(html, /Ring Jesse/);
+    assert.match(html, /Talk with Hetty/);
+    assert.match(html, /Talk with Jesse/);
     /* Character comes after comprehension (docs/FOYER_LINE.md §4.7): the
        first screen carries no epithet or quote; "Meet the brokers" below may. */
     const hero = html.slice(html.indexOf('aria-labelledby="foyer-title"'), html.indexOf('id="house-offerings"'));
@@ -176,7 +176,7 @@ describe('house foyer', () => {
     root = createRoot(getRootElement());
     await act(async () => root!.render(createElement(HouseFoyer, { onEnter: id => { entered = id; } })));
 
-    const ringHetty = findButton('Ring Hetty');
+    const ringHetty = findButton('Talk with Hetty');
     assert.ok(ringHetty, 'Hetty ring button rendered');
     await act(async () => click(ringHetty!));
 

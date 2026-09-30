@@ -56,6 +56,7 @@ export type ParkedDesk = {
   state: DeskState;
   viewedRecordId: string | null;
   error: string | null;
+  sideRequired?: boolean;
 };
 
 export function enterDesk(

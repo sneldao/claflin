@@ -7,7 +7,11 @@ import type { JesseDraft } from '../solana/contracts';
 import type { JesseSpeechParse } from './speech';
 import { provenanceFromFields, type SlipProvenance } from '../desk/slip-provenance';
 
-export function provenanceFromParse(parse: JesseSpeechParse, priorDraft: JesseDraft): SlipProvenance {
+export function provenanceFromParse(
+  parse: JesseSpeechParse,
+  priorDraft: JesseDraft,
+  source: 'spoken' | 'typed' | 'picked' = 'spoken',
+): SlipProvenance {
   const command = parse.command;
   const fields = command?.type === 'draft'
     ? command.intent
@@ -28,5 +32,6 @@ export function provenanceFromParse(parse: JesseSpeechParse, priorDraft: JesseDr
       side: priorDraft.side,
       amount: priorDraft.amount,
     },
+    source,
   });
 }

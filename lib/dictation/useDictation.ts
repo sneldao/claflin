@@ -238,7 +238,14 @@ export function useDictation(options?: UseDictationOptions) {
 
           options?.onTranscript?.(cleanTranscript);
 
-          if (result.parsedIntent && options?.onIntentParsed) {
+          if (result.issue) {
+            setState({
+              status: 'error',
+              transcript: cleanTranscript,
+              error: result.issue,
+              provider: result.provider || 'AssemblyAI Dictation',
+            });
+          } else if (result.parsedIntent && options?.onIntentParsed) {
             options.onIntentParsed(result.parsedIntent, cleanTranscript, {
               intent: result.parsedIntent,
               spans: result.parsedSpans ?? undefined,

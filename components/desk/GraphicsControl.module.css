@@ -1,0 +1,75 @@
+.control {
+  --brass: var(--claflin-brass, #c5ac78);
+  --brass-dim: var(--claflin-brass-dim, #82724f);
+  --ink: var(--claflin-ink, #e8e6d9);
+  --muted: var(--claflin-muted, #aeb9aa);
+  --night: var(--claflin-night-room, #0d1218);
+  position: relative;
+  font-family: var(--font-body, 'IBM Plex Sans', system-ui, sans-serif);
+}
+
+.summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--brass-dim);
+  border-radius: 4px;
+  color: var(--brass);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 40;
+  min-width: 15rem;
+  padding: 0.75rem;
+  background: var(--night);
+  border: 1px solid var(--brass-dim);
+  border-radius: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+  margin-bottom: 0.4rem;
+}
+
+.select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  padding: 0 0.6rem;
+  background: var(--night);
+  color: var(--ink);
+  border: 1px solid var(--brass-dim);
+  border-radius: 4px;
+}
+
+.status {
+  margin: 0.6rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}

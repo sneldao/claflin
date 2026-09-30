@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   HOUSE_DESK_PREFERENCE_KEY,
+  entryIntentWithInstruction,
   loadLastDesk,
   parseDeskQuery,
   parseEntryIntent,
@@ -110,6 +111,41 @@ describe('house entry', () => {
       intent: { side: 'buy', amount: '25' },
       recordId: null,
     });
+  });
+
+  it('keeps the caller’s exact words and how they arrived on the intent', () => {
+    const intent = entryIntentWithInstruction('  buy $25 of Apple  ', 'typed');
+    assert.ok(intent);
+    assert.equal(intent.instruction?.text, 'buy $25 of Apple');
+    assert.equal(intent.instruction?.source, 'typed');
+    assert.equal(intent.side, 'buy');
+    assert.equal(intent.amount, '25');
+    assert.equal(intent.instruction?.spans?.side, 'buy');
+    assert.equal(intent.instruction?.spans?.amount, '$25');
+  });
+
+  it('keeps instrument-only phrases — an instruction with no side or amount still carries its words', () => {
+    const intent = entryIntentWithInstruction('Apple', 'spoken');
+    assert.ok(intent);
+    assert.equal(intent.instruction?.text, 'Apple');
+    assert.equal(intent.instruction?.source, 'spoken');
+    assert.equal(intent.side, null);
+    assert.equal(intent.amount, null);
+    assert.equal(intent.instruction?.spans, undefined);
+  });
+
+  it('rejects empty instructions and caps long ones', () => {
+    assert.equal(entryIntentWithInstruction('   ', 'typed'), null);
+    assert.equal(entryIntentWithInstruction('', 'spoken'), null);
+    const long = entryIntentWithInstruction('x'.repeat(1500), 'typed');
+    assert.equal(long?.instruction?.text.length, 1000);
+  });
+
+  it('never puts instruction text or source in the URL contract', () => {
+    const fromUrl = parseEntryIntent('buy', '25');
+    assert.deepEqual(fromUrl, { side: 'buy', amount: '25' });
+    assert.equal(fromUrl?.instruction, undefined);
+    assert.equal(parseEntryIntent('typed:buy', 'buy $25 of Apple')?.instruction, undefined);
   });
 
   it('parses ?record= into a record deep link and rejects junk ids', () => {

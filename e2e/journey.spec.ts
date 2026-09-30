@@ -46,10 +46,14 @@ test.describe('house journey', () => {
     await expect(page.getByRole('button', { name: 'Price it' })).toHaveCount(0);
   });
 
-  test('an instruction lights the line that carries it', async ({ page }) => {
+  test('an instruction lights the lines and names the products that carry it', async ({ page }) => {
     await openFoyer(page);
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
     await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
+    const matches = page.getByRole('region', { name: 'Matching products' });
+    await expect(matches).toBeVisible();
+    await expect(matches.getByRole('button', { name: /Continue with AAPLc/ })).toBeVisible();
+    await expect(matches.getByRole('button', { name: /Continue with AAPLx/ })).toBeVisible();
   });
 
   test('foyer → desk → price → file → return → reopen', async ({ page }) => {
@@ -58,7 +62,7 @@ test.describe('house journey', () => {
     // Foyer: say what you want, then take the lit line.
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
     await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
-    await hettyLine(page).getByRole('link', { name: 'Type instead' }).click();
+    await page.getByRole('region', { name: 'Matching products' }).getByRole('button', { name: /Continue with AAPLc/ }).click();
 
     // Desk: the instruction came with us — no chain chosen, no re-typing.
     await expect(page).toHaveURL(/desk=hetty/);
@@ -66,7 +70,7 @@ test.describe('house journey', () => {
     await expect(page).toHaveURL(/amount=100/);
 
     await page.getByRole('button', { name: 'Price it' }).first().click();
-    await page.getByRole('button', { name: 'File paper record' }).first().click();
+    await page.getByRole('button', { name: 'Save paper record' }).first().click();
     await expect(page.getByText(FILED).first()).toBeVisible();
 
     // The record is kept in this browser.
@@ -96,13 +100,13 @@ test.describe('house journey', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openFoyer(page);
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
-    await hettyLine(page).getByRole('link', { name: 'Type instead' }).click();
+    await page.getByRole('region', { name: 'Matching products' }).getByRole('button', { name: /Continue with AAPLc/ }).click();
     await expect(page).toHaveURL(/desk=hetty/);
     /* Both views are reachable from the first visit, including from
        Compact on a phone (reduced motion lands here in Compact). */
     await expect(page.getByRole('group', { name: 'Desk presentation' }).getByRole('button', { name: 'Room' })).toBeVisible();
     await page.getByRole('button', { name: 'Price it' }).first().click();
-    await page.getByRole('button', { name: 'File paper record' }).first().click();
+    await page.getByRole('button', { name: 'Save paper record' }).first().click();
     await expect(page.getByText(FILED).first()).toBeVisible();
   });
 });

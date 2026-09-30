@@ -45,7 +45,7 @@ export const FOYER_ANSWERS: readonly FoyerAnswer[] = Object.freeze([
   {
     id: 'record',
     question: 'Where does my record live?',
-    answer: 'In this browser. If you sign in, paper records are also copied to your account; deleting one on the desk does not remove the account copy.',
+    answer: 'In this browser. Jesse’s paper records live only in this browser. On Hetty’s desk, signing in can also keep a copy on your account; deleting a record on the desk removes the browser copy, and the account copy can reappear.',
   },
   {
     id: 'person',

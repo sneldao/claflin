@@ -39,12 +39,14 @@ import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
 import type { ParsedDictation } from '@/lib/dictation/useDictation';
 import {
   carriedMarks,
+  entryInstructionMarks,
   handMarks,
   mergeProvenance,
   provenanceFromFields,
   spansInVerbatim,
   type SlipProvenance,
 } from '@/lib/desk/slip-provenance';
+import { offeringForId } from '@/lib/desk/offerings';
 import { trackSuperseded, type SupersededSlip } from '@/lib/desk/superseded';
 import { HETTY_VOCAB, slipOneLine } from '@/lib/desk/written-slip';
 import type { TradeIntent } from '@/lib/trading/domain';
@@ -123,10 +125,11 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     window.history.replaceState({}, '', next);
   }, []);
   const handleLiveChange = useCallback((live: boolean) => { setHettyLive(live); if (!live) { setSpoken(null); setHettySaid(null); } }, []);
-  const [liveMode, setLiveMode] = useState(LIVE_EXECUTION_ENABLED);
+  const [liveMode, setLiveMode] = useState(false);
   useEffect(() => { if (!desk.open) setHettyLive(false); }, [desk.open]);
   const handleUserSpoken = useCallback((text: string) => {
     setSpoken(text);
+    setEntryWords(null);
     rememberSlipDedication('user', text);
   }, []);
   const handleAgentSpoken = useCallback((text: string) => {
@@ -148,8 +151,27 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
      Marks are value-gated at render — a stale mark simply never shows. */
   const [slipProv, setSlipProv] = useState<SlipProvenance>({});
   const [superseded, setSuperseded] = useState<SupersededSlip[]>([]);
+  const [entryWords, setEntryWords] = useState<string | null>(null);
   const prevSlipRef = useRef<{ quote: typeof desk.state.quote; stage: string }>({ quote: desk.state.quote, stage: desk.state.stage });
   const draftFieldsEmpty = !desk.state.draft.instrumentId && !desk.state.draft.amount;
+
+  const entryGenConsumed = useRef(-1);
+  useEffect(() => {
+    const gen = desk.entryGen;
+    if (entryGenConsumed.current === gen) return;
+    entryGenConsumed.current = gen;
+    const intent = desk.entryIntent;
+    const instruction = intent?.instruction;
+    if (desk.entryRecordId) return;
+    setEntryWords(instruction && instruction.source !== 'spoken' ? instruction.text : null);
+    if (instruction?.source === 'spoken') setSpoken(instruction.text);
+    else if (instruction) setSpoken(null);
+    if (!instruction) return;
+    const instrumentId = desk.entryOfferingId
+      ? offeringForId(desk.entryOfferingId)?.instrumentId ?? null
+      : null;
+    setSlipProv(prev => mergeProvenance(prev, entryInstructionMarks(intent, instrumentId)));
+  }, [desk.entryGen, desk.entryIntent, desk.entryOfferingId, desk.entryRecordId]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -181,7 +203,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   /* A fully blank slip carries no provenance — nothing to explain. Hetty's
      side always has a default, so empty means no instrument and no amount. */
   useEffect(() => {
-    if (desk.state.stage === 'draft' && draftFieldsEmpty) setSlipProv({});
+    if (desk.state.stage === 'draft' && draftFieldsEmpty) {
+      setSlipProv({});
+      setEntryWords(null);
+    }
   }, [desk.state.stage, draftFieldsEmpty]);
 
   /* Superseded prices stay struck through on the same slip. */
@@ -222,6 +247,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         amount: priorDraft.amount || null,
       },
     }));
+    setEntryWords(null);
   }, [mergeSlipProv]);
 
   /* Hand edits mark only the field the client actually touched. Hetty's
@@ -237,7 +263,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     } as TradeIntent;
   };
   const handEdit = useCallback((partial: { instrumentId?: string | null; side?: 'buy' | 'sell' | null; amount?: string | null; unit?: string | null }, field: 'instrument' | 'side' | 'amount' | 'units') => {
-    desk.edit(applySlipPartial(partial));
+    desk.edit(applySlipPartial(partial), field);
     mergeSlipProv(handMarks(partial, field));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [desk, mergeSlipProv]);
@@ -254,10 +280,16 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     const next = applySlipPartial(partial);
     const complete = Boolean(next.instrumentId && next.side && next.amount);
     if (desk.state.quote && complete) requoteAfterEdit.current = true;
-    desk.edit(next);
+    desk.edit(next, field);
     mergeSlipProv(handMarks(partial, field));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [desk, mergeSlipProv]);
+
+  useEffect(() => {
+    if (foreground.kind === 'receipt' || foreground.kind === 'archive' || foreground.kind === 'missing') {
+      setEntryWords(null);
+    }
+  }, [foreground.kind]);
 
   const prevForegroundRef = useRef(foreground.kind);
   useEffect(() => {
@@ -290,9 +322,9 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const loadInstrument = (instrumentId: string) => {
     if (desk.state.draft.side === 'sell') {
-      desk.edit({ instrumentId, side: 'sell', unit: 'token', amount: '' });
+      desk.edit({ instrumentId, side: 'sell', unit: 'token', amount: '' }, 'instrument');
     } else {
-      desk.edit({ instrumentId, side: 'buy', unit: 'USDC', amount: '' });
+      desk.edit({ instrumentId, side: 'buy', unit: 'USDC', amount: '' }, 'instrument');
     }
     mergeSlipProv(handMarks({ instrumentId }, 'instrument'));
     scrollToDeskTarget('instruction', { focusId: 'amount' });
@@ -303,7 +335,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       const apple = resolveDeskAlias('apple');
       if (apple?.quoteSupported) {
         const prior = desk.state.draft;
-        desk.edit({ instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '25' });
+        desk.edit({ instrumentId: apple.id, side: 'buy', unit: 'USDC', amount: '25' }, 'side');
         /* The blotter's own words wrote the slip — mark what was said. */
         const parsed = parseDictatedTradeIntent(phrase);
         mergeSlipProv(provenanceFromFields({
@@ -311,8 +343,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           values: { instrument: apple.id, side: 'buy', amount: '25' },
           spans: parsed.spans,
           prior: { instrument: prior.instrumentId ?? null, side: prior.side ?? null, amount: prior.amount || null },
+          source: 'picked',
         }));
-        handleUserSpoken(phrase);
+        setEntryWords(phrase);
+        setSpoken(null);
         scrollToDeskTarget('instruction');
         return;
       }
@@ -453,6 +487,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
           roomView={roomView}
           provenance={slipProv}
           superseded={superseded}
+          entryWords={entryWords}
           onHandEdit={handEdit}
           onSlipEdit={slipEdit}
           onDictated={recordDictated}

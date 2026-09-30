@@ -119,12 +119,12 @@ describe('mobile filing integration through actual buttons', () => {
     await flush();
     assert.equal(desk!.state.stage, 'review', 'clicking Price it should reach review');
 
-    const record = getButton(/File paper record/);
-    assert.ok(record, 'File paper record button should exist');
+    const record = getButton(/Save paper record/);
+    assert.ok(record, 'Save paper record button should exist');
     await act(async () => { record!.click(); });
     await flush();
 
-    assert.equal(desk!.state.stage, 'saved', 'File paper record should file the record');
+    assert.equal(desk!.state.stage, 'saved', 'Save paper record should file the record');
     assert.equal(desk!.records.length, 1, 'a record should be saved to local history');
     const ledger = container.querySelector('#paper-ledger');
     assert.ok(ledger, 'PaperLedger should appear after filing');

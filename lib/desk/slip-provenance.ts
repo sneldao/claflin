@@ -5,11 +5,13 @@
  * labelled kept, a value the parser assumed is flagged as such. Pure module;
  * the React state lives in each desk surface.
  */
+import type { EntryIntent } from '../house-entry';
 
 export type SlipField = 'instrument' | 'side' | 'amount';
 
 export type SlipSource =
   | { kind: 'said'; phrase: string; excerpt: string }
+  | { kind: 'typed'; phrase: string; excerpt: string }
   | { kind: 'kept' }
   | { kind: 'inferred' }
   | { kind: 'line'; lastCaller: string | null }
@@ -38,13 +40,17 @@ export function provenanceFromFields(input: {
   values: { instrument: string | null; side: string | null; amount: string | null };
   spans?: { instrument?: string; side?: string; amount?: string };
   prior: { instrument: string | null; side: string | null; amount: string | null };
+  source?: 'spoken' | 'typed' | 'picked';
 }): SlipProvenance {
   const out: SlipProvenance = {};
+  const source = input.source ?? 'spoken';
   for (const field of FIELDS) {
     const value = input.values[field];
     if (value === null) continue;
     const excerpt = input.spans?.[field];
-    if (excerpt) out[field] = { kind: 'said', phrase: input.phrase, excerpt, value };
+    if (excerpt && source === 'spoken') out[field] = { kind: 'said', phrase: input.phrase, excerpt, value };
+    else if (excerpt && source === 'typed') out[field] = { kind: 'typed', phrase: input.phrase, excerpt, value };
+    else if (excerpt && source === 'picked') out[field] = { kind: 'hand', value };
     else if (input.prior[field] === value) out[field] = { kind: 'kept', value };
     else out[field] = { kind: 'inferred', value };
   }
@@ -102,6 +108,30 @@ export function handMarks(
     : partial.amount;
   if (!value) return {};
   return { [slipField]: { kind: 'hand', value } };
+}
+
+export function entryInstructionMarks(
+  intent: EntryIntent | null,
+  instrumentId: string | null,
+): SlipProvenance {
+  const out: SlipProvenance = {};
+  if (!intent) return out;
+  if (instrumentId) out.instrument = { kind: 'carried', value: instrumentId };
+  const instruction = intent.instruction;
+  const verified = instruction ? spansInVerbatim(instruction.spans, instruction.text) : undefined;
+  for (const field of ['side', 'amount'] as const) {
+    const value = intent[field];
+    if (!value) continue;
+    const span = verified?.[field];
+    if (instruction?.source === 'spoken' && span) {
+      out[field] = { kind: 'said', phrase: instruction.text, excerpt: span, value };
+    } else if (instruction?.source === 'typed' && span) {
+      out[field] = { kind: 'typed', phrase: instruction.text, excerpt: span, value };
+    } else {
+      out[field] = { kind: 'carried', value };
+    }
+  }
+  return out;
 }
 
 /** Marks for a foyer/URL carried instruction. */
