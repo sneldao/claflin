@@ -30,18 +30,6 @@ export interface JesseToolContext {
   markLine: (field: SlipField, value: string) => void;
 }
 
-function waitFor(desk: () => JesseDesk, predicate: (d: JesseDesk) => boolean, ms: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const deadline = Date.now() + ms;
-    const tick = () => {
-      if (predicate(desk())) return resolve(true);
-      if (Date.now() >= deadline) return resolve(false);
-      setTimeout(tick, 120);
-    };
-    tick();
-  });
-}
-
 export function jesseToolHandlers({ desk, markLine }: JesseToolContext): Record<JesseToolName, JesseToolHandler> {
   const applied = (status: string) => status === 'applied' || status === 'clarify';
 
@@ -64,10 +52,14 @@ export function jesseToolHandlers({ desk, markLine }: JesseToolContext): Record<
       if (refusal) return refusal;
       const side = String(p.side ?? '');
       if (side !== 'buy' && side !== 'sell') return setJesseInstructionResult(side);
-      const next = nextJesseInstructionDraft(d.state.draft, side);
-      const result = await d.edit(next.draft, 'side');
+      let amountCleared = false;
+      const result = await d.edit(current => {
+        const next = nextJesseInstructionDraft(current, side);
+        amountCleared = next.amountCleared;
+        return next.draft;
+      }, 'side');
       if (applied(result.status)) markLine('side', side);
-      return setJesseInstructionResult(side, next.amountCleared);
+      return setJesseInstructionResult(side, amountCleared);
     },
 
     async set_amount(p) {
@@ -78,9 +70,13 @@ export function jesseToolHandlers({ desk, markLine }: JesseToolContext): Record<
       if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean)) {
         return `"${clean || 'That'}" is not a usable amount — say a plain number, like 100 or 0.5.`;
       }
-      const result = await d.edit({ amount: clean }, 'amount');
+      let side: 'buy' | 'sell' | null = null;
+      const result = await d.edit(current => {
+        side = current.side;
+        return { amount: clean };
+      }, 'amount');
       if (applied(result.status)) markLine('amount', clean);
-      return setJesseAmountResult(d.state.draft.side, clean);
+      return setJesseAmountResult(side, clean);
     },
 
     async request_estimate() {
@@ -88,15 +84,14 @@ export function jesseToolHandlers({ desk, markLine }: JesseToolContext): Record<
       const refusal = jesseForegroundGuard(d.foreground);
       if (refusal) return refusal;
       if (d.inFlight === 'quote' || d.state.stage === 'quoting') return 'An estimate is already on its way.';
-      const before = d.state.quote?.id;
-      await d.quote();
-      await waitFor(desk, x => x.state.stage === 'review' || (x.state.stage === 'draft' && x.inFlight === null), 8_000);
-      const now = desk();
-      if (now.state.stage === 'review' && now.state.quote && now.state.quote.id !== before) {
-        return now.lastResult?.spokenText
-          ?? `Estimate on the slip: spend ${now.state.quote.inputAmount} ${now.state.quote.inputSymbol}, receive ${now.state.quote.outputAmount} ${now.state.quote.outputSymbol}, Jupiter Metis — paper only.`;
+      /* The quote result comes straight from the controller. The desk
+         snapshot lags a render behind it, so polling it would misreport a
+         quote that has already landed. */
+      const result = await d.quote();
+      if (result.status === 'applied' && result.quoteId) {
+        return result.spokenText || 'Estimate on the slip — paper only.';
       }
-      return now.lastResult?.spokenText ?? 'The estimate did not come through. Offer to adjust or retry.';
+      return result.spokenText || 'The estimate did not come through. Offer to adjust or retry.';
     },
 
     async compare_markets(p) {
@@ -111,10 +106,9 @@ export function jesseToolHandlers({ desk, markLine }: JesseToolContext): Record<
         if (applied(result.status)) markLine('instrument', instrument.id);
       }
       if (!desk().state.draft.instrumentId) return 'Which xStock should I compare — Apple, NVIDIA, or Tesla?';
-      await d.compare();
-      await waitFor(desk, x => x.inFlight === null, 6_000);
-      return desk().lastResult?.spokenText
-        ?? 'Comparison is unavailable right now. Say so honestly; independent Jupiter quoting may still work.';
+      const compared = await d.compare();
+      return compared.spokenText
+        || 'Comparison is unavailable right now. Say so honestly; independent Jupiter quoting may still work.';
     },
 
     async record_paper() {

@@ -47,18 +47,31 @@ Claflin existed before September: the repo started 2026-02-09, and the Base desk
 
 ## Video (target 2:30)
 
+**Model note (2026-09-30):** Universal-3.6 Pro Realtime shipped today,
+selected with `speech_model: "universal-3-6-pro"` on the raw Realtime STT
+API. This repo never sets `speech_model`: Jesse's call line uses the Voice
+Agent API and the turret uses the Dictation endpoint. We have not verified
+which model either runs, so don't claim 3.6 in the video or the form. The
+on-screen credit and the tags currently say "Universal-3 Pro"; leave them
+unless AssemblyAI confirms the Voice Agent API's model.
+
 | t | Shot | Say |
 |---|---|---|
 | 0:00 | Landing page after NYSE close: "The floor is dark. The line is open." | "Tokenized stocks trade all night. Claflin is the broker's line for that market." |
-| 0:15 | Hold Space: "buy Apple for a hundred dollars" → both lamps light, and the page names AAPLc and AAPLx | "It never picks a chain for you. Same company, two products." |
+| 0:15 | Hold Space: "buy Apple for a hundred dollars" → two product cards appear: AAPLc on Coinbase/Base and AAPLx on Backed/Solana; tap AAPLx | "Same company, two products. It never picks a chain for you." (The lamp view still exists behind "Talk with a broker" — optional half-second, don't linger.) |
 | 0:35 | Open Jesse (`&line=assemblyai`), ring | "Jesse runs on AssemblyAI's Voice Agent API." |
-| 0:45 | "Put a hundred dollars of Tesla on the ticket": the slip fills field by field | Point at "from the call" on each field |
-| 1:05 | "Price it" → Jupiter estimate with a countdown | "A real venue quote that expires." |
-| 1:20 | **Before the quote:** "file it" → Jesse says there is nothing in review | "Filing doesn't exist as a tool until there's a quote. That's progressive tool reveal." |
-| 1:40 | "File the paper record" → silence (hold), stamp | "Hold mode: he waits for the browser to write it." |
+| 0:45 | "Put a hundred dollars of Tesla on the ticket": the slip fills field by field, each marked *said* | Point at the provenance marks — said vs typed |
+| 1:00 | "Make that fifty dollars" → the amount corrects in place, the side stays | "Corrections land in place. Nothing restarts." |
+| 1:15 | "Price it" → Jupiter estimate with a countdown and the review panel | "A real venue quote that expires." |
+| 1:30 | Fresh instruction → "file it" **before** pricing → Jesse says there is nothing in review | "Filing doesn't exist as a tool until there's a quote. That's progressive tool reveal." |
+| 1:45 | "File the paper record" → silence (hold), stamp | "Hold mode: he waits for the browser to write it." |
 | 1:55 | Interrupt Jesse mid-sentence | "Barge-in drops stale results." |
 | 2:10 | Board row: mint, "tracker certificate", "not for US persons" | "Every number and every product fact is sourced." |
-| 2:25 | End card: repo, MIT, AssemblyAI | — |
+| 2:25 | End card: repo, MIT, AssemblyAI, hosted URL | — |
+
+Keep live settlement out of frame entirely — flags are off and paper-only
+is the safety story. Record in Chrome, full-screen, ~110% zoom, quiet
+room; audio is the product.
 
 ## Slides (6)
 
@@ -74,7 +87,7 @@ Claflin existed before September: the repo started 2026-02-09, and the Base desk
 - [x] MIT `LICENSE` at the repo root, and `"license": "MIT"` in `package.json`
 - [x] Public GitHub repo
 - [x] Voice Agent API integration with client-side tools, verified against the live API
-- [ ] Push `main` and deploy with `ASSEMBLYAI_API_KEY` set on the server
+- [x] Push `main` and deploy with `ASSEMBLYAI_API_KEY` set on the server — verified on snel-bot 2026-09-30: `/api/desk/jesse/voice-agent/token` returns a live single-use token on the deployed build
 - [ ] A real-microphone call at the hosted URL (Chrome, then Safari)
 - [ ] Record the video, make the slides and a cover image
 - [ ] Submit on lablab.ai before **Sep 30, 15:00 UTC**

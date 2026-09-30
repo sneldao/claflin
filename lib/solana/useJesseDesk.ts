@@ -39,6 +39,11 @@ export type { JesseForeground };
 
 type ClarifyField = Extract<JesseCommand, { type: 'clarify' }>['field'];
 
+/** A patch, or a function of the controller's live draft. Voice tools fire
+ *  several edits in one turn, before React re-renders — a function reads the
+ *  draft as it is when the edit runs, never a stale render snapshot. */
+export type JesseDraftEdit = Partial<JesseDraft> | ((current: JesseDraft) => Partial<JesseDraft>);
+
 /** Jesse's session honors the shared document-session contract — the engine
  *  (a serialized command controller) differs; the lifecycle does not. */
 export interface JesseDesk extends DeskDocumentSession {
@@ -50,9 +55,9 @@ export interface JesseDesk extends DeskDocumentSession {
   storageError: string | null;
   viewedRecordId: string | null;
   foreground: JesseForeground;
-  edit: (partial: Partial<JesseDraft>, field: ClarifyField) => Promise<CommandResult>;
-  quote: () => Promise<void>;
-  compare: () => Promise<void>;
+  edit: (partial: JesseDraftEdit, field: ClarifyField) => Promise<CommandResult>;
+  quote: () => Promise<CommandResult>;
+  compare: () => Promise<CommandResult>;
   file: () => Promise<CommandResult>;
   cancel: () => Promise<CommandResult>;
   watch: (id: SolanaInstrumentId) => Promise<CommandResult>;
@@ -116,6 +121,8 @@ const SSR_SNAPSHOT = Object.freeze({
   storageError: null as string | null,
   viewedRecordId: null as string | null,
 });
+
+const NOT_READY: CommandResult = { status: 'rejected', revision: 0, quoteId: null, evidenceId: null, spokenText: 'Desk not ready.' };
 
 /** Testable session — the React hook is a thin subscription over this. */
 export function createJesseDeskSession(opts: {
@@ -234,8 +241,9 @@ export function createJesseDeskSession(opts: {
     );
   };
 
-  const edit = (partial: Partial<JesseDraft>, field: ClarifyField) => {
-    const draft = mergeDraft(controller.getState().draft, partial, field);
+  const edit = (partial: JesseDraftEdit, field: ClarifyField) => {
+    const current = controller.getState().draft;
+    const draft = mergeDraft(current, typeof partial === 'function' ? partial(current) : partial, field);
     return run({ type: 'clarify', draft, field, question: '' });
   };
 
@@ -398,7 +406,7 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     return session.run(command);
   }, [session]);
 
-  const edit = useCallback((partial: Partial<JesseDraft>, field: ClarifyField) => {
+  const edit = useCallback((partial: JesseDraftEdit, field: ClarifyField) => {
     if (!session) {
       return Promise.resolve({
         status: 'rejected' as const,
@@ -411,14 +419,8 @@ export function useJesseDesk(ports?: Partial<JesseControllerPorts>): JesseDesk {
     return session.edit(partial, field);
   }, [session]);
 
-  const quote = useCallback(async () => {
-    if (!session) return;
-    await session.quote();
-  }, [session]);
-  const compare = useCallback(async () => {
-    if (!session) return;
-    await session.compare();
-  }, [session]);
+  const quote = useCallback(async (): Promise<CommandResult> => (session ? session.quote() : NOT_READY), [session]);
+  const compare = useCallback(async (): Promise<CommandResult> => (session ? session.compare() : NOT_READY), [session]);
   const file = useCallback(async () => {
     if (!session) {
       return { status: 'rejected' as const, revision: 0, quoteId: null, evidenceId: null, spokenText: 'Desk not ready.' };

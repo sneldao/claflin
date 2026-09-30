@@ -28,6 +28,9 @@ import type { DeskMark } from '@/lib/trading/marks-shared';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
 
+/** Hand edits are plain patches; the desk's wider updater form is for voice tools. */
+type SlipHandEdit = (partial: Partial<JesseDraft>, field: Parameters<JesseDesk['edit']>[1]) => ReturnType<JesseDesk['edit']>;
+
 export { GapStrip } from './GapStrip';
 
 const SLIP_INSTRUMENTS = SOLANA_INSTRUMENTS.filter(s => s.quoteSupported);
@@ -90,7 +93,7 @@ export const JesseTicket = memo(function JesseTicket({
   /** Inline sentence edits — the surface decides edit-versus-reprice. */
   onSlipEdit?: (partial: Partial<JesseDraft>, field: 'instrument' | 'side' | 'amount' | 'units') => void;
   /** Plain hand edits (Compact DraftForm) — edit plus hand provenance. */
-  handEdit?: JesseDesk['edit'];
+  handEdit?: SlipHandEdit;
 }) {
   const { state, foreground, inFlight, lastResult, edit, quote, compare, cancel, dismissRecord } = jesse;
   const draft = state.draft;
@@ -433,7 +436,7 @@ function DraftForm({
   selectedStock: (typeof SOLANA_INSTRUMENTS)[number] | null | undefined;
   localError: string | null;
   lastSpoken: string | null;
-  edit: JesseDesk['edit'];
+  edit: SlipHandEdit;
   quote: JesseDesk['quote'];
   compare: JesseDesk['compare'];
   liveIntent: JesseIntent | null;
