@@ -8,6 +8,9 @@ import {
   createBrowserSolanaWallet,
   type SolanaWalletPort,
 } from '@/lib/solana/wallet';
+import { useEligibilityAttestation } from '@/lib/desk/eligibility';
+import { CLAFLIN_MARKET } from '@/lib/desk/market';
+import { JesseReadiness } from './JesseReadiness';
 import { SolanaProposalCosts } from './QuoteReview';
 import styles from './WorkingDesk.module.css';
 
@@ -39,6 +42,7 @@ export function JesseLiveSettle({
     [],
   );
   const [account, setAccount] = useState<string | null>(null);
+  const eligibility = useEligibilityAttestation(CLAFLIN_MARKET);
   const [phase, setPhase] = useState<LivePhase>('idle');
   const [proposal, setProposal] = useState<SolanaLiveProposal | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -159,6 +163,12 @@ export function JesseLiveSettle({
         Needs USDC (buys) or the xStock (sells) plus SOL for fees. Per-order cap: 250 USDC / 10 scaled.
         Paper filing stays available below.
       </p>
+      <JesseReadiness
+        account={account}
+        intent={intent}
+        attested={eligibility.attested}
+        onAttest={eligibility.confirm}
+      />
       <div className={styles.slipActions}>
         {!account ? (
           <button type="button" className={styles.primary} disabled={phase === 'connecting'} onClick={() => { void connect(); }}>
@@ -172,7 +182,7 @@ export function JesseLiveSettle({
         <button
           type="button"
           className={styles.primary}
-          disabled={!account || !intent || phase === 'preparing' || phase === 'signing' || phase === 'submitting'}
+          disabled={!account || !intent || !eligibility.attested || phase === 'preparing' || phase === 'signing' || phase === 'submitting'}
           onClick={() => { void prepare(); }}
         >
           {phase === 'preparing' ? 'Preparing…' : 'Prepare live order'}

@@ -43,6 +43,12 @@ function pickProvider(): SolanaProvider | null {
   return null;
 }
 
+/** True when a wallet already injects itself here — inside a wallet app's
+ *  browser or with an extension installed. */
+export function hasInjectedSolanaProvider(): boolean {
+  return pickProvider() !== null;
+}
+
 export function createBrowserSolanaWallet(): SolanaWalletPort {
   let account: SolanaWalletAccount | null = null;
   const listeners = new Set<() => void>();

@@ -1507,6 +1507,19 @@
 .liveConsent { margin: 10px 0 0 !important; color: var(--desk-paper-ink); font-size: 13px; font-weight: 600; line-height: 1.5; }
 .liveMeta code { font-size: 11px; overflow-wrap: anywhere; }
 .liveMeta a { color: var(--desk-paper-ink); }
+/* Pre-trade checklist — what the order needs, each row named and state-marked. */
+.readiness { list-style: none; margin: 14px 0 4px; padding: 0; border-top: 1px solid var(--desk-paper-rule); }
+.readiness > li { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--desk-paper-rule); color: var(--desk-paper-ink); font-size: 12px; line-height: 1.5; }
+.readiness > li::before { content: '·'; display: none; }
+.readiness > li[data-state='ok'] > span:first-child::before { content: '✓ '; color: #5f7d5b; }
+.readiness > li[data-state='needed'] > span:first-child::before { content: '○ '; color: var(--desk-paper-muted); }
+.readiness > li[data-state='unknown'] > span:first-child::before { content: '? '; color: var(--desk-paper-muted); }
+.readinessDetail { display: block; color: var(--desk-paper-muted); font-size: 11px; }
+.readinessDetail a { color: var(--desk-paper-ink); text-decoration: underline; text-underline-offset: 3px; margin-right: 14px; min-height: 44px; display: inline-flex; align-items: center; }
+.readinessDetail .secondary { margin: 0 14px 0 0; font-size: 11px; }
+.readinessFund { display: block; margin-top: 6px; }
+.readinessFund a { color: var(--desk-paper-ink); text-decoration: underline; text-underline-offset: 3px; margin-right: 14px; min-height: 44px; display: inline-flex; align-items: center; font-size: 11px; }
+.readinessFund .secondary { font-size: 11px; }
 .liveBox .primary { margin-top: 12px; }
 .liveBox .secondary { font-size: 11px; }
 .stampLive { border-color: #5f7d5b; color: #5f7d5b; box-shadow: inset 0 0 0 1px #5f7d5b55; transform: rotate(-8deg); }
