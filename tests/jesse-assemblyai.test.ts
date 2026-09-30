@@ -103,7 +103,7 @@ describe('Jesse on AssemblyAI — progressive tool reveal', () => {
 });
 
 describe('Jesse on AssemblyAI — tool.result ordering', () => {
-  it('holds results until reply.done, and drops them if the caller barged in', () => {
+  it('holds results until reply.done, and still delivers them after a barge-in', () => {
     const sent: string[] = [];
     const queue = new ToolResultQueue(m => sent.push(m));
     queue.busy();
@@ -114,9 +114,11 @@ describe('Jesse on AssemblyAI — tool.result ordering', () => {
     assert.deepEqual(JSON.parse(sent[0]), { type: 'tool.result', call_id: 'c1', result: JSON.stringify({ result: 'AAPLx is on the ticket.' }) });
 
     queue.busy();
-    queue.push('c2', 'stale');
+    queue.push('c2', 'Paper estimate for AAPLx: spend 10 USDC.');
+    assert.equal(sent.length, 1, 'still waiting while the reply is in flight');
     queue.done('interrupted');
-    assert.equal(sent.length, 1, 'interrupted replies drop their pending results');
+    assert.equal(sent.length, 2, 'the estimate already on the desk is reported, never lost');
+    assert.equal(JSON.parse(sent[1]).call_id, 'c2');
     assert.equal(queue.size, 0);
   });
 

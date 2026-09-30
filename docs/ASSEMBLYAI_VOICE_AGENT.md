@@ -61,7 +61,7 @@ Ring Jesse ─► POST /api/desk/jesse/voice-agent/token      (server: GET agent
 | Filing is deliberate | `record_paper` runs in `hold` mode: the broker goes silent until the browser has written or refused the record. |
 | A misheard amount is re-asked, not guessed | `set_amount.amount` has a `pattern` and `examples`, so a value that doesn't match is rejected before the tool runs. |
 | A filed record is read-only | Receipt, archive and missing records expose only `describe_desk`, `explain_concept` and `watch_mark`. |
-| Barge-in wins | `input.speech.started` empties the playback ring; an interrupted `reply.done` drops pending tool results. |
+| Barge-in wins | `input.speech.started` empties the playback ring. Pending tool results are still sent on the interrupted `reply.done`: the tool has already changed the desk, and a dropped result makes the agent's call time out and report the tool as broken. |
 | Voice cannot move money | No tool signs, submits, or touches a wallet (asserted in the tests). |
 
 ## Audio

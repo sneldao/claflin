@@ -191,7 +191,9 @@ export function jesseToolUpdate(foreground: ForegroundKind) {
 /**
  * Tool results must be sent only when `reply.done` is the latest event
  * (AssemblyAI client-side tools contract). Results that finish mid-turn
- * wait; an interrupted reply drops what was pending for it.
+ * wait. An interrupted reply still delivers them: the tool has already
+ * changed the desk, and a result that never arrives makes the agent's call
+ * time out and report the tool as broken while the screen shows it worked.
  */
 export class ToolResultQueue {
   private idle = true;
@@ -203,9 +205,8 @@ export class ToolResultQueue {
   busy(): void { this.idle = false; }
 
   /** reply.done — flush unless the user barged in. */
-  done(status: string | undefined): void {
+  done(_status?: string): void {
     this.idle = true;
-    if (status === 'interrupted') { this.pending = []; return; }
     this.flush();
   }
 

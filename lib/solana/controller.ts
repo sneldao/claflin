@@ -603,7 +603,7 @@ export function createJesseController(opts: {
       return result('rejected', 'There is no reviewed estimate to file. Ask for an estimate first.');
     }
     if (now() >= quote.expiresAt) {
-      return result('rejected', 'That estimate has expired. Ask for a fresh one before filing.');
+      return result('rejected', 'That estimate has expired, so it cannot be filed. Offer to price it again now, read the new terms, and file only after the caller says yes to those.');
     }
     const comparison = state.comparison && state.comparison.instrumentId === quote.intent.instrumentId
       ? state.comparison

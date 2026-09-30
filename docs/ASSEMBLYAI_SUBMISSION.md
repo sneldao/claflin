@@ -30,7 +30,7 @@ Do not submit the bare Stocklana URL here. Without `&line=assemblyai`, Jesse rin
 > - **Progressive tool reveal.** `record_paper` is not registered until a quotation is actually in review. Every time the document on the desk changes, we re-send `session.update` with the tools for that state. The model can't file what it can't call, and the browser refuses anyway if a call races the reveal.
 > - **Hold mode for the consequential step.** Filing runs in `hold`, so the broker goes quiet until the browser has written or refused the record.
 > - **JSON-Schema hints.** A spoken amount that isn't a plain positive number is re-asked by the agent before our tool ever sees it.
-> - **Ordered tool results.** Results are sent only when `reply.done` is the latest event, and a barge-in drops stale ones.
+> - **Ordered tool results.** Results are sent only when `reply.done` is the latest event, so the agent never hears a result mid-sentence. A barge-in cuts his audio at once, and the result still lands, so he never reports a tool as broken that already changed the desk.
 > - **Paper only.** No tool signs, submits or touches a wallet. Live settlement exists behind separate flags and always needs the caller's own wallet signature.
 >
 > The landing page is a working dealer turret. You hold Space (or press and hold) and speak, AssemblyAI transcribes the instruction, and lamps light on each desk that carries that exact product. When Apple exists on both Base and Solana, the house names both and you choose. It never swaps one rail for another.
@@ -65,7 +65,7 @@ unless AssemblyAI confirms the Voice Agent API's model.
 | 1:15 | "Price it" → Jupiter estimate with a countdown and the review panel | "A real venue quote that expires." |
 | 1:30 | Fresh instruction → "file it" **before** pricing → Jesse says there is nothing in review | "Filing doesn't exist as a tool until there's a quote. That's progressive tool reveal." |
 | 1:45 | "File the paper record" → silence (hold), stamp | "Hold mode: he waits for the browser to write it." |
-| 1:55 | Interrupt Jesse mid-sentence | "Barge-in drops stale results." |
+| 1:55 | Interrupt Jesse mid-sentence | "Talk over him and he stops at once. What he just did still lands on the desk." |
 | 2:10 | Board row: mint, "tracker certificate", "not for US persons" | "Every number and every product fact is sourced." |
 | 2:25 | End card: repo, MIT, AssemblyAI, hosted URL | — |
 
