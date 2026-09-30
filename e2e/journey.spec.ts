@@ -9,7 +9,8 @@ import { mockApi, PAPER_PREFIX } from './fixtures';
  * the last filing and reopens it.
  *
  * Every selector here is a role or accessible name taken from the source:
- *   HouseTurret   — textbox "Instruction for the house", list "The house lines",
+ *   HouseTurret   — textbox "Instruction for the house", list "The house lines"
+ *                   (folded behind "Talk with a broker" while products match),
  *                   link "Type instead", data-lamp on each line
  *   HouseFoyer    — region "Live reference marks"
  *   SLIP_ACTIONS  — "Price it", "File paper record"
@@ -34,6 +35,12 @@ function hettyLine(page: Page) {
   return page.getByRole('list', { name: 'The house lines' }).getByRole('listitem').filter({ hasText: 'Hetty' });
 }
 
+/* Once an instruction matches products the broker lines fold behind a
+   disclosure — open it before asserting on the lamps. */
+async function openBrokerLines(page: Page) {
+  await page.locator('summary', { hasText: 'Talk with a broker' }).click();
+}
+
 test.describe('house journey', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
@@ -49,6 +56,7 @@ test.describe('house journey', () => {
   test('an instruction lights the lines and names the products that carry it', async ({ page }) => {
     await openFoyer(page);
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
+    await openBrokerLines(page);
     await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
     const matches = page.getByRole('region', { name: 'Matching products' });
     await expect(matches).toBeVisible();
@@ -61,6 +69,7 @@ test.describe('house journey', () => {
 
     // Foyer: say what you want, then take the lit line.
     await page.getByRole('textbox', { name: 'Instruction for the house' }).fill(INSTRUCTION);
+    await openBrokerLines(page);
     await expect(hettyLine(page)).toHaveAttribute('data-lamp', 'match');
     await page.getByRole('region', { name: 'Matching products' }).getByRole('button', { name: /Continue with AAPLc/ }).click();
 
