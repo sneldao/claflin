@@ -74,7 +74,7 @@ function laggingDesk(outputAmount?: string) {
     storage: memoryStorage(),
     now: () => T0,
     ports: {
-      quote: async () => estimate(outputAmount ? { outputAmount } : {}),
+      quote: async intent => estimate({ intent, inputAmount: intent.amount, ...(outputAmount ? { outputAmount } : {}) }),
       compare: async () => COMPARISON_UNAVAILABLE_FIXTURE as MarketComparison,
     },
   });
@@ -183,5 +183,41 @@ describe('unavailable tool messages', () => {
   it('still refuses honestly when nothing is in review', () => {
     assert.match(unavailableToolMessage('record_paper', { kind: 'draft' }), /no estimate in review/i);
     assert.match(unavailableToolMessage('watch_mark', { kind: 'pending' }), /not available/i);
+  });
+});
+
+describe('another instruction after a filing', () => {
+  async function filed() {
+    const desk = laggingDesk();
+    await desk.handlers.choose_instrument({ query: 'Apple' });
+    await desk.handlers.set_instruction({ side: 'buy' });
+    await desk.handlers.set_amount({ amount: '100' });
+    await desk.handlers.request_estimate({});
+    await desk.handlers.record_paper({});
+    assert.equal(desk.session.getSnapshot().state.stage, 'saved');
+    return desk;
+  }
+
+  it('prices the same ticket again from a filed receipt', async () => {
+    const { session, handlers } = await filed();
+    const spoken = await handlers.request_estimate({});
+    assert.equal(session.getSnapshot().state.stage, 'review');
+    assert.ok(!/did not come through|cannot/i.test(spoken), spoken);
+  });
+
+  it('takes a corrected amount after a filing and reprices it', async () => {
+    const { session, handlers } = await filed();
+    await handlers.set_amount({ amount: '20' });
+    assert.equal(session.getSnapshot().state.draft.amount, '20');
+    assert.equal(session.getSnapshot().state.stage, 'draft');
+    await handlers.request_estimate({});
+    assert.equal(session.getSnapshot().state.stage, 'review');
+  });
+
+  it('leaves the filed record alone', async () => {
+    const { session, handlers } = await filed();
+    await handlers.set_amount({ amount: '20' });
+    await handlers.request_estimate({});
+    assert.equal(session.getSnapshot().records.length, 1);
   });
 });

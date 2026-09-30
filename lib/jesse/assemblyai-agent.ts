@@ -100,6 +100,10 @@ export function allowedTools(foreground: ForegroundKind): ReadonlySet<JesseToolN
     case 'pending':
       return new Set([...ALWAYS, 'cancel_instruction']);
     case 'receipt':
+      /* A filed record is finished, not a dead end: the next instruction
+         starts a fresh ticket, so the caller never has to reach for the
+         screen. Filing stays unregistered until a new quotation exists. */
+      return new Set([...ALWAYS, ...DRAFTING]);
     case 'archive':
     case 'missing':
       return new Set([...ALWAYS, 'watch_mark']);

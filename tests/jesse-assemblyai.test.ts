@@ -53,10 +53,18 @@ describe('Jesse on AssemblyAI — progressive tool reveal', () => {
     }
   });
 
-  it('keeps a filed or missing record read-only on the line', () => {
-    for (const kind of ['receipt', 'archive', 'missing']) {
+  it('keeps an archived or missing record read-only on the line', () => {
+    for (const kind of ['archive', 'missing']) {
       assert.deepEqual(names(kind), ['describe_desk', 'explain_concept', 'watch_mark']);
     }
+  });
+
+  it('lets the caller start another instruction after a filing, without filing again', () => {
+    const after = names('receipt');
+    for (const tool of ['set_amount', 'set_instruction', 'choose_instrument', 'request_estimate']) {
+      assert.ok(after.includes(tool), `${tool} stays reachable after a filing`);
+    }
+    assert.ok(!after.includes('record_paper'), 'a filed record cannot be filed again');
   });
 
   it('lets a pending estimate only be described or cancelled', () => {
