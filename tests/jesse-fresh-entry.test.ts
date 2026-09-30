@@ -77,7 +77,11 @@ describe('jesse fresh foyer entry over saved state', () => {
     window.localStorage.clear();
     window.history.replaceState({}, '', '/');
     desk = null;
-    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
+    (globalThis as unknown as { fetch: typeof fetch }).fetch = (async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const body = url.includes('/marks') ? '{"marks":[]}' : '{}';
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
   });
 
   afterEach(async () => {
