@@ -69,7 +69,7 @@ function estimate(overrides: Partial<SolanaPaperEstimate> = {}): SolanaPaperEsti
 
 /** A desk whose render snapshot never advances — the browser before React
  *  re-renders between tool calls. Methods still act on the live controller. */
-function laggingDesk(outputAmount?: string) {
+function laggingDesk(outputAmount?: string, turn: { n: number } | null = { n: 0 }) {
   const session = createJesseDeskSession({
     storage: memoryStorage(),
     now: () => T0,
@@ -90,8 +90,12 @@ function laggingDesk(outputAmount?: string) {
     watch: session.watch,
   } as unknown as JesseDesk;
   const marks: string[] = [];
-  const handlers = jesseToolHandlers({ desk: () => desk, markLine: field => { marks.push(field); } });
-  return { session, handlers, marks };
+  const handlers = jesseToolHandlers({
+    desk: () => desk,
+    markLine: field => { marks.push(field); },
+    ...(turn ? { userTurn: () => turn.n } : {}),
+  });
+  return { session, handlers, marks, turn };
 }
 
 describe('jesse tool handlers with a lagging snapshot', () => {
@@ -218,6 +222,136 @@ describe('another instruction after a filing', () => {
     const { session, handlers } = await filed();
     await handlers.set_amount({ amount: '20' });
     await handlers.request_estimate({});
+    assert.equal(session.getSnapshot().records.length, 1);
+  });
+});
+
+/** Across turns the render snapshot has caught up — record tools read it live. */
+function recordsDesk(turn: { n: number } | null = { n: 0 }) {
+  let quotes = 0;
+  const session = createJesseDeskSession({
+    storage: memoryStorage(),
+    now: () => T0,
+    ports: {
+      quote: async intent => {
+        const target = SOLANA_INSTRUMENTS.find(i => i.id === intent.instrumentId)!;
+        quotes += 1;
+        return estimate({
+          id: `q-records-${quotes}`,
+          intent,
+          inputAmount: intent.amount,
+          instrumentAddress: target.mint,
+          instrumentName: target.name,
+          outputMint: target.mint,
+          outputSymbol: target.symbol,
+        });
+      },
+      compare: async () => COMPARISON_UNAVAILABLE_FIXTURE as MarketComparison,
+    },
+  });
+  const desk = {
+    get state() { return session.getSnapshot().state; },
+    get records() { return session.getSnapshot().records; },
+    get historyReady() { return session.getSnapshot().historyReady; },
+    get viewedRecordId() { return session.getSnapshot().viewedRecordId; },
+    get foreground() {
+      const s = session.getSnapshot();
+      return jesseForeground(s.state, s.viewedRecordId, s.historyReady ? s.records : undefined);
+    },
+    edit: session.edit, quote: session.quote, file: session.file, cancel: session.cancel,
+    openRecord: session.openRecord, dismissRecord: session.dismissRecord, removeRecord: session.removeRecord,
+  } as unknown as JesseDesk;
+  const handlers = jesseToolHandlers({ desk: () => desk, markLine: () => {}, ...(turn ? { userTurn: () => turn.n } : {}) });
+  return { session, handlers, turn };
+}
+
+async function fileOne(h: ReturnType<typeof recordsDesk>['handlers'], query: string, side: 'buy' | 'sell' = 'buy', amount = '100') {
+  await h.choose_instrument({ query });
+  await h.set_instruction({ side });
+  await h.set_amount({ amount });
+  await h.request_estimate({});
+  await h.record_paper({});
+}
+
+describe('records by voice', () => {
+  it('opens the matching record read-only, and goes back to the ticket', async () => {
+    const { session, handlers } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    await handlers.set_amount({ amount: '20' });
+    const said = await handlers.open_record({ query: 'the Apple buy' });
+    assert.match(said, /Showing the buy/i);
+    assert.equal(session.getSnapshot().viewedRecordId, session.getSnapshot().records[0].id);
+    await handlers.back_to_instruction({});
+    assert.equal(session.getSnapshot().viewedRecordId, null);
+    assert.equal(session.getSnapshot().state.stage, 'draft');
+    assert.equal(session.getSnapshot().state.draft.amount, '20', 'the instruction is as the caller left it');
+  });
+
+  it('says so, and changes nothing, when no record matches', async () => {
+    const { session, handlers } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    const before = session.getSnapshot().viewedRecordId;
+    const said = await handlers.open_record({ query: 'Tesla' });
+    assert.match(said, /No filed record matches/i);
+    assert.equal(session.getSnapshot().viewedRecordId, before, 'nothing was opened');
+    assert.match(await recordsDesk().handlers.open_record({}), /no paper records/i);
+  });
+});
+
+describe('deleting a record by voice', () => {
+  it('never deletes on the first call — it names the record and asks', async () => {
+    const { session, handlers } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    const said = await handlers.delete_record({ query: 'Apple' });
+    assert.match(said, /confirm/i);
+    assert.equal(session.getSnapshot().records.length, 1);
+  });
+
+  it('refuses a confirm the caller has not had a turn to give', async () => {
+    const { session, handlers } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    await handlers.delete_record({ query: 'Apple' });
+    const said = await handlers.delete_record({ confirm: true });
+    assert.match(said, /has not answered/i);
+    assert.equal(session.getSnapshot().records.length, 1);
+  });
+
+  it('refuses a confirm with nothing proposed', async () => {
+    const { session, handlers } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    assert.match(await handlers.delete_record({ confirm: true }), /Nothing is waiting/i);
+    assert.equal(session.getSnapshot().records.length, 1);
+  });
+
+  it('deletes exactly the proposed record after a caller turn, and returns to the ticket', async () => {
+    const { session, handlers, turn } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    await fileOne(handlers, 'Tesla', 'buy', '50');
+    assert.equal(session.getSnapshot().records.length, 2);
+    await handlers.delete_record({ query: 'Tesla' });
+    turn!.n += 1;
+    const said = await handlers.delete_record({ confirm: true, query: 'Apple' });
+    assert.match(said, /Deleted the buy/i);
+    const left = session.getSnapshot().records;
+    assert.equal(left.length, 1);
+    assert.equal(left[0].instrumentSnapshot.symbol, 'AAPLx', 'the confirm cannot retarget a different record');
+    assert.notEqual(session.getSnapshot().state.stage, 'saved');
+  });
+
+  it('forgets a proposal after one use', async () => {
+    const { handlers, turn } = recordsDesk();
+    await fileOne(handlers, 'Apple');
+    await handlers.delete_record({});
+    turn!.n += 1;
+    await handlers.delete_record({ confirm: true });
+    assert.match(await handlers.delete_record({ confirm: true }), /Nothing is waiting/i);
+  });
+
+  it('cannot delete by voice on a line that cannot count caller turns', async () => {
+    const { session, handlers } = recordsDesk(null);
+    await fileOne(handlers, 'Apple');
+    assert.match(await handlers.delete_record({ query: 'Apple' }), /not available on this line/i);
+    assert.match(await handlers.delete_record({ confirm: true }), /not available on this line/i);
     assert.equal(session.getSnapshot().records.length, 1);
   });
 });

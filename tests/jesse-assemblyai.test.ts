@@ -55,7 +55,19 @@ describe('Jesse on AssemblyAI — progressive tool reveal', () => {
 
   it('keeps an archived or missing record read-only on the line', () => {
     for (const kind of ['archive', 'missing']) {
-      assert.deepEqual(names(kind), ['describe_desk', 'explain_concept', 'watch_mark']);
+      assert.deepEqual(names(kind), ['back_to_instruction', 'delete_record', 'describe_desk', 'explain_concept', 'open_record', 'watch_mark']);
+      for (const drafting of ['set_amount', 'set_instruction', 'choose_instrument', 'request_estimate', 'record_paper']) {
+        assert.ok(!names(kind).includes(drafting), `${kind} cannot ${drafting}`);
+      }
+    }
+  });
+
+  it('offers going back only from a record view, and records never while pricing', () => {
+    for (const kind of ['receipt', 'archive', 'missing']) assert.ok(names(kind).includes('back_to_instruction'), kind);
+    for (const kind of ['draft', 'quotation', 'pending']) assert.ok(!names(kind).includes('back_to_instruction'), kind);
+    assert.ok(!names('pending').includes('delete_record') && !names('pending').includes('open_record'));
+    for (const kind of ['draft', 'quotation', 'receipt']) {
+      assert.ok(names(kind).includes('open_record') && names(kind).includes('delete_record'), kind);
     }
   });
 

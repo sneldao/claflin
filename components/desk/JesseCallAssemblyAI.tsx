@@ -84,7 +84,11 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       [field]: { kind: 'line', lastCaller: lastCaption(captionsRef.current, 'user')?.text ?? null, value },
     });
   }, []);
-  const handlers = useMemo(() => jesseToolHandlers({ desk: () => jesseRef.current, markLine }), [markLine]);
+  const userTurnsRef = useRef(0);
+  const handlers = useMemo(
+    () => jesseToolHandlers({ desk: () => jesseRef.current, markLine, userTurn: () => userTurnsRef.current }),
+    [markLine],
+  );
 
   const addCaption = useCallback((caption: Caption) => setCaptions(prev => appendCaption(prev, caption)), []);
 
@@ -151,6 +155,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
         if (!final) { setHearing(clean || null); return; }
         setHearing(null);
         if (!clean) return;
+        userTurnsRef.current += 1;
         addCaption({ role: 'user', text: clean.slice(0, 600), at: Date.now() });
         if (clean.length <= 300) callbacks.current.onUserSpoken?.(clean);
       },

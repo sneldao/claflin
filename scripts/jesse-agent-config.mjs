@@ -40,6 +40,8 @@ TOOLS ARE THE DESK
 - Corrections are first-class: “Ten, not twenty-five” changes only the amount. “I meant Tesla” changes only the instrument. “Don't file that” leaves the draft intact. “Let me type it instead” means you stop and wait.
 - When unsure what is on the ticket, call describe_desk before correcting the caller.
 - request_estimate only when instrument, side, and amount are set. File paper ONLY after an explicit “file this paper record” (or clear yes to file) while that same quotation is still in review — bind to the current quote, never a stale one. “Yes” alone after unrelated talk is not enough.
+- Filed records live on the desk. open_record shows one, read-only (by company, buy or sell, or "the last one"). back_to_instruction returns to the ticket. After a filing, simply give the next instruction — it starts a fresh ticket, no need to ask the caller to click anything.
+- delete_record removes ONE paper record from this browser, only when the caller explicitly asks to delete or clear it. Call it without confirm first, read back exactly which record it names, then wait. Call it again with confirm true only after the caller's explicit yes. A maybe, a change of subject, or silence is not a yes. Never offer to delete, and never clear everything by voice — on-screen Clear all is for that.
 - compare_markets reads equity-versus-token evidence for the selected (or named) xStock. If unavailable, relay the reason honestly.
 - explain_concept covers: reference-difference, market-hours, scaled-units, paper-mode. Speak returned text nearly verbatim. Never invent a lesson or urge a trade.
 - You cannot read wallets, balances, news, or anything off this desk — the tools are the whole world.
@@ -136,6 +138,42 @@ export const tools = [
     description: 'Clear the in-flight request or review and return the ticket to drafting.',
     expects_response: true,
     response_timeout_secs: 10,
+  },
+  {
+    type: 'client',
+    name: 'open_record',
+    description:
+      'Open a filed paper record on the desk (read-only). Pass what the caller said — a company, buy or sell, or omit for the most recent one.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Company or ticker, optionally with buy or sell, e.g. "the Tesla buy". Omit for the latest.' },
+      },
+    },
+  },
+  {
+    type: 'client',
+    name: 'back_to_instruction',
+    description: 'Leave a filed or opened record and return to the instruction on the ticket, exactly as the caller left it.',
+    expects_response: true,
+    response_timeout_secs: 10,
+  },
+  {
+    type: 'client',
+    name: 'delete_record',
+    description:
+      'Delete one paper record from the caller\'s browser. Only when the caller explicitly asks. First call WITHOUT confirm names the record; call again with confirm true only after their explicit yes.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Which record, as the caller said it. Omit for the one on screen or the latest.' },
+        confirm: { type: 'boolean', description: 'True only after the caller has explicitly said yes to deleting the named record.' },
+      },
+    },
   },
   {
     type: 'client',

@@ -14,6 +14,8 @@ import { countRetrieval } from '@/lib/funnel/client';
 export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDesk }) {
   const { records, historyReady, storageError, viewedRecordId, openRecord, removeRecord, foreground } = jesse;
   const [exportNote, setExportNote] = useState<string | null>(null);
+  /* One id, or 'all', waiting on an explicit yes — a click never deletes by itself. */
+  const [confirming, setConfirming] = useState<string | null>(null);
   const [slips, setSlips] = useState<DeskSlip[]>([]);
   const tally = useMemo(() => tallyPaper(safeFills(records, jesseFill)), [records]);
   const justFiledId = foreground.kind === 'receipt' ? foreground.recordId : null;
@@ -85,9 +87,17 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
                       <span>{entry.amount}</span>
                       <small>{formatRecordedTime(entry.createdAt)}</small>
                     </button>
-                    <button type="button" className={styles.ledgerDelete} onClick={() => removeRecord(record.id)} aria-label={`Delete ${entry.symbol} record`}>
-                      Delete
-                    </button>
+                    {confirming === record.id ? (
+                      <span className={styles.ledgerConfirm} role="group" aria-label={`Delete ${entry.symbol} record?`}>
+                        Delete this record?
+                        <button type="button" className={styles.ledgerDelete} data-danger="true" onClick={() => { removeRecord(record.id); setConfirming(null); }}>Yes, delete</button>
+                        <button type="button" className={styles.ledgerDelete} onClick={() => setConfirming(null)}>Keep</button>
+                      </span>
+                    ) : (
+                      <button type="button" className={styles.ledgerDelete} onClick={() => setConfirming(record.id)} aria-label={`Delete ${entry.symbol} record`}>
+                        Delete
+                      </button>
+                    )}
                   </li>
                 );
               })}
@@ -127,6 +137,15 @@ export const JesseLedger = memo(function JesseLedger({ jesse }: { jesse: JesseDe
         <button type="button" onClick={() => takeCopy('csv')}>Copy CSV</button>
         <button type="button" onClick={() => takeCopy('json')}>Copy JSON</button>
         {exportNote && <span role="status">{exportNote}</span>}
+        {records.length > 0 && (confirming === 'all' ? (
+          <span className={styles.ledgerConfirm} role="group" aria-label="Clear every paper record?">
+            Clear all {records.length}? This cannot be undone.
+            <button type="button" data-danger="true" onClick={() => { records.map(r => r.id).forEach(removeRecord); setConfirming(null); }}>Yes, clear all</button>
+            <button type="button" onClick={() => setConfirming(null)}>Keep</button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirming('all')}>Clear all</button>
+        ))}
       </div>
     </section>
   );

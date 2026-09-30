@@ -26,7 +26,8 @@ export const AAI_JESSE_VOICE = 'charles';
 export type JesseToolName =
   | 'choose_instrument' | 'set_instruction' | 'set_amount' | 'request_estimate'
   | 'compare_markets' | 'record_paper' | 'cancel_instruction' | 'describe_desk'
-  | 'watch_mark' | 'explain_concept';
+  | 'watch_mark' | 'explain_concept'
+  | 'open_record' | 'back_to_instruction' | 'delete_record';
 
 interface SharedTool {
   name: string;
@@ -93,22 +94,26 @@ const DRAFTING: readonly JesseToolName[] = [
   'compare_markets', 'cancel_instruction', 'watch_mark',
 ];
 
+/* Records are the caller's own paper, reachable whenever nothing is being
+   priced. Going back is offered only from a record view. */
+const RECORDS: readonly JesseToolName[] = ['open_record', 'delete_record'];
+
 export function allowedTools(foreground: ForegroundKind): ReadonlySet<JesseToolName> {
   switch (foreground.kind) {
     case 'quotation':
-      return new Set([...ALWAYS, ...DRAFTING, 'record_paper']);
+      return new Set([...ALWAYS, ...DRAFTING, ...RECORDS, 'record_paper']);
     case 'pending':
       return new Set([...ALWAYS, 'cancel_instruction']);
     case 'receipt':
       /* A filed record is finished, not a dead end: the next instruction
          starts a fresh ticket, so the caller never has to reach for the
          screen. Filing stays unregistered until a new quotation exists. */
-      return new Set([...ALWAYS, ...DRAFTING]);
+      return new Set([...ALWAYS, ...DRAFTING, ...RECORDS, 'back_to_instruction']);
     case 'archive':
     case 'missing':
-      return new Set([...ALWAYS, 'watch_mark']);
+      return new Set([...ALWAYS, ...RECORDS, 'watch_mark', 'back_to_instruction']);
     default:
-      return new Set([...ALWAYS, ...DRAFTING]);
+      return new Set([...ALWAYS, ...DRAFTING, ...RECORDS]);
   }
 }
 

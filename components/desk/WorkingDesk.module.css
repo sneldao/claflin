@@ -1696,7 +1696,9 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 .amountChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
 .amountChips button { padding: 6px 10px; border: 1px solid var(--desk-paper-rule); background: transparent; color: var(--desk-paper-ink); font: 11px/1 var(--font-mono), monospace; cursor: pointer; }
 .amountChips button:hover { border-color: var(--desk-brass); }
-.ledgerDelete { margin-left: 8px; font-size: 10px; color: var(--desk-paper-muted); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+.ledgerDelete { margin-left: 8px; min-height: 32px; padding: 0 6px; font-size: 11px; color: var(--desk-paper-ink); background: none; border: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.ledgerDelete[data-danger='true'], .ledgerExport [data-danger='true'] { color: var(--desk-error); font-weight: 600; }
+.ledgerConfirm { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; margin-left: 8px; font-size: 11px; color: var(--desk-paper-ink); }
 .deskSlips { margin-top: 16px; }
 .deskSlip { margin: 0 0 8px !important; font-size: 12px; line-height: 1.5; }
 .deskSlip small { display: block; color: var(--desk-muted); font-size: 10px; margin-top: 4px; }

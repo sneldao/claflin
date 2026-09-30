@@ -193,6 +193,16 @@ export function createJesseDeskSession(opts: {
         spokenText: 'The desk session has ended.',
       });
     }
+    /* Editing from a just-filed receipt starts the next instruction: leave
+       the record view, or the desk would read as a read-only archive. */
+    if (
+      (command.type === 'clarify' || command.type === 'draft' || command.type === 'cancel')
+      && viewedRecordId
+      && controller.getState().stage === 'saved'
+      && controller.getState().quote?.id === viewedRecordId
+    ) {
+      viewedRecordId = null;
+    }
     const isProviderOp = (command.type === 'draft' && command.quote) || command.type === 'compare';
     const isPresentation = command.type === 'explain' || command.type === 'describe' || command.type === 'focus';
     let ownId: number | null = null;
