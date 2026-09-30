@@ -60,13 +60,14 @@ describe('readiness parsers', () => {
     assert.equal(res.ok, false);
     assert.equal(res.solLamports, null);
     assert.equal(res.usdc, null);
+    assert.deepEqual(res.holdings, []);
   });
 
-  it('reads a batch into the right fields', async () => {
+  it('reads a batch into the right fields, one sum per mint', async () => {
     const res = await readWalletReadiness({
       rpcUrl: 'https://rpc.example',
       wallet: WALLET,
-      mint: APPLE.mint,
+      mints: [{ mint: APPLE.mint, decimals: APPLE.decimals }],
       fetchImpl: async (_url, init) => {
         const sent = JSON.parse(String(init?.body)) as { id: number }[];
         assert.equal(sent.length, 3);
@@ -80,7 +81,27 @@ describe('readiness parsers', () => {
     assert.equal(res.ok, true);
     assert.equal(res.solLamports, '9000');
     assert.equal(res.usdc?.raw, '1000000');
-    assert.equal(res.token?.accountExists, false);
+    assert.equal(res.holdings[0]?.accountExists, false);
+  });
+
+  it('reads every requested mint as a holding', async () => {
+    const res = await readWalletReadiness({
+      rpcUrl: 'https://rpc.example',
+      wallet: WALLET,
+      mints: SOLANA_INSTRUMENTS.map(i => ({ mint: i.mint, decimals: i.decimals })),
+      fetchImpl: async (_url, init) => {
+        const sent = JSON.parse(String(init?.body)) as { id: number }[];
+        assert.equal(sent.length, 2 + SOLANA_INSTRUMENTS.length);
+        return new Response(JSON.stringify(sent.map(({ id }) => (
+          id === 1
+            ? { jsonrpc: '2.0', id, result: { context: { slot: 1 }, value: 1 } }
+            : { jsonrpc: '2.0', id, result: { context: { slot: 1 }, value: [{ account: { data: { parsed: { info: { tokenAmount: { amount: '42', decimals: 8 } } } } } }] } }
+        ))));
+      },
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.holdings.length, SOLANA_INSTRUMENTS.length);
+    assert.ok(res.holdings.every(h => h?.raw === '42'));
   });
 });
 
@@ -102,10 +123,11 @@ describe('readiness route', () => {
       const res = await readinessGet(new Request(`http://x/api/desk/jesse/readiness?wallet=${WALLET}`));
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('cache-control'), 'no-store');
-      const body = await res.json() as { ok: boolean; solLamports: string | null; usdc: { raw: string } | null };
+      const body = await res.json() as { ok: boolean; solLamports: string | null; usdc: { raw: string } | null; holdings: unknown[] };
       assert.equal(body.ok, true);
       assert.equal(body.solLamports, '5000');
       assert.equal(body.usdc?.raw, '0');
+      assert.deepEqual(body.holdings, []);
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = realFetch;
     }

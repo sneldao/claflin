@@ -1520,6 +1520,19 @@
 .readinessFund { display: block; margin-top: 6px; }
 .readinessFund a { color: var(--desk-paper-ink); text-decoration: underline; text-underline-offset: 3px; margin-right: 14px; min-height: 44px; display: inline-flex; align-items: center; font-size: 11px; }
 .readinessFund .secondary { font-size: 11px; }
+/* Durable wallet block — observed balances and the live order trail. */
+.liveWalletBlock { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--desk-paper-rule); }
+.liveOrders { list-style: none; margin: 8px 0 0; padding: 0; }
+.liveOrders > li { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--desk-paper-rule); color: var(--desk-paper-ink); font-size: 12px; }
+.liveOrders > li:last-child { border-bottom: 0; }
+.liveOrderStatus { font: 600 10px/1.6 var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.liveOrders > li[data-status='confirmed'] .liveOrderStatus { color: #5f7d5b; }
+.liveOrders > li[data-status='failed'] .liveOrderStatus { color: var(--desk-error); }
+.liveOrders > li[data-status='submitted'] .liveOrderStatus,
+.liveOrders > li[data-status='unknown'] .liveOrderStatus { color: var(--desk-paper-muted); }
+.liveOrders a { color: var(--desk-paper-ink); text-decoration: underline; text-underline-offset: 3px; min-height: 44px; display: inline-flex; align-items: center; }
+.liveOrderChecked { color: var(--desk-paper-muted); font-size: 11px; }
+.liveWalletBlock .secondary { font-size: 11px; }
 .liveBox .primary { margin-top: 12px; }
 .liveBox .secondary { font-size: 11px; }
 .stampLive { border-color: #5f7d5b; color: #5f7d5b; box-shadow: inset 0 0 0 1px #5f7d5b55; transform: rotate(-8deg); }

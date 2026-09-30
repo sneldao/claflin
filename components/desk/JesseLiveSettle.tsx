@@ -10,6 +10,9 @@ import {
 } from '@/lib/solana/wallet';
 import { useEligibilityAttestation } from '@/lib/desk/eligibility';
 import { CLAFLIN_MARKET } from '@/lib/desk/market';
+import { useLiveLedger } from '@/lib/solana/live-ledger';
+import { signatureFromSignedTransaction } from '@/lib/solana/signature';
+import { JesseLiveLedger } from './JesseLiveLedger';
 import { JesseReadiness } from './JesseReadiness';
 import { SolanaProposalCosts } from './QuoteReview';
 import styles from './WorkingDesk.module.css';
@@ -43,6 +46,7 @@ export function JesseLiveSettle({
   );
   const [account, setAccount] = useState<string | null>(null);
   const eligibility = useEligibilityAttestation(CLAFLIN_MARKET);
+  const ledger = useLiveLedger(account);
   const [phase, setPhase] = useState<LivePhase>('idle');
   const [proposal, setProposal] = useState<SolanaLiveProposal | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -111,6 +115,20 @@ export function JesseLiveSettle({
     try {
       const unsigned = base64ToBytes(proposal.transactionBase64);
       const signed = await wallet.signTransaction(unsigned);
+      /* The durable record exists the moment the signature does — before
+         execute, so a dead tab never loses the on-chain pointer. */
+      ledger.record({
+        proposalId: proposal.id,
+        wallet: address,
+        signature: signatureFromSignedTransaction(signed),
+        instrumentId: proposal.intent.instrumentId,
+        side: proposal.intent.side,
+        amount: proposal.intent.amount,
+        unit: proposal.intent.unit,
+        submittedAt: Date.now(),
+        status: 'submitted',
+        lastCheckedAt: null,
+      });
       setPhase('submitting');
       const res = await fetch('/api/desk/jesse/live/submit', {
         method: 'POST',
@@ -129,30 +147,50 @@ export function JesseLiveSettle({
         signature?: string | null;
       };
       if (!res.ok) {
-        setPhase(body.status === 'unknown' ? 'unknown' : 'failed');
+        const status = body.status === 'unknown' ? 'unknown' : 'failed';
+        setPhase(status);
+        ledger.update(proposal.id, {
+          status,
+          ...(body.signature ? { signature: body.signature } : {}),
+          lastCheckedAt: Date.now(),
+        });
         setNote(body.message ?? 'Live submit failed.');
         return;
       }
       if (body.status === 'confirmed') {
         setPhase('confirmed');
+        ledger.update(proposal.id, {
+          status: 'confirmed',
+          signature: body.signature ?? null,
+          lastCheckedAt: Date.now(),
+        });
         setSolscanUrl(body.solscanUrl ?? (body.signature ? `https://solscan.io/tx/${body.signature}` : null));
         setNote(body.message ?? 'Live settle confirmed.');
         return;
       }
       if (body.status === 'unknown') {
         setPhase('unknown');
+        ledger.update(proposal.id, { status: 'unknown', lastCheckedAt: Date.now() });
         setNote(body.message ?? 'Outcome unknown — do not resign a different order.');
         setSolscanUrl(body.solscanUrl ?? null);
         return;
       }
       setPhase('failed');
+      ledger.update(proposal.id, {
+        status: 'failed',
+        signature: body.signature ?? null,
+        lastCheckedAt: Date.now(),
+      });
       setNote(body.message ?? 'Live settle failed.');
       setSolscanUrl(body.solscanUrl ?? null);
     } catch (err) {
       setPhase('failed');
+      /* A record that exists here was already signed — the execute may or
+         may not have landed, so unknown is the honest state. */
+      ledger.update(proposal.id, { status: 'unknown', lastCheckedAt: Date.now() });
       setNote(err instanceof Error ? err.message : 'Signing or submit failed.');
     }
-  }, [wallet, proposal]);
+  }, [wallet, proposal, ledger]);
 
   return (
     <section className={styles.liveBox} data-source="jesse-live" aria-labelledby="jesse-live-title">
@@ -215,6 +253,7 @@ export function JesseLiveSettle({
           If execute timed out, reconcile the same signature — never broadcast a different order automatically.
         </p>
       )}
+      {account && <JesseLiveLedger account={account} ledger={ledger} />}
     </section>
   );
 }

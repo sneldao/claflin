@@ -60,6 +60,20 @@ export function decodeBase58(text: string): Uint8Array | null {
   return Uint8Array.from([...new Array<number>(leadingZeros).fill(0), ...bytes]);
 }
 
+/** Encode bytes to base58 — the inverse of decodeBase58, same alphabet. */
+export function encodeBase58(bytes: Uint8Array): string {
+  let leadingZeros = 0;
+  while (leadingZeros < bytes.length && bytes[leadingZeros] === 0) leadingZeros++;
+  let value = 0n;
+  for (const b of bytes) value = value * 256n + BigInt(b);
+  let out = '';
+  while (value > 0n) {
+    out = BASE58_ALPHABET[Number(value % 58n)] + out;
+    value /= 58n;
+  }
+  return '1'.repeat(leadingZeros) + out;
+}
+
 /**
  * Validate a `sol:` instrument id and return it unchanged — exact case
  * preserved. Anything that is not a base58 string decoding to precisely

@@ -21,7 +21,8 @@ export interface WalletReadiness {
   /** null = unreadable, not zero. */
   solLamports: string | null;
   usdc: TokenSum | null;
-  token: TokenSum | null;
+  /** One sum per requested mint, order preserved; null = unreadable. */
+  holdings: (TokenSum | null)[];
   /** false when the RPC endpoint could not be reached at all. */
   ok: boolean;
 }
@@ -75,16 +76,14 @@ export function parseTokenAccountsResult(body: unknown, fallbackDecimals: number
 export async function readWalletReadiness({
   rpcUrl,
   wallet,
-  mint = null,
-  mintDecimals = 8,
+  mints = [],
   fetchImpl = fetch,
   timeoutMs = 8_000,
 }: {
   rpcUrl: string;
   wallet: string;
-  mint?: string | null;
-  /** Catalog decimals for `mint` — the label on an empty token sum. */
-  mintDecimals?: number;
+  /** Catalog mints to read alongside USDC — order preserved. */
+  mints?: { mint: string; decimals: number }[];
   fetchImpl?: FetchLike;
   timeoutMs?: number;
 }): Promise<WalletReadiness> {
@@ -92,9 +91,9 @@ export async function readWalletReadiness({
     { jsonrpc: '2.0', id: 1, method: 'getBalance', params: [wallet] },
     { jsonrpc: '2.0', id: 2, method: 'getTokenAccountsByOwner', params: [wallet, { mint: SOLANA_USDC_MINT }, { encoding: 'jsonParsed' }] },
   ];
-  if (mint) {
-    batch.push({ jsonrpc: '2.0', id: 3, method: 'getTokenAccountsByOwner', params: [wallet, { mint }, { encoding: 'jsonParsed' }] });
-  }
+  mints.forEach((m, i) => {
+    batch.push({ jsonrpc: '2.0', id: 3 + i, method: 'getTokenAccountsByOwner', params: [wallet, { mint: m.mint }, { encoding: 'jsonParsed' }] });
+  });
   let body: unknown;
   try {
     const res = await fetchImpl(rpcUrl, {
@@ -103,17 +102,17 @@ export async function readWalletReadiness({
       body: JSON.stringify(batch),
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!res.ok) return { solLamports: null, usdc: null, token: null, ok: false };
+    if (!res.ok) return { solLamports: null, usdc: null, holdings: [], ok: false };
     body = await res.json();
   } catch {
-    return { solLamports: null, usdc: null, token: null, ok: false };
+    return { solLamports: null, usdc: null, holdings: [], ok: false };
   }
   const envelopes = Array.isArray(body) ? body : [body];
   const byId = (id: number) => envelopes.find(e => (e as { id?: unknown })?.id === id) ?? null;
   return {
     solLamports: parseBalanceResult(byId(1)),
     usdc: parseTokenAccountsResult(byId(2), SOLANA_USDC_DECIMALS),
-    token: mint ? parseTokenAccountsResult(byId(3), mintDecimals) : null,
+    holdings: mints.map((m, i) => parseTokenAccountsResult(byId(3 + i), m.decimals)),
     ok: true,
   };
 }
