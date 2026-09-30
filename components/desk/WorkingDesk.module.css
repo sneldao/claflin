@@ -235,6 +235,9 @@
 .review details, .record details { font-size: 11px; line-height: 1.8; }
 .review summary, .record summary, .voice summary { cursor: pointer; padding-block: 12px; min-height: 44px; }
 .review details p { margin-block: 12px !important; }
+.assumptionsFold { margin: 14px 0; font-size: 11px; color: var(--desk-paper-muted); }
+.assumptionsFold > summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; text-decoration: underline; text-underline-offset: 3px; }
+.assumptionsFold[open] > summary { margin-bottom: 4px; }
 .ticket .assumptions { margin-block: 18px; padding: 15px; background: #27362b0a; font-size: 11px; line-height: 1.8; }
 .ticket .localConsent { font-size: 11px; line-height: 1.7; margin-bottom: 16px; }
 .ticket .paperFoot { font: 9px var(--font-mono), monospace; letter-spacing: .06em; padding-top: 28px; text-align: center; }

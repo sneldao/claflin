@@ -42,11 +42,10 @@ export function BrokerLinePlate({ deskId, take, compact = false }: { deskId: Hou
 
 /** The last four lines of the discussion, in order — the tape of the call.
  *  Presentational only; lifecycle and storage stay in the call panels. */
-export function LineCaptions({ captions, brokerName, applied, discussion }: {
+export function LineCaptions({ captions, brokerName, applied }: {
   captions: readonly Caption[];
   brokerName: string;
   applied: string | null;
-  discussion: string | null;
 }) {
   const recent = captions.slice(-4);
   return (
@@ -57,7 +56,6 @@ export function LineCaptions({ captions, brokerName, applied, discussion }: {
         </p>
       ))}
       {applied && <p className={styles.captionApplied}>{applied}</p>}
-      {discussion && <p className={styles.captionApplied}>{discussion}</p>}
     </>
   );
 }

@@ -17,7 +17,6 @@ import {
   boundedDiscussionContext,
   lastCaption,
   openingWithResume,
-  summarizeDiscussion,
   type DiscussionCaption,
 } from '@/lib/hetty/discussion';
 import { appliedJesseTicketLine, jesseClosingLine, jesseOpeningLine } from '@/lib/jesse/voice-tools';
@@ -267,7 +266,6 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
 
   const lastUser = lastCaption(captions, 'user');
   const lastAgent = lastCaption(captions, 'agent');
-  const discussion = summarizeDiscussion(captions, 'Jesse');
   const applied = live || captions.length > 0 ? appliedJesseTicketLine(jesse.state, jesse.foreground) : null;
   const callNote = jesse.foreground.kind === 'missing'
     ? 'That paper record is no longer in this browser. Return to the instruction.'
@@ -334,7 +332,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       )}
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
-          <LineCaptions captions={captions} brokerName="Jesse" applied={applied} discussion={discussion} />
+          <LineCaptions captions={captions} brokerName="Jesse" applied={applied} />
           {captions.length > 4 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>

@@ -278,7 +278,12 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
             {validity?.state === 'closing' && 'Nearly expired — request a fresh estimate'}
             {validity?.state === 'lapsed' && 'Expired — request a fresh estimate'}
           </p>
-          {quote.assumptions && <p className={styles.assumptions}>{quote.assumptions}</p>}
+          {quote.assumptions && (
+            <details className={styles.assumptionsFold}>
+              <summary>How this paper estimate works</summary>
+              <p className={styles.assumptions}>{quote.assumptions}</p>
+            </details>
+          )}
         </>
       )}
       {children}
@@ -289,10 +294,6 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
       {trailing}
     </div>
   );
-}
-
-function truncate(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
 /** Where the desk got a value — small print under it, honest or absent. */
@@ -317,8 +318,7 @@ function ProvMark({ mark }: { mark: SlipMark }) {
       label = 'The desk assumed this — check it';
       break;
     case 'line': {
-      const caller = mark.lastCaller ? ` · you said “${truncate(mark.lastCaller, 60)}”` : '';
-      text = `← from the call${caller}`;
+      text = '← from the call';
       label = mark.lastCaller ? `Set over the call after you said: “${mark.lastCaller}”` : 'Set over the call';
       break;
     }

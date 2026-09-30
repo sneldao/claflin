@@ -133,6 +133,21 @@ describe('written slip — sentences', () => {
   });
 });
 
+describe('written slip — estimate terms', () => {
+  it('puts the numbers first and folds the paper disclaimer behind one line', () => {
+    const html = renderToStaticMarkup(createElement(WrittenSlip, {
+      mode: 'review',
+      draft: buyDraft,
+      ...jesse,
+      quote: { ...buyQuote, assumptions: 'Simulated fill at the quoted output.' },
+      instrument: AAPLX_FIXTURE,
+      now: buyQuote.quotedAt + 10_000,
+    }));
+    assert.match(html, /<details[^>]*><summary>How this paper estimate works<\/summary><p[^>]*>Simulated fill at the quoted output\.<\/p><\/details>/);
+    assert.ok(!/<details[^>]* open/.test(html), 'collapsed by default');
+  });
+});
+
 describe('written slip — provenance', () => {
   const prov = {
     amount: { kind: 'said' as const, phrase: 'buy 100 USDC of AAPLx', excerpt: '100 USDC', value: '100' },
@@ -179,6 +194,20 @@ describe('written slip — provenance', () => {
     assert.match(html, /← from the foyer/);
     assert.match(html, /Carried in from the foyer/);
     assert.doesNotMatch(html, /From what you said|From what you typed/);
+  });
+
+  it('shows a call-set value as "from the call" and keeps the long phrase out of sight', () => {
+    const phrase = "Uh, no, let's swap it to Tesla for 10 USDC";
+    const html = renderToStaticMarkup(createElement(WrittenSlip, {
+      mode: 'draft',
+      draft: buyDraft,
+      ...jesse,
+      instrument: AAPLX_FIXTURE,
+      provenance: { amount: { kind: 'line' as const, value: '100', lastCaller: phrase } },
+    }));
+    assert.match(html, /<span aria-hidden="true">← from the call<\/span>/);
+    assert.ok(!html.includes(`← from the call · you said`), 'the quote is not printed beside the field');
+    assert.match(html, /Set over the call after you said: “Uh, no/, 'still available on hover and to screen readers');
   });
 
   it('never renders a mark whose value the slip no longer holds', () => {

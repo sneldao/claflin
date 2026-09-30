@@ -8,7 +8,6 @@ import {
   boundedDiscussionContext,
   lastCaption,
   openingWithResume,
-  summarizeDiscussion,
   type DiscussionCaption,
 } from '@/lib/hetty/discussion';
 import { resolveDeskAlias } from '@/lib/trading/catalog';
@@ -683,7 +682,6 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
 
   const lastUser = lastCaption(captions, 'user');
   const lastAgent = lastCaption(captions, 'agent');
-  const discussion = summarizeDiscussion(captions);
   const applied = live || captions.length > 0 ? appliedTicketLine(desk.state, desk.foreground) : null;
 
   const callNote = desk.foreground.kind === 'missing'
@@ -762,7 +760,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       </div>
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
-          <LineCaptions captions={captions} brokerName="Hetty" applied={applied} discussion={discussion} />
+          <LineCaptions captions={captions} brokerName="Hetty" applied={applied} />
           {captions.length > 4 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>
