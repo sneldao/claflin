@@ -15,6 +15,21 @@ Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, co
 dom.window.cancelAnimationFrame = (id: number) => clearTimeout(id);
 dom.window.requestAnimationFrame = (cb: FrameRequestCallback) => setTimeout(cb, 0) as unknown as number;
 
+/* Components reach browser globals bare — not through window — so effects
+   mounted under createRoot need them on globalThis too. */
+(globalThis as any).requestAnimationFrame = dom.window.requestAnimationFrame;
+(globalThis as any).cancelAnimationFrame = dom.window.cancelAnimationFrame;
+(globalThis as any).MutationObserver = dom.window.MutationObserver;
+if (typeof (globalThis as any).IntersectionObserver === 'undefined') {
+  (globalThis as any).IntersectionObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() { return []; }
+  };
+}
+(dom.window as any).IntersectionObserver = (globalThis as any).IntersectionObserver;
+
 dom.window.matchMedia = (query: string) => ({
   matches: query.includes('prefers-reduced-motion'),
   media: query,

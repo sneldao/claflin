@@ -48,11 +48,12 @@ describe('provenanceFromParse', () => {
     assert.equal(prov.instrument?.kind, 'kept');
   });
 
-  it('flags a side the parser inferred against the prior slip', () => {
+  it('refuses a USDC amount against a scaled-unit sell slip', () => {
     const sellDraft: JesseDraft = { instrumentId: apple.id, side: 'sell', unit: 'scaled-token', amount: '5' };
     const parse = parseJesseSpeech('make that 50 USDC', sellDraft);
-    const prov = provenanceFromParse(parse, sellDraft);
-    assert.equal(prov.side?.kind, 'inferred');
+    assert.equal(parse.command, null);
+    assert.match(parse.issue ?? '', /different instructions/);
+    assert.deepEqual(provenanceFromParse(parse, sellDraft), {});
   });
 
   it('returns nothing for non-draft commands', () => {

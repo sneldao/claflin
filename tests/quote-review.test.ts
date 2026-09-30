@@ -24,6 +24,7 @@ const jesseBuy: SolanaPaperEstimate = {
   inputAmount: '100',
   outputAmount: '0.4326',
   effectiveScaledAmount: '0.4326',
+  feeBps: 2,
 };
 
 const jesseSell: SolanaPaperEstimate = {
