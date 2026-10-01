@@ -45,9 +45,10 @@ describe('desk capabilities drive openness', () => {
     /* Jesse paper tracks NEXT_PUBLIC_JESSE_PAPER_ENABLED — quote-only is not
        an open desk until the seated surface can file. */
     assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
-    for (const deskId of ['isabel', 'arbitrum'] as const) {
-      assert.deepEqual(DESK_CAPABILITIES[deskId], { quote: false, paper: false, voice: null, live: false });
-    }
+    /* Isabel answers Lighter estimates and Chainlink/rhj marks on the tape,
+       but quote-only is not an open desk until the surface can file paper. */
+    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: false, voice: null, live: false });
+    assert.deepEqual(DESK_CAPABILITIES.arbitrum, { quote: false, paper: false, voice: null, live: false });
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.equal(isOpenDesk('hetty'), true);
     assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
@@ -182,13 +183,12 @@ describe('base seams stay byte-identical', () => {
   it('keeps sol: ids out of Hetty’s catalog', () => {
     assert.equal(codeOf(() => getDeskInstrument(AAPLX_FIXTURE.id)).code, 'unknown_instrument');
   });
-  it('resolves Jesse through its own venue while planned desks still refuse', () => {
+  it('resolves each open rail through its own venue while unfinished desks still refuse', () => {
     assert.equal(quoteAdapterFor('hetty').venue, 'aerodrome');
     assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
-    for (const deskId of ['isabel', 'arbitrum']) {
-      const failure = codeOf(() => quoteAdapterFor(deskId));
-      assert.equal(failure.code, 'desk_unavailable');
-      assert.equal(failure.status, 422);
-    }
+    assert.equal(quoteAdapterFor('isabel').venue, 'lighter');
+    const failure = codeOf(() => quoteAdapterFor('arbitrum'));
+    assert.equal(failure.code, 'desk_unavailable');
+    assert.equal(failure.status, 422);
   });
 });

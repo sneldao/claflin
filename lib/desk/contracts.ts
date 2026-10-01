@@ -51,7 +51,7 @@ export interface MarketMandate {
   issuer: string | null;
   rails: readonly RailRef[];
   venues: readonly string[];
-  quoteAsset: 'USDC' | null;
+  quoteAsset: 'USDC' | 'USDG' | null;
   status: 'active' | 'planned';
 }
 
@@ -106,7 +106,7 @@ export interface InstrumentOffering {
   issuer: string | null;
   rail: RailRef;
   venue: string | null;
-  quoteAsset: 'USDC' | null;
+  quoteAsset: 'USDC' | 'USDG' | null;
   unitPolicy: {
     buy: string;
     sell: string;

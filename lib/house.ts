@@ -55,8 +55,8 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Isabel',
     market: 'Robinhood Chain',
     approach: 'Fundamental analysis and patient investigation.',
-    access: 'Planned — not open yet',
-    capability: 'Coming later.',
+    access: 'Robinhood Stock Tokens on Robinhood Chain',
+    capability: 'Marks and venue estimates live on the tape; the desk itself opens next.',
     status: 'planned' as DeskStatus,
   }),
   Object.freeze({
@@ -91,7 +91,7 @@ export const OPEN_DESK_ID: HouseDeskId = 'hetty';
 export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
   jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: JESSE_LIVE_CLIENT_ENABLED },
-  isabel: { quote: false, paper: false, voice: null, live: false },
+  isabel: { quote: true, paper: false, voice: null, live: false },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };
 

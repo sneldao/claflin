@@ -121,6 +121,9 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - [The Foyer Is the Line](docs/FOYER_LINE.md): foyer anatomy (voice-first dealer turret) and its build phases.
 - [Jesse on AssemblyAI's Voice Agent API](docs/ASSEMBLYAI_VOICE_AGENT.md): flag, protocol, progressive tool reveal, verification.
 - [AssemblyAI Voice Agent Hackathon submission pack](docs/ASSEMBLYAI_SUBMISSION.md): URLs, copy, video script, checklist.
+- [World's Fair entry plan](docs/WORLDS_FAIR_PLAN.md): one house submission tagged Solana + Base + Robinhood Chain; Isabel marks-first slice scope and the day sequence to 12 Oct.
+- [Eligibility & venue compliance](docs/ELIGIBILITY.md): house policy on restricted-security instruments — who owns the check per desk, what paper surfaces never carry, and what a live flag requires first.
+- [Meteora Launch Desk — design plan](docs/METEORA_LAUNCH_DESK.md): **proposal, not approved** — candidate desk (Halley) for the World's Fair Meteora DBC *sidetrack* (Superteam Earn); voice-driven, fundamental-anchored equity-pair price-discovery launch (DBC → DAMM v2). Attempted only if the Isabel marks slice lands and the devnet spike is green.
 - [Roadmap](ROADMAP.md): current state and next release gates.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.
 - [Architecture](docs/AGENTIC_ARCHITECTURE.md): domain boundaries, integration evidence and retained implementation references.

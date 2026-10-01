@@ -55,7 +55,7 @@ describe('adapter registries', () => {
       try { fn(); } catch (error) { return (error as { code?: string }).code ?? 'no-code'; }
       return 'did-not-throw';
     };
-    for (const deskId of ['isabel', 'arbitrum', 'nope']) {
+    for (const deskId of ['arbitrum', 'nope']) {
       assert.equal(codeOf(() => quoteAdapterFor(deskId)), 'desk_unavailable');
     }
     /* Jesse quotes and marks via Jupiter — his marks ride the same venue
@@ -63,7 +63,12 @@ describe('adapter registries', () => {
     assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
     assert.equal(markAdapterFor('jesse').source, 'jupiter-price-v3');
     assert.equal(markAdapterFor('jesse').market, 'Solana');
-    for (const deskId of ['isabel', 'arbitrum', 'nope']) {
+    /* Isabel quotes via the Lighter domain order book on Robinhood Chain;
+       marks are the onchain Chainlink feed with the issuer leg as duplex. */
+    assert.equal(quoteAdapterFor('isabel').venue, 'lighter');
+    assert.equal(markAdapterFor('isabel').source, 'chainlink');
+    assert.equal(markAdapterFor('isabel').market, 'Robinhood Chain');
+    for (const deskId of ['arbitrum', 'nope']) {
       assert.equal(codeOf(() => markAdapterFor(deskId)), 'desk_unavailable');
     }
   });

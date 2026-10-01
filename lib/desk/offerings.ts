@@ -6,10 +6,12 @@
  */
 import { canonicalInstrumentId, DESK_INSTRUMENTS, parseInstrumentId } from '../trading/catalog';
 import { SOLANA_INSTRUMENTS } from '../solana/catalog';
+import { ROBINHOOD_INSTRUMENTS } from '../robinhood/catalog';
 import type { DeskId, InstrumentOffering, RailRef } from './contracts';
 
 const BASE_RAIL: RailRef = { kind: 'evm', network: 'eip155:8453', chainId: 8453 };
 const SOLANA_RAIL: RailRef = { kind: 'solana', network: 'solana:mainnet' };
+const ROBINHOOD_RAIL: RailRef = { kind: 'evm', network: 'eip155:4663', chainId: 4663 };
 
 function productIdFor(underlyingSymbol: string): string {
   return `equity:${underlyingSymbol.toUpperCase()}`;
@@ -55,9 +57,28 @@ const SOLANA_OFFERINGS: readonly InstrumentOffering[] = SOLANA_INSTRUMENTS.map(s
   status: 'active' as const,
 }));
 
+const ROBINHOOD_OFFERINGS: readonly InstrumentOffering[] = ROBINHOOD_INSTRUMENTS.map(stock => Object.freeze({
+  offeringId: offeringIdFor('robinhood-stock-tokens', stock.id),
+  productId: productIdFor(stock.underlyingSymbol),
+  instrumentId: stock.id,
+  symbol: stock.symbol,
+  underlyingSymbol: stock.underlyingSymbol,
+  name: stock.name,
+  mandateId: 'robinhood-stock-tokens' as const,
+  issuer: stock.issuer,
+  rail: ROBINHOOD_RAIL,
+  venue: 'lighter',
+  quoteAsset: 'USDG' as const,
+  unitPolicy: { buy: 'USDG', sell: 'token' },
+  deskIds: ['isabel' satisfies DeskId],
+  quoteSupported: stock.quoteSupported,
+  status: 'active' as const,
+}));
+
 export const INSTRUMENT_OFFERINGS: readonly InstrumentOffering[] = Object.freeze([
   ...BASE_OFFERINGS,
   ...SOLANA_OFFERINGS,
+  ...ROBINHOOD_OFFERINGS,
 ]);
 
 const OFFERING_BY_ID = new Map(INSTRUMENT_OFFERINGS.map(offering => [offering.offeringId, offering]));

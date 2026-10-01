@@ -60,7 +60,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     coverages: Object.freeze([
       Object.freeze({
         mandate: MARKET_MANDATES['robinhood-stock-tokens'],
-        adapters: Object.freeze({ quote: null, marks: null, execution: null, voice: null }),
+        adapters: Object.freeze({ quote: 'lighter', marks: 'robinhood-marks', execution: null, voice: null }),
       }),
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, engine: 'none' as const, historyLimit: 100 }),
@@ -84,7 +84,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
 const EXTENDED_CAPABILITIES: Readonly<Record<HouseDeskId, { marks: boolean; accountSync: boolean; evidence: readonly string[] }>> = Object.freeze({
   hetty: Object.freeze({ marks: true, accountSync: true, evidence: [] }),
   jesse: Object.freeze({ marks: true, accountSync: false, evidence: ['comparison', 'venue-duplex', 'prestocks'] }),
-  isabel: Object.freeze({ marks: false, accountSync: false, evidence: [] }),
+  isabel: Object.freeze({ marks: true, accountSync: false, evidence: ['venue-duplex'] }),
   arbitrum: Object.freeze({ marks: false, accountSync: false, evidence: [] }),
 });
 

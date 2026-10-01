@@ -113,10 +113,12 @@ describe('rail-neutral desk architecture', () => {
     assert.throws(() => quoteAdapterFor('hetty', solana.instrumentId), /not covered by this desk/);
     assert.throws(() => quoteAdapterFor('jesse', stock.id), /not covered by this desk/);
     assert.equal(markAdapterFor('hetty').source, 'chainlink');
-    for (const deskId of ['isabel', 'arbitrum', 'unknown']) {
+    for (const deskId of ['arbitrum', 'unknown']) {
       assert.throws(() => quoteAdapterFor(deskId));
       assert.throws(() => markAdapterFor(deskId));
     }
+    assert.equal(quoteAdapterFor('isabel').venue, 'lighter');
+    assert.equal(markAdapterFor('isabel').source, 'chainlink');
     assert.equal(markAdapterFor('jesse').source, 'jupiter-price-v3');
   });
 
