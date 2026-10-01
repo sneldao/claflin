@@ -1170,6 +1170,63 @@
   border-radius: 4px;
 }
 
+/* ————— The folded book: family index before the table ————— */
+
+.bookIndex {
+  display: grid;
+  gap: 0;
+}
+
+.bookIndexRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 18px;
+  align-items: baseline;
+  padding: 16px 4px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.16);
+  color: inherit;
+  cursor: pointer;
+}
+
+.bookIndexRow:first-child {
+  border-top: 1px solid rgba(179, 144, 90, 0.16);
+}
+
+.bookIndexRow:hover .bookIndexLabel {
+  color: var(--brass);
+}
+
+.bookIndexRow:focus-visible {
+  outline: 2px solid #e3cf9e;
+  outline-offset: 2px;
+}
+
+.bookIndexLabel {
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.05rem;
+  color: #eee3ca;
+  transition: color 0.18s ease;
+}
+
+.bookIndexMeta {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8f8265;
+  white-space: nowrap;
+}
+
+.bookIndexHint {
+  margin: 14px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
 
 .method {
   position: relative;

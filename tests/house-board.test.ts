@@ -89,15 +89,38 @@ describe('house board (component)', () => {
   beforeEach(() => resetContainer());
   afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } });
 
-  it('SSR paints one table row per offering, with the shared facts said once', () => {
+  it('SSR paints the book as a family index, not a wall of rows', () => {
     const html = renderToStaticMarkup(createElement(HouseOfferings, { onEnter: () => {} }));
+    assert.doesNotMatch(html, /<table/, 'the full book stays folded until asked for');
+    assert.match(html, /Coinbase Tokenized Stocks/);
+    assert.match(html, /Backed xStocks/);
+    assert.match(html, /Robinhood Stock Tokens/);
+    assert.match(html, /Name a company or ticker/);
+  });
+
+  it('an instruction unfolds the filtered table; the quote asset is said once', async () => {
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseOfferings, {
+      onEnter: () => {},
+      instruction: 'Apple',
+    })));
+    const html = getRootElement().innerHTML;
     assert.match(html, /<table/);
-    assert.match(html, /<caption[^>]*>Quoted in USDC\./);
-    assert.equal((html.match(/Quoted in USDC/g) ?? []).length, 1, 'the quote asset is said once, not per row');
+    assert.match(html, /Quoted in the desk’s settlement asset/);
+    assert.equal((html.match(/Quoted in the desk’s settlement asset/g) ?? []).length, 1, 'the quote assets are said once, not per row');
     assert.match(html, /Token mark/);
     assert.match(html, /Stock ref/);
     assert.match(html, />Gap</);
     assert.match(html, /Reading…/, 'no marks yet reads as reading, not as zero');
+  });
+
+  it('the full book opens on demand', async () => {
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseOfferings, { onEnter: () => {} })));
+    const opener = getRootElement().querySelector('.bookIndexRow') as HTMLButtonElement;
+    assert.ok(opener, 'family index row rendered');
+    await act(async () => opener.click());
+    assert.match(getRootElement().innerHTML, /<table/, 'clicking a family unfolds the book');
   });
 
   it('a row opens to the contract, what it is, and who it is for', async () => {

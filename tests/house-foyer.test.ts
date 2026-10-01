@@ -53,6 +53,30 @@ function renderFoyerInEnv(env: Record<string, string>) {
   );
 }
 
+/** The unfolded board under a given env — the table only paints under an instruction. */
+function renderOfferingsInEnv(env: Record<string, string>, instruction: string) {
+  const script = `
+    import { createRequire } from 'node:module';
+    const require = createRequire(process.cwd() + '/tests/');
+    require.extensions['.css'] = (m) => { m.exports = new Proxy({}, { get: (_t, k) => k === '__esModule' ? false : String(k) }); };
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { createElement } = await import('react');
+    const mod = await import('./components/desk/HouseOfferings.tsx');
+    const HouseOfferings = mod.HouseOfferings;
+    process.stdout.write(renderToStaticMarkup(createElement(HouseOfferings, { onEnter: () => {}, instruction: ${JSON.stringify(instruction)} })));
+  `;
+  return execFileSync(
+    process.execPath,
+    ['--import', 'tsx', '--eval', script],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, ...env },
+      encoding: 'utf8',
+      maxBuffer: 8 * 1024 * 1024,
+    },
+  );
+}
+
 describe('house foyer', () => {
   let root: Root | null = null;
   let fetchCalls = 0;
@@ -113,13 +137,14 @@ describe('house foyer', () => {
     assert.match(html, /LIVE REFERENCE MARKS/);
     assert.match(html, /id="house-offerings"/);
     assert.match(html, /Every verified offering\./);
-    assert.match(html, /AAPLc/);
-    assert.match(html, /AAPLx/);
+    /* The book stays folded on first paint — the family index is the landing,
+       not forty rows of marks. */
+    assert.doesNotMatch(html, /AAPLc/, 'no token rows before the visitor asks');
+    assert.doesNotMatch(html, /AAPLx/);
     assert.match(html, /Coinbase Tokenized Stocks/);
     assert.match(html, /Backed xStocks/);
-    assert.match(html, /href="\/\?desk=hetty&amp;offering=/);
-    assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
-    assert.match(html, /Open Jesse’s desk/);
+    assert.match(html, /Robinhood Stock Tokens/);
+    assert.match(html, /Name a company or ticker/);
     assert.match(html, /id="house-method"/);
     assert.match(html, /How the line works\./);
     assert.match(html, /THE TAPE RUNS ALL NIGHT\. EVERY SLIP ON THE RECORD\./);
@@ -127,6 +152,11 @@ describe('house foyer', () => {
     assert.match(html, /Trade tokenized US stocks by voice, onchain, any hour\./, 'plain lede under the headline');
     assert.match(html, /Base · AI broker/);
     assert.match(html, /Solana · AI broker/);
+    /* Isabel has a card despite no line — voiceless, visited by typed instruction. */
+    assert.match(html, /AI broker · Robinhood Chain/);
+    assert.match(html, /Visit Isabel’s desk/);
+    assert.match(html, /Typed instructions only — no line\./);
+    assert.doesNotMatch(html, /Talk with Isabel/, 'no fake voice affordance on a voiceless desk');
     assert.match(html, /A live estimate when you ask\./);
     assert.doesNotMatch(html, /A real price when you ask/);
     assert.match(html, /Coming soon — /);
@@ -196,6 +226,14 @@ describe('house foyer', () => {
     await act(async () => root!.render(createElement(HouseFoyer, {
       onEnter: (id, offeringId) => { entered = id; selectedOffering = offeringId ?? null; enterCount += 1; },
     })));
+
+    /* The book unfolds once the visitor names something. */
+    const input = getRootElement().querySelector('.instructionSearch input') as HTMLInputElement;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, 'buy Apple');
+      input.dispatchEvent(new (window as any).Event('input', { bubbles: true }));
+    });
 
     const offering = offeringForInstrument(SOLANA_INSTRUMENTS[0].id)!;
     const primary = Array.from(getRootElement().querySelectorAll('a'))
@@ -288,16 +326,17 @@ describe('house foyer', () => {
       NEXT_PUBLIC_JESSE_PAPER_ENABLED: 'false',
       NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true',
     });
-    assert.match(html, /href="\/\?desk=hetty&amp;offering=/);
-    assert.match(html, /Open Hetty’s desk/);
+    /* A gated desk leaves the book entirely — no family row, no desk link. */
+    assert.match(html, /Coinbase Tokenized Stocks/);
+    assert.doesNotMatch(html, /Backed xStocks/);
+    assert.doesNotMatch(html, /desk=jesse/);
     assert.doesNotMatch(html, /Open Jesse’s desk/);
-    assert.doesNotMatch(html, /live settle|live settlement|Live settle/, 'a gated desk must not advertise live settlement');
+    assert.doesNotMatch(html, /live settle available/, 'a gated desk must not advertise live settlement');
   });
 
   it('advertises live settlement only where the selected desk supports it', () => {
-    const html = renderFoyerInEnv({ NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true' });
+    const html = renderOfferingsInEnv({ NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true' }, 'Apple');
     assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
-    assert.match(html, /live settle where the desk supports it/);
     assert.match(html, /live settle available/);
   });
 });

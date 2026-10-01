@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import { EvidenceDelta, EvidencePanel, EvidenceRow } from './EvidencePanel';
@@ -106,6 +106,102 @@ function IsabelRecordView({ record, onClose, onRemove }: {
   );
 }
 
+const PICK_SUGGESTIONS = 6;
+
+/**
+ * Type a ticker or a company — the book narrows to a short list. One field
+ * replaces a 24-row dropdown: the tape below stays for browsing.
+ */
+function IsabelInstrumentField({ instrumentId, onPick }: {
+  instrumentId: RobinhoodInstrumentId | null;
+  onPick: (id: RobinhoodInstrumentId | null) => void;
+}) {
+  const selected = instrumentId
+    ? (() => { try { return getRobinhoodInstrument(instrumentId); } catch { return null; } })()
+    : null;
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const [openList, setOpenList] = useState(false);
+  const listId = 'isabel-instrument-list';
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return ROBINHOOD_INSTRUMENTS.slice(0, PICK_SUGGESTIONS);
+    return ROBINHOOD_INSTRUMENTS
+      .filter(i => i.symbol.toLowerCase().includes(q) || i.name.toLowerCase().includes(q))
+      .slice(0, PICK_SUGGESTIONS);
+  }, [query]);
+
+  const type = (text: string) => { setQuery(text); setActive(0); setOpenList(true); };
+
+  const choose = (instrument: RobinhoodInstrument) => {
+    onPick(instrument.id);
+    setQuery('');
+    setOpenList(false);
+  };
+
+  if (selected) {
+    return (
+      <>
+        <span id="isabel-instrument-label">Instrument</span>
+        <div className={styles.pickedInstrument} role="group" aria-labelledby="isabel-instrument-label">
+          <span className={styles.pickedSymbol}>{selected.symbol}</span>
+          <span className={styles.pickedName}>{selected.name.replace(/ • Robinhood Token$/, '')}</span>
+          <button type="button" className={styles.secondary} onClick={() => onPick(null)}>
+            Change
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <label htmlFor="isabel-instrument">Instrument</label>
+      <div className={styles.instrumentPick}>
+        <input
+          id="isabel-instrument"
+          role="combobox"
+          aria-expanded={openList && matches.length > 0}
+          aria-controls={listId}
+          aria-activedescendant={openList && matches[active] ? `${listId}-${matches[active].symbol}` : undefined}
+          aria-autocomplete="list"
+          autoComplete="off"
+          placeholder="Ticker or company — e.g. NVDA"
+          value={query}
+          onChange={event => type(event.target.value)}
+          onFocus={() => setOpenList(true)}
+          onBlur={() => setOpenList(false)}
+          onKeyDown={event => {
+            if (event.key === 'ArrowDown') { event.preventDefault(); setOpenList(true); setActive(i => Math.min(i + 1, matches.length - 1)); }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(i => Math.max(i - 1, 0)); }
+            else if (event.key === 'Enter' && openList && matches[active]) { event.preventDefault(); choose(matches[active]); }
+            else if (event.key === 'Escape') { setQuery(''); setOpenList(false); }
+          }}
+        />
+        {openList && matches.length > 0 && (
+          <ul id={listId} role="listbox" className={styles.instrumentList} aria-label="Matching stock tokens">
+            {matches.map((instrument, index) => (
+              <li key={instrument.id} role="option" id={`${listId}-${instrument.symbol}`} aria-selected={index === active}>
+                <button
+                  type="button"
+                  className={styles.instrumentOption}
+                  data-active={index === active}
+                  /* mousedown beats blur so the pick registers before the list closes. */
+                  onMouseDown={event => { event.preventDefault(); choose(instrument); }}
+                >
+                  <strong>{instrument.symbol}</strong>
+                  <span>{instrument.name.replace(/ • Robinhood Token$/, '')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
 /**
  * Isabel's desk — Robinhood Chain stock tokens, paper only. Pick a token,
  * size it in USDG (or tokens to sell), get a Lighter orderbook estimate,
@@ -180,10 +276,17 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
           </div>
           <h1 id="isabel-ticket-title">The Robinhood Chain desk.</h1>
           <p className={styles.product}>
-            Stock tokens issued by Robinhood Assets (Jersey) Limited — ERC-20 debt securities with
-            issuer eligibility terms (not for US persons). This desk reads the tape and files paper
-            records only. An estimate is never an order, and nothing here determines eligibility.
+            Stock tokens issued by Robinhood Assets (Jersey) Limited. Paper estimates and
+            records only — an estimate is never an order.
           </p>
+          <details className={styles.productDetails}>
+            <summary>What these tokens are and who may hold them</summary>
+            <p>
+              ERC-20 debt securities carrying issuer eligibility terms — not for US persons.
+              This desk reads the tape and files paper records; nothing here determines
+              eligibility, and nothing moves onchain.
+            </p>
+          </details>
 
           <TickerTape
             marks={marks.result?.marks ?? []}
@@ -240,17 +343,10 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
             ) : (
               <>
                 <div className={styles.fields}>
-                  <label htmlFor="isabel-instrument">Instrument</label>
-                  <select
-                    id="isabel-instrument"
-                    value={isabel.state.draft.instrumentId ?? ''}
-                    onChange={event => isabel.edit({ instrumentId: (event.target.value || null) as RobinhoodInstrumentId | null })}
-                  >
-                    <option value="">Choose a stock token…</option>
-                    {ROBINHOOD_INSTRUMENTS.map(i => (
-                      <option key={i.id} value={i.id}>{i.symbol} — {i.name}</option>
-                    ))}
-                  </select>
+                  <IsabelInstrumentField
+                    instrumentId={isabel.state.draft.instrumentId}
+                    onPick={id => isabel.edit({ instrumentId: id })}
+                  />
 
                   <span id="isabel-side-label">Side</span>
                   <div role="group" aria-labelledby="isabel-side-label">

@@ -7,9 +7,12 @@ import { entryIntentWithInstruction } from '@/lib/house-entry';
 import { instructionIssue } from '@/lib/trading/instruction-safety';
 import type { InstrumentOffering } from '@/lib/desk/contracts';
 import {
+  mandateLabel,
   offeringCapabilityText,
   offeringGroupsForInstruction,
+  offeringProductGroups,
   openDesksForOffering,
+  railLabel,
 } from '@/lib/desk/offerings-presentation';
 import { offeringForId } from '@/lib/desk/offerings';
 import { boardRows, formatGap, formatObservedAt, shortAddress, type BoardRow } from '@/lib/desk/board';
@@ -21,6 +24,24 @@ function offeringHref(offeringId: string, deskId: HouseDeskId): string {
 }
 
 type MarksRead = { result: MarksResult | null; failed: boolean };
+
+/** One line per product family on the board's folded index. */
+function mandateIndex(): readonly { mandateId: string; label: string; count: number; rail: string; quoteAsset: string }[] {
+  const families = new Map<string, { label: string; count: number; rail: string; quoteAsset: string }>();
+  for (const group of offeringProductGroups()) {
+    for (const offering of group.offerings) {
+      const existing = families.get(offering.mandateId);
+      if (existing) { existing.count += 1; continue; }
+      families.set(offering.mandateId, {
+        label: mandateLabel(offering),
+        count: 1,
+        rail: railLabel(offering.rail),
+        quoteAsset: offering.quoteAsset ?? 'the desk’s settlement asset',
+      });
+    }
+  }
+  return [...families.entries()].map(([mandateId, family]) => ({ mandateId, ...family }));
+}
 
 /**
  * The house board: every verified offering in one table — token, issuer,
@@ -37,6 +58,11 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
 }) {
   const groups = useMemo(() => offeringGroupsForInstruction(instruction), [instruction]);
   const [open, setOpen] = useState<string | null>(null);
+  /* The whole book is a reference, not a landing — it stays folded until the
+     visitor names something or asks to see it all. */
+  const [bookOpen, setBookOpen] = useState(false);
+  const filtering = instruction.trim().length > 0;
+  const showTable = filtering || bookOpen;
 
   const markIndex = useMemo(() => {
     const index = new Map<string, DeskMark>();
@@ -81,15 +107,34 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
       </div>
 
       <div className={foyerStyles.boardWrap} aria-live="polite">
-        {rows.length === 0 ? (
+        {!showTable ? (
+          <div className={foyerStyles.bookIndex}>
+            {mandateIndex().map(family => (
+              <button
+                key={family.mandateId}
+                type="button"
+                className={foyerStyles.bookIndexRow}
+                onClick={() => setBookOpen(true)}
+              >
+                <span className={foyerStyles.bookIndexLabel}>{family.label}</span>
+                <span className={foyerStyles.bookIndexMeta}>
+                  {family.count} {family.count === 1 ? 'token' : 'tokens'} · {family.rail} · {family.quoteAsset}
+                </span>
+              </button>
+            ))}
+            <p className={foyerStyles.bookIndexHint}>
+              Name a company or ticker above, or open the full book.
+            </p>
+          </div>
+        ) : rows.length === 0 ? (
           <p className={foyerStyles.noOfferings} role="status">
             No verified offering matches that instruction yet. Try a ticker or company name.
           </p>
         ) : (
           <table className={foyerStyles.board}>
             <caption className={foyerStyles.boardCaption}>
-              Quoted in USDC. {capability}. Marks are indicative references, not offers; the desk
-              quotes the venue when you ask.
+              Quoted in the desk’s settlement asset — USDC or USDG. {capability}. Marks are
+              indicative references, not offers; the desk quotes the venue when you ask.
             </caption>
             <thead>
               <tr>

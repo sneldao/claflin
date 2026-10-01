@@ -11,6 +11,7 @@ import foyerStyles from './HouseFoyer.module.css';
 const NAMESAKE: Partial<Record<HouseDeskId, string>> = {
   hetty: 'Hetty Green (1834–1916)',
   jesse: 'Jesse Livermore (1877–1940)',
+  isabel: 'Isabel Benham (1909–2013)',
 };
 
 /**
@@ -38,6 +39,7 @@ export function HouseDesks({ desks, deskHref, onOpen }: {
               <p className={foyerStyles.deskMeta}>{LINE_IDENTITY} · {voice?.rail ?? desk.market}</p>
               <h3 className={foyerStyles.deskName}>{desk.shortName}</h3>
               {voice && <p className={foyerStyles.deskLens}>{voice.lens}</p>}
+              {!voice && <p className={foyerStyles.deskLens}>{desk.approach} Typed instructions only — no line.</p>}
               {line && (
                 <blockquote className={foyerStyles.deskQuote}>
                   <p>{line.text}</p>

@@ -27,7 +27,7 @@ import { HouseAnswers } from './HouseAnswers';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
 
-type WireMark = { key: string; rail: 'BASE' | 'SOL'; mark: DeskMark };
+type WireMark = { key: string; rail: 'BASE' | 'SOL' | 'RH'; mark: DeskMark };
 
 /** The house-book instruction a wire mark stands for — the plain underlying ticker. */
 function instructionForMark(mark: DeskMark): string {
@@ -59,9 +59,12 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
   const clock = market?.clock ?? null;
   const [headlineTop, headlineBottom] = FOYER_HEADLINES[clock?.exchange ?? 'pending'];
   const jesseOpen = isOpenDesk('jesse');
+  const isabelOpen = isOpenDesk('isabel');
   const hettyMarks = useReferenceMarks('hetty');
   const jesseMarksRead = useReferenceMarks(jesseOpen ? 'jesse' : 'hetty');
   const jesseMarks = jesseOpen ? jesseMarksRead : null;
+  const isabelMarksRead = useReferenceMarks(isabelOpen ? 'isabel' : 'hetty');
+  const isabelMarks = isabelOpen ? isabelMarksRead : null;
   /* The house-book instruction lives here so a wire-mark click can write it. */
   const [wireInstruction, setWireInstruction] = useState('');
   const [instructionSource, setInstructionSource] = useState<'spoken' | 'typed' | 'picked'>('typed');
@@ -190,7 +193,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} onPick={pickFromWire} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} isabel={isabelMarks} onPick={pickFromWire} />
 
         <HouseOfferings
           onEnter={(...args: Parameters<typeof onEnter>) => {
@@ -199,7 +202,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           }}
           instruction={wireInstruction}
           instructionSource={instructionSource}
-          marks={{ hetty: hettyMarks, jesse: jesseMarks }}
+          marks={{ hetty: hettyMarks, jesse: jesseMarks, isabel: isabelMarks }}
         />
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
@@ -232,7 +235,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
         </section>
 
         <HouseDesks
-          desks={lineDesks}
+          desks={openDesks}
           deskHref={id => deskHref(id, null, null)}
           onOpen={enter}
         />
@@ -270,25 +273,26 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
  */
 type MarksRead = { result: MarksResult | null; failed: boolean };
 
-function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null): WireMark[] {
+function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null, isabel: MarksRead | null): WireMark[] {
   return [
     ...(hetty.result?.marks ?? []).map(mark => ({ key: `base:${mark.instrumentId}`, rail: 'BASE' as const, mark })),
     ...(jesse?.result?.marks ?? []).map(mark => ({ key: `sol:${mark.instrumentId}`, rail: 'SOL' as const, mark })),
+    ...(isabel?.result?.marks ?? []).map(mark => ({ key: `rh:${mark.instrumentId}`, rail: 'RH' as const, mark })),
   ];
 }
 
-function LiveWire({ hetty, jesse, onPick }: { hetty: MarksRead; jesse: MarksRead | null; onPick: (symbol: string) => void }) {
-  const wireMarks = wireMarksOf(hetty, jesse);
-  const failed = hetty.failed && (jesse?.failed ?? true);
+function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: MarksRead | null; isabel: MarksRead | null; onPick: (symbol: string) => void }) {
+  const wireMarks = wireMarksOf(hetty, jesse, isabel);
+  const failed = hetty.failed && (jesse?.failed ?? true) && (isabel?.failed ?? true);
 
   const [ticks, setTicks] = useState<Record<string, 'up' | 'down'>>({});
-  const [seen, setSeen] = useState<{ hetty: MarksResult | null; jesse: MarksResult | null }>({ hetty: hetty.result, jesse: jesse?.result ?? null });
+  const [seen, setSeen] = useState<{ hetty: MarksResult | null; jesse: MarksResult | null; isabel: MarksResult | null }>({ hetty: hetty.result, jesse: jesse?.result ?? null, isabel: isabel?.result ?? null });
 
   /* Compare successive real readings only — a tick exists only when a refresh
      actually moved the price. */
-  if (hetty.result !== seen.hetty || (jesse?.result ?? null) !== seen.jesse) {
-    const prior = wireMarksOf({ result: seen.hetty, failed: false }, { result: seen.jesse, failed: false });
-    setSeen({ hetty: hetty.result, jesse: jesse?.result ?? null });
+  if (hetty.result !== seen.hetty || (jesse?.result ?? null) !== seen.jesse || (isabel?.result ?? null) !== seen.isabel) {
+    const prior = wireMarksOf({ result: seen.hetty, failed: false }, { result: seen.jesse, failed: false }, { result: seen.isabel, failed: false });
+    setSeen({ hetty: hetty.result, jesse: jesse?.result ?? null, isabel: isabel?.result ?? null });
     const nextTicks: Record<string, 'up' | 'down'> = {};
     for (const wire of wireMarks) {
       const old = prior.find(p => p.key === wire.key);
@@ -350,7 +354,7 @@ function WireItem({ wire, tick, disabled, onPick }: { wire: WireMark; tick?: 'up
       disabled={disabled}
       tabIndex={disabled ? -1 : 0}
       onClick={() => onPick(instruction)}
-      aria-label={`${wire.mark.symbol} ${price ? `$${price}` : 'reference unavailable'} on ${wire.rail === 'BASE' ? 'Base' : 'Solana'}`}
+      aria-label={`${wire.mark.symbol} ${price ? `$${price}` : 'reference unavailable'} on ${wire.rail === 'BASE' ? 'Base' : wire.rail === 'SOL' ? 'Solana' : 'Robinhood Chain'}`}
     >
       <span className={foyerStyles.wireSymbol}>{wire.mark.symbol}</span>
       <span className={foyerStyles.wirePrice} data-tick={tick}>
