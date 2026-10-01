@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import postcss from 'postcss';
 import { HOUSE, HOUSE_DESKS, RETIRED_CLIENT_PATHS, isRetiredMarketplaceApi } from '../lib/house';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
+import { ISABEL_PAPER_ENABLED } from '../lib/robinhood/flags';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -16,7 +17,8 @@ describe('one canonical house', () => {
     assert.equal(HOUSE.liveExecutionEnabled, process.env.NEXT_PUBLIC_LIVE_EXECUTION_ENABLED === 'true');
     assert.equal(HOUSE.voiceConversationEnabled, true);
     assert.equal(HOUSE_DESKS[1].status, JESSE_PAPER_ENABLED ? 'paper' : 'planned');
-    assert.ok(HOUSE_DESKS.slice(2).every(d => d.status === 'planned'));
+    assert.equal(HOUSE_DESKS[2].status, ISABEL_PAPER_ENABLED ? 'paper' : 'planned');
+    assert.equal(HOUSE_DESKS[3].status, 'planned');
   });
   it('renders the desk at root with no onboarding, directory, or automatic call entry', () => {
     const home = source('app/page.tsx');

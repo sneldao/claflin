@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
 import { documentEngineFor, usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
+import { ISABEL_PAPER_ENABLED } from '../lib/robinhood/flags';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
 import { quoteAdapterFor } from '../lib/trading/adapters';
@@ -45,18 +46,20 @@ describe('desk capabilities drive openness', () => {
     /* Jesse paper tracks NEXT_PUBLIC_JESSE_PAPER_ENABLED — quote-only is not
        an open desk until the seated surface can file. */
     assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
-    /* Isabel answers Lighter estimates and Chainlink/rhj marks on the tape,
-       but quote-only is not an open desk until the surface can file paper. */
-    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: false, voice: null, live: false });
+    /* Isabel paper tracks NEXT_PUBLIC_ISABEL_PAPER_ENABLED — quote-only was
+       not an open desk until her session could file; now it can, paper-only
+       and voiceless by design. */
+    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: ISABEL_PAPER_ENABLED, voice: null, live: false });
     assert.deepEqual(DESK_CAPABILITIES.arbitrum, { quote: false, paper: false, voice: null, live: false });
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.equal(isOpenDesk('hetty'), true);
     assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
-    for (const deskId of ['isabel', 'arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
+    assert.equal(isOpenDesk('isabel'), ISABEL_PAPER_ENABLED);
+    for (const deskId of ['arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
     /* Document engines are declared per desk; the legacy predicate reads them. */
     assert.equal(documentEngineFor('hetty'), 'legacy-reducer');
     assert.equal(documentEngineFor('jesse'), 'controller');
-    assert.equal(documentEngineFor('isabel'), 'none');
+    assert.equal(documentEngineFor('isabel'), 'controller');
     assert.equal(usesLegacyDeskDocuments('hetty'), true);
     assert.equal(usesLegacyDeskDocuments('jesse'), false);
     assert.equal(usesLegacyDeskDocuments('isabel'), false);

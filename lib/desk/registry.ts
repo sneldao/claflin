@@ -63,9 +63,9 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
         adapters: Object.freeze({ quote: 'lighter', marks: 'robinhood-marks', execution: null, voice: null }),
       }),
     ]),
-    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'none' as const, historyLimit: 100 }),
+    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
-    surface: null,
+    surface: 'isabel' as const,
   }),
   arbitrum: Object.freeze({
     deskId: 'arbitrum',

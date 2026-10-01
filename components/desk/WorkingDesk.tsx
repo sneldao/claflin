@@ -6,6 +6,7 @@ import { DeskObjects } from './BrokerageRoom';
 import { ClosedDesk } from './ClosedDesk';
 import { DeskRoom } from './DeskRoom';
 import { HettyDeskSurface } from './HettyDeskSurface';
+import { IsabelDeskSurface } from './IsabelDeskSurface';
 import { JesseDeskSurface } from './JesseDeskSurface';
 import { HouseFoyer } from './HouseFoyer';
 import { HouseSceneProvider } from './HouseScene';
@@ -36,6 +37,10 @@ function WorkingDeskContent() {
 
   if (desk.deskId === 'jesse' && desk.open) {
     return <JesseDeskSurface desk={desk} />;
+  }
+
+  if (desk.deskId === 'isabel' && desk.open) {
+    return <IsabelDeskSurface desk={desk} />;
   }
 
   return (

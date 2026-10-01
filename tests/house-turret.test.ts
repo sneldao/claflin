@@ -95,12 +95,14 @@ describe('house turret (component)', () => {
     assert.match(html, /Hold to dictate an instruction, or type\. Then choose a product\./);
     assert.match(html, /LINE 1/);
     assert.match(html, /data-lamp="planned"/);
-    assert.match(html, /Robinhood Chain · coming soon/);
+    assert.match(html, /Arbitrum · coming soon/);
   });
 
   it('lamps follow the words: Apple lights both, Tesla lights Jesse only', async () => {
     await mount();
-    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'planned', Jay: 'planned' });
+    /* Isabel is open but voiceless — no talk line, and not planned. She is
+       reached through the matching-products buttons or ?desk=isabel. */
+    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Jay: 'planned' });
 
     await type('buy Apple for 100 USDC');
     assert.equal(lamps().Hetty, 'match');
@@ -234,13 +236,14 @@ describe('house turret (component)', () => {
     })));
     const form = () => getRootElement().querySelector('form.talkBar') as HTMLFormElement;
 
-    await type('buy Tesla');
+    /* SPY sits on Isabel's book alone — every Jesse name is cross-listed. */
+    await type('buy SPY');
     assert.equal(getRootElement().querySelectorAll('[aria-label="Matching products"] button').length >= 1, true);
     await act(async () => {
       form().dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
     });
     assert.equal(entered.length, 1, 'one product on one desk continues on Enter');
-    assert.equal(entered[0]?.desk, 'jesse');
+    assert.equal(entered[0]?.desk, 'isabel');
     assert.ok(entered[0]?.offering);
 
     entered.length = 0;

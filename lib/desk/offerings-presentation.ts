@@ -15,7 +15,7 @@ export interface OfferingProductGroup {
 }
 
 const SEARCH_STOP_WORDS = new Set([
-  'a', 'an', 'and', 'buy', 'for', 'get', 'in', 'of', 'on', 'please', 'quote',
+  'a', 'an', 'and', 'buy', 'for', 'get', 'in', 'no', 'of', 'on', 'please', 'quote',
   'sell', 'share', 'shares', 'stock', 'the', 'to', 'token', 'tokens', 'usdc',
   'with',
 ]);

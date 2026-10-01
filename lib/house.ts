@@ -1,6 +1,7 @@
 import { LIVE_EXECUTION_ENABLED } from './trading/domain';
 import type { DeskCapabilities } from './desk/contracts';
 import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
+import { ISABEL_PAPER_ENABLED } from './robinhood/flags';
 
 /**
  * Static house identity. Operational capability lives in DESK_CAPABILITIES —
@@ -55,9 +56,9 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Isabel',
     market: 'Robinhood Chain',
     approach: 'Fundamental analysis and patient investigation.',
-    access: 'Robinhood Stock Tokens on Robinhood Chain',
-    capability: 'Marks and venue estimates live on the tape; the desk itself opens next.',
-    status: 'planned' as DeskStatus,
+    access: 'Robinhood Stock Tokens on Robinhood Chain · paper',
+    capability: 'Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.',
+    status: (ISABEL_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
     id: 'arbitrum',
@@ -91,7 +92,10 @@ export const OPEN_DESK_ID: HouseDeskId = 'hetty';
 export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
   jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: JESSE_LIVE_CLIENT_ENABLED },
-  isabel: { quote: true, paper: false, voice: null, live: false },
+  /* Isabel paper filing is gated by NEXT_PUBLIC_ISABEL_PAPER_ENABLED, same
+     release-flag shape as Jesse's. There is no live flag — her desk is
+     paper-only by design (docs/ELIGIBILITY.md §5). */
+  isabel: { quote: true, paper: ISABEL_PAPER_ENABLED, voice: null, live: false },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };
 
@@ -101,7 +105,8 @@ export function getHouseDesk(id: string): HouseDesk | undefined {
 
 /**
  * Open means quotation and paper filing are both real capabilities.
- * Today Hetty; Jesse when JESSE_PAPER_ENABLED is on. This is the directory /
+ * Today Hetty; Jesse and Isabel when their paper flags are on. This is the
+ * directory /
  * surface routing gate — not the owner of Base v1 documents.
  */
 export function isOpenDesk(id: string): id is HouseDeskId {

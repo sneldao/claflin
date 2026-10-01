@@ -78,7 +78,7 @@ describe('rail-neutral desk architecture', () => {
     assert.equal(jesse?.storage.engine, 'controller');
     assert.equal(documentEngineFor('hetty'), 'legacy-reducer');
     assert.equal(documentEngineFor('jesse'), 'controller');
-    assert.equal(documentEngineFor('isabel'), 'none');
+    assert.equal(documentEngineFor('isabel'), 'controller');
     assert.equal(documentEngineFor('arbitrum'), 'none');
     assert.equal(documentEngineFor('nope'), 'none');
     /* The legacy helper stays as a predicate over the declared engine. */

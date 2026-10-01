@@ -31,7 +31,7 @@ describe('offering presentation', () => {
     assert.equal(groups[0].underlyingSymbol, 'AAPL');
     assert.deepEqual(
       groups[0].offerings.map(offering => offering.symbol),
-      ['AAPLc', 'AAPLx'],
+      ['AAPLc', 'AAPLx', 'AAPL'],
     );
   });
 

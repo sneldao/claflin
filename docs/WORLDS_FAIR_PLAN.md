@@ -62,9 +62,9 @@ Read from `docs.robinhood.com/chain` on 2026-10-01; recheck live parameters befo
 
 | Slice | Content | Gate |
 |---|---|---|
-| **A — marks + catalog** | Catalog derived from `/assets` (chainId 4663, `ASSET_STATUS_ACTIVE`), marks adapter reading rhj `/prices` + onchain Chainlink, honest stale/unavailable labels. Feeds desk tape and foyer wire. | Must land. Keyless path verified by docs; ~1–2 days. |
-| **B — estimate** | **Venue = Lighter domain orderbook** (`api.rh.lighter.xyz`, keyless): best bid/ask + depth vs USDG per stock market, read-only. Not Uniswap — see §4b. | Gate cleared 2026-10-01 — quote path verified live. Estimate = top-of-book / depth-weighted fill vs the 25 covered symbols; label thin names honestly. |
-| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | After A; paper-only. |
+| **A — marks + catalog** | Catalog derived from `/assets` (chainId 4663, `ASSET_STATUS_ACTIVE`), marks adapter reading rhj `/prices` + onchain Chainlink, honest stale/unavailable labels. Feeds desk tape and foyer wire. | **Landed 2026-10-01** — 24 triple-covered symbols; see §4a. |
+| **B — estimate** | **Venue = Lighter domain orderbook** (`api.rh.lighter.xyz`, keyless): best bid/ask + depth vs USDG per stock market, read-only. Not Uniswap — see §4b. | **Landed 2026-10-01** — book-walking USDG estimate with depth/partial-fill labels, multiplier, and the three-way tape embedded. |
+| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | **Landed 2026-10-01.** Voiceless by design; reached via offering chips and `?desk=isabel`. |
 
 Out of scope for the window: live execution, wallet ceremony, account sync, eligibility enforcement surface. Isabel stays paper and marks-first — consistent with every desk gate the house has held.
 
@@ -111,7 +111,7 @@ Goal: is there a quotable venue for stock tokens on 4663? Exercised live against
 | Days | Work |
 |---|---|
 | Oct 1–2 | Register (Solana + Base + Robinhood Chain). Isabel catalog + marks spike: exercise `/rhj/assets` + `/prices` live, pull Chainlink feed addresses, confirm a marks read end-to-end. Check Earn for a UK regional sidetrack. Meteora workshop only if the sidetrack is still in play. |
-| Oct 3–5 | Isabel slice A integrated (catalog, marks, offering, registry, flags). Slice B spike: venue quote path on 4663 — land it or label the gap honestly. |
+| Oct 3–5 | ~~Isabel slice A + slice B spike~~ — **done early**: slices A, B, C all landed Oct 1. Use the slack for desk polish, e2e smoke on the deployed site, and submission copy. |
 | Oct 6–8 | Meteora decision point: if Isabel is clean and the devnet spike is green, Halley Scope 1; otherwise drop and harden. Submission copy begins — foreground in-window work, disclose pre-existing code. |
 | Oct 9–11 | Demo video + submission polish (UX and business plan are judging criteria — the voice-broker metaphor and paper-first honesty are the pitch). Confirm closed-repo judge-access requirements. |
 | Oct 12 | Submit before 11:59pm PT. Earn sidetrack submissions by 13 Oct 06:59 UTC. |

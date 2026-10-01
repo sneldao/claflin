@@ -32,6 +32,15 @@ export type IsabelIntent =
   | { instrumentId: RobinhoodInstrumentId; side: 'buy'; unit: 'USDG'; amount: string }
   | { instrumentId: RobinhoodInstrumentId; side: 'sell'; unit: 'token'; amount: string };
 
+/** An incomplete instruction in progress — every field independently
+ *  nullable. The unit is implied by the side (USDG spend for buys, token
+ *  quantity for sells), so the draft never stores one. */
+export interface IsabelDraft {
+  instrumentId: RobinhoodInstrumentId | null;
+  side: 'buy' | 'sell' | null;
+  amount: string | null;
+}
+
 /**
  * A verified Robinhood stock token. `contractAddress` keeps issuer checksum
  * case; `id` is the canonical lowercase `rh:` form. The corporate-action
