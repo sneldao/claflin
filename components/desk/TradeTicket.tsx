@@ -10,7 +10,7 @@ import type { TradeIntent, QuoteEstimate } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useDeskExecution } from '@/lib/trading/useDeskExecution';
-import { useEligibility } from '@/lib/trading/useEligibility';
+import { COINBASE_VERIFICATIONS_URL, eligibilityLine, useEligibility } from '@/lib/trading/useEligibility';
 import { attestationCopy, COINBASE_STOCKS_SCOPE, useEligibilityAttestation } from '@/lib/desk/eligibility';
 import { BASE_CHAIN_ID, getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
@@ -182,6 +182,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
   const attestation = useEligibilityAttestation(COINBASE_STOCKS_SCOPE);
   const { state, approve, execute, reset, needsApproval, insufficientBalance } = execution;
   const [slippageBps, setSlippageBps] = useState<number>(50);
+  const [attestFailed, setAttestFailed] = useState(false);
   const busy = state.stage === 'checking' || state.stage === 'approving' || state.stage === 'swapping' || state.stage === 'confirming';
 
   /* Fail closed: only a wallet the onchain attestations mark eligible may
@@ -191,21 +192,7 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
      the issuer's verification signal. */
   const verified = eligibility.stage === 'done' && eligibility.eligible;
   const gateReady = attestation.attested && verified;
-  const eligibilityDetail = () => {
-    if (eligibility.stage !== 'done') {
-      if (eligibility.stage === 'checking') return 'Reading the wallet’s onchain attestations…';
-      return 'Checks once the wallet is connected.';
-    }
-    if (verified) return 'Verified Account and an eligible country attest this wallet.';
-    switch (eligibility.reason) {
-      case 'restricted_jurisdiction': return 'This wallet’s verified country is excluded under the issuer’s terms — live settle stays closed.';
-      case 'no_verified_account_attestation': return 'No Verified Account attestation on this wallet — live settle stays closed.';
-      case 'no_country_attestation': return 'No Verified Country attestation on this wallet — live settle stays closed.';
-      case 'country_attestation_undecodable': return 'The country attestation could not be read — live settle stays closed.';
-      case 'check_unavailable': return 'The onchain check could not be read — live settle stays closed until it can.';
-      default: return 'This wallet is not verified for these instruments — live settle stays closed.';
-    }
-  };
+  const line = eligibilityLine(eligibility);
 
   if (!auth.enabled) {
     return <p className={styles.slipNotice} role="status">Live execution requires an account.</p>;
@@ -265,17 +252,33 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
             <span className={styles.readinessDetail}>
               {attestationCopy(COINBASE_STOCKS_SCOPE)}{' '}
               <a href={COINBASE_STOCKS_SCOPE.issuerTermsUrl} target="_blank" rel="noreferrer">Product guide</a>
-              <button type="button" className={styles.secondary} onClick={attestation.confirm}>
+              <button type="button" className={styles.secondary} onClick={() => { if (!attestation.confirm()) setAttestFailed(true); }}>
                 I confirm I’m eligible
               </button>
+              {attestFailed && <span role="status">Browser storage refused the confirmation — enable site storage to continue.</span>}
             </span>
           )}
         </li>
-        <li data-state={verified ? 'ok' : eligibility.stage === 'checking' ? 'unknown' : 'needed'}>
-          <span>Coinbase verification</span>
-          <span className={styles.readinessDetail}>{eligibilityDetail()}</span>
+        <li data-state={line.marker}>
+          <span>Wallet verified for these instruments</span>
+          <span className={styles.readinessDetail}>
+            {line.detail}{' '}
+            {line.action === 'verify' && (
+              <a href={COINBASE_VERIFICATIONS_URL} target="_blank" rel="noreferrer">Verify with Coinbase</a>
+            )}
+            {line.action === 'retry' && (
+              <button type="button" className={styles.secondary} onClick={eligibility.retry}>Check again</button>
+            )}
+          </span>
         </li>
       </ol>
+      {!gateReady && (
+        <p className={styles.slipNotice} role="status">
+          {eligibility.stage === 'checking'
+            ? 'Reading the wallet’s verification — the buttons unlock when the check above passes.'
+            : 'Finish the checks above — a verified wallet and your confirmation under the issuer’s terms — before real funds can move.'}
+        </p>
+      )}
       <div className={styles.liveRow}>
         <span className={styles.liveRowLabel}>Slippage tolerance</span>
         <div className={styles.amountChips} role="group" aria-label="Slippage tolerance">
@@ -302,7 +305,18 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
             : 'The gas estimate appears once approval is in place.'}
       </p>
       {state.stage === 'idle' && <p className={styles.slipNotice} role="status">Wallet status unavailable. Check your connection, then refresh the estimate.</p>}
-      {insufficientBalance && <p className={styles.slipNotice} role="status">The connected wallet does not hold enough {quote.inputSymbol} for this instruction.</p>}
+      {insufficientBalance && (
+        <p className={styles.slipNotice} role="status">
+          The connected wallet does not hold enough {quote.inputSymbol} for this instruction.{' '}
+          {quote.inputSymbol === 'USDC' && (
+            <a
+              href={`https://global.transak.com/?cryptoCurrencyCode=USDC&network=base&walletAddress=${auth.walletAddress}&disableWalletAddressForm=true`}
+              target="_blank"
+              rel="noreferrer"
+            >Get USDC on Base · Transak</a>
+          )}
+        </p>
+      )}
       {showApproveStep ? (
         <>
           <button
