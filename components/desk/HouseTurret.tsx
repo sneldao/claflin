@@ -260,11 +260,31 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
           <input
             value={instruction}
             onChange={event => { typedRef.current = true; onInstruction(event.target.value, 'typed'); }}
+            onKeyDown={event => {
+              /* Escape — or the clear key — returns the line to the home
+                 state: lamps idle, the book shut, the launch slip back. */
+              if (event.key === 'Escape' && instruction) onInstruction('', 'typed');
+            }}
             placeholder="Try “buy Apple for 100 USDC”"
             maxLength={1000}
             autoComplete="off"
             aria-label="Instruction for the house"
           />
+          {instruction.trim() !== '' && (
+            <button
+              type="button"
+              className={foyerStyles.instructionClear}
+              aria-label="Clear the line"
+              title="Clear the line"
+              onClick={event => {
+                event.preventDefault();
+                onInstruction('', 'typed');
+                event.currentTarget.closest('label')?.querySelector('input')?.focus();
+              }}
+            >
+              ×
+            </button>
+          )}
         </label>
       </form>
 
@@ -410,7 +430,8 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
               <summary>Talk with a broker</summary>
               {lines}
             </details>
-            {launchLines}
+            {/* A resolved tape ask is trade intent — the launch slip folds
+                away until the line is cleared back to the home state. */}
             {plannedKeys}
           </>
         ) : <>{lines}{launchLines}{plannedKeys}</>;

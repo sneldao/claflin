@@ -143,8 +143,8 @@ describe('house turret (component)', () => {
     assert.equal(lamps().Jesse, 'match');
     assert.equal(lamps().Isabel, 'match');
     /* Halley launches curves, he does not fill trades — a buy instruction
-       is not his to carry. */
-    assert.equal(lamps().Halley, 'quiet');
+       folds his slip away entirely rather than dimming his lamp. */
+    assert.equal(lamps().Halley, undefined);
     assert.match(getRootElement().textContent ?? '', /3 lines carry this, as separate products/);
 
     await type('buy Tesla');
@@ -163,6 +163,31 @@ describe('house turret (component)', () => {
     assert.match(html, /Type a launch/);
     assert.doesNotMatch(html, /Talk with Halley/, 'no tape verb on the launch line');
     assert.match(html, /Solana · makes instruments/);
+  });
+
+  it('a trade ask folds the launch slip away; the clear key brings it home', async () => {
+    await mount();
+    assert.ok(getRootElement().querySelector('.launchLineBlock'), 'the slip stands at idle');
+    await type('buy Apple for 100 USDC');
+    /* Trade intent is declared — origination leaves the room. */
+    assert.equal(getRootElement().querySelector('.launchLineBlock'), null);
+    const clear = getRootElement().querySelector('button[aria-label="Clear the line"]') as HTMLElement;
+    assert.ok(clear, 'the line offers its way home');
+    await act(async () => { clear.dispatchEvent(new (window as any).MouseEvent('click', { bubbles: true })); });
+    assert.ok(getRootElement().querySelector('.launchLineBlock'), 'the slip returns at the home state');
+    assert.equal(lamps().Halley, 'idle');
+    assert.equal(lamps().Hetty, 'idle');
+  });
+
+  it('Escape on the field also returns the line home', async () => {
+    await mount();
+    await type('buy Apple for 100 USDC');
+    assert.equal(getRootElement().querySelector('.launchLineBlock'), null);
+    const input = getRootElement().querySelector('.instructionSearch input') as HTMLInputElement;
+    await act(async () => {
+      input.dispatchEvent(new (window as any).KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    assert.ok(getRootElement().querySelector('.launchLineBlock'), 'Escape restores the home state');
   });
 
   it('the cast: the spoken line is the origin, every landing carries a marker', async () => {
