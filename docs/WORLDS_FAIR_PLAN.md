@@ -121,7 +121,7 @@ Goal: is there a quotable venue for stock tokens on 4663? Exercised live against
 1. **Disclosure.** Hetty predates the judging window and must be disclosed as pre-existing work; the in-window story is Jesse + rail-neutral seams + foyer + Isabel. Do not let the submission imply otherwise — misrepresentation is disqualifying.
 2. **Isabel venue risk — retired 2026-10-01.** The Lighter domain quote path is verified (§4b), so Isabel ships estimates, not just marks. Residual risk is depth honesty: 24h volume concentrates in ~6 books — thin names must label it.
 3. **One submission.** This plan bets the single entry on the house; there is no second product slot to hedge with.
-4. **Closed repo.** The repo is private; the Meteora sidetrack documents a judge read-access requirement (`dannxbt`) — confirm whether the main competition has an equivalent before submission day.
+4. **Closed repo — resolved 2026-10-02.** The official rules allow private repos if judges get access: invite `hackathon@colosseum.com` and verify every submitted link opens for a non-team member. The Meteora sidetrack separately documents `dannxbt`. Failure here is the most common disqualifying mistake per the track guides — do it early, not on submission day.
 5. **Regional sidetracks** are geography-gated and separately submitted on Earn; confirm the UK listing exists and its eligibility rules before counting it.
 
 *This document owns World's Fair sequencing only. [ROADMAP.md](../ROADMAP.md) owns the house's longer sequence; [METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) owns the Halley design; [AGENTIC_ARCHITECTURE.md](AGENTIC_ARCHITECTURE.md) owns the Robinhood Chain integration baseline.*
