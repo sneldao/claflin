@@ -102,9 +102,31 @@ Goal: is there a quotable venue for stock tokens on 4663? Exercised live against
 - Lighter reads are public; **order placement** is a Lighter account/API-key matter — out of scope for the window, per the desk gate (paper-only).
 - Optional later: Rialto integrator onboarding (wallet-signed) adds a second equity venue with firm quotes — the only remaining RFQ-class path for stock tokens. Not needed for Slice B.
 
-## 5. Meteora repositioned
+## 5. Sidetracks — the Earn landscape (enumerated 2026-10-02)
 
-[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) remains a proposal. Under this plan it is **optional upside, not the entry**: Halley would strengthen the Solana track story *and* collect the Meteora sidetrack (a separate Superteam Earn submission, ~$20K). Two conditions before any Meteora work: Isabel slice A is landed, and the DBC devnet spike is green. The Meteora workshop (2 Oct, 08:30 PT) is worth attending only if the sidetrack stays in play. The venue-not-issuer hard line is unchanged.
+All sidetracks are separate **Superteam Earn** submissions due **13 Oct, 06:59 UTC** — submitting to one never substitutes for the main Colosseum entry, and you may enter several. 37 listings, ~$197K total.
+
+**Cash, open to all:**
+
+| Sidetrack | Prize | Fit call |
+|---|---|---|
+| Meteora — "Best use of Dynamic Bonding Curve" | $20K USDC | The Halley desk ([METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md)) — only sidetrack that compounds the main Solana-track story; also the only one with real build cost |
+| RPC Fast infrastructure | ~$10.5K USDC | Weak — our Solana reads are Jupiter keyless + env RPC |
+| SolanaCZE | $10K USDG | Not marked regional in the Earn API — eligibility worth confirming |
+| Panta API | $5K USDG | Sponsor scope unverified |
+| "Build something live on Solana data" (RPC/gRPC/webhook) | $3K USDG | Pyth feed daemon + venue duplex is live Solana data work; possibly submit-only |
+| peaq Machine Economy (Germany-tagged) | ~$4K USDT | DePIN framing, weak fit |
+| KASE "Corporate Actions on Blockchain" | $2K | Topically perfect (we read rhj `/corporate-actions`) but Kazakhstan-tagged, small |
+
+**Credits, not cash:** CertiK audit credits ($100K USDG) and Adevar pre-audit credits ($20K) — nearly free to submit; low marginal value for an app that custodies nothing.
+
+**Regional tracks:** ~25 listings at $5–10K, all geography-gated (Australia, Argentina, Türkiye, Ukraine, Vietnam, Georgia, Brazil, Canada, India, Nigeria, Japan, Singapore, IE, NL, Germany, Poland, Nepal, Kazakhstan, Malaysia…). **There is no UK track** — closest are IE/NL/DE. Regional EV is binary on team location.
+
+**EV read:** submit the near-free listings whose criteria fit existing work; Meteora is the only build-cost entry worth the days, and only if the spike proves the DBC→DAMM v2 path is cheap.
+
+### Meteora repositioned
+
+[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) remains a proposal. Under this plan it is **optional upside, not the entry**: Halley would strengthen the Solana track story *and* collect the Meteora sidetrack (a separate Superteam Earn submission, $20K USDC, listing slug `meteora-dbc`). Two conditions before any Meteora work: Isabel slice A is landed (**done 2026-10-01**), and the DBC devnet spike is green (**in progress 2026-10-02**). The venue-not-issuer hard line is unchanged.
 
 ## 6. Sequence to the deadline
 
@@ -122,6 +144,6 @@ Goal: is there a quotable venue for stock tokens on 4663? Exercised live against
 2. **Isabel venue risk — retired 2026-10-01.** The Lighter domain quote path is verified (§4b), so Isabel ships estimates, not just marks. Residual risk is depth honesty: 24h volume concentrates in ~6 books — thin names must label it.
 3. **One submission.** This plan bets the single entry on the house; there is no second product slot to hedge with.
 4. **Closed repo — resolved 2026-10-02.** The official rules allow private repos if judges get access: invite `hackathon@colosseum.com` and verify every submitted link opens for a non-team member. The Meteora sidetrack separately documents `dannxbt`. Failure here is the most common disqualifying mistake per the track guides — do it early, not on submission day.
-5. **Regional sidetracks** are geography-gated and separately submitted on Earn; confirm the UK listing exists and its eligibility rules before counting it.
+5. **Regional sidetracks — resolved 2026-10-02.** Enumerated the Earn listings: ~25 regional tracks, all geography-gated, and **no UK track exists** (nearest: IE/NL/DE). Regional EV is binary on team location — see §5.
 
 *This document owns World's Fair sequencing only. [ROADMAP.md](../ROADMAP.md) owns the house's longer sequence; [METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) owns the Halley design; [AGENTIC_ARCHITECTURE.md](AGENTIC_ARCHITECTURE.md) owns the Robinhood Chain integration baseline.*
