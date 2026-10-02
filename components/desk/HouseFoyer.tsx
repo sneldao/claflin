@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketBell } from '@/lib/use-market-clock';
 import { bellLine } from '@/lib/market-clock';
-import { BROKER_VOICE } from '@/lib/desk/broker-voice';
 import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
@@ -42,7 +41,10 @@ function instructionForMark(mark: DeskMark): string {
 export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null, recordId?: string | null) => void }) {
   const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
-  const lineDesks = openDesks.filter(desk => DESK_CAPABILITIES[desk.id].voice && BROKER_VOICE[desk.id]);
+  /* Every open desk gets a line — voice desks take calls, typed-only desks
+     like Isabel take instructions. The turret renders the affordance each
+     desk actually has. */
+  const lineDesks = openDesks;
 
   /* Same landing discipline as the desk rooms — focus the work, not the chrome. */
   const mainRef = useRef<HTMLElement>(null);

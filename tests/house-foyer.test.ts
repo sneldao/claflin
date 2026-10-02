@@ -152,11 +152,16 @@ describe('house foyer', () => {
     assert.match(html, /Trade tokenized US stocks by voice, onchain, any hour\./, 'plain lede under the headline');
     assert.match(html, /Base · AI broker/);
     assert.match(html, /Solana · AI broker/);
-    /* Isabel has a card despite no line — voiceless, visited by typed instruction. */
+    /* Isabel is LINE 3 — a typed-only line: the lamp and the instruction
+       link are real, the "Talk with" affordance is not faked. */
+    assert.match(html, /LINE 3/);
+    assert.match(html, /Robinhood Chain · AI broker · typed only/);
+    assert.match(html, /Type an instruction/);
+    assert.doesNotMatch(html, /Talk with Isabel/, 'no fake voice affordance on a voiceless desk');
+    /* …and a card in "Meet the brokers" below. */
     assert.match(html, /AI broker · Robinhood Chain/);
     assert.match(html, /Visit Isabel’s desk/);
     assert.match(html, /Typed instructions only — no line\./);
-    assert.doesNotMatch(html, /Talk with Isabel/, 'no fake voice affordance on a voiceless desk');
     assert.match(html, /A live estimate when you ask\./);
     assert.doesNotMatch(html, /A real price when you ask/);
     assert.match(html, /Coming soon — /);

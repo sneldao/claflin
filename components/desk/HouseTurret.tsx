@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useDictation } from '@/lib/dictation/useDictation';
-import { HOUSE_DESKS, type HouseDesk, type HouseDeskId } from '@/lib/house';
+import { DESK_CAPABILITIES, HOUSE_DESKS, type HouseDesk, type HouseDeskId } from '@/lib/house';
 import { offeringForId } from '@/lib/desk/offerings';
 import { PRODUCT_FACTS } from '@/lib/desk/board';
 import { offeringCapabilityText, openDesksForOffering, railLabel, soleOfferingForDesk, venueLabel } from '@/lib/desk/offerings-presentation';
@@ -292,6 +292,10 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
               const words = LAMP_WORDS[lamp];
               const sole = soleOfferingForDesk(instruction, desk.id);
               const canAct = reading.kind === 'empty' || (matched && sole !== null);
+              /* A line is the channel the desk actually takes — voice desks
+                 answer a call, typed-only desks like Isabel take the
+                 instruction field. Never a fake "Talk" affordance. */
+              const voice = DESK_CAPABILITIES[desk.id].voice !== null;
               return (
                 <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
                   <span className={foyerStyles.keyLamp} aria-hidden="true" />
@@ -299,17 +303,19 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
                   <div className={foyerStyles.keyIdentity}>
                     <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
                     <p className={foyerStyles.keyRail}>
-                      {desk.market} · {LINE_IDENTITY}
+                      {desk.market} · {LINE_IDENTITY}{voice ? '' : ' · typed only'}
                       {words && <span className={foyerStyles.lampWords}> · {words}</span>}
                     </p>
                   </div>
                   {canAct && (
                     <div className={foyerStyles.keyActions}>
-                      <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
-                        Talk with {desk.shortName}
-                      </button>
+                      {voice && (
+                        <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
+                          Talk with {desk.shortName}
+                        </button>
+                      )}
                       <a href={deskHref(desk.id)} className={foyerStyles.keyType} onClick={onTypeClick(desk.id)}>
-                        Type instead
+                        {voice ? 'Type instead' : 'Type an instruction'}
                       </a>
                     </div>
                   )}

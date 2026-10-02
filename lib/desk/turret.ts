@@ -87,5 +87,5 @@ export function turretReply(reading: TurretReading, deskIds: readonly HouseDeskI
       return `${match.symbol} on ${match.rail} (${brokers})`;
     })
     .join(' · ');
-  return `Two lines carry this, as separate products: ${named}. Choose a product below.`;
+  return `${lit.length === 2 ? 'Two' : lit.length} lines carry this, as separate products: ${named}. Choose a product below.`;
 }

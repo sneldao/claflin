@@ -8,7 +8,7 @@ import { lampFor, litDesks, readInstruction, turretReply } from '../lib/desk/tur
 import { HouseFoyer } from '../components/desk/HouseFoyer';
 import { resetContainer, getRootElement } from './jsdom-setup';
 
-const OPEN = ['hetty', 'jesse'] as const;
+const OPEN = ['hetty', 'jesse', 'isabel'] as const;
 
 describe('turret reading (pure)', () => {
   it('stays idle until the sentence names something', () => {
@@ -20,20 +20,22 @@ describe('turret reading (pure)', () => {
     }
   });
 
-  it('lights both lines for Apple and names both products — never picks a rail', () => {
+  it('lights every open line for Apple and names each product — never picks a rail', () => {
     const reading = readInstruction('buy Apple for 100 USDC');
-    assert.deepEqual(litDesks(reading, OPEN), ['hetty', 'jesse']);
+    assert.deepEqual(litDesks(reading, OPEN), ['hetty', 'jesse', 'isabel']);
     const reply = turretReply(reading, OPEN)!;
+    assert.match(reply, /3 lines carry this/);
     assert.match(reply, /AAPLc on Base \(Hetty\)/);
     assert.match(reply, /AAPLx on Solana \(Jesse\)/);
+    assert.match(reply, /AAPL on Robinhood Chain \(Isabel\)/);
     assert.match(reply, /Choose a product below\./);
   });
 
-  it('lights one line for a single-rail product and says nothing extra', () => {
+  it('lights the typed-only line too — Tesla sits on Jesse and Isabel', () => {
     const reading = readInstruction('buy Tesla');
-    assert.deepEqual(litDesks(reading, OPEN), ['jesse']);
+    assert.deepEqual(litDesks(reading, OPEN), ['jesse', 'isabel']);
     assert.equal(lampFor(reading, 'hetty'), 'quiet');
-    assert.equal(turretReply(reading, OPEN), null, 'the lamp already says it');
+    assert.match(turretReply(reading, OPEN)!, /Two lines carry this/);
   });
 
   it('says plainly when no line carries it, with what the book covers', () => {
@@ -98,20 +100,27 @@ describe('house turret (component)', () => {
     assert.match(html, /Arbitrum · coming soon/);
   });
 
-  it('lamps follow the words: Apple lights both, Tesla lights Jesse only', async () => {
+  it('lamps follow the words: Apple lights all three, Tesla lights Jesse and Isabel', async () => {
     await mount();
-    /* Isabel is open but voiceless — no talk line, and not planned. She is
-       reached through the matching-products buttons or ?desk=isabel. */
-    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Jay: 'planned' });
+    /* Isabel is open but voiceless — LINE 3 is a typed line: it lamps, it
+       takes an instruction, and it never fakes a "Talk" affordance. */
+    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'idle', Jay: 'planned' });
+    const isabelLine = Array.from(getRootElement().querySelectorAll('[data-lamp]')).find(el => el.textContent?.includes('Isabel'));
+    assert.ok(isabelLine, 'Isabel has a line');
+    assert.match(isabelLine!.textContent ?? '', /typed only/);
+    assert.match(isabelLine!.textContent ?? '', /Type an instruction/);
+    assert.doesNotMatch(isabelLine!.textContent ?? '', /Talk with/, 'no fake voice affordance');
 
     await type('buy Apple for 100 USDC');
     assert.equal(lamps().Hetty, 'match');
     assert.equal(lamps().Jesse, 'match');
-    assert.match(getRootElement().textContent ?? '', /Two lines carry this, as separate products/);
+    assert.equal(lamps().Isabel, 'match');
+    assert.match(getRootElement().textContent ?? '', /3 lines carry this, as separate products/);
 
     await type('buy Tesla');
     assert.equal(lamps().Hetty, 'quiet');
     assert.equal(lamps().Jesse, 'match');
+    assert.equal(lamps().Isabel, 'match');
   });
 
   it('never touches the microphone until the caller holds the line', async () => {
