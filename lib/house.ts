@@ -2,6 +2,7 @@ import { LIVE_EXECUTION_ENABLED } from './trading/domain';
 import type { DeskCapabilities } from './desk/contracts';
 import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
 import { ISABEL_PAPER_ENABLED } from './robinhood/flags';
+import { HALLEY_LIVE_CLIENT_ENABLED, HALLEY_PAPER_ENABLED } from './meteora/flags';
 
 /**
  * Static house identity. Operational capability lives in DESK_CAPABILITIES —
@@ -61,6 +62,16 @@ export const HOUSE_DESKS = Object.freeze([
     status: (ISABEL_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
+    id: 'halley',
+    name: 'Edmond Halley',
+    shortName: 'Halley',
+    market: 'Solana',
+    approach: 'Prices what has never traded — anchors a new name to a known one, then lets the tape decide.',
+    access: 'Meteora DBC launches on Solana · paper or live',
+    capability: 'Say a launch. See the curve, the equity anchor, and the graduation line. File a paper launch or sign it live.',
+    status: (HALLEY_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
+  }),
+  Object.freeze({
     id: 'arbitrum',
     name: 'Jay Cooke',
     shortName: 'Jay',
@@ -96,6 +107,10 @@ export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
      release-flag shape as Jesse's. There is no live flag — her desk is
      paper-only by design (docs/ELIGIBILITY.md §5). */
   isabel: { quote: true, paper: ISABEL_PAPER_ENABLED, voice: ISABEL_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
+  /* Halley's live launch is a dual env gate (client + server), same shape as
+     Jesse's — a real DBC launch needs both flags, and neither alone moves
+     funds. */
+  halley: { quote: true, paper: HALLEY_PAPER_ENABLED, voice: HALLEY_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: HALLEY_LIVE_CLIENT_ENABLED },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };
 

@@ -12,6 +12,7 @@ const NAMESAKE: Partial<Record<HouseDeskId, string>> = {
   hetty: 'Hetty Green (1834–1916)',
   jesse: 'Jesse Livermore (1877–1940)',
   isabel: 'Isabel Benham (1909–2013)',
+  halley: 'Edmond Halley (1656–1742)',
 };
 
 /**

@@ -36,6 +36,18 @@ export const MARKET_MANDATES: Readonly<Record<string, MarketMandate>> = Object.f
     quoteAsset: 'USDG' as const,
     status: 'active' as const,
   }),
+  'meteora-launch': Object.freeze({
+    id: 'meteora-launch' as const,
+    label: 'Meteora Launch Desk',
+    /* DBC mints a fresh base token per launch — the house is venue, never
+       issuer, and the token is an exposure/tracker, not share ownership. */
+    product: 'Equity-exposure tracker token (DBC curve → DAMM v2)',
+    issuer: null,
+    rails: [{ kind: 'solana' as const, network: 'solana:mainnet' as const }],
+    venues: ['meteora-dbc', 'damm-v2'],
+    quoteAsset: 'USDC' as const,
+    status: 'active' as const,
+  }),
   'arbitrum-pending': Object.freeze({
     id: 'arbitrum-pending' as const,
     label: 'Arbitrum mandate pending verification',

@@ -32,6 +32,10 @@ SKIP_PATTERNS=(
   "lib/solana/catalog.ts"
   # Same: this doc cites public Solana program/config PDAs from the DBC spike.
   "docs/METEORA_LAUNCH_DESK.md"
+  # Meteora desk constants — public mint/badge/program PDAs, same class as
+  # lib/solana/catalog.ts above. The dbc.ts hit is a config key name, not a secret.
+  "lib/meteora/catalog.ts"
+  "lib/meteora/dbc.ts"
 )
 
 # ─────────────────────────────────────────────

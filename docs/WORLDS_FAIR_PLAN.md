@@ -126,7 +126,7 @@ All sidetracks are separate **Superteam Earn** submissions due **13 Oct, 06:59 U
 
 ### Meteora repositioned
 
-[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) remains a proposal. Under this plan it is **optional upside, not the entry**: Halley would strengthen the Solana track story *and* collect the Meteora sidetrack (a separate Superteam Earn submission, $20K USDC, listing slug `meteora-dbc`). Two conditions before any Meteora work: Isabel slice A is landed (**done 2026-10-01**), and the DBC devnet spike is green (**in progress 2026-10-02**). The venue-not-issuer hard line is unchanged.
+[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) is **built paper-first as of 2026-10-03** — both conditions landed: Isabel's slice is seated (**done 2026-10-01**) and the DBC devnet spike is green (**done 2026-10-02**, full Token-2022 pair lifecycle through DAMM v2 migration). Scope 1 as built: LINE 4 launch desk drafting tracker/exposure tokens (DBC mints a fresh base — an existing xStock can only be the *quote*, never the base) in USDC or badged AAPLx/NVDAx/TSLAx, Pyth-anchored opening, DAMM v2 graduation, paper records, ConvAI line. The Earn submission still needs a live mainnet launch for the strongest entry — that path is designed but unimplemented and stays dual-flagged off. The venue-not-issuer hard line is unchanged.
 
 ## 6. Sequence to the deadline
 
@@ -134,7 +134,7 @@ All sidetracks are separate **Superteam Earn** submissions due **13 Oct, 06:59 U
 |---|---|
 | Oct 1–2 | Register (Solana + Base + Robinhood Chain). Isabel catalog + marks spike: exercise `/rhj/assets` + `/prices` live, pull Chainlink feed addresses, confirm a marks read end-to-end. Check Earn for a UK regional sidetrack. Meteora workshop only if the sidetrack is still in play. |
 | Oct 3–5 | ~~Isabel slice A + slice B spike~~ — **done early**: slices A, B, C all landed Oct 1. Use the slack for desk polish, e2e smoke on the deployed site, and submission copy. |
-| Oct 6–8 | Meteora decision point: if Isabel is clean and the devnet spike is green, Halley Scope 1; otherwise drop and harden. Submission copy begins — foreground in-window work, disclose pre-existing code. |
+| Oct 6–8 | ~~Meteora decision point~~ **Resolved early 2026-10-03** — Isabel clean + spike green → Halley Scope 1 approved and landed paper-first. Remaining Meteora call: whether a live mainnet launch is attempted before the Earn deadline. Submission copy begins — foreground in-window work, disclose pre-existing code. |
 | Oct 9–11 | Demo video + submission polish (UX and business plan are judging criteria — the voice-broker metaphor and paper-first honesty are the pitch). Confirm closed-repo judge-access requirements. |
 | Oct 12 | Submit before 11:59pm PT. Earn sidetrack submissions by 13 Oct 06:59 UTC. |
 

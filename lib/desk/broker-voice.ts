@@ -21,4 +21,9 @@ export const BROKER_VOICE: Partial<Record<HouseDeskId, {
     rail: 'Stock Tokens · Robinhood Chain',
     lens: 'Three tapes — issuer, chain, venue — read side by side, never blended.',
   },
+  halley: {
+    epithet: 'The Comet Caller',
+    rail: 'Meteora launches · Solana',
+    lens: 'Anchors a new price to a known one before the crowd arrives.',
+  },
 };

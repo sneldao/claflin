@@ -71,6 +71,22 @@ const METHODS: Readonly<Record<HouseDeskId, BrokerExaminationMethod>> = {
     ],
     revisedAt: '2026-09-10',
   },
+  halley: {
+    deskId: 'halley',
+    name: 'Halley',
+    lens: 'Pricing what has no history',
+    questions: [
+      'What table would I build before quoting a price no one has paid yet?',
+      'Which part of this curve is arithmetic, and which is guess?',
+      'If the launch works, what still owes me an explanation later?',
+    ],
+    boundary:
+      'Educational perspective only. The Meteora launch desk prices new exposure tokens on paper; a projected path is not an order, and Halley never signs. Exposure is not share ownership.',
+    sources: [
+      { label: 'Halley’s annuity life table (1693)', note: 'The first actuarial pricing of a product with no observable market — the desk’s working parallel.' },
+    ],
+    revisedAt: '2026-10-02',
+  },
   arbitrum: {
     deskId: 'arbitrum',
     name: 'Jay',

@@ -23,7 +23,7 @@ describe('the house roster', () => {
     assert.ok(!usesLegacyDeskDocuments('jesse'));
     assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
     assert.ok(!isOpenDesk('arbitrum'));
-    assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Arbitrum']);
+    assert.deepEqual(HOUSE_DESKS.map(d => d.market), ['Base', 'Solana', 'Robinhood Chain', 'Solana', 'Arbitrum']);
   });
   it('gives the Arbitrum desk its rails-first approach instead of a placeholder', () => {
     const arbitrum = getHouseDesk('arbitrum')!;

@@ -1,7 +1,7 @@
 # The Foyer Is the Line
 
 **Date:** 2026-09-24 · **Status:** Phases 0–2 and 4 shipped on `main` for the Stocklana submission (copy truth, turret, board, desks/answers/footer/handset). Phase 3 waits on an accepted real recording; Phase 5 funnel source is in (docs/FUNNEL_METRICS.md); the pulse still waits on real counters · **Owner:** product lead
-**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again. **Amended 2026-10-02:** Isabel is seated — LINE 3 is a live lamp that lights on her coverage (Robinhood Stock Tokens), with "Talk with Isabel" opening her own ConvAI session. Jay alone remains "coming soon".
+**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again. **Amended 2026-10-02:** Isabel is seated — LINE 3 is a live lamp that lights on her coverage (Robinhood Stock Tokens), with "Talk with Isabel" opening her own ConvAI session. Jay alone remains "coming soon". **Amended 2026-10-03:** Halley is seated — LINE 4 is the Meteora launch desk on Solana (paper-only: estimates and filed launch records, no live launch path) with his own ConvAI session. Jay is LINE 5, still coming soon.
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
 This document owns **foyer anatomy and its build sequence**. [Product Direction](PRODUCT_DIRECTION.md) still owns principles and the information hierarchy, and wins any conflict. [ROADMAP.md](../ROADMAP.md) §1a owns sequencing against other work.
@@ -46,8 +46,9 @@ Trade tokenized US stocks by voice, onchain, any hour.        ← plain subhead 
 └──────────────────────────────────────────────────────────┘
 Paper by default · Only you can sign                          ← FOYER_BOUNDARY, once
 
-◉ LINE 1  HETTY · Base · AI broker     ◉ LINE 2  JESSE · Solana · AI broker
-◉ LINE 3  ISABEL · RH Chain · AI broker ○ LINE 4  JAY · coming soon
+◉ LINE 1  HETTY · Base · AI broker      ◉ LINE 2  JESSE · Solana · AI broker
+◉ LINE 3  ISABEL · RH Chain · AI broker ◉ LINE 4  HALLEY · Solana · AI broker
+○ LINE 5  JAY · coming soon
 ```
 
 - **One primary action: the house line.** Hold Space (desktop, when focus is not in a field or button) or press and hold (touch). Release to send. This uses the existing dictation path (`/api/dictation` → `dictation-parser`). The words fill the same foyer instruction the input already drives, and there is no second parser.
@@ -114,7 +115,7 @@ One dense, scannable table. It replaces seven repeated cards.
 
 ### 4.7 Meet the desks (character after comprehension)
 
-Hetty, Jesse and Isabel get one card each: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing; Isabel: reading the rails — fundamental and sector analysis); a fact-checked, attributed line where one exists (Isabel has none — no verified quote, so no attribution is invented); a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
+Hetty, Jesse, Isabel and Halley get one card each: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing; Isabel: reading the rails — fundamental and sector analysis; Halley: pricing what has never traded — the anchored curve); a fact-checked, attributed line where one exists (Isabel and Halley have none — no verified quotes, so no attribution is invented); a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
 
 ### 4.8 Straight answers
 

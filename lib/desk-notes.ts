@@ -54,6 +54,13 @@ const DESK_NOTES: Readonly<Record<HouseDeskId, readonly (DeskNote | string)[]>> 
     'What a company owns outright survives a bad quarter better than what it merely promises.',
     'A careful reader of annual letters was once considered a dangerous competitor.',
   ],
+  halley: [
+    ...GENERAL_NOTES,
+    'Halley priced annuities from a town’s birth and burial records before any exchange would trust the numbers.',
+    'He predicted a comet’s return and was proven right decades later — a launch desk inherits the patience of its namesake.',
+    'The first mortality table was a price discovery: what a life was worth, read from records rather than opinion.',
+    'An untried curve earns trust the way an untried instrument does — one settled fill at a time.',
+  ],
   arbitrum: [
     ...GENERAL_NOTES,
     'Cooke sold the rails before he sold the ride — distribution first, then the crowd.',
@@ -86,6 +93,11 @@ const DESK_WORDS: Readonly<Record<HouseDeskId, readonly DeskNote[]>> = {
     ...GENERAL_WORDS,
     { text: 'A seat: membership on an exchange — the right to trade on its floor. Muriel Siebert bought the first seat held by a woman on the New York Stock Exchange in 1967; Isabel Benham’s craft was reading the rails, not owning the floor.', attribution: null, term: 'seat' },
     { text: 'The annual letter: a company’s own account of itself, once a year. Benham read them more closely than most competitors read anything.', attribution: null, term: 'annual letter' },
+  ],
+  halley: [
+    ...GENERAL_WORDS,
+    { text: 'An anchor: the known price a new one is moored to. A launch that opens near its anchor discovers; one that opens nowhere drifts.', attribution: null, term: 'anchor' },
+    { text: 'Graduation: the moment a bonding curve hands its pool to deeper water — the day a launch becomes a market.', attribution: null, term: 'graduation' },
   ],
   arbitrum: [
     ...GENERAL_WORDS,

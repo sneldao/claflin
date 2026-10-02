@@ -94,7 +94,17 @@ ELEVENLABS_AGENT_ISABEL=
 ELEVENLABS_VOICE_ISABEL=EXAVITQu4vr4xnSDxMaL
 ```
 
-All three brokers' ConvAI agents speak on **Eleven v4 Turbo** (`eleven_v4_turbo`);
+Halley’s Meteora launch desk (Solana, paper-only) has its own ConvAI agent —
+provision with `scripts/create-halley-agent.mjs`, then set the id it prints.
+The desk estimates and files paper launches without it; the call card reports
+the line as not connected:
+
+```
+ELEVENLABS_AGENT_HALLEY=
+ELEVENLABS_VOICE_HALLEY=onwK4e9ZLuTAKqWW03F9
+```
+
+All four brokers' ConvAI agents speak on **Eleven v4 Turbo** (`eleven_v4_turbo`);
 the model lives in the agent config, not this deployment. See
 [Broker voice](#broker-voice-eleven-v4-turbo) below.
 
@@ -126,6 +136,7 @@ env var; changing it is an API call, not a VPS/Vercel deploy.
   node --env-file=.env.local scripts/update-hetty-agent.mjs
   node --env-file=.env.local scripts/update-jesse-agent.mjs
   node --env-file=.env.local scripts/update-isabel-agent.mjs
+  node --env-file=.env.local scripts/update-halley-agent.mjs
   ```
   Each script reads the agent back and fails if the model the server kept
   isn't the one requested. Roll back by re-running with

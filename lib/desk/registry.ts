@@ -67,6 +67,18 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     presentationDefault: 'room' as const,
     surface: 'isabel' as const,
   }),
+  halley: Object.freeze({
+    deskId: 'halley',
+    coverages: Object.freeze([
+      Object.freeze({
+        mandate: MARKET_MANDATES['meteora-launch'],
+        adapters: Object.freeze({ quote: 'meteora-dbc', marks: null, execution: 'meteora-live', voice: 'elevenlabs-convai' }),
+      }),
+    ]),
+    storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),
+    presentationDefault: 'room' as const,
+    surface: 'halley' as const,
+  }),
   arbitrum: Object.freeze({
     deskId: 'arbitrum',
     coverages: Object.freeze([
@@ -85,6 +97,10 @@ const EXTENDED_CAPABILITIES: Readonly<Record<HouseDeskId, { marks: boolean; acco
   hetty: Object.freeze({ marks: true, accountSync: true, evidence: [] }),
   jesse: Object.freeze({ marks: true, accountSync: false, evidence: ['comparison', 'venue-duplex', 'prestocks'] }),
   isabel: Object.freeze({ marks: true, accountSync: false, evidence: ['venue-duplex'] }),
+  /* A launch desk owns no static marks tape — its evidence is the launch
+     curve and the anchor duplex on each launch. Marks stay off until a real
+     damm-v2 marks adapter exists. */
+  halley: Object.freeze({ marks: false, accountSync: false, evidence: ['launch-curve', 'venue-duplex'] }),
   arbitrum: Object.freeze({ marks: false, accountSync: false, evidence: [] }),
 });
 

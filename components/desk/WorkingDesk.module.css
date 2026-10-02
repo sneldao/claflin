@@ -235,6 +235,9 @@
 .secondary:hover:not(:disabled) { color: var(--desk-paper-muted); }
 .secondary:active:not(:disabled) { transform: translateY(1px); }
 .notice { border-left: 2px solid currentColor; padding: 10px 12px; margin: 18px 0 !important; font-size: 13px; line-height: 1.6; }
+/* Halley's projected launch curve — a sketch of the estimate, not a chart of a trade. */
+.launchCurve { display: block; width: 100%; height: 56px; margin: 10px 0 18px; color: var(--desk-brass); }
+.launchCurve path { vector-effect: non-scaling-stroke; }
 .review { margin-top: 24px; padding-top: 24px; border-top: 1px solid #27362b60; scroll-margin-top: 20px; }
 .reviewHeading { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
 .review h3 { font: 27px var(--font-display), serif; margin: 0; }

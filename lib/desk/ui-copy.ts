@@ -41,6 +41,7 @@ export const RING_EXAMPLES = {
   jesse: ['what’s on the tape?', 'compare NVIDIA xStock', 'price 50 USDC of TSLAx'],
   hetty: ['what’s moving on the tape?', 'explain the estimate before I decide'],
   isabel: ['what’s Apple trading at?', 'price 100 USDG of Tesla', 'what does the three-way tape say?'],
+  halley: ['launch an NVIDIA tracker', 'quote it in AAPLx', 'draw the curve'],
 } as const;
 
 /** One action vocabulary for both desks' slips — same verbs, same order. */

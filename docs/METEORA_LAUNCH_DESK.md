@@ -1,10 +1,10 @@
 # Meteora Launch Desk — Design Plan (working title)
 
-**Prepared:** 2026-10-01. **Status:** **PROPOSAL — under consideration, not approved.** No code is planned or committed under this document until the project lead makes an explicit go decision. Working broker name is **Halley** (comet → Meteora; rename freely — the name is not load-bearing). **Repositioned 2026-10-01 under [WORLDS_FAIR_PLAN.md](WORLDS_FAIR_PLAN.md):** the World's Fair entry does not depend on this desk — the main submission is the house tagged Solana + Base + Robinhood Chain, and the Meteora DBC prize is a Superteam Earn sidetrack (~$20K), not a main track. Halley is attempted only if Isabel's marks slice lands and the devnet spike is green.
+**Prepared:** 2026-10-01. **Status:** **SCOPE 1 BUILT — paper-first, live launch not implemented.** Approved and landed 2026-10-03: pair-first launch configuration, USDC fallback, tracker/exposure token framing (never stock ownership), Pyth-anchored estimates, paper records, and the ConvAI voice line. The devnet spike is green (§11). Live launch remains unimplemented and dual-flagged off. Working broker name is **Halley** (comet → Meteora; rename freely — the name is not load-bearing). **Repositioned 2026-10-01 under [WORLDS_FAIR_PLAN.md](WORLDS_FAIR_PLAN.md):** the World's Fair entry does not depend on this desk — the main submission is the house tagged Solana + Base + Robinhood Chain, and the Meteora DBC prize is a Superteam Earn sidetrack (~$20K), not a main track. Halley is attempted only if Isabel's marks slice lands and the devnet spike is green.
 
 **Why this exists now:** [STOCKLANA_BUILD_PLAN.md](STOCKLANA_BUILD_PLAN.md) §1 ("Contest focus and deadline") records that **Meteora DBC was declined** as a primary target and Clawpump/Tessera were declined, on the basis that launching a token "conflicts with the house's no-token, provenance-first direction." That decision was made for **Stocklana** (deadline 25 Sept 2026, now **closed**; judging runs through 2 Oct). The **Colosseum Crypto World's Fair** (submissions due **12 Oct 2026**) reintroduces a Meteora **DBC** bounty as a Superteam sidetrack (~**$20K**) whose framing explicitly invites *stock-pair* and *RWA/tokenized-equity* launches — and the World's Fair overall track ($840K prizes, $250K pre-seed via the Colosseum Accelerator) is where the real value is. This document is the reconsideration: **if** the house takes the Meteora track, here is what "making it real" would look like, designed into the product rather than bolted on.
 
-**Relationship to the house:** This is a *candidate fourth desk*, in the same sequence as Isabel/Jay in the [Roadmap](../ROADMAP.md) §5. It reuses every shared seam the house already owns (mandate → offering → desk runtime → adapters → controller → voice → dual-env flags → paper/live split). It does not touch Jesse's verified-catalog integrity and does not move any approved work.
+**Relationship to the house:** Now the *seated fourth desk* (LINE 4), in the same sequence as Isabel/Jay in the [Roadmap](../ROADMAP.md) §5. It reuses every shared seam the house already owns (mandate → offering → desk runtime → adapters → controller → voice → dual-env flags → paper/live split). It does not touch Jesse's verified-catalog integrity and does not move any approved work.
 
 ---
 
@@ -132,6 +132,8 @@ The launch *issuing* of the security mint is **out of scope** — see §9. What 
 
 **Scope 1 — the defensible core (must land).** Launch an **existing** thinly-traded xStock (or an xStock *pair*) onto a DBC for price discovery, graduate to DAMM v2, on **mainnet with a tiny real USDC commitment**. The house is *venue*, not issuer (Backed issues; the desk provides the launch venue) — this keeps the regulatory surface clean and the build fast. Scope 1 alone satisfies "working code on mainnet" + "depth of integration."
 
+> **Amended 2026-10-03 — as built.** The spike proved the protocol constraint behind the reframe: **DBC always mints a fresh base token** — an existing xStock cannot be placed on a curve as the base. What Scope 1 actually builds is a **new tracker/exposure token** (name + symbol chosen on the slip) quoted in USDC or a badged xStock (AAPLx/NVDAx/TSLAx — badge PDAs verified on mainnet, `lib/meteora/catalog.ts`), optionally anchored to the equity's Pyth mark (or the pair ratio for an xStock quote). The tracker token is *never* represented as stock ownership — the house is venue and infrastructure, the launcher's wallet is the mint's creator. The mainnet USDC commitment is deferred: the shipped desk is **paper-first** (estimates + browser-local launch records); the live launch path (§7) is designed but not implemented and stays dual-flagged off.
+
 **Scope 2 — the differentiator (attempt only if Scope 1 is solid).** The **conviction pool → DLMM** graduation: commit USDC pre-launch, and migrate that position into a **DLMM** at graduation instead of flat DAMM v2. This is the "creative end-to-end flow using all of our stack (DBC, DAMM v2 and DLMM)" and the strongest originality card. It is also the riskiest piece.
 
 **Out of scope (explicit).** *Issuing a brand-new stock mint.* Issuance authority + securities law is a real surface the house should not promise to judges in 11 days. The "new name" framing stays a **venue for existing/relatively-thin mints**, never an issuer.
@@ -153,14 +155,14 @@ The launch *issuing* of the security mint is **out of scope** — see §9. What 
 2. **The DBC-from-zero instinct.** The naive read is "launch a stock from $0 up a curve" — that is a meme pump with a ticker. The anchored band is what makes it *about equities*. Do not lose it in the build.
 3. **Mainnet traction bar.** "We prefer projects who have gone live on mainnet and have people actively using it." Usage cannot be faked in 11 days. A conviction pool seeded by the team is the honest version of "people participating"; frame volume as "first launch live," not high.
 
-## 10. What a go decision requires
+## 10. What a go decision required
 
-This is a proposal. Before it becomes a workstream, the lead should settle:
+~~This is a proposal.~~ **Decided 2026-10-03:** the lead approved Scope 1 — pair-first, USDC supported, tracker-token framing. Settled answers below; open items remain marked.
 
-- **Do we take the World's Fair at all**, and is Meteora-DBC the right secondary given the existing *decline* in [STOCKLANA_BUILD_PLAN.md](STOCKLANA_BUILD_PLAN.md) §1? (The World's Fair overall track is the real value; Meteora is one lever.)
-- **Venue, not issuer — confirmed as the hard line?** If the lead wants a true "new name" launch, that is a separate, larger, legal question, not an 11-day build.
+- ~~**Do we take the World's Fair at all**~~ **Yes** — the main submission is the house (Solana + Base + Robinhood Chain); Meteora DBC is the Earn sidetrack.
+- ~~**Venue, not issuer — confirmed as the hard line?**~~ **Yes** — and tighter than drafted: the launched mint is a tracker/exposure token, not stock ownership, because DBC always creates a fresh base mint (spike finding).
 - ~~**Is the devnet spike green?**~~ **Answered 2026-10-02 — yes.** The full Token-2022 pair lifecycle (create → trade → DAMM v2 migrate) is proven on devnet; see §11. The remaining gate is the product go/no-go, not protocol feasibility.
-- **Does Halley get a broker, or is it a mode?** This plan assumes a desk. A "launch mode on Jesse" is the alternative and, per §2, does not fit the verified-catalog integrity.
+- ~~**Does Halley get a broker, or is it a mode?**~~ **A desk** — LINE 4, Edmond Halley, "The Comet Caller". Voice parity landed with the build: `lib/meteora/voice-tools.ts` + `desk-tools.ts`, `HalleyCall`, `POST /api/desk/halley/session`, agent `ELEVENLABS_AGENT_HALLEY`.
 - **Submission mechanics:** one submission per team; confirm whether the World's Fair lets a single submission tag both the Solana track and the Meteora sidetrack, or whether the Meteora sidetrack is a separate Superteam entry.
 
 ## 11. Open technical questions (resolve in the spike)

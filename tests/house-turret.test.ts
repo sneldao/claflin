@@ -104,7 +104,7 @@ describe('house turret (component)', () => {
     await mount();
     /* Isabel's LINE 3 is a real line now — it lamps, it takes an
        instruction, and her "Talk" affordance rings the ElevenLabs agent. */
-    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'idle', Jay: 'planned' });
+    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'idle', Halley: 'idle', Jay: 'planned' });
     const isabelLine = Array.from(getRootElement().querySelectorAll('[data-lamp]')).find(el => el.textContent?.includes('Isabel'));
     assert.ok(isabelLine, 'Isabel has a line');
     assert.doesNotMatch(isabelLine!.textContent ?? '', /typed only/);
@@ -115,6 +115,9 @@ describe('house turret (component)', () => {
     assert.equal(lamps().Hetty, 'match');
     assert.equal(lamps().Jesse, 'match');
     assert.equal(lamps().Isabel, 'match');
+    /* Halley launches curves, he does not fill trades — a buy instruction
+       is not his to carry. */
+    assert.equal(lamps().Halley, 'quiet');
     assert.match(getRootElement().textContent ?? '', /3 lines carry this, as separate products/);
 
     await type('buy Tesla');
