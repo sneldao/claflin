@@ -1,7 +1,7 @@
 # The Foyer Is the Line
 
 **Date:** 2026-09-24 · **Status:** Phases 0–2 and 4 shipped on `main` for the Stocklana submission (copy truth, turret, board, desks/answers/footer/handset). Phase 3 waits on an accepted real recording; Phase 5 funnel source is in (docs/FUNNEL_METRICS.md); the pulse still waits on real counters · **Owner:** product lead
-**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again.
+**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again. **Amended 2026-10-02:** Isabel is seated — LINE 3 is a live lamp that lights on her coverage (Robinhood Stock Tokens), with "Talk with Isabel" opening her own ConvAI session. Jay alone remains "coming soon".
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
 This document owns **foyer anatomy and its build sequence**. [Product Direction](PRODUCT_DIRECTION.md) still owns principles and the information hierarchy, and wins any conflict. [ROADMAP.md](../ROADMAP.md) §1a owns sequencing against other work.
@@ -47,15 +47,15 @@ Trade tokenized US stocks by voice, onchain, any hour.        ← plain subhead 
 Paper by default · Only you can sign                          ← FOYER_BOUNDARY, once
 
 ◉ LINE 1  HETTY · Base · AI broker     ◉ LINE 2  JESSE · Solana · AI broker
-○ LINE 3  ISABEL · coming soon          ○ LINE 4  JAY · coming soon
+◉ LINE 3  ISABEL · RH Chain · AI broker ○ LINE 4  JAY · coming soon
 ```
 
 - **One primary action: the house line.** Hold Space (desktop, when focus is not in a field or button) or press and hold (touch). Release to send. This uses the existing dictation path (`/api/dictation` → `dictation-parser`). The words fill the same foyer instruction the input already drives, and there is no second parser.
 - **Type is the equal fallback.** The instruction input stays; ↵ submits. The whole journey works without a microphone (Product Direction: immersion optional).
 - **The mic is used only on the gesture.** No permission prompt on load. The first hold explains the prompt in one line. A denied permission falls back to typing, with an honest note.
 - **Lines are lamps, not a chain picker.** Before any instruction, open lines glow evenly. After an instruction, `offeringGroupsForInstruction` decides which lines light:
-  - one matching offering → that line lights, and "Ring Jesse with this" appears on it;
-  - several (e.g. AAPLc on Base and AAPLx on Solana) → both light and the house **names both offerings**. The caller picks. The house never picks a rail silently (Product Direction, decision 1; ROADMAP: similar exposures stay separate);
+  - one matching offering → that line lights, and "Talk with {broker}" appears on it;
+  - several (e.g. AAPLc on Base, AAPLx on Solana, AAPL on Robinhood Chain) → all matching lines light and the house **names each offering**. The caller picks. The house never picks a rail silently (Product Direction, decision 1; ROADMAP: similar exposures stay separate);
   - none → no line lights, and the house says so plainly with the supported names.
 - **Ringing** still hands off to the desk's own ConvAI session via `requestRingOnArrival`. A single house-level voice agent is **out of scope** until per-desk calls are accepted, so we are not adding a third agent with its own honesty surface.
 - **Planned desks** stay unlit lamps with "coming soon". That is a restrained directory detail, not a grid and not a clickable room.
@@ -114,7 +114,7 @@ One dense, scannable table. It replaces seven repeated cards.
 
 ### 4.7 Meet the desks (character after comprehension)
 
-Hetty and Jesse get one card each: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing); a fact-checked, attributed line; a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
+Hetty, Jesse and Isabel get one card each: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing; Isabel: reading the rails — fundamental and sector analysis); a fact-checked, attributed line where one exists (Isabel has none — no verified quote, so no attribution is invented); a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
 
 ### 4.8 Straight answers
 
@@ -122,7 +122,7 @@ Written in the house voice as "Questions callers ask": Is this a real share? Can
 
 ### 4.9 Footer
 
-"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Coming soon: Isabel (Robinhood Chain) · Jay (Arbitrum)" (retires "Later —").
+"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Coming soon: Jay (Arbitrum)" (retires "Later —"). Isabel left this line when she was seated; the copy is generated from the planned-desks list, so it stays correct as desks open.
 
 ## 5. Design language (foyer-specific additions)
 

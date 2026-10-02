@@ -85,6 +85,14 @@ Secrets live in `/opt/claflin/.env.hetzner` on the server (create it from
 `.env.hetzner.example` — `deploy-hetzner.sh` never writes or overwrites it)
 and are read by `ecosystem.config.js` at `pm2 start`.
 
+**Adding a new variable takes two edits, not one.** `ecosystem.config.js`
+whitelists which `.env.hetzner` vars reach the app (`env:` block), so a var
+present only in the secrets file is silently dropped — the app sees it
+undefined. Map it in `ecosystem.config.js` (committed), then reload with
+`pm2 delete claflin && pm2 start ecosystem.config.js --only claflin && pm2 save`
+— the config file's own documented procedure, and the reliable path for new
+`env:` keys (observed: `pm2 restart --update-env` alone did not pick one up).
+
 | Variable | Default | Notes |
 |---|---|---|
 | `HOSTNAME` | `127.0.0.1` | Loopback only; nginx fronts the app |

@@ -64,7 +64,7 @@ Read from `docs.robinhood.com/chain` on 2026-10-01; recheck live parameters befo
 |---|---|---|
 | **A — marks + catalog** | Catalog derived from `/assets` (chainId 4663, `ASSET_STATUS_ACTIVE`), marks adapter reading rhj `/prices` + onchain Chainlink, honest stale/unavailable labels. Feeds desk tape and foyer wire. | **Landed 2026-10-01** — 24 triple-covered symbols; see §4a. |
 | **B — estimate** | **Venue = Lighter domain orderbook** (`api.rh.lighter.xyz`, keyless): best bid/ask + depth vs USDG per stock market, read-only. Not Uniswap — see §4b. | **Landed 2026-10-01** — book-walking USDG estimate with depth/partial-fill labels, multiplier, and the three-way tape embedded. |
-| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | **Landed 2026-10-01.** Voiceless by design; reached via offering chips and `?desk=isabel`. |
+| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | **Landed 2026-10-01.** Reached via offering chips, `?desk=isabel`, and LINE 3 on the turret. ElevenLabs ConvAI line added 2026-10-02 (`scripts/isabel-agent-config.mjs`, `components/desk/IsabelCall.tsx`, `/api/desk/isabel/session`); still paper-only by design. |
 
 Out of scope for the window: live execution, wallet ceremony, account sync, eligibility enforcement surface. Isabel stays paper and marks-first — consistent with every desk gate the house has held.
 
