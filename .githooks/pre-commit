@@ -30,6 +30,8 @@ SKIP_PATTERNS=(
   # Public Solana token mint addresses (base58, 32-byte keys) trip the
   # generic 40+ pattern — they are public identifiers, not secrets.
   "lib/solana/catalog.ts"
+  # Same: this doc cites public Solana program/config PDAs from the DBC spike.
+  "docs/METEORA_LAUNCH_DESK.md"
 )
 
 # ─────────────────────────────────────────────

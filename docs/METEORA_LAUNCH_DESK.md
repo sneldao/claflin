@@ -159,17 +159,44 @@ This is a proposal. Before it becomes a workstream, the lead should settle:
 
 - **Do we take the World's Fair at all**, and is Meteora-DBC the right secondary given the existing *decline* in [STOCKLANA_BUILD_PLAN.md](STOCKLANA_BUILD_PLAN.md) §1? (The World's Fair overall track is the real value; Meteora is one lever.)
 - **Venue, not issuer — confirmed as the hard line?** If the lead wants a true "new name" launch, that is a separate, larger, legal question, not an 11-day build.
-- **Is the devnet spike green?** It is the feasibility gate and the first thing to spend a day on. If the DBC→DAMM v2 sequence or the equity-pair anchor does not work cleanly, Scope 1 does not hold and the whole track should be dropped rather than shipped thin.
+- ~~**Is the devnet spike green?**~~ **Answered 2026-10-02 — yes.** The full Token-2022 pair lifecycle (create → trade → DAMM v2 migrate) is proven on devnet; see §11. The remaining gate is the product go/no-go, not protocol feasibility.
 - **Does Halley get a broker, or is it a mode?** This plan assumes a desk. A "launch mode on Jesse" is the alternative and, per §2, does not fit the verified-catalog integrity.
 - **Submission mechanics:** one submission per team; confirm whether the World's Fair lets a single submission tag both the Solana track and the Meteora sidetrack, or whether the Meteora sidetrack is a separate Superteam entry.
 
 ## 11. Open technical questions (resolve in the spike)
 
-- Exact DBC init/graduate transaction shapes and the DAMM v2 migration call (from the [DBC dev guide](https://docs.meteora.ag/developer-guides/dbc) / [DAMM v2 dev guide](https://docs.meteora.ag/developer-guides/damm-v2) and the `dynamic-bonding-curve-sdk` / `damm-v2-sdk`).
+**Spike completed 2026-10-02 — green.** Full evidence and tx links live in
+`~/Dev/meteora-dbc-spike/RESULTS.md` (isolated repo, nothing in production code).
+A Token-2022 quote-mint pool (mock xStock pair) was launched, traded, and
+migrated to DAMM v2 on devnet end-to-end — no token badge, no keeper, no
+Meteora-side allowlisting required for a plain Token-2022 mint.
+
+Resolved by the spike:
+
+- **Exact DBC init/graduate transaction shapes** — `createConfigAndPool` (one
+  tx) → buys → `migration_damm_v2` (one tx, permissionless once the pool state
+  machine reaches `LockedVesting`). Migration progress is
+  `PreBondingCurve → [PostBondingCurve] → LockedVesting → CreatedPool`; with
+  zero vesting configured the curve-completing swap jumps straight to
+  `LockedVesting`, and `create_locker` is only required when vesting is set.
+- **Valid DAMM v2 migration config** — not the generic index-0 config. The
+  program requires `poolCreatorAuthority ==` the DBC pool authority PDA plus
+  full-range sqrt prices, `vaultConfigKey == default`, Timestamp activation,
+  and an unscheduled linear/exponential fee scheduler. Devnet: config indices
+  20000–20006 (`7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd` used here).
+- **Token badge** — not required for a plain Token-2022 quote mint on devnet;
+  badges exist for mints with transfer hooks/nonstandard behavior. **Caveat:
+  re-verify against a real xStock mint on mainnet** — devnet cannot answer for
+  mints carrying extensions.
+- **Fees/quote-token behavior on a stock pair** — a Token-2022 quote mint
+  behaves identically to SPL through the whole lifecycle; the only friction is
+  thin-curve tail buys, which need `swap2` `PartialFill` rather than `ExactIn`.
+
+Still open (product-side, not protocol):
+
 - Where the equity-pair anchor reads the Pyth ratio and how the band bounds are set per the launch config (reuse `lib/solana/market/` normalization).
 - The dynamic `LaunchOffering` shape: how a post-deploy mint id enters `INSTRUMENT_OFFERINGS` without touching the static verified catalog.
 - Whether the conviction pool is a DAMM v2 position or a separate deposit program, and how it migrates to DLMM at graduation (this decides whether Scope 2 is realistic).
-- Fees and quote-token behavior on a stock-pair DBC (base xStock as quote asset) vs. a USDC-quoted single name.
 
 ---
 
