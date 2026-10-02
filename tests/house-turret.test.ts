@@ -102,14 +102,14 @@ describe('house turret (component)', () => {
 
   it('lamps follow the words: Apple lights all three, Tesla lights Jesse and Isabel', async () => {
     await mount();
-    /* Isabel is open but voiceless — LINE 3 is a typed line: it lamps, it
-       takes an instruction, and it never fakes a "Talk" affordance. */
+    /* Isabel's LINE 3 is a real line now — it lamps, it takes an
+       instruction, and her "Talk" affordance rings the ElevenLabs agent. */
     assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'idle', Jay: 'planned' });
     const isabelLine = Array.from(getRootElement().querySelectorAll('[data-lamp]')).find(el => el.textContent?.includes('Isabel'));
     assert.ok(isabelLine, 'Isabel has a line');
-    assert.match(isabelLine!.textContent ?? '', /typed only/);
-    assert.match(isabelLine!.textContent ?? '', /Type an instruction/);
-    assert.doesNotMatch(isabelLine!.textContent ?? '', /Talk with/, 'no fake voice affordance');
+    assert.doesNotMatch(isabelLine!.textContent ?? '', /typed only/);
+    assert.match(isabelLine!.textContent ?? '', /Talk with Isabel/);
+    assert.match(isabelLine!.textContent ?? '', /Type instead/);
 
     await type('buy Apple for 100 USDC');
     assert.equal(lamps().Hetty, 'match');

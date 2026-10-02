@@ -46,10 +46,9 @@ describe('desk capabilities drive openness', () => {
     /* Jesse paper tracks NEXT_PUBLIC_JESSE_PAPER_ENABLED — quote-only is not
        an open desk until the seated surface can file. */
     assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
-    /* Isabel paper tracks NEXT_PUBLIC_ISABEL_PAPER_ENABLED — quote-only was
-       not an open desk until her session could file; now it can, paper-only
-       and voiceless by design. */
-    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: ISABEL_PAPER_ENABLED, voice: null, live: false });
+    /* Isabel paper tracks NEXT_PUBLIC_ISABEL_PAPER_ENABLED — her line is
+       ElevenLabs ConvAI like the others while her desk stays paper-only. */
+    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: ISABEL_PAPER_ENABLED, voice: ISABEL_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
     assert.deepEqual(DESK_CAPABILITIES.arbitrum, { quote: false, paper: false, voice: null, live: false });
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.equal(isOpenDesk('hetty'), true);

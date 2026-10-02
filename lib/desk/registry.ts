@@ -60,7 +60,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     coverages: Object.freeze([
       Object.freeze({
         mandate: MARKET_MANDATES['robinhood-stock-tokens'],
-        adapters: Object.freeze({ quote: 'lighter', marks: 'robinhood-marks', execution: null, voice: null }),
+        adapters: Object.freeze({ quote: 'lighter', marks: 'robinhood-marks', execution: null, voice: 'elevenlabs-convai' }),
       }),
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),

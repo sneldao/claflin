@@ -152,16 +152,18 @@ describe('house foyer', () => {
     assert.match(html, /Trade tokenized US stocks by voice, onchain, any hour\./, 'plain lede under the headline');
     assert.match(html, /Base · AI broker/);
     assert.match(html, /Solana · AI broker/);
-    /* Isabel is LINE 3 — a typed-only line: the lamp and the instruction
-       link are real, the "Talk with" affordance is not faked. */
+    /* Isabel is LINE 3 — a voice line like the others: lamp, ring, and a
+       typed fallback. */
     assert.match(html, /LINE 3/);
-    assert.match(html, /Robinhood Chain · AI broker · typed only/);
-    assert.match(html, /Type an instruction/);
-    assert.doesNotMatch(html, /Talk with Isabel/, 'no fake voice affordance on a voiceless desk');
+    assert.match(html, /Robinhood Chain · AI broker/);
+    assert.doesNotMatch(html, /Robinhood Chain · AI broker · typed only/);
+    assert.match(html, /Talk with Isabel/);
+    assert.match(html, /Type instead/);
     /* …and a card in "Meet the brokers" below. */
-    assert.match(html, /AI broker · Robinhood Chain/);
+    assert.match(html, /AI broker · Stock Tokens · Robinhood Chain/);
     assert.match(html, /Visit Isabel’s desk/);
-    assert.match(html, /Typed instructions only — no line\./);
+    assert.match(html, /Three tapes — issuer, chain, venue — read side by side, never blended\./);
+    assert.match(html, /“The Railroad Lady”/);
     assert.match(html, /A live estimate when you ask\./);
     assert.doesNotMatch(html, /A real price when you ask/);
     assert.match(html, /Coming soon — /);

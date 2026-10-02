@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -17,6 +18,8 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
+
+const IsabelCall = dynamic(() => import('./IsabelCall').then(m => m.IsabelCall), { ssr: false });
 
 function money(value: string | null | undefined): string {
   if (!value) return '—';
@@ -266,6 +269,9 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
       <div className={styles.grid}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
+        <aside className={styles.support} aria-label="The Robinhood Chain desk’s direct line">
+          <IsabelCall isabel={isabel} />
+        </aside>
         {viewed ? (
           <IsabelRecordView record={viewed} onClose={isabel.dismissRecord} onRemove={isabel.removeRecord} />
         ) : (

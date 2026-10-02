@@ -95,7 +95,7 @@ export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   /* Isabel paper filing is gated by NEXT_PUBLIC_ISABEL_PAPER_ENABLED, same
      release-flag shape as Jesse's. There is no live flag — her desk is
      paper-only by design (docs/ELIGIBILITY.md §5). */
-  isabel: { quote: true, paper: ISABEL_PAPER_ENABLED, voice: null, live: false },
+  isabel: { quote: true, paper: ISABEL_PAPER_ENABLED, voice: ISABEL_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
   arbitrum: { quote: false, paper: false, voice: null, live: false },
 };
 

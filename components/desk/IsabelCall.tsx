@@ -1,0 +1,528 @@
+/**
+ * Isabel's line — live ElevenLabs ConvAI session. Client tools execute
+ * against useIsabelDesk in the caller's browser. Paper only — her desk has
+ * no execution path, so the line can draft, quote, and file records, never
+ * move funds.
+ *
+ * Same reliability model as JesseCall: every terminal event remounts the
+ * ConversationProvider so a stale SDK lock cannot refuse the next ring.
+ */
+'use client';
+
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ConversationProvider, useConversation, useConversationClientTool } from '@elevenlabs/react';
+import { fetchJson } from '@/lib/api-client';
+import {
+  appendCaption,
+  boundedDiscussionContext,
+  lastCaption,
+  openingWithResume,
+  type DiscussionCaption,
+} from '@/lib/hetty/discussion';
+import {
+  appliedIsabelTicketLine,
+  isabelClosingLine,
+  isabelOpeningLine,
+} from '@/lib/robinhood/voice-tools';
+import { isabelToolHandlers } from '@/lib/robinhood/desk-tools';
+import type { IsabelDesk } from '@/lib/robinhood/useIsabelDesk';
+import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
+import { LINE_FOOT } from '@/lib/desk/ui-copy';
+import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { RingExample } from './RingExample';
+import styles from './WorkingDesk.module.css';
+
+type ToolParams = Record<string, unknown>;
+type ToolResult = Promise<string>;
+export type Caption = DiscussionCaption;
+
+type IsabelTools = {
+  choose_instrument: (p: ToolParams) => ToolResult;
+  set_instruction: (p: ToolParams) => ToolResult;
+  set_amount: (p: ToolParams) => ToolResult;
+  request_estimate: () => ToolResult;
+  compare_markets: () => ToolResult;
+  record_paper: () => ToolResult;
+  open_record: (p: ToolParams) => ToolResult;
+  back_to_instruction: () => ToolResult;
+  delete_record: (p: ToolParams) => ToolResult;
+  cancel_instruction: () => ToolResult;
+  describe_desk: () => ToolResult;
+  explain_concept: (p: ToolParams) => ToolResult;
+};
+
+const DIAL_TIMEOUT_MS = 20_000;
+
+function receiverClick(): void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 1400;
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.08, t + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.06);
+    osc.onended = () => { void ctx.close().catch(() => undefined); };
+  } catch { /* silence is fine */ }
+}
+
+function IsabelCallInner({
+  isabel,
+  take = null,
+  compactPlate = false,
+  captions,
+  onCaption,
+  onClearDiscussion,
+  onLiveChange,
+  onUserSpoken,
+  onAgentSpoken,
+  endNote,
+  callError,
+  onActivity,
+  onSessionEnded,
+  onSessionFailed,
+}: {
+  isabel: IsabelDesk;
+  take?: string | null;
+  compactPlate?: boolean;
+  captions: Caption[];
+  onCaption: (caption: Caption) => void;
+  onClearDiscussion: () => void;
+  onLiveChange?: (live: boolean) => void;
+  onUserSpoken?: (text: string) => void;
+  onAgentSpoken?: (text: string) => void;
+  endNote: string | null;
+  callError: string | null;
+  onActivity: () => void;
+  onSessionEnded: (note: string | null) => void;
+  onSessionFailed: (message: string) => void;
+}) {
+  const isabelRef = useRef(isabel);
+  useEffect(() => { isabelRef.current = isabel; });
+  const captionsRef = useRef(captions);
+  useEffect(() => { captionsRef.current = captions; });
+  const onCaptionRef = useRef(onCaption);
+  useEffect(() => { onCaptionRef.current = onCaption; });
+
+  const handlers = useMemo(() => isabelToolHandlers({ desk: () => isabelRef.current }), []);
+  useConversationClientTool<IsabelTools>('choose_instrument', p => handlers.choose_instrument(p));
+  useConversationClientTool<IsabelTools>('set_instruction', p => handlers.set_instruction(p));
+  useConversationClientTool<IsabelTools>('set_amount', p => handlers.set_amount(p));
+  useConversationClientTool<IsabelTools>('request_estimate', () => handlers.request_estimate({}));
+  useConversationClientTool<IsabelTools>('compare_markets', () => handlers.compare_markets({}));
+  useConversationClientTool<IsabelTools>('record_paper', () => handlers.record_paper({}));
+  useConversationClientTool<IsabelTools>('open_record', p => handlers.open_record(p));
+  useConversationClientTool<IsabelTools>('back_to_instruction', () => handlers.back_to_instruction({}));
+  useConversationClientTool<IsabelTools>('delete_record', p => handlers.delete_record(p));
+  useConversationClientTool<IsabelTools>('cancel_instruction', () => handlers.cancel_instruction({}));
+  useConversationClientTool<IsabelTools>('describe_desk', () => handlers.describe_desk({}));
+  useConversationClientTool<IsabelTools>('explain_concept', p => handlers.explain_concept(p));
+
+  const [dialing, setDialing] = useState(false);
+  const dialCancelledRef = useRef(false);
+  const ringGenRef = useRef(0);
+  const endedByUserRef = useRef(false);
+  const sessionActiveRef = useRef(false);
+  const terminalFiredRef = useRef(false);
+  const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fireEnded = useCallback((note: string | null) => {
+    if (terminalFiredRef.current) return;
+    terminalFiredRef.current = true;
+    sessionActiveRef.current = false;
+    onSessionEnded(note);
+  }, [onSessionEnded]);
+
+  const fireFailed = useCallback((message: string) => {
+    if (terminalFiredRef.current) return;
+    terminalFiredRef.current = true;
+    sessionActiveRef.current = false;
+    setDialing(false);
+    onSessionFailed(message);
+  }, [onSessionFailed]);
+
+  const conversation = useConversation({
+    onError: (message: unknown, context?: unknown) => {
+      const haystack = [
+        String((context as { name?: string } | null)?.name ?? ''),
+        String((context as { message?: string } | null)?.message ?? ''),
+        String((message as { message?: string } | null)?.message ?? message ?? ''),
+      ].join(' ');
+      const msg = /notallowed|permission|denied|getusermedia/i.test(haystack)
+        ? 'The microphone was not allowed. Grant mic access and ring again.'
+        : 'The line dropped. Ring again when you are ready.';
+      fireFailed(msg);
+    },
+    onMessage: (m: { message: string; role?: string; source?: string }) => {
+      const text = typeof m.message === 'string' ? m.message.trim() : '';
+      if (!text) return;
+      const user = m.role === 'user' || m.source === 'user';
+      onCaptionRef.current({ role: user ? 'user' : 'agent', text: text.slice(0, 600), at: Date.now() });
+      if (user) {
+        if (text.length <= 300) onUserSpoken?.(text);
+      } else if (text.length <= 600) {
+        onAgentSpoken?.(text);
+      }
+    },
+    onConnect: () => {
+      if (dialCancelledRef.current) {
+        hangUp();
+        return;
+      }
+      endedByUserRef.current = false;
+      onActivity();
+      setDialing(false);
+      receiverClick();
+    },
+    onDisconnect: () => {
+      onLiveChange?.(false);
+      setDialing(false);
+      const d = isabelRef.current;
+      const note = isabelClosingLine(d.state, d.foreground, endedByUserRef.current ? 'ended' : 'dropped');
+      endedByUserRef.current = false;
+      fireEnded(note);
+    },
+  });
+
+  const live = conversation.status === 'connected';
+  const sdkConnecting = conversation.status === 'connecting';
+  const ringing = dialing || sdkConnecting;
+
+  const statusRef = useRef(conversation.status);
+  useEffect(() => { statusRef.current = conversation.status; });
+  const hangUp = useCallback(() => {
+    if (statusRef.current !== 'connected' && statusRef.current !== 'connecting') return;
+    try { conversation.setMuted(true); } catch { /* */ }
+    try { conversation.endSession(); } catch { /* */ }
+  }, [conversation]);
+
+  useEffect(() => { onLiveChange?.(live); }, [live, onLiveChange]);
+
+  const hangUpRef = useRef(hangUp);
+  useEffect(() => { hangUpRef.current = hangUp; });
+  useEffect(() => () => {
+    dialCancelledRef.current = true;
+    ringGenRef.current += 1;
+    if (endTimerRef.current) clearTimeout(endTimerRef.current);
+    hangUpRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (!ringing || live) return;
+    const timer = setTimeout(() => {
+      hangUp();
+      fireFailed('The line did not answer. Check the microphone permission and ring again.');
+    }, DIAL_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [ringing, live, hangUp, fireFailed]);
+
+  useEffect(() => {
+    const endForLeave = () => {
+      if (!sessionActiveRef.current && statusRef.current === 'disconnected') return;
+      hangUp();
+      const d = isabelRef.current;
+      fireEnded(isabelClosingLine(d.state, d.foreground, 'ended'));
+    };
+    const onHidden = () => {
+      hangUp();
+      if (!sessionActiveRef.current && statusRef.current === 'disconnected') return;
+      sessionActiveRef.current = false;
+      try { conversation.setMuted(true); } catch { /* */ }
+      onSessionEnded(null);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onHidden(); };
+    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) endForLeave(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', endForLeave);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', endForLeave);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [hangUp, fireEnded, conversation, onSessionEnded]);
+
+  const cancelRing = useCallback(() => {
+    dialCancelledRef.current = true;
+    ringGenRef.current += 1;
+    setDialing(false);
+    hangUp();
+    fireEnded(null);
+  }, [hangUp, fireEnded]);
+
+  const endCall = useCallback(() => {
+    endedByUserRef.current = true;
+    dialCancelledRef.current = true;
+    ringGenRef.current += 1;
+    setDialing(false);
+    hangUp();
+    endTimerRef.current = setTimeout(() => {
+      const d = isabelRef.current;
+      fireEnded(isabelClosingLine(d.state, d.foreground, 'ended'));
+    }, 2000);
+  }, [hangUp, fireEnded]);
+
+  const ring = async (mode: 'fresh' | 'resume' = 'fresh') => {
+    if (dialing || sdkConnecting || live) return;
+    dialCancelledRef.current = false;
+    endedByUserRef.current = false;
+    sessionActiveRef.current = true;
+    const gen = ++ringGenRef.current;
+    setDialing(true);
+    onActivity();
+    receiverClick();
+    const result = await fetchJson<{ signedUrl?: string }>('/api/desk/isabel/session', { method: 'POST', cache: 'no-store' });
+    if (dialCancelledRef.current || ringGenRef.current !== gen) return;
+    if (!result.ok) {
+      const e = result.error;
+      const msg = e.retryAfterSeconds
+        ? `The line is busy. Try again in about ${Math.max(1, Math.ceil(e.retryAfterSeconds / 5) * 5)} seconds.`
+        : e.code === 'not_connected'
+          ? 'Isabel’s line is not connected on this deployment.'
+          : e.message;
+      fireFailed(msg);
+      return;
+    }
+    if (!result.data.signedUrl) {
+      fireFailed('Isabel’s line is unavailable. Please try again shortly.');
+      return;
+    }
+    const d = isabelRef.current;
+    const ticketOpening = isabelOpeningLine(d.state, d.foreground);
+    const resume = mode === 'resume' && captionsRef.current.length > 0;
+    const prior = resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Isabel') : null;
+    const opening = resume ? openingWithResume(ticketOpening, captionsRef.current) : ticketOpening;
+    try {
+      await (conversation.startSession as unknown as (opts: Record<string, unknown>) => unknown)({
+        signedUrl: result.data.signedUrl,
+        overrides: { agent: { firstMessage: opening } },
+        dynamicVariables: {
+          desk_foreground: d.foreground.kind,
+          desk_instrument: d.state.draft.instrumentId ?? '',
+          desk_stage: d.state.stage,
+          desk_mode: 'paper',
+          prior_discussion: prior ?? '',
+          discussion_resume: resume ? 'yes' : 'no',
+        },
+      });
+    } catch (err) {
+      if (dialCancelledRef.current || ringGenRef.current !== gen) return;
+      const raw = err instanceof Error ? `${err.name} ${err.message}` : String(err ?? '');
+      const mic = /notallowed|permission|denied|getusermedia/i.test(raw);
+      fireFailed(mic
+        ? 'The microphone was not allowed. Grant mic access and ring again.'
+        : 'The line could not be opened. Check the microphone permission and ring again.');
+    }
+  };
+
+  const ringRef = useRef(ring);
+  ringRef.current = ring;
+  useEffect(() => {
+    const onSignal = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== 'toggle') return;
+      if (live) endCall();
+      else if (ringing) cancelRing();
+      else void ringRef.current('fresh');
+    };
+    window.addEventListener(LINE_SIGNAL_EVENT, onSignal);
+    return () => window.removeEventListener(LINE_SIGNAL_EVENT, onSignal);
+  }, [live, ringing, endCall, cancelRing]);
+
+  /* Ring-on-arrival: the foyer's "Talk with Isabel" leaves a one-shot note;
+     the line lifts on mount. */
+  useEffect(() => {
+    if (consumeRingOnArrival('isabel')) void ringRef.current('fresh');
+  }, []);
+
+  const estimating = isabel.inFlight || isabel.foreground.kind === 'pending';
+  const inReview = isabel.foreground.kind === 'quotation';
+  const speaking = live && conversation.isSpeaking;
+  const statusKey = ringing ? 'connecting' : !live ? 'idle' : estimating ? 'estimating' : speaking ? 'speaking' : inReview ? 'review' : conversation.isMuted ? 'muted' : 'on';
+  const statusLabel = ringing
+    ? 'Connecting'
+    : !live
+      ? 'Direct line'
+      : estimating
+        ? 'Requesting estimate'
+        : speaking
+          ? 'Isabel speaking'
+          : inReview
+            ? 'For your review'
+            : conversation.isMuted
+              ? 'Microphone muted'
+              : 'Microphone on';
+
+  const lastUser = lastCaption(captions, 'user');
+  const lastAgent = lastCaption(captions, 'agent');
+  const applied = live || captions.length > 0 ? appliedIsabelTicketLine(isabel.state, isabel.foreground) : null;
+
+  const callNote = isabel.foreground.kind === 'missing'
+    ? 'That paper record is no longer in this browser. Return to the instruction.'
+    : isabel.foreground.kind === 'archive'
+      ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
+      : live && inReview
+        ? 'The quotation is on the slip. Take your time — Isabel will hold the line.'
+        : null;
+
+  return (
+    <section id="isabel-line" className={styles.call} aria-labelledby="isabel-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
+      <div className={styles.brokerPlate}>
+        <h2 id="isabel-call-title" className={compactPlate ? styles.srOnly : undefined}>Isabel Benham <small>The Railroad Lady · AI broker on Robinhood Chain</small></h2>
+        <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
+          <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
+          {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
+        </span>
+      </div>
+      {!live && !ringing && <BrokerLinePlate deskId="isabel" take={take} compact={compactPlate} />}
+      {callNote && <p className={styles.callNote}>{callNote}</p>}
+      <div className={styles.callActions}>
+        {!live && !ringing && captions.length > 0 && (
+          <>
+            <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>
+              Resume with Isabel
+            </button>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); }}>
+              Start fresh
+            </button>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); void ring('fresh'); }}>
+              Ring fresh
+            </button>
+          </>
+        )}
+        {!live && !ringing && captions.length === 0 && (
+          <>
+            <button
+              type="button"
+              className={styles.callButton}
+              data-cue="idle"
+              aria-label={compactPlate ? 'Ring Isabel' : undefined}
+              onClick={() => void ring('fresh')}
+            >
+              <span className={styles.ringLamp} aria-hidden="true" />
+              {compactPlate ? 'Ring' : 'Ring Isabel'}
+            </button>
+            {compactPlate && <RingExample deskId="isabel" />}
+          </>
+        )}
+        {ringing && !live && (
+          <>
+            <p className={styles.callStatus} role="status">
+              <span className={styles.callDot} data-speaking="false" aria-hidden="true" />
+              Connecting… the ticket stays usable.
+            </p>
+            <button type="button" className={styles.callButtonSecondary} onClick={cancelRing}>
+              Cancel
+            </button>
+          </>
+        )}
+        {live && (
+          <>
+            <p className={styles.callStatus} role="status" aria-live="polite">
+              <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
+              {statusLabel}
+            </p>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => conversation.setMuted(!conversation.isMuted)} aria-pressed={conversation.isMuted}>
+              {conversation.isMuted ? 'Microphone off' : 'Microphone on'}
+            </button>
+            <button type="button" className={styles.callButtonSecondary} onClick={endCall}>
+              End call
+            </button>
+          </>
+        )}
+      </div>
+      {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
+        <div className={styles.callCaptions} aria-live="polite">
+          <LineCaptions captions={captions} brokerName="Isabel" applied={applied} />
+          {captions.length > 4 && (
+            <details className={styles.captionHistory}>
+              <summary>Conversation ({captions.length})</summary>
+              <ol>
+                {captions.map((c, i) => (
+                  <li key={`${c.at}-${i}`} data-voice={c.role}>
+                    <span>{c.role === 'user' ? 'You' : 'Isabel'}.</span> {c.text}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+        </div>
+      )}
+      {endNote && !live && !ringing && <p className={styles.callFoot} role="status">{endNote}</p>}
+      {callError && <p className={styles.callError} role="alert">{callError}</p>}
+      {!live && !ringing && !endNote && !callError && (
+        <p className={styles.callFoot}>{LINE_FOOT} Press <kbd>H</kbd> to lift the line.</p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Outer shell owns captions / notes so remounting ConversationProvider never
+ * wipes the discussion or closing line.
+ */
+export const IsabelCall = memo(function IsabelCall({
+  isabel,
+  take = null,
+  compactPlate = false,
+  onLiveChange,
+  onUserSpoken,
+  onAgentSpoken,
+}: {
+  isabel: IsabelDesk;
+  take?: string | null;
+  compactPlate?: boolean;
+  onLiveChange?: (live: boolean) => void;
+  onUserSpoken?: (text: string) => void;
+  onAgentSpoken?: (text: string) => void;
+}) {
+  const [sessionKey, setSessionKey] = useState(0);
+  const [captions, setCaptions] = useState<Caption[]>([]);
+  const [endNote, setEndNote] = useState<string | null>(null);
+  const [callError, setCallError] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+
+  const handleLiveChange = useCallback((next: boolean) => {
+    setLive(next);
+    onLiveChange?.(next);
+  }, [onLiveChange]);
+
+  const remount = useCallback(() => {
+    setSessionKey(k => k + 1);
+  }, []);
+
+  return (
+    <ConversationProvider key={sessionKey}>
+      <IsabelCallInner
+        isabel={isabel}
+        take={take}
+        compactPlate={compactPlate}
+        captions={captions}
+        onCaption={(c) => setCaptions(prev => appendCaption(prev, c))}
+        onClearDiscussion={() => { setCaptions([]); setEndNote(null); setCallError(null); }}
+        onLiveChange={handleLiveChange}
+        onUserSpoken={onUserSpoken}
+        onAgentSpoken={onAgentSpoken}
+        endNote={endNote}
+        callError={callError}
+        onActivity={() => { setCallError(null); if (!live) setEndNote(null); }}
+        onSessionEnded={(note) => {
+          handleLiveChange(false);
+          if (note) setEndNote(note);
+          remount();
+        }}
+        onSessionFailed={(message) => {
+          handleLiveChange(false);
+          setCallError(message);
+          remount();
+        }}
+      />
+    </ConversationProvider>
+  );
+});

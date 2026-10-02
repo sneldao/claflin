@@ -16,4 +16,9 @@ export const BROKER_VOICE: Partial<Record<HouseDeskId, {
     rail: 'Backed xStocks · Solana',
     lens: 'Reads the tape first — price action and timing.',
   },
+  isabel: {
+    epithet: 'The Railroad Lady',
+    rail: 'Stock Tokens · Robinhood Chain',
+    lens: 'Three tapes — issuer, chain, venue — read side by side, never blended.',
+  },
 };
