@@ -7,6 +7,7 @@ import { approveInputForQuote, createBasePublicClient, estimateSwapGas, readToke
 import { saveLiveApproval, saveLiveSubmission, updateLiveOutcome } from './live-journal';
 import { mintFirstLiveSlip } from './desk-slips';
 import { AERODROME_SWAP_ROUTER, BASE_USDC } from '../base-chain';
+import { COINBASE_STOCKS_SCOPE, loadAttestation } from '../desk/eligibility';
 import type { QuoteEstimate } from './domain';
 
 export type DeskExecutionState =
@@ -25,6 +26,7 @@ export type DeskExecutionFailure =
   | 'rejected'
   | 'gas_unavailable'
   | 'rpc_failed'
+  | 'eligibility_blocked'
   | 'submit_failed';
 
 /** Rejected signatures, expired estimates, reverted approvals and RPC drops
@@ -49,6 +51,7 @@ const FAILURE_COPY: Record<DeskExecutionFailure, string> = {
   rejected: 'The wallet request was declined. Nothing was submitted.',
   gas_unavailable: 'The network cost could not be estimated. Refresh the estimate and try again.',
   rpc_failed: 'The Base connection dropped before anything was submitted. Refresh the estimate and try again.',
+  eligibility_blocked: 'This wallet does not satisfy the issuer’s eligibility terms for these instruments. Nothing was submitted.',
   submit_failed: 'The transaction could not be submitted. Refresh the estimate and try again.',
 };
 
@@ -65,6 +68,31 @@ function failureOutcome(e: unknown): LiveOutcome {
 function journalStorage(): Storage | null {
   if (typeof window === 'undefined') return null;
   try { return window.localStorage; } catch { return null; }
+}
+
+/* Hetty's instruments are issuer-restricted, so the ticket UI gate is backed
+   by a second gate inside the hook itself — a bypassed or stale render still
+   cannot reach the wallet. Two honest signals, both fail-closed: the scoped
+   self-confirmation must exist in browser storage, and the wallet must carry
+   Coinbase's Verified Account + eligible-country attestations. */
+async function issuerGateBlock(wallet: string): Promise<string | null> {
+  const storage = journalStorage();
+  if (!storage || !loadAttestation(storage, COINBASE_STOCKS_SCOPE.id)) {
+    return 'Confirm eligibility under the issuer’s terms before trading live. Nothing was submitted.';
+  }
+  try {
+    const res = await fetch(`/api/eligibility?address=${encodeURIComponent(wallet)}`);
+    if (!res.ok) throw new Error('eligibility check failed');
+    const body = await res.json() as { eligible?: boolean };
+    if (!body?.eligible) return FAILURE_COPY.eligibility_blocked;
+  } catch {
+    return 'The eligibility check could not be read — live settle stays closed until it can. Nothing was submitted.';
+  }
+  return null;
+}
+
+function gateOutcome(message: string): LiveOutcome {
+  return { status: 'failed', hash: '0x', message, reason: 'eligibility_blocked' };
 }
 
 export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskId = OPEN_DESK_ID, onJournalChange?: () => void) {
@@ -110,6 +138,10 @@ export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskI
    *  the wallet so the execute step lights up with a gas estimate. */
   const approve = useCallback(async (): Promise<boolean> => {
     if (!quote || !auth.walletAddress || !auth.authenticated || !inputToken) return false;
+    if (deskId === 'hetty') {
+      const block = await issuerGateBlock(auth.walletAddress);
+      if (block) { setState({ stage: 'done', outcome: gateOutcome(block) }); return false; }
+    }
     setState({ stage: 'approving' });
     try {
       const hash = await approveInputForQuote(
@@ -147,6 +179,10 @@ export function useDeskExecution(quote: QuoteEstimate | null, deskId: HouseDeskI
     const boundSend = auth.sendTransaction;
     if (!boundQuote || !boundWallet || !boundAuthenticated || !boundToken) {
       return { status: 'failed', hash: '0x', message: FAILURE_COPY.disconnected, reason: 'disconnected' };
+    }
+    if (deskId === 'hetty') {
+      const block = await issuerGateBlock(boundWallet);
+      if (block) { setState({ stage: 'done', outcome: gateOutcome(block) }); return gateOutcome(block); }
     }
     const wallet = boundWallet as `0x${string}`;
     const expectedWallet = wallet.toLowerCase();

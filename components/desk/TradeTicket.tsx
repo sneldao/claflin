@@ -10,6 +10,8 @@ import type { TradeIntent, QuoteEstimate } from '@/lib/trading/domain';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useDeskExecution } from '@/lib/trading/useDeskExecution';
+import { useEligibility } from '@/lib/trading/useEligibility';
+import { attestationCopy, COINBASE_STOCKS_SCOPE, useEligibilityAttestation } from '@/lib/desk/eligibility';
 import { BASE_CHAIN_ID, getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime, isUnfinishedWork } from '@/lib/trading/desk-documents';
 import { focusLedgerTitle, liveEvidence, paperOutcomeCopy } from '@/lib/trading/outcomes';
@@ -176,9 +178,34 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
   onApproved?: () => void;
 }) {
   const auth = useDeskAuth();
+  const eligibility = useEligibility();
+  const attestation = useEligibilityAttestation(COINBASE_STOCKS_SCOPE);
   const { state, approve, execute, reset, needsApproval, insufficientBalance } = execution;
   const [slippageBps, setSlippageBps] = useState<number>(50);
   const busy = state.stage === 'checking' || state.stage === 'approving' || state.stage === 'swapping' || state.stage === 'confirming';
+
+  /* Fail closed: only a wallet the onchain attestations mark eligible may
+     move funds, and only after the client confirms the issuer's terms. An
+     unreadable check, a missing attestation or a restricted country all keep
+     the buttons cold — the client's own declaration cannot substitute for
+     the issuer's verification signal. */
+  const verified = eligibility.stage === 'done' && eligibility.eligible;
+  const gateReady = attestation.attested && verified;
+  const eligibilityDetail = () => {
+    if (eligibility.stage !== 'done') {
+      if (eligibility.stage === 'checking') return 'Reading the wallet’s onchain attestations…';
+      return 'Checks once the wallet is connected.';
+    }
+    if (verified) return 'Verified Account and an eligible country attest this wallet.';
+    switch (eligibility.reason) {
+      case 'restricted_jurisdiction': return 'This wallet’s verified country is excluded under the issuer’s terms — live settle stays closed.';
+      case 'no_verified_account_attestation': return 'No Verified Account attestation on this wallet — live settle stays closed.';
+      case 'no_country_attestation': return 'No Verified Country attestation on this wallet — live settle stays closed.';
+      case 'country_attestation_undecodable': return 'The country attestation could not be read — live settle stays closed.';
+      case 'check_unavailable': return 'The onchain check could not be read — live settle stays closed until it can.';
+      default: return 'This wallet is not verified for these instruments — live settle stays closed.';
+    }
+  };
 
   if (!auth.enabled) {
     return <p className={styles.slipNotice} role="status">Live execution requires an account.</p>;
@@ -219,8 +246,8 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
      estimate, then the swap. Only the swap itself needs a live estimate. */
   const wrongChain = auth.walletChainId != null && auth.walletChainId !== BASE_CHAIN_ID;
   const showApproveStep = needsApproval || state.stage === 'approving';
-  const approveDisabled = state.stage !== 'ready' || !needsApproval || insufficientBalance || wrongChain;
-  const executeDisabled = busy || state.stage !== 'ready' || needsApproval || insufficientBalance || expired || expiringSoon || wrongChain;
+  const approveDisabled = state.stage !== 'ready' || !needsApproval || insufficientBalance || wrongChain || !gateReady;
+  const executeDisabled = busy || state.stage !== 'ready' || needsApproval || insufficientBalance || expired || expiringSoon || wrongChain || !gateReady;
 
   return (
     <div className={styles.liveBox} data-live="true">
@@ -231,6 +258,24 @@ function LiveExecution({ quote, execution, expired, expiringSoon, onApproved }: 
           <button type="button" className={styles.secondary} onClick={() => void auth.ensureBaseChain()}>Switch wallet to Base</button>
         </>
       )}
+      <ol className={styles.readiness} aria-label="What this order needs">
+        <li data-state={attestation.attested ? 'ok' : 'needed'}>
+          <span>Eligible under the issuer’s terms</span>
+          {!attestation.attested && (
+            <span className={styles.readinessDetail}>
+              {attestationCopy(COINBASE_STOCKS_SCOPE)}{' '}
+              <a href={COINBASE_STOCKS_SCOPE.issuerTermsUrl} target="_blank" rel="noreferrer">Product guide</a>
+              <button type="button" className={styles.secondary} onClick={attestation.confirm}>
+                I confirm I’m eligible
+              </button>
+            </span>
+          )}
+        </li>
+        <li data-state={verified ? 'ok' : eligibility.stage === 'checking' ? 'unknown' : 'needed'}>
+          <span>Coinbase verification</span>
+          <span className={styles.readinessDetail}>{eligibilityDetail()}</span>
+        </li>
+      </ol>
       <div className={styles.liveRow}>
         <span className={styles.liveRowLabel}>Slippage tolerance</span>
         <div className={styles.amountChips} role="group" aria-label="Slippage tolerance">

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseBalanceResult, parseTokenAccountsResult, readWalletReadiness } from '../lib/solana/readiness-rpc';
 import { GET as readinessGet } from '../app/api/desk/jesse/readiness/route';
 import { marketProfile, CLAFLIN_MARKET, MARKET_PROFILES } from '../lib/desk/market';
-import { loadAttestation, saveAttestation, attestationCopy } from '../lib/desk/eligibility';
+import { loadAttestation, saveAttestation, attestationCopy, COINBASE_STOCKS_SCOPE } from '../lib/desk/eligibility';
 import { SOLANA_USDC_MINT, SOLANA_INSTRUMENTS } from '../lib/solana/catalog';
 
 const WALLET = SOLANA_USDC_MINT; // any valid 32-byte base58 key
@@ -189,5 +189,29 @@ describe('eligibility attestation', () => {
     assert.match(copy, /US persons/);
     assert.match(copy, /UK retail/);
     assert.match(MARKET_PROFILES.ph.issuerTermsUrl, /assets\.backed\.fi/);
+  });
+
+  it('scopes confirmations — one issuer’s attest never stands in for another’s', () => {
+    const storage = memStorage();
+    saveAttestation(storage, 'ph', 123);
+    saveAttestation(storage, COINBASE_STOCKS_SCOPE.id, 456);
+    assert.equal(loadAttestation(storage, 'ph')?.attestedAt, 123);
+    assert.equal(loadAttestation(storage, COINBASE_STOCKS_SCOPE.id)?.attestedAt, 456);
+    assert.equal(loadAttestation(storage, 'ng'), null);
+  });
+
+  it('still honours a legacy unscoped record for the market it names', () => {
+    const storage = memStorage();
+    storage.setItem('claflin.eligibility.v1', JSON.stringify({ market: 'ph', attestedAt: 99 }));
+    assert.equal(loadAttestation(storage, 'ph')?.attestedAt, 99);
+    assert.equal(loadAttestation(storage, COINBASE_STOCKS_SCOPE.id), null);
+  });
+
+  it('writes Coinbase copy for the Base desk scope', () => {
+    const copy = attestationCopy(COINBASE_STOCKS_SCOPE);
+    assert.match(copy, /Coinbase/);
+    assert.match(copy, /US persons/);
+    assert.doesNotMatch(copy, /Backed Assets/, 'never borrows another issuer’s terms');
+    assert.match(COINBASE_STOCKS_SCOPE.issuerTermsUrl, /docs\.base\.org/);
   });
 });

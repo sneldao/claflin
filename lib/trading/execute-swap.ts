@@ -26,7 +26,7 @@ export type LiveOutcome = {
   hash: `0x${string}`;
   message: string;
   /** Machine-readable failure reason (distinct wallet/network/RPC causes). */
-  reason?: 'disconnected' | 'wrong_network' | 'insufficient_funds' | 'rejected' | 'gas_unavailable' | 'rpc_failed' | 'submit_failed';
+  reason?: 'disconnected' | 'wrong_network' | 'insufficient_funds' | 'rejected' | 'gas_unavailable' | 'rpc_failed' | 'eligibility_blocked' | 'submit_failed';
   gasUsedWei?: string;
   effectiveGasPriceWei?: string;
   feeEth?: string;

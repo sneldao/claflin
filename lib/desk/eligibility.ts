@@ -10,22 +10,48 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { MarketProfile } from './market';
 
 const ATTEST_KEY = 'claflin.eligibility.v1';
+
+function keyFor(scopeId: string): string {
+  return `${ATTEST_KEY}.${scopeId}`;
+}
 
 export interface EligibilityAttestation {
   market: string;
   attestedAt: number;
 }
 
+/**
+ * A named thing a visitor confirms eligibility under — a market profile id
+ * for the Solana desk, a mandate id for desks whose issuer terms differ.
+ * One scope's confirmation never stands in for another's.
+ */
+export interface EligibilityScope {
+  id: string;
+  issuerTermsUrl: string;
+}
+
+/** The Coinbase/B20 scope for Hetty's desk — a different issuer, a different key. */
+export const COINBASE_STOCKS_SCOPE: EligibilityScope = {
+  id: 'coinbase-tokenized-stocks',
+  /* The Base tokenized-stocks guide carries the restriction language the
+     issuer publishes; there is no separate issuer terms page to cite. */
+  issuerTermsUrl: 'https://docs.base.org/base-chain/asset-issuance/tokenized-stocks-on-base',
+};
+
 export function loadAttestation(storage: Pick<Storage, 'getItem'> | null, marketId: string): EligibilityAttestation | null {
   if (!storage) return null;
   try {
-    const raw = storage.getItem(ATTEST_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as EligibilityAttestation;
-    return parsed.market === marketId && typeof parsed.attestedAt === 'number' ? parsed : null;
+    /* Scoped key first; the legacy unscoped key still reads if its record
+       names this scope — a confirm written before scoping stays honoured. */
+    for (const key of [keyFor(marketId), ATTEST_KEY]) {
+      const raw = storage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as EligibilityAttestation;
+      if (parsed.market === marketId && typeof parsed.attestedAt === 'number') return parsed;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -34,7 +60,7 @@ export function loadAttestation(storage: Pick<Storage, 'getItem'> | null, market
 export function saveAttestation(storage: Pick<Storage, 'setItem'> | null, marketId: string, now: number): EligibilityAttestation | null {
   const record: EligibilityAttestation = { market: marketId, attestedAt: now };
   try {
-    storage?.setItem(ATTEST_KEY, JSON.stringify(record));
+    storage?.setItem(keyFor(marketId), JSON.stringify(record));
     return record;
   } catch {
     return null;
@@ -42,7 +68,10 @@ export function saveAttestation(storage: Pick<Storage, 'setItem'> | null, market
 }
 
 /** Honest gate copy — names the issuer and the exclusions, not a legal opinion. */
-export function attestationCopy(market: MarketProfile): string {
+export function attestationCopy(scope: { id: string }): string {
+  if (scope.id === COINBASE_STOCKS_SCOPE.id) {
+    return `Coinbase tokenized stocks are B20 tokens issued by Coinbase on Base — offered to eligible persons in permitted jurisdictions only, and not to US persons. Confirm you are eligible under the issuer's terms before real funds move.`;
+  }
   return `xStocks are tracker certificates issued by Backed Assets. They are not offered to US persons, not available to UK retail clients, and are excluded in sanctioned jurisdictions. Confirm you are eligible under the issuer's terms before real funds move.`;
 }
 
@@ -60,7 +89,7 @@ function emit() {
 }
 function subscribe(listener: () => void) {
   listeners.push(listener);
-  const onStorage = (e: StorageEvent) => { if (e.key === ATTEST_KEY) listener(); };
+  const onStorage = (e: StorageEvent) => { if (e.key?.startsWith(ATTEST_KEY)) listener(); };
   window.addEventListener('storage', onStorage);
   return () => {
     listeners = listeners.filter(l => l !== listener);
@@ -69,28 +98,28 @@ function subscribe(listener: () => void) {
 }
 
 /**
- * Attestation state for the active market. `attested` means the client
+ * Attestation state for the given scope. `attested` means the client
  * confirmed once on this browser; `confirm()` writes the record and returns
  * false if storage refused.
  */
-export function useEligibilityAttestation(market: MarketProfile): { attested: boolean; attestedAt: number | null; confirm: () => boolean } {
+export function useEligibilityAttestation(scope: { id: string }): { attested: boolean; attestedAt: number | null; confirm: () => boolean } {
   const storage = storageAvailable();
   const raw = useSyncExternalStore(
     subscribe,
-    () => storage?.getItem(ATTEST_KEY) ?? null,
+    () => storage?.getItem(keyFor(scope.id)) ?? storage?.getItem(ATTEST_KEY) ?? null,
     () => null,
   );
   let record: EligibilityAttestation | null = null;
   try {
     const parsed = raw ? (JSON.parse(raw) as EligibilityAttestation) : null;
-    record = parsed && parsed.market === market.id && typeof parsed.attestedAt === 'number' ? parsed : null;
+    record = parsed && parsed.market === scope.id && typeof parsed.attestedAt === 'number' ? parsed : null;
   } catch {
     record = null;
   }
   const confirm = useCallback(() => {
-    const saved = saveAttestation(storageAvailable(), market.id, Date.now());
+    const saved = saveAttestation(storageAvailable(), scope.id, Date.now());
     if (saved) emit();
     return saved !== null;
-  }, [market.id]);
+  }, [scope.id]);
   return { attested: record !== null, attestedAt: record?.attestedAt ?? null, confirm };
 }
