@@ -117,6 +117,66 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     };
   }, [sceneApi]);
 
+  /* Focus pull — the room nearest the reading plane stays lit while its
+     neighbors fall into lamp-low shadow via a --room-dim veil. DOM-only so
+     it works in still mode; skipped under reduced motion. */
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rooms = Array.from(main.children) as HTMLElement[];
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const focal = window.innerHeight * 0.5;
+      const band = window.innerHeight * 0.3;
+      for (const room of rooms) {
+        const box = room.getBoundingClientRect();
+        const center = box.top + box.height / 2;
+        const dist = Math.max(0, Math.abs(center - focal) - band) / window.innerHeight;
+        room.style.setProperty('--room-dim', Math.min(0.42, dist * 1.4).toFixed(3));
+      }
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    measure();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+      for (const room of rooms) room.style.removeProperty('--room-dim');
+    };
+  }, []);
+
+  /* Inertial scroll — the page glides and settles at room boundaries
+     (proximity snap only, so a gesture far from a boundary is never
+     claimed). Reduced motion keeps the browser's native scroll. */
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let lenis: { destroy(): void } | null = null;
+    let snap: { destroy(): void } | null = null;
+    let cancelled = false;
+    void Promise.all([import('lenis'), import('lenis/snap')])
+      .then(([lenisModule, snapModule]) => {
+        if (cancelled || !mainRef.current) return;
+        const instance = new lenisModule.default({ autoRaf: true, duration: 1.1, smoothWheel: true });
+        lenis = instance;
+        const snapInstance = new snapModule.default(instance, {
+          type: 'proximity',
+          distanceThreshold: '65%',
+          debounce: 120,
+        });
+        snapInstance.addElements(Array.from(mainRef.current.children) as HTMLElement[]);
+        snap = snapInstance;
+      })
+      .catch(() => { /* native scroll stands if the module fails to load */ });
+    return () => {
+      cancelled = true;
+      snap?.destroy();
+      lenis?.destroy();
+    };
+  }, []);
+
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
 
   const carried = (id: HouseDeskId) => {
@@ -335,6 +395,40 @@ function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: M
     return () => clearTimeout(timer);
   }, [ticks]);
 
+  /* The tape reads the room's pace — scroll velocity feeds the drift and a
+     slight skew, like a ticker running hot. Pauses under pointer or focus,
+     and never runs under reduced motion. */
+  const windowRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const track = trackRef.current;
+    const win = windowRef.current;
+    if (!track || !win) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let x = 0;
+    let velocity = 0;
+    let lastY = window.scrollY;
+    let last = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      const y = window.scrollY;
+      velocity += (dt > 0 ? (y - lastY) / dt - velocity : -velocity) * 0.12;
+      lastY = y;
+      const half = track.scrollWidth / 2;
+      if (!win.matches(':hover') && !win.matches(':focus-within') && half > 0) {
+        x -= Math.max(-26, 55 + Math.min(velocity * 0.09, 150)) * dt;
+        if (x <= -half) x += half;
+      }
+      const skew = Math.max(-4, Math.min(4, velocity * 0.003));
+      track.style.transform = `translateX(${x.toFixed(1)}px) skewX(${skew.toFixed(2)}deg)`;
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <section className={foyerStyles.wire} aria-label="Live reference marks">
       <span className={foyerStyles.wireLabel}>LIVE REFERENCE MARKS</span>
@@ -343,8 +437,8 @@ function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: M
           {failed ? 'Tape unavailable — estimates unaffected.' : 'Reading the tape…'}
         </p>
       ) : (
-        <div className={foyerStyles.wireWindow}>
-          <div className={foyerStyles.wireTrack}>
+        <div ref={windowRef} className={foyerStyles.wireWindow}>
+          <div ref={trackRef} className={foyerStyles.wireTrack}>
             {[0, 1].map(copy => (
               <div key={copy} className={foyerStyles.wireCopy} aria-hidden={copy === 1}>
                 {wireMarks.map(wire => (

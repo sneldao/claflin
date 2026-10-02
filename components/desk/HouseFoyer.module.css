@@ -128,6 +128,23 @@
   outline: none;
 }
 
+/* Focus pull — JS sets --room-dim per room; the veil lowers the lamps on
+   whatever lies outside the reading plane. Clicks and text pass through. */
+.main > * {
+  position: relative;
+}
+
+.main > *::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: #0a0f16;
+  opacity: var(--room-dim, 0);
+  pointer-events: none;
+  transition: opacity 140ms linear;
+}
+
 .hero {
   position: relative;
   display: grid;
@@ -425,12 +442,54 @@
 /* ————— The turret: one line into the house, a lamp per desk ————— */
 
 .turret {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 12px;
   padding: clamp(48px, 9vh, 120px) 0 24px;
   min-width: 0;
   max-width: 640px;
+}
+
+/* The cast — arcs from the spoken line to every place the ask can land. */
+.casts {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cast {
+  fill: none;
+  stroke: rgba(227, 207, 158, 0.8);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 5px rgba(227, 207, 158, 0.45));
+}
+
+.cast[data-kind='launch'] {
+  stroke: rgba(216, 164, 94, 0.9);
+  stroke-width: 2;
+}
+
+.castTip {
+  fill: rgba(227, 207, 158, 0.9);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cast {
+    animation: castDraw 0.55s cubic-bezier(0.3, 0.6, 0.3, 1) backwards;
+  }
+}
+
+@keyframes castDraw {
+  from { stroke-dashoffset: 100; opacity: 0.2; }
+  to { stroke-dashoffset: 0; opacity: 1; }
 }
 
 .talkBar {
@@ -859,6 +918,8 @@
 .wireTrack {
   display: flex;
   width: max-content;
+  /* The tape is driven from scroll velocity in JS — no fixed animation. */
+  will-change: transform;
 }
 
 .wireCopy {
@@ -1677,7 +1738,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 20;
+    /* Above the focus-pull veil (30) — the pinned line stays lit. */
+    z-index: 40;
     display: grid;
     gap: 8px;
     padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
@@ -1796,10 +1858,6 @@
   50% { box-shadow: 0 0 10px rgba(197, 172, 120, 0.95); }
 }
 
-@keyframes wireRun {
-  to { transform: translateX(-50%); }
-}
-
 @keyframes tickUp {
   0% { color: #a9c98a; }
   100% { color: var(--ink); }
@@ -1813,15 +1871,6 @@
 @media (prefers-reduced-motion: no-preference) {
   .kicker[data-exchange='closed'] .clockLamp {
     animation: lampPulse 3.2s ease-in-out infinite;
-  }
-
-  .wireTrack {
-    animation: wireRun 46s linear infinite;
-  }
-
-  .wireWindow:hover .wireTrack,
-  .wireWindow:focus-within .wireTrack {
-    animation-play-state: paused;
   }
 
   .wirePrice[data-tick='up'] {

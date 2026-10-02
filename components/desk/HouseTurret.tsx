@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useDictation } from '@/lib/dictation/useDictation';
 import { DESK_CAPABILITIES, HOUSE_DESKS, type HouseDesk, type HouseDeskId } from '@/lib/house';
 import { offeringForId } from '@/lib/desk/offerings';
@@ -86,6 +86,51 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
   const reading = readInstruction(instruction);
   const deskIds = lineDesks.map(desk => desk.id);
   const reply = turretReply(reading, deskIds);
+
+  /* The cast: a resolved instruction projects an arc from the line it was
+     spoken on to wherever it can land — the "continue" buttons on the book
+     for tape asks, the lit lamp on the launch slip for launch asks. The
+     turret never picks; the arcs show every landing at once. */
+  const turretRef = useRef<HTMLDivElement>(null);
+  const [casts, setCasts] = useState<{ key: string; d: string; kind: string }[]>([]);
+  const [castBox, setCastBox] = useState({ w: 0, h: 0 });
+  const castKey = reading.kind === 'matched'
+    ? `m:${reading.matches.map(m => `${m.offeringId}>${m.deskIds.join('+')}`).join('|')}`
+    : reading.kind === 'launch' ? `l:${deskIds.join(',')}` : '';
+  useLayoutEffect(() => {
+    const host = turretRef.current;
+    if (!host) return;
+    const measure = () => {
+      const hostBox = host.getBoundingClientRect();
+      setCastBox({ w: hostBox.width, h: hostBox.height });
+      const origin = host.querySelector<HTMLElement>('[data-cast-origin]')?.getBoundingClientRect();
+      if (!origin) { setCasts([]); return; }
+      const x0 = origin.left + origin.width / 2 - hostBox.left;
+      const y0 = origin.bottom - hostBox.top;
+      const next: { key: string; d: string; kind: string }[] = [];
+      host.querySelectorAll<HTMLElement>('[data-cast-target]').forEach((el, index) => {
+        /* Lamp targets count only while their line is lit — a quiet lamp
+           takes no arc. Match buttons are rendered only as choices. */
+        const lampHolder = el.closest<HTMLElement>('[data-lamp]');
+        if (lampHolder && lampHolder.dataset.lamp !== 'match') return;
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 && box.height === 0) return; // inside closed details
+        const kind = el.dataset.castKind ?? 'tape';
+        const x1 = box.left + box.width / 2 - hostBox.left;
+        const y1 = box.top + box.height / 2 - hostBox.top;
+        /* Tape arcs sag gently; a launch arcs like a trajectory. */
+        const lift = kind === 'launch' ? -110 : 54;
+        const d = `M ${x0.toFixed(1)} ${y0.toFixed(1)} C ${x0.toFixed(1)} ${(y0 + lift).toFixed(1)}, ${x1.toFixed(1)} ${(y1 + lift).toFixed(1)}, ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+        next.push({ key: `${el.dataset.castTarget}-${index}`, d, kind });
+      });
+      setCasts(next);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [castKey]);
 
   if (state.status === 'success' && state.transcript && state.transcript !== heard) {
     setHeard(state.transcript);
@@ -194,8 +239,8 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
       : TURRET_COPY.hold;
 
   return (
-    <div className={foyerStyles.turret}>
-      <form ref={barRef} className={foyerStyles.talkBar} onSubmit={submit} data-state={state.status}>
+    <div ref={turretRef} className={foyerStyles.turret}>
+      <form ref={barRef} className={foyerStyles.talkBar} onSubmit={submit} data-state={state.status} data-cast-origin>
         <button
           type="button"
           data-talk
@@ -270,6 +315,8 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
                         key={desk.id}
                         type="button"
                         className={foyerStyles.matchChoose}
+                        data-cast-target={desk.id}
+                        data-cast-kind={desk.kind}
                         onClick={() => onChooseOffering(offering.offeringId, desk.id)}
                       >
                         Continue with {offering.symbol}{desks.length > 1 ? ` · ${desk.shortName}` : ''}
@@ -300,7 +347,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
           const voice = DESK_CAPABILITIES[desk.id].voice !== null;
           return (
             <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
-              <span className={foyerStyles.keyLamp} aria-hidden="true" />
+              <span className={foyerStyles.keyLamp} aria-hidden="true" data-cast-target={desk.id} data-cast-kind={desk.kind} />
               <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
               <div className={foyerStyles.keyIdentity}>
                 <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
@@ -391,6 +438,24 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
           {talkLabel}
         </button>
       </div>
+
+      {casts.length > 0 && (
+        <svg
+          className={foyerStyles.casts}
+          viewBox={`0 0 ${Math.max(castBox.w, 1)} ${Math.max(castBox.h, 1)}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <marker id="castTip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 8 4 L 0 8 z" className={foyerStyles.castTip} />
+            </marker>
+          </defs>
+          {casts.map(cast => (
+            <path key={cast.key} d={cast.d} data-kind={cast.kind} className={foyerStyles.cast} pathLength={100} markerEnd="url(#castTip)" />
+          ))}
+        </svg>
+      )}
     </div>
   );
 }
