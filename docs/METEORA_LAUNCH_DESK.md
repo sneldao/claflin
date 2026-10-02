@@ -184,10 +184,14 @@ Resolved by the spike:
   full-range sqrt prices, `vaultConfigKey == default`, Timestamp activation,
   and an unscheduled linear/exponential fee scheduler. Devnet: config indices
   20000–20006 (`7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd` used here).
-- **Token badge** — not required for a plain Token-2022 quote mint on devnet;
-  badges exist for mints with transfer hooks/nonstandard behavior. **Caveat:
-  re-verify against a real xStock mint on mainnet** — devnet cannot answer for
-  mints carrying extensions.
+- **Token badge** — required for real xStocks (they carry `permanentDelegate`,
+  `transferHook`, `pausableConfig` etc., beyond the metadata-only permissionless
+  set) and **already resolved on mainnet**: Meteora has created badges for all
+  three catalog mints (verified via RPC — badge PDAs exist for AAPLx, TSLAx,
+  NVDAx). Meteora's own docs describe the badge path as "the path used for
+  Stock Tokens." Zero transfer fee is enforced at badge creation and on every
+  quote transfer; DBC-owned DAMM v2 migration configs carry
+  `CreatePoolWithoutMintValidation` so badged mints graduate cleanly.
 - **Fees/quote-token behavior on a stock pair** — a Token-2022 quote mint
   behaves identically to SPL through the whole lifecycle; the only friction is
   thin-curve tail buys, which need `swap2` `PartialFill` rather than `ExactIn`.
