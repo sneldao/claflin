@@ -136,7 +136,9 @@
   column-gap: clamp(24px, 4vw, 72px);
   width: min(1480px, 100% - clamp(32px, 8vw, 128px));
   margin: 0 auto;
-  min-height: calc(100svh - 90px);
+  /* Leave the wire's own ~56px band inside the first viewport — a full-height
+     hero pushes the tape half below the fold on desktop. */
+  min-height: calc(100svh - 90px - 60px);
 }
 
 .hero::before {
