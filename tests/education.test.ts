@@ -18,7 +18,7 @@ import {
   delayedTapeDebrief,
   practiceReturnHref,
 } from '../lib/education';
-import { explainConceptResult, deskNoteSpokenLine } from '../lib/trading/voice-tools';
+import { explainConceptResult, deskNoteSpokenLine, explainNamesakeResult } from '../lib/trading/voice-tools';
 import { HOUSE_DESKS } from '../lib/house';
 import { deskNoteOfTheDay } from '../lib/desk-notes';
 
@@ -99,7 +99,20 @@ describe('explain_concept voice tool', () => {
   it('speaks broker examination lenses when asked how a desk thinks', () => {
     assert.match(explainConceptResult('how would Jesse examine this'), /Timing and uncertainty/);
     assert.match(explainConceptResult('Isabel’s lens'), /Enterprise and infrastructure/);
+    assert.match(explainConceptResult('how would Halley look at this'), /Pricing what has no history/);
     assert.equal(resolveBrokerMethod('liquidity and downside')?.deskId, 'hetty');
+    assert.equal(resolveBrokerMethod('the comet caller')?.deskId, 'halley');
+  });
+
+  it('answers namesake asks with the reviewed bio — on this desk or a named one', () => {
+    /* The same text the nameplate renders — bio and voice never drift. */
+    assert.match(explainConceptResult('who are you'), /Hetty Green \(1834–1916\)/);
+    assert.match(explainConceptResult('who are you'), /An AI character/);
+    assert.match(explainConceptResult('who is Isabel'), /Isabel Benham \(1909–2013\)/);
+    assert.match(explainConceptResult('what is Halley named for'), /Edmond Halley \(1656–1742\)/);
+    assert.match(explainConceptResult('who is the broker'), /Hetty Green/);
+    /* A bare name with no name-ask stays a method/education question. */
+    assert.equal(explainNamesakeResult('jesse timing'), null);
   });
 
   it('points word-of-the-day speech at explain_concept when a catalog bridge exists', () => {

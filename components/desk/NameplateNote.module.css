@@ -1,0 +1,42 @@
+/**
+ * The nameplate disclosure — small print that opens. Matches the foyer
+ * card's deskNamesake type; works the same inside the desk-room plate.
+ */
+
+.nameplate {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: #6b634c;
+}
+
+.nameplate summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.nameplate summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A quiet marker — the smallest affordance the house offers. */
+.nameplate summary::before {
+  content: '◦ ';
+  color: var(--brass-dim, #a08c5a);
+}
+
+.nameplate summary:hover {
+  color: #2a2416;
+}
+
+.nameplate[open] summary {
+  margin-bottom: 6px;
+}
+
+.nameplateBio {
+  margin: 0;
+  padding: 8px 0 2px 12px;
+  border-left: 1px solid var(--brass-dim, #a08c5a);
+  font-style: italic;
+  color: #55492f;
+}

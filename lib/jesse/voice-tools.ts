@@ -10,7 +10,7 @@ import type { JesseForeground } from '../solana/desk-documents';
 import type { JesseDraft, SolanaInstrument, SolanaInstrumentId } from '../solana/contracts';
 import type { JessePaperRecord } from '../solana/paper';
 
-export type ExplainTopic = 'reference-difference' | 'market-hours' | 'scaled-units' | 'paper-mode';
+export type ExplainTopic = 'reference-difference' | 'market-hours' | 'scaled-units' | 'paper-mode' | 'namesake';
 
 const ARCHIVE_READONLY =
   'That filed record is for reading. Return to the instruction to quote or file.';
@@ -78,11 +78,14 @@ export function resolveExplainTopic(query: string): ExplainTopic | null {
   if (q === 'paper-mode' || /paper|simulation|local\s*record|no\s*wallet/.test(q)) {
     return 'paper-mode';
   }
+  if (q === 'namesake' || /namesake|name(d)?\s+(for|after)|who\s+(are|r)\s+you|who is jesse|livermore|boy\s*plunger/.test(q)) {
+    return 'namesake';
+  }
   return null;
 }
 
 export function explainTopicChoices(): string {
-  return 'reference-difference, market-hours, scaled-units, paper-mode';
+  return 'reference-difference, market-hours, scaled-units, paper-mode, namesake';
 }
 
 function shortCompany(name: string): string {

@@ -9,6 +9,7 @@
  * estimate, and file a paper record; it can never sign, submit, or launch.
  */
 import { HALLEY_QUOTE_MINTS } from './catalog';
+import { brokerBio } from '../desk/broker-voice';
 import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from './contracts';
 import { SOLANA_INSTRUMENTS } from '../solana/catalog';
 import { formatRecordedTime } from '../trading/desk-documents';
@@ -17,7 +18,7 @@ import type { HalleyDeskState } from './useHalleyDesk';
 import type { HalleyPaperRecord } from './paper';
 import type { HalleyDraft, HalleyLaunchEstimate } from './contracts';
 
-export type HalleyExplainTopic = 'anchor' | 'graduation' | 'tracker-token' | 'curve-shape' | 'paper-mode';
+export type HalleyExplainTopic = 'anchor' | 'graduation' | 'tracker-token' | 'curve-shape' | 'paper-mode' | 'namesake';
 
 const ARCHIVE_READONLY =
   'That filed record is for reading. Return to the launch slip to draft or file.';
@@ -98,6 +99,8 @@ const HALLEY_EXPLANATIONS: Record<HalleyExplainTopic, string> = {
     'The curve sets how price moves as the token sells. Flat stays near the opening mark. Long holds the early price down for slower discovery. Exponential climbs steeply at the tail. Equity pair is the anchored band — the desk’s differentiator.',
   'paper-mode':
     'Halley’s desk is paper first. An estimate is a projection of the curve you chose — never an order. Filing a paper launch only saves a local record in this browser. Nothing mints, nothing settles, and no wallet is touched. A live launch would always be a separate, signed ceremony.',
+  /* The namesake story — the same reviewed text the nameplate shows. */
+  'namesake': brokerBio('halley') ?? '',
 };
 
 export function resolveHalleyExplainTopic(query: string): HalleyExplainTopic | null {
@@ -108,11 +111,12 @@ export function resolveHalleyExplainTopic(query: string): HalleyExplainTopic | n
   if (/tracker|exposure|ownership|stock|issuer|security/.test(q)) return 'tracker-token';
   if (/curve|shape|flat|long|exponential|band|preset/.test(q)) return 'curve-shape';
   if (/paper|simulation|local\s*record|no\s*wallet|real|live|funds|settle|execut/.test(q)) return 'paper-mode';
+  if (/namesake|name(d)?\s+(for|after)|who\s+(are|r)\s+you|who is halley|edmond|comet|annuit|astronom/.test(q)) return 'namesake';
   return null;
 }
 
 export function halleyExplainTopicChoices(): string {
-  return 'anchor, graduation, tracker-token, curve-shape, paper-mode';
+  return 'anchor, graduation, tracker-token, curve-shape, paper-mode, namesake';
 }
 
 export function explainHalleyTopic(topic: HalleyExplainTopic): string {

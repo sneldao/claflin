@@ -184,7 +184,7 @@ export interface JesseDraft {
 export type JesseCommand =
   | { type: 'draft'; intent: JesseIntent; quote: boolean }
   | { type: 'compare'; instrumentId: SolanaInstrumentId }
-  | { type: 'explain'; topic: 'reference-difference' | 'market-hours' | 'scaled-units' | 'paper-mode' }
+  | { type: 'explain'; topic: 'reference-difference' | 'market-hours' | 'scaled-units' | 'paper-mode' | 'namesake' }
   | { type: 'describe' }
   | { type: 'focus'; target: 'desk' | 'evidence' | 'instruction' | 'record'; objectId: string | null }
   | { type: 'watch'; instrumentId: SolanaInstrumentId }

@@ -5,15 +5,10 @@ import type { HouseDesk, HouseDeskId } from '@/lib/house';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
 import { signatureLine } from '@/lib/desk-notes';
 import { LINE_IDENTITY } from '@/lib/desk/ui-copy';
+import { NameplateNote } from './NameplateNote';
 import foyerStyles from './HouseFoyer.module.css';
 
-/** Who each broker is named for — dates fact-checked, not flavour text. */
-const NAMESAKE: Partial<Record<HouseDeskId, string>> = {
-  hetty: 'Hetty Green (1834–1916)',
-  jesse: 'Jesse Livermore (1877–1940)',
-  isabel: 'Isabel Benham (1909–2013)',
-  halley: 'Edmond Halley (1656–1742)',
-};
+
 
 /**
  * Meet the desks — character after comprehension. The only foyer section
@@ -47,10 +42,7 @@ export function HouseDesks({ desks, deskHref, onOpen }: {
                   <cite>— {line.attribution}</cite>
                 </blockquote>
               )}
-              <p className={foyerStyles.deskNamesake}>
-                Named for {NAMESAKE[desk.id] ?? desk.name}
-                {voice ? `, “${voice.epithet}”` : ''}. An AI character, not the historical person, and no substitute for advice.
-              </p>
+              <NameplateNote deskId={desk.id} namedFor={voice?.namedFor ?? desk.name} />
               <a className={foyerStyles.deskOpen} href={deskHref(desk.id)} onClick={onOpen(desk.id)}>
                 Visit {desk.shortName}’s desk
               </a>

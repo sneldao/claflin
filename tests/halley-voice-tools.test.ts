@@ -90,6 +90,7 @@ describe('halley voice tools', () => {
     assert.match(explainHalleyTopic('paper-mode'), /never an order|Nothing mints/i);
     assert.match(explainHalleyTopic('anchor'), /Pyth/);
     assert.match(explainHalleyTopic('graduation'), /DAMM v2/);
+    assert.match(explainHalleyTopic('namesake'), /Edmond Halley \(1656–1742\)/);
   });
 
   it('maps spoken questions to reviewed topics', () => {
@@ -98,6 +99,7 @@ describe('halley voice tools', () => {
     assert.equal(resolveHalleyExplainTopic('am I buying real stock'), 'tracker-token');
     assert.equal(resolveHalleyExplainTopic('what curve shapes are there'), 'curve-shape');
     assert.equal(resolveHalleyExplainTopic('is this a real trade'), 'paper-mode');
+    assert.equal(resolveHalleyExplainTopic('who are you named for'), 'namesake');
     assert.equal(resolveHalleyExplainTopic('the weather'), null);
   });
 

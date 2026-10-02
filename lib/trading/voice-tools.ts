@@ -2,6 +2,7 @@ import { DESK_INSTRUMENTS, resolveDeskAlias } from './catalog';
 import { ARCHIVE_READONLY, RECORD_UNAVAILABLE } from './desk-documents';
 import { estimateUsable } from './workflow';
 import { deskNoteOfTheDay } from '../desk-notes';
+import { brokerBio } from '../desk/broker-voice';
 import {
   educationTopicSpokenLine,
   listEducationTopics,
@@ -156,12 +157,42 @@ export function deskNoteSpokenLine(deskId: HouseDeskId, date = new Date()): stri
  * Reviewed education from the shared catalog — or a broker examination lens.
  * Same material as DeskTerm / further reading on screen. Never advice.
  */
+const BROKER_NAME_HINTS: readonly [RegExp, HouseDeskId][] = [
+  [/\b(hetty|green)\b/, 'hetty'],
+  [/\b(jesse|livermore)\b/, 'jesse'],
+  [/\b(isabel|benham)\b/, 'isabel'],
+  [/\b(halley|edmond|comet)\b/, 'halley'],
+  [/\b(jay|cooke|arbitrum)\b/, 'arbitrum'],
+];
+
+/**
+ * A namesake ask — "who are you", "who is Isabel", "what are you named
+ * for" — answers with the desk's reviewed bio (the same text the nameplate
+ * shows), never an improvised biography. A bare "who are you" resolves to
+ * this desk's own namesake; naming another broker answers with theirs.
+ */
+export function explainNamesakeResult(query: string): string | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  const asksAboutName = /\bwho\b|namesake|named?\b|\bcalled\b/.test(q);
+  const namedDesk = BROKER_NAME_HINTS.find(([re]) => re.test(q))?.[1] ?? null;
+  if (namedDesk) {
+    const bio = brokerBio(namedDesk);
+    /* A bare name without a name-ask is a method question, not a bio ask. */
+    return asksAboutName ? bio : null;
+  }
+  if (asksAboutName && /\b(you|your|broker|this\s+desk)\b/.test(q)) return brokerBio('hetty');
+  return null;
+}
+
 export function explainConceptResult(query: string): string {
+  const namesake = explainNamesakeResult(query);
+  if (namesake) return namesake;
   const method = resolveBrokerMethod(query);
   /* Prefer an explicit catalog topic when the ask is about a term, not a person. */
   const topic = resolveEducationTopic(query);
   const asksForMethod = /\b(how|lens|method|examine|thinks?|perspective)\b/i.test(query)
-    || /\b(hetty|jesse|isabel|jay|livermore|benham|cooke)\b/i.test(query);
+    || /\b(hetty|jesse|isabel|jay|halley|livermore|benham|cooke|edmond)\b/i.test(query);
   if (method && (asksForMethod || !topic)) return brokerMethodSpokenLine(method);
   if (!topic) {
     const topics = listEducationTopics({ includeOptionalHouse: true })

@@ -98,6 +98,7 @@ describe('isabel voice tools', () => {
     assert.equal(resolveIsabelExplainTopic('is the market open on weekends'), 'market-hours');
     assert.equal(resolveIsabelExplainTopic('is this a real trade'), 'paper-mode');
     assert.equal(resolveIsabelExplainTopic('who issues these tokens'), 'stock-token');
+    assert.equal(resolveIsabelExplainTopic('who are you'), 'namesake');
     assert.equal(resolveIsabelExplainTopic('what is slippage'), null);
   });
 

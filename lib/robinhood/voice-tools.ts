@@ -8,13 +8,14 @@
  * (issuer quote, onchain mark, venue book) — labelled, never blended.
  */
 import { ROBINHOOD_INSTRUMENTS } from './catalog';
+import { brokerBio } from '../desk/broker-voice';
 import { formatRecordedTime } from '../trading/desk-documents';
 import type { DeskForegroundDocument } from '../desk/contracts';
 import type { IsabelDeskState } from './useIsabelDesk';
 import type { IsabelPaperRecord } from './paper';
 import type { IsabelDraft, RobinhoodInstrument, RobinhoodInstrumentId, RobinhoodPaperEstimate } from './contracts';
 
-export type IsabelExplainTopic = 'reference-difference' | 'market-hours' | 'paper-mode' | 'stock-token';
+export type IsabelExplainTopic = 'reference-difference' | 'market-hours' | 'paper-mode' | 'stock-token' | 'namesake';
 
 const ARCHIVE_READONLY =
   'That filed record is for reading. Return to the instruction to quote or file.';
@@ -109,6 +110,8 @@ const ISABEL_EXPLANATIONS: Record<IsabelExplainTopic, string> = {
     'Isabel is a paper desk. An estimate is a read of the visible Lighter book, and filing a paper record only saves a local record in this browser. No wallet is touched, no order is routed, and nothing settles on any network.',
   'stock-token':
     'These are stock tokens issued by Robinhood Assets Jersey — tokens that track listed US equities and funds on Robinhood Chain. They are not exchange orders, and they carry the issuer’s own eligibility terms. On this desk they are for paper records only.',
+  /* The namesake story — the same reviewed text the nameplate shows. */
+  'namesake': brokerBio('isabel') ?? '',
 };
 
 export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | null {
@@ -123,6 +126,9 @@ export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | n
   if (/paper|simulation|local\s*record|no\s*wallet|real|live|funds|settle|execut/.test(q)) {
     return 'paper-mode';
   }
+  if (/namesake|name(d)?\s+(for|after)|who\s+(are|r)\s+you|who is isabel|benham|railroad\s*lady/.test(q)) {
+    return 'namesake';
+  }
   if (/stock\s*token|robinhood|issu\w+|jersey|eligib|usdg|token/.test(q)) {
     return 'stock-token';
   }
@@ -130,7 +136,7 @@ export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | n
 }
 
 export function isabelExplainTopicChoices(): string {
-  return 'reference-difference, market-hours, paper-mode, stock-token';
+  return 'reference-difference, market-hours, paper-mode, stock-token, namesake';
 }
 
 export function explainIsabelTopic(topic: IsabelExplainTopic): string {

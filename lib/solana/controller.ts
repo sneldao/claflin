@@ -44,6 +44,7 @@ import {
   type SolanaPaperEstimate,
 } from './contracts';
 import { SOLANA_INSTRUMENTS } from './catalog';
+import { brokerBio } from '../desk/broker-voice';
 import {
   loadJesseDraft,
   loadJessePaperRecords,
@@ -215,6 +216,8 @@ const EXPLANATIONS: Record<Extract<JesseCommand, { type: 'explain' }>['topic'], 
     'xStock tokens use a scaled display amount: one displayed unit can correspond to a different number of raw tokens, set by the issuer’s multiplier. Jesse always speaks in the units shown on the ticket and reads the multiplier live at quote time — it is never stored from an earlier session.',
   'paper-mode':
     'Jesse is in paper mode. Estimates are simulated fills from the venue’s quote, and filing a paper record only saves a local record in this browser. No wallet is touched, no order is routed, and nothing settles on any network.',
+  /* The namesake story — the same reviewed text the nameplate shows. */
+  'namesake': brokerBio('jesse') ?? '',
 };
 
 function defaultRandomId(): string {

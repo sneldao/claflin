@@ -57,6 +57,7 @@ describe('jesse voice tools', () => {
   it('maps explain topics', () => {
     assert.equal(resolveExplainTopic('scaled units'), 'scaled-units');
     assert.equal(resolveExplainTopic('why is the equity different'), 'reference-difference');
+    assert.equal(resolveExplainTopic('who are you'), 'namesake');
     assert.equal(resolveExplainTopic('astrology'), null);
   });
 

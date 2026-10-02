@@ -46,7 +46,7 @@ const METHODS: Readonly<Record<HouseDeskId, BrokerExaminationMethod>> = {
       'Is standing aside a complete decision?',
     ],
     boundary:
-      'Educational perspective only. The Solana desk is not open for quotation or recording. This lens never loads a ticket and never implies a live path.',
+      'Educational perspective only. On the open Solana desk, Jesse may draft, estimate, and file paper; he never signs without your wallet. This lens never loads a ticket and never implies a live path.',
     sources: [
       { label: 'Reminiscences of a Stock Operator (Lefèvre, 1923)', note: 'Literary portrait of tape reading and waiting — not executable advice.' },
     ],
@@ -62,7 +62,7 @@ const METHODS: Readonly<Record<HouseDeskId, BrokerExaminationMethod>> = {
       'Who must keep the rails working for this product to mean what it says?',
     ],
     boundary:
-      'Educational perspective only. Isabel Benham is remembered as a railroad and credit analyst — not as the first woman with an NYSE seat (that was Muriel Siebert, 1967). This desk is not open for quotation.',
+      'Educational perspective only. Isabel Benham is remembered as a railroad and credit analyst — not as the first woman with an NYSE seat (that was Muriel Siebert, 1967). The Robinhood Chain desk is paper-only; this lens never loads a ticket.',
     sources: [
       {
         label: 'Harvard Baker Library — Muriel Siebert NYSE seat, 1967',
@@ -120,6 +120,7 @@ export function resolveBrokerMethod(query: string): BrokerExaminationMethod | un
   if (/\b(hetty|green|liquidity|downside|cash)\b/.test(q)) return METHODS.hetty;
   if (/\b(jesse|livermore|timing|uncertainty|tape reading)\b/.test(q)) return METHODS.jesse;
   if (/\b(isabel|benham|infrastructure|enterprise|annual letter|roadbed)\b/.test(q)) return METHODS.isabel;
+  if (/\b(halley|edmond|comet|launch|issuance|unpriced)\b/.test(q)) return METHODS.halley;
   if (/\b(jay|cooke|arbitrum|rails|clearing|distribution)\b/.test(q)) return METHODS.arbitrum;
   if (/\b(how .+ (think|examine|look)|examination|method|lens)\b/.test(q)) return METHODS.hetty;
   return undefined;

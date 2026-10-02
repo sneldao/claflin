@@ -4,6 +4,7 @@ import { BROKER_VOICE } from '@/lib/desk/broker-voice';
 import { signatureLine } from '@/lib/desk-notes';
 import { getHouseDesk, type HouseDeskId } from '@/lib/house';
 import type { DiscussionCaption as Caption } from '@/lib/hetty/discussion';
+import { NameplateNote } from './NameplateNote';
 import styles from './WorkingDesk.module.css';
 
 /** The broker's take — shared by the desk plate and the foyer card. */
@@ -36,6 +37,10 @@ export function BrokerLinePlate({ deskId, take, compact = false }: { deskId: Hou
       )}
       {BROKER_VOICE[deskId] && <p className={styles.lineLens}>{BROKER_VOICE[deskId]!.lens}</p>}
       <BrokerTake deskId={deskId} take={take} />
+      <NameplateNote
+        deskId={deskId}
+        namedFor={getHouseDesk(deskId)?.name ?? deskId}
+      />
     </div>
   );
 }

@@ -1381,13 +1381,6 @@
   color: #7a6c4c;
 }
 
-.deskNamesake {
-  margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.5;
-  color: #6b634c;
-}
-
 .deskOpen {
   align-self: flex-start;
   margin-top: auto;
