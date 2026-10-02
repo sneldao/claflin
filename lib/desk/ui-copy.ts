@@ -57,6 +57,21 @@ export const SLIP_ACTIONS = {
 export const EVIDENCE_DISCLAIMER =
   'Reference only — not an exchange print, not arbitrage.';
 
+/**
+ * The launch-desk explainer — the panel a caller meets the first time they
+ * reach for the launch plate. Reviewed copy: what the room makes, what it
+ * never is, and the way back to the tape desks if they meant to trade.
+ */
+export const LAUNCH_DESK_EXPLAINER = {
+  kicker: 'THE LAUNCH DESK',
+  title: 'This desk makes instruments; it does not trade them.',
+  body: 'Name a tracker token, pick its quote (USDC or an xStock), anchor its opening to an equity’s mark, choose the curve, set graduation. The estimate is a projection, never an order; a filed launch is a paper record in this browser. The token is a tracker — it is not stock ownership, and the house is not the issuer.',
+  redirect: 'If you meant to buy a stock token, the tape desks are above.',
+  enter: 'Enter the launch desk',
+  dismiss: 'Not now',
+  ask: 'What is this desk?',
+} as const;
+
 /** Empty-state line inside the market-evidence card; paired with its action. */
 export const MARKET_EMPTY_HINT = 'No comparison on this slip yet.';
 

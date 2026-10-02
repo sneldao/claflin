@@ -11,18 +11,18 @@ import styles from './NameplateNote.module.css';
  * fold carries none of it — voice draws the same text through brokerBio()
  * so the story can never drift between surfaces.
  */
-export function NameplateNote({ deskId, namedFor }: { deskId: HouseDeskId; namedFor: string }) {
+export function NameplateNote({ deskId, namedFor, tone }: { deskId: HouseDeskId; namedFor: string; tone?: 'dark' }) {
   const voice = BROKER_VOICE[deskId];
   const name = voice?.namedFor ?? namedFor;
   if (!voice?.bio) {
     return (
-      <p className={styles.nameplate}>
+      <p className={styles.nameplate} data-tone={tone}>
         Named for {name}. {BROKER_AI_DISCLAIMER}
       </p>
     );
   }
   return (
-    <details className={styles.nameplate}>
+    <details className={styles.nameplate} data-tone={tone}>
       <summary>
         Named for {name}
         {voice.epithet ? `, “${voice.epithet}”` : ''}. {BROKER_AI_DISCLAIMER}

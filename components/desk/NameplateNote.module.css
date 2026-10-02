@@ -1,6 +1,6 @@
 /**
- * The nameplate disclosure — small print that opens. Matches the foyer
- * card's deskNamesake type; works the same inside the desk-room plate.
+ * The nameplate disclosure — small print that opens. Set on the foyer
+ * cards, the desk-room plate, and the ink-dipped launch plate (dark tone).
  */
 
 .nameplate {
@@ -39,4 +39,18 @@
   border-left: 1px solid var(--brass-dim, #a08c5a);
   font-style: italic;
   color: #55492f;
+}
+
+/* The same small print on the ink-dipped launch plate. */
+.nameplate[data-tone='dark'] {
+  color: #a99f83;
+}
+
+.nameplate[data-tone='dark'] summary:hover {
+  color: var(--ink, #e8e6d9);
+}
+
+.nameplate[data-tone='dark'] .nameplateBio {
+  border-left-color: var(--brass, #c5ac78);
+  color: #c9bda0;
 }

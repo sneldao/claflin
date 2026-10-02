@@ -346,4 +346,57 @@ describe('house foyer', () => {
     assert.match(html, /href="\/\?desk=jesse&amp;offering=/);
     assert.match(html, /live settle available/);
   });
+
+  it('paints the launch plate apart — ink, not a fifth card — with the explainer folded', () => {
+    const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
+    assert.match(html, /THE LAUNCH DESK/);
+    assert.match(html, /Bring Halley a launch/);
+    assert.match(html, /Not another line on the same book/);
+    /* The plate is not a card in the brokers grid, and the explainer never
+       paints unasked — first reach opens it. */
+    assert.doesNotMatch(html, /Enter the launch desk/);
+    assert.doesNotMatch(html, /id="launch-explainer-halley"/);
+    /* No direct door before the gate — "Bring" is a button, not a link. */
+    const plate = html.slice(html.indexOf('THE LAUNCH DESK'), html.indexOf('id="house-method"'));
+    assert.doesNotMatch(plate, /href="\/\?desk=halley/);
+  });
+
+  it('gates the first reach — the explainer opens, then entry marks it seen', async () => {
+    window.localStorage.removeItem('claflin.launchdesk.v1.seen');
+    let entered: string | null = null;
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: id => { entered = id; } })));
+
+    const bring = findButton('Bring Halley a launch');
+    assert.ok(bring, 'the plate’s way in renders as a button while unseen');
+    await act(async () => click(bring!));
+
+    const explainer = getRootElement().querySelector('#launch-explainer-halley');
+    assert.ok(explainer, 'the explainer opens to the plate’s left');
+    assert.match(text(explainer), /makes instruments; it does not trade them/);
+    assert.match(text(explainer), /the tape desks are above/);
+    assert.equal(entered, null, 'the gate holds — no navigation yet');
+    assert.equal(window.localStorage.getItem('claflin.launchdesk.v1.seen'), null, 'peeking does not mark the gate');
+
+    const enterLink = Array.from(explainer!.querySelectorAll('a'))
+      .find(a => a.textContent?.includes('Enter the launch desk'));
+    assert.ok(enterLink, 'the door lives inside the explainer');
+    await act(async () => click(enterLink!));
+    assert.equal(entered, 'halley');
+    assert.equal(window.localStorage.getItem('claflin.launchdesk.v1.seen'), '1', 'entry marks the gate seen');
+  });
+
+  it('a seen caller gets the door directly — the gate never re-asks', async () => {
+    window.localStorage.setItem('claflin.launchdesk.v1.seen', '1');
+    let entered: string | null = null;
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: id => { entered = id; } })));
+
+    const enterLink = Array.from(getRootElement().querySelectorAll('a'))
+      .find(a => a.textContent?.includes('Bring Halley a launch'));
+    assert.ok(enterLink, 'the CTA is the door itself once seen');
+    assert.equal(enterLink!.getAttribute('href'), '/?desk=halley');
+    await act(async () => click(enterLink!));
+    assert.equal(entered, 'halley');
+  });
 });

@@ -1320,16 +1320,38 @@
 }
 
 /* The launch desk stands apart — a different room, not a fourth broker card.
-   Same paper and brass, but the stamp runs down the side and the plate reads
-   horizontally: name, what the room does, then the way in. */
-.launchPlate {
+   Ink-dipped rather than paper: the tape desks are printed cards, this is the
+   plate they print from. Set right against the left-aligned grid; the stamp
+   runs down the side, the name reads across, the way in is brass. The first
+   reach for it opens the explainer on its left before the door opens. */
+.launchRow {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
   margin-top: 18px;
+}
+
+.launchPlate {
+  flex: 0 0 min(460px, 46%);
+  margin-left: auto;
   padding: 20px 26px;
-  color: var(--paper-ink);
-  background: linear-gradient(160deg, #ece2c5, var(--paper));
-  border: 1px solid rgba(120, 95, 55, 0.34);
-  border-left: 3px solid var(--brass-dim);
+  color: var(--ink, #e8e6d9);
+  background: linear-gradient(160deg, #131b16, var(--deep, #0c1814));
+  border: 1px solid rgba(197, 172, 120, 0.4);
+  border-left: 3px solid var(--brass);
   border-radius: 3px;
+}
+
+.launchPlate .deskMeta {
+  color: var(--brass);
+}
+
+.launchPlate .deskName {
+  color: var(--ink, #e8e6d9);
+}
+
+.launchPlate .deskLens {
+  color: var(--muted, #aeb9aa);
 }
 
 .launchPlateBody {
@@ -1344,7 +1366,7 @@
 }
 
 .launchPlateCopy {
-  flex: 1 1 320px;
+  flex: 1 1 280px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1354,12 +1376,102 @@
   margin: 0;
   font-size: 0.78rem;
   line-height: 1.55;
-  color: #5c5340;
+  color: #a99f83;
+}
+
+.launchPlateAsk {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--brass);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .launchPlateBody .deskOpen {
   flex: 0 0 auto;
   margin-top: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--brass);
+  cursor: pointer;
+}
+
+.launchPlateBody .deskOpen:hover {
+  color: var(--ink, #e8e6d9);
+}
+
+/* The explainer — a paper notice stood to the left of the ink plate. */
+.launchExplainer {
+  flex: 1 1 320px;
+  padding: 20px 26px;
+  color: var(--paper-ink);
+  background: linear-gradient(160deg, #efe5ca, var(--paper));
+  border: 1px solid rgba(120, 95, 55, 0.34);
+  border-left: 3px solid var(--brass-dim);
+  border-radius: 3px;
+}
+
+.launchExplainerTitle {
+  margin: 8px 0 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.25;
+  color: #241d10;
+  outline: none;
+}
+
+.launchExplainerBody {
+  margin: 10px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: #3a3122;
+}
+
+.launchExplainerRedirect {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: #5c5340;
+}
+
+.launchExplainerActions {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.launchExplainerDismiss {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.74rem;
+  color: #6b634c;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .launchRow {
+    flex-direction: column;
+  }
+
+  .launchPlate {
+    flex: none;
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 .deskCard {
