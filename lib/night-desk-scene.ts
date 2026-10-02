@@ -13,6 +13,9 @@ export type NightDeskLayout = 'foyer' | 'room' | 'compact';
 
 export interface NightDeskSceneController {
   setView(view: NightDeskView): void;
+  /** Scroll-driven walk: progress 0..1 rides the curve through the poses.
+   *  `null` hands the camera back to discrete `setView`. */
+  setTour(progress: number | null): void;
   setStage(stage: NightDeskStage): void;
   setLayout(layout: NightDeskLayout): void;
   dispose(): void;
@@ -35,6 +38,12 @@ const ANCHOR_POINTS = {
   review: new THREE.Vector3(0, 0.2, 0.5),
   ledger: new THREE.Vector3(3, 0.5, 2),
 };
+
+/** The scroll walk: the same four poses, strung into a path through the room
+ *  (desk → evidence → review → ledger) plus a parallel curve of look-targets. */
+const TOUR_ORDER: NightDeskView[] = ['desk', 'evidence', 'review', 'ledger'];
+const TOUR_POSITIONS = new THREE.CatmullRomCurve3(TOUR_ORDER.map(v => VIEWS[v].position), false, 'catmullrom', 0.5);
+const TOUR_TARGETS = new THREE.CatmullRomCurve3(TOUR_ORDER.map(v => VIEWS[v].target), false, 'catmullrom', 0.5);
 
 function roundedSlab(w: number, d: number, h: number, radius: number, material: THREE.Material) {
   const shape = new THREE.Shape();
@@ -106,7 +115,7 @@ export function createNightDeskScene(
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
   } catch {
     onUnavailable();
-    return { setView() {}, setStage() {}, setLayout() {}, dispose() {} };
+    return { setView() {}, setTour() {}, setStage() {}, setLayout() {}, dispose() {} };
   }
   renderer.setClearColor(0x0d1218, 1);
   const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
@@ -561,6 +570,11 @@ export function createNightDeskScene(
   let ledgerTarget = 0;
   let lampGlow = 1;
   let lampTarget = 1;
+  /* The walk: engaged by the foyer's scroll listener. tourT is the damped
+     position on the curve; tourGoal is where the scroll bar says we are. */
+  let tour = false;
+  let tourT = 0;
+  let tourGoal = 0;
 
   const projected = new THREE.Vector3();
   function projectAnchor(point: THREE.Vector3) {
@@ -593,18 +607,28 @@ export function createNightDeskScene(
     if (stage === 'quote' || stage === 'revised' || stage === 'filed') paperSlip.visible = true;
   }
   const framingOffset = new THREE.Vector3();
-  function applyView() {
-    const pose = VIEWS[view];
-    posGoal.copy(pose.position);
-    targetGoal.copy(pose.target);
+  function applyFraming() {
     if (layout === 'foyer' && host.clientWidth > 760) {
-      framingOffset.subVectors(pose.target, pose.position).cross(camera.up).normalize().multiplyScalar(-2.6);
+      framingOffset.subVectors(targetGoal, posGoal).cross(camera.up).normalize().multiplyScalar(-2.6);
       posGoal.add(framingOffset);
       targetGoal.add(framingOffset);
     }
     camera.fov = layout === 'foyer' ? (host.clientWidth <= 760 ? 48 : 40) : 36;
     camera.updateProjectionMatrix();
+  }
+  function applyView() {
+    const pose = VIEWS[view];
+    posGoal.copy(pose.position);
+    targetGoal.copy(pose.target);
+    applyFraming();
     ledgerTarget = view === 'ledger' ? 0.65 : 0;
+  }
+  function applyTour(t: number) {
+    TOUR_POSITIONS.getPoint(t, posGoal);
+    TOUR_TARGETS.getPoint(t, targetGoal);
+    applyFraming();
+    /* The book opens as the walk arrives at it. */
+    ledgerTarget = t > 0.7 ? 0.65 : 0;
   }
   applyStage();
   applyView();
@@ -626,6 +650,13 @@ export function createNightDeskScene(
     const delta = lastTime ? Math.min((time - lastTime) / 1000, 0.05) : 1 / 60;
     lastTime = time;
     const blend = reducedMotion.matches ? 1 : 1 - Math.exp(-delta * 8.5);
+    if (tour) {
+      /* The scroll position is the destination; the camera chases it along
+         the curve, then camPos chases the curve — the double-damp is the
+         glide. */
+      tourT += (tourGoal - tourT) * blend;
+      applyTour(tourT);
+    }
     camPos.lerp(posGoal, blend);
     camTarget.lerp(targetGoal, blend);
     parallax.lerp(parallaxGoal, blend);
@@ -654,6 +685,7 @@ export function createNightDeskScene(
       camPos.distanceTo(posGoal) + camTarget.distanceTo(targetGoal) +
       Math.abs(parallax.x - parallaxGoal.x) + Math.abs(parallax.y - parallaxGoal.y) +
       Math.abs(ledgerTarget - ledgerOpen) + Math.abs(lampTarget - lampGlow) +
+      (tour ? Math.abs(tourGoal - tourT) : 0) +
       paperPos.distanceTo(paperGoal) + Math.abs(paperSpinGoal - paperSpin);
     if (unsettled > 0.0008) frame = requestAnimationFrame(renderFrame);
     else lastTime = 0;
@@ -670,7 +702,7 @@ export function createNightDeskScene(
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
-    applyView();
+    if (tour) applyTour(tourT); else applyView();
     schedule();
   }
 
@@ -731,6 +763,19 @@ export function createNightDeskScene(
     setView(nextView) {
       view = nextView;
       applyView();
+      schedule();
+    },
+    setTour(progress) {
+      if (progress === null) {
+        if (!tour) return;
+        tour = false;
+        applyView();
+        schedule();
+        return;
+      }
+      tour = true;
+      tourGoal = Math.max(0, Math.min(1, progress));
+      if (reducedMotion.matches) { tourT = tourGoal; applyTour(tourT); }
       schedule();
     },
     setStage(nextStage) {

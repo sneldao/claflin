@@ -23,6 +23,9 @@ export type HouseSceneState = {
 type HouseSceneApi = {
   update(state: HouseSceneState): void;
   subscribeAnchors(listener: (anchors: NightDeskAnchors) => void): () => void;
+  /** Scroll-driven camera walk — progress 0..1 through the room's poses,
+      `null` hands the camera back to discrete views. No-op without WebGL. */
+  setTour(progress: number | null): void;
 };
 
 const INITIAL_SCENE: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false };
@@ -99,6 +102,10 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
   const [scene, setScene] = useState(INITIAL_SCENE);
   const graphics = useGraphicsState();
   const anchorListeners = useRef(new Set<(anchors: NightDeskAnchors) => void>());
+  const controllerRef = useRef<import('@/lib/night-desk-scene').NightDeskSceneController | null>(null);
+  /* The WebGL controller mounts after first paint — replay the last tour
+     position on (re)registration so a mid-page load lands mid-walk. */
+  const lastTour = useRef<number | null>(null);
   const update = useCallback((next: HouseSceneState) => setScene(old =>
     old.visible === next.visible
     && old.layout === next.layout
@@ -114,7 +121,11 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
   const emitAnchors = useCallback((anchors: NightDeskAnchors) => {
     anchorListeners.current.forEach(listener => listener(anchors));
   }, []);
-  const api = useMemo<HouseSceneApi>(() => ({ update, subscribeAnchors }), [update, subscribeAnchors]);
+  const setTour = useCallback((progress: number | null) => {
+    lastTour.current = progress;
+    controllerRef.current?.setTour(progress);
+  }, []);
+  const api = useMemo<HouseSceneApi>(() => ({ update, subscribeAnchors, setTour }), [update, subscribeAnchors, setTour]);
   return (
     <HouseSceneContext.Provider value={api}>
       <HouseGraphicsContext.Provider value={graphics}>
@@ -128,6 +139,10 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
               tape={scene.tape}
               tapeAt={scene.tapeAt}
               onAnchors={emitAnchors}
+              onController={controller => {
+                controllerRef.current = controller;
+                if (controller && lastTour.current !== null) controller.setTour(lastTour.current);
+              }}
             />
           </div>
           <div className={styles.content}>{children}</div>
@@ -146,6 +161,11 @@ export function useHouseScene(state: HouseSceneState) {
 
 export function useHouseGraphics(): HouseGraphicsApi {
   return useContext(HouseGraphicsContext) ?? OUTSIDE_PROVIDER_GRAPHICS;
+}
+
+/** The scene api itself — for imperative drives like the scroll walk. */
+export function useHouseSceneApi(): HouseSceneApi | null {
+  return useContext(HouseSceneContext);
 }
 
 export function useHouseSceneAnchors(onAnchors?: (anchors: NightDeskAnchors) => void) {

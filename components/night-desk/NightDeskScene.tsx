@@ -18,6 +18,7 @@ export function NightDeskScene({
   tape,
   tapeAt = null,
   onAnchors,
+  onController,
 }: {
   view: NightDeskView;
   stage: NightDeskStage;
@@ -29,6 +30,9 @@ export function NightDeskScene({
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
   tapeAt?: number | null;
   onAnchors?: (anchors: NightDeskAnchors) => void;
+  /** Hands the live controller to the provider so scroll can drive the walk
+      without React state churn. `null` on unmount. */
+  onController?: (controller: NightDeskSceneController | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +41,7 @@ export function NightDeskScene({
   const stageRef = useRef(stage);
   const layoutRef = useRef(layout);
   const anchorsRef = useRef(onAnchors);
+  const onControllerRef = useRef(onController);
   const [ready, setReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [reducedMotion, setReducedMotion] = useState<boolean | null>(null);
@@ -46,6 +51,7 @@ export function NightDeskScene({
     stageRef.current = stage;
     layoutRef.current = layout;
     anchorsRef.current = onAnchors;
+    onControllerRef.current = onController;
   });
 
   useEffect(() => {
@@ -81,6 +87,7 @@ export function NightDeskScene({
           layoutRef.current,
         );
         controllerRef.current = controller;
+        onControllerRef.current?.(controller);
         controller.setView(viewRef.current);
         controller.setStage(stageRef.current);
         controller.setLayout(layoutRef.current);
@@ -89,6 +96,7 @@ export function NightDeskScene({
     return () => {
       cancelled = true;
       controllerRef.current = null;
+      onControllerRef.current?.(null);
       controller?.dispose();
       setReady(false);
     };

@@ -17,7 +17,7 @@ import { trackFunnel, trackInstruction } from '@/lib/funnel/client';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { LastFilingLine } from './LastFilingLine';
 import { HouseMark } from './HouseMark';
-import { useHouseGraphics, useHouseScene } from './HouseScene';
+import { useHouseGraphics, useHouseScene, useHouseSceneApi } from './HouseScene';
 import { GraphicsControl } from './GraphicsControl';
 import { HouseOfferings } from './HouseOfferings';
 import { HouseTurret } from './HouseTurret';
@@ -94,6 +94,28 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
   const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false });
   const graphics = useHouseGraphics();
+  const sceneApi = useHouseSceneApi();
+
+  /* The scroll walk: descending the foyer rides the camera along a curve
+     through the room's poses (desk → evidence → review → ledger). Passive,
+     rAF-throttled, and a no-op when the scene is still/lightweight. */
+  useEffect(() => {
+    if (!sceneApi) return;
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const range = document.documentElement.scrollHeight - window.innerHeight;
+      sceneApi.setTour(range > 0 ? window.scrollY / range : 0);
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    measure();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+      sceneApi.setTour(null);
+    };
+  }, [sceneApi]);
 
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
 
