@@ -356,8 +356,10 @@ describe('house foyer', () => {
        paints unasked — first reach opens it. */
     assert.doesNotMatch(html, /Enter the launch desk/);
     assert.doesNotMatch(html, /id="launch-explainer-halley"/);
-    /* No direct door before the gate — "Bring" is a button, not a link. */
-    const plate = html.slice(html.indexOf('THE LAUNCH DESK'), html.indexOf('id="house-method"'));
+    /* No direct door before the gate — "Bring" is a button, not a link.
+       (The turret's launch slip also links ?desk=halley, so slice on the
+       plate's own note, not the kicker.) */
+    const plate = html.slice(html.indexOf('Not another line on the same book'), html.indexOf('id="house-method"'));
     assert.doesNotMatch(plate, /href="\/\?desk=halley/);
   });
 
@@ -367,7 +369,10 @@ describe('house foyer', () => {
     root = createRoot(getRootElement());
     await act(async () => root!.render(createElement(HouseFoyer, { onEnter: id => { entered = id; } })));
 
-    const bring = findButton('Bring Halley a launch');
+    /* The turret's ring shares the verb — the gate lives on the plate. */
+    const plateEl = getRootElement().querySelector('.launchPlate')!;
+    const bring = Array.from(plateEl.querySelectorAll('button'))
+      .find(b => b.textContent?.includes('Bring Halley a launch'));
     assert.ok(bring, 'the plate’s way in renders as a button while unseen');
     await act(async () => click(bring!));
 

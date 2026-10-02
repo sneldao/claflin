@@ -7,7 +7,7 @@ import { offeringForId } from '@/lib/desk/offerings';
 import { PRODUCT_FACTS } from '@/lib/desk/board';
 import { offeringCapabilityText, openDesksForOffering, railLabel, soleOfferingForDesk, venueLabel } from '@/lib/desk/offerings-presentation';
 import { lampFor, readInstruction, turretReply, type LineLamp } from '@/lib/desk/turret';
-import { LINE_IDENTITY, TURRET_COPY } from '@/lib/desk/ui-copy';
+import { LAUNCH_LINE, LINE_IDENTITY, TURRET_COPY } from '@/lib/desk/ui-copy';
 import type { MicReason } from '@/lib/funnel/events';
 import foyerStyles from './HouseFoyer.module.css';
 
@@ -285,47 +285,62 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
       {(lineDesks.length > 0 || planned.length > 0) && (() => {
         const matched = reading.kind === 'matched';
+        const renderLine = (desk: HouseDesk) => {
+          const launch = desk.kind === 'launch';
+          const lamp = lampFor(reading, desk.id);
+          const words = LAMP_WORDS[lamp];
+          const sole = soleOfferingForDesk(instruction, desk.id);
+          const canAct =
+            reading.kind === 'empty' ||
+            (matched && sole !== null) ||
+            (reading.kind === 'launch' && launch);
+          /* A line is the channel the desk actually takes — voice desks
+             answer a call, typed-only desks like Isabel take the
+             instruction field. Never a fake "Talk" affordance. */
+          const voice = DESK_CAPABILITIES[desk.id].voice !== null;
+          return (
+            <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
+              <span className={foyerStyles.keyLamp} aria-hidden="true" />
+              <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
+              <div className={foyerStyles.keyIdentity}>
+                <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
+                <p className={foyerStyles.keyRail}>
+                  {desk.market} · {launch ? LAUNCH_LINE.rail : LINE_IDENTITY}{voice ? '' : ' · typed only'}
+                  {words && <span className={foyerStyles.lampWords}> · {words}</span>}
+                </p>
+              </div>
+              {canAct && (
+                <div className={foyerStyles.keyActions}>
+                  {voice && (
+                    <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
+                      {launch ? LAUNCH_LINE.ring(desk.shortName) : `Talk with ${desk.shortName}`}
+                    </button>
+                  )}
+                  <a href={deskHref(desk.id)} className={foyerStyles.keyType} onClick={onTypeClick(desk.id)}>
+                    {launch ? LAUNCH_LINE.type : voice ? 'Type instead' : 'Type an instruction'}
+                  </a>
+                </div>
+              )}
+            </li>
+          );
+        };
+        /* The launch desk is not another row on the tape roll — it hangs
+           below it as its own slip, the way the launch plate stands apart
+           from the broker cards. */
+        const tapeDesks = lineDesks.filter(desk => desk.kind !== 'launch');
+        const launchDesks = lineDesks.filter(desk => desk.kind === 'launch');
         const lines = (
           <ol className={foyerStyles.turretLines} aria-label="The house lines">
-            {lineDesks.map(desk => {
-              const lamp = lampFor(reading, desk.id);
-              const words = LAMP_WORDS[lamp];
-              const sole = soleOfferingForDesk(instruction, desk.id);
-              const canAct =
-                reading.kind === 'empty' ||
-                (matched && sole !== null) ||
-                (reading.kind === 'launch' && desk.kind === 'launch');
-              /* A line is the channel the desk actually takes — voice desks
-                 answer a call, typed-only desks like Isabel take the
-                 instruction field. Never a fake "Talk" affordance. */
-              const voice = DESK_CAPABILITIES[desk.id].voice !== null;
-              return (
-                <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
-                  <span className={foyerStyles.keyLamp} aria-hidden="true" />
-                  <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
-                  <div className={foyerStyles.keyIdentity}>
-                    <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
-                    <p className={foyerStyles.keyRail}>
-                      {desk.market} · {desk.kind === 'launch' ? 'launch desk' : LINE_IDENTITY}{voice ? '' : ' · typed only'}
-                      {words && <span className={foyerStyles.lampWords}> · {words}</span>}
-                    </p>
-                  </div>
-                  {canAct && (
-                    <div className={foyerStyles.keyActions}>
-                      {voice && (
-                        <button type="button" className={foyerStyles.keyRing} onClick={() => onRing(desk.id)}>
-                          Talk with {desk.shortName}
-                        </button>
-                      )}
-                      <a href={deskHref(desk.id)} className={foyerStyles.keyType} onClick={onTypeClick(desk.id)}>
-                        {voice ? 'Type instead' : 'Type an instruction'}
-                      </a>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
+            {tapeDesks.map(renderLine)}
           </ol>
+        );
+        const launchLines = launchDesks.length > 0 && (
+          <div className={foyerStyles.launchLineBlock}>
+            <p className={foyerStyles.launchLineKicker}>{LAUNCH_LINE.kicker}</p>
+            <ol className={foyerStyles.launchLines} aria-label="The launch desk line">
+              {launchDesks.map(renderLine)}
+            </ol>
+          </div>
         );
         const plannedKeys = planned.length > 0 ? (
           <details className={foyerStyles.plannedLines}>
@@ -348,9 +363,10 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
               <summary>Talk with a broker</summary>
               {lines}
             </details>
+            {launchLines}
             {plannedKeys}
           </>
-        ) : <>{lines}{plannedKeys}</>;
+        ) : <>{lines}{launchLines}{plannedKeys}</>;
       })()}
 
       {boundary}

@@ -663,6 +663,80 @@
   color: var(--ink);
 }
 
+/* The launch desk is not another row on the tape roll — it hangs below it
+   as its own paper slip, the way the launch plate stands apart from the
+   broker cards. Ink rows above, paper below: a different class of line. */
+.launchLineBlock {
+  margin: 16px 0 0;
+}
+
+.launchLineKicker {
+  margin: 0 0 7px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+}
+
+.launchLines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: linear-gradient(165deg, #f0e9d4, #dfd5b6);
+  border: 1px solid rgba(197, 172, 120, 0.55);
+  border-radius: 4px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.42);
+}
+
+.launchLines .lineKey {
+  border-bottom: none;
+}
+
+.launchLines .lineNumber {
+  color: #8a7b57;
+}
+
+.launchLines .keyName {
+  color: #27362b;
+}
+
+.launchLines .keyRail {
+  color: #6f6753;
+}
+
+.launchLines .lampWords {
+  color: #7a5c1e;
+}
+
+.launchLines .keyLamp {
+  background: rgba(39, 54, 43, 0.3);
+  box-shadow: none;
+}
+
+.launchLines .lineKey[data-lamp='idle'] .keyLamp {
+  background: #9a7f45;
+  box-shadow: 0 0 6px rgba(154, 127, 69, 0.55);
+}
+
+.launchLines .lineKey[data-lamp='match'] {
+  background: linear-gradient(90deg, rgba(154, 127, 69, 0.24), transparent 70%);
+}
+
+.launchLines .lineKey[data-lamp='match'] .keyLamp {
+  background: #8a6f33;
+  box-shadow: 0 0 10px rgba(154, 127, 69, 0.9);
+}
+
+.launchLines .keyType {
+  color: #6f6753;
+}
+
+.launchLines .keyType:hover {
+  color: #27362b;
+}
+
 .plannedKeys {
   display: flex;
   flex-wrap: wrap;

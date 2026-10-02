@@ -72,6 +72,15 @@ export const LAUNCH_DESK_EXPLAINER = {
   ask: 'What is this desk?',
 } as const;
 
+/** The launch desk's turret presence — not another row on the tape roll, so
+ *  it hangs below it as its own slip with its own verbs. */
+export const LAUNCH_LINE = {
+  kicker: `${LAUNCH_DESK_EXPLAINER.kicker} · MAKES INSTRUMENTS — DOES NOT TRADE THEM`,
+  ring: (name: string) => `Bring ${name} a launch`,
+  type: 'Type a launch',
+  rail: 'makes instruments',
+} as const;
+
 /** Empty-state line inside the market-evidence card; paired with its action. */
 export const MARKET_EMPTY_HINT = 'No comparison on this slip yet.';
 

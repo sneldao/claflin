@@ -153,6 +153,18 @@ describe('house turret (component)', () => {
     assert.equal(lamps().Isabel, 'match');
   });
 
+  it('the launch desk hangs below the roll as its own slip, with its own verbs', () => {
+    const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
+    /* The tape roll carries only tape lines — LINE 4 leaves it entirely. */
+    const roll = html.slice(html.indexOf('turretLines'), html.indexOf('launchLineBlock'));
+    assert.doesNotMatch(roll, /Halley/);
+    assert.match(html, /MAKES INSTRUMENTS — DOES NOT TRADE THEM/);
+    assert.match(html, /Bring Halley a launch/);
+    assert.match(html, /Type a launch/);
+    assert.doesNotMatch(html, /Talk with Halley/, 'no tape verb on the launch line');
+    assert.match(html, /Solana · makes instruments/);
+  });
+
   it('never touches the microphone until the caller holds the line', async () => {
     await mount();
     await type('buy Apple');
