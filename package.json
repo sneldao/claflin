@@ -20,7 +20,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@elevenlabs/react": "1.14.0",
+    "@elevenlabs/react": "1.16.0",
     "@meteora-ag/dynamic-bonding-curve-sdk": "1.5.13",
     "@privy-io/react-auth": "3.39.0",
     "@privy-io/server-auth": "1.32.5",
