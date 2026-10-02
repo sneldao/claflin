@@ -1319,6 +1319,49 @@
   gap: 18px;
 }
 
+/* The launch desk stands apart — a different room, not a fourth broker card.
+   Same paper and brass, but the stamp runs down the side and the plate reads
+   horizontally: name, what the room does, then the way in. */
+.launchPlate {
+  margin-top: 18px;
+  padding: 20px 26px;
+  color: var(--paper-ink);
+  background: linear-gradient(160deg, #ece2c5, var(--paper));
+  border: 1px solid rgba(120, 95, 55, 0.34);
+  border-left: 3px solid var(--brass-dim);
+  border-radius: 3px;
+}
+
+.launchPlateBody {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.launchPlateBody .deskName {
+  flex: 0 0 auto;
+}
+
+.launchPlateCopy {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.launchPlateNote {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #5c5340;
+}
+
+.launchPlateBody .deskOpen {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
 .deskCard {
   display: flex;
   flex-direction: column;

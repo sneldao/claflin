@@ -27,6 +27,13 @@ export const HOUSE = Object.freeze({
 export type DeskStatus = 'paper' | 'planned';
 
 /**
+ * What the room is for. Tape desks price, size, and file instruments that
+ * already trade; a launch desk creates the instrument. The foyer, turret,
+ * and docs all read this — never infer a desk's job from its market.
+ */
+export type DeskKind = 'tape' | 'launch';
+
+/**
  * Desk doors: plain capability first, market/access second.
  * `approach` stays the editorial lens — secondary on the foyer.
  */
@@ -39,6 +46,7 @@ export const HOUSE_DESKS = Object.freeze([
     approach: 'Independent judgment. Capital preservation. Deliberate decisions.',
     access: 'Tokenized stocks on Base · paper',
     capability: 'Talk or type a buy. Get a Base estimate. File a paper record.',
+    kind: 'tape' as DeskKind,
     status: 'paper' as DeskStatus,
   }),
   Object.freeze({
@@ -49,6 +57,7 @@ export const HOUSE_DESKS = Object.freeze([
     approach: 'Price action, timing, and disciplined speculation.',
     access: 'Backed xStocks on Solana · paper or live',
     capability: 'Talk or type a buy. Get a Jupiter estimate. Paper or settle live.',
+    kind: 'tape' as DeskKind,
     status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
@@ -59,6 +68,7 @@ export const HOUSE_DESKS = Object.freeze([
     approach: 'Fundamental analysis and patient investigation.',
     access: 'Robinhood Stock Tokens on Robinhood Chain · paper',
     capability: 'Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.',
+    kind: 'tape' as DeskKind,
     status: (ISABEL_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
@@ -67,8 +77,9 @@ export const HOUSE_DESKS = Object.freeze([
     shortName: 'Halley',
     market: 'Solana',
     approach: 'Prices what has never traded — anchors a new name to a known one, then lets the tape decide.',
-    access: 'Meteora DBC launches on Solana · paper or live',
-    capability: 'Say a launch. See the curve, the equity anchor, and the graduation line. File a paper launch or sign it live.',
+    access: 'Meteora DBC launches · paper',
+    capability: 'Say a launch. See the curve, the anchor mark, and the graduation line. File a paper launch.',
+    kind: 'launch' as DeskKind,
     status: (HALLEY_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
@@ -79,6 +90,7 @@ export const HOUSE_DESKS = Object.freeze([
     approach: 'Building the rails that let everyone else move money.',
     access: 'Planned — not open yet',
     capability: 'Coming later.',
+    kind: 'tape' as DeskKind,
     status: 'planned' as DeskStatus,
   }),
 ]);

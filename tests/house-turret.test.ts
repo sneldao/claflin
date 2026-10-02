@@ -45,6 +45,33 @@ describe('turret reading (pure)', () => {
     assert.equal(lampFor(reading, 'jesse'), 'quiet');
     assert.match(turretReply(reading, OPEN)!, /^No line carries that yet\. The house book covers .*AAPL/);
   });
+
+  it('routes explicit launch verbs to the launch desk, not the tape lines', () => {
+    const WITH_HALLEY = [...OPEN, 'halley'] as const;
+    for (const said of ['launch an NVDA tracker', 'mint a new token', 'issue a tracker token', 'draw me a bonding curve']) {
+      const reading = readInstruction(said);
+      assert.equal(reading.kind, 'launch', `“${said}” is a launch ask`);
+      assert.deepEqual(litDesks(reading, WITH_HALLEY), ['halley']);
+      /* A named anchor inside a launch ask must not light the tape line for it. */
+      assert.equal(lampFor(reading, 'jesse'), 'quiet');
+    }
+    const reply = turretReply(readInstruction('launch an NVDA tracker'), WITH_HALLEY)!;
+    assert.match(reply, /LINE 4/);
+    assert.match(reply, /launch desk/);
+    assert.match(reply, /trade what already exists/);
+  });
+
+  it('says honestly when no launch desk is open', () => {
+    const reading = readInstruction('launch a token');
+    assert.equal(reading.kind, 'launch');
+    assert.match(turretReply(reading, OPEN)!, /not open/);
+  });
+
+  it('keeps tape asks on the tape lines — the launch desk never borrows one', () => {
+    const reading = readInstruction('buy Apple for 100 USDC');
+    assert.equal(reading.kind, 'matched');
+    assert.equal(lampFor(reading, 'halley'), 'quiet');
+  });
 });
 
 describe('house turret (component)', () => {

@@ -291,7 +291,10 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
               const lamp = lampFor(reading, desk.id);
               const words = LAMP_WORDS[lamp];
               const sole = soleOfferingForDesk(instruction, desk.id);
-              const canAct = reading.kind === 'empty' || (matched && sole !== null);
+              const canAct =
+                reading.kind === 'empty' ||
+                (matched && sole !== null) ||
+                (reading.kind === 'launch' && desk.kind === 'launch');
               /* A line is the channel the desk actually takes — voice desks
                  answer a call, typed-only desks like Isabel take the
                  instruction field. Never a fake "Talk" affordance. */
@@ -303,7 +306,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
                   <div className={foyerStyles.keyIdentity}>
                     <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
                     <p className={foyerStyles.keyRail}>
-                      {desk.market} · {LINE_IDENTITY}{voice ? '' : ' · typed only'}
+                      {desk.market} · {desk.kind === 'launch' ? 'launch desk' : LINE_IDENTITY}{voice ? '' : ' · typed only'}
                       {words && <span className={foyerStyles.lampWords}> · {words}</span>}
                     </p>
                   </div>

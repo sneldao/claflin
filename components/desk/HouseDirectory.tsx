@@ -37,7 +37,7 @@ export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId
     <div className={styles.directoryPaper}>
       <p className={styles.directoryTitle}>Claflin &amp; Co.</p>
       <p className={styles.directoryNote}>
-        Pick a market desk. Talk or type a trade. Review the estimate — paper by default, live when you choose.
+        Pick a market desk — or the launch desk. Talk or type. Review the estimate — paper by default, live when you choose.
       </p>
       <ul>
         {onHome && (
@@ -70,7 +70,7 @@ export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId
           >
             <div>
               <strong>{desk.name}</strong>
-              <span>{desk.market} · {desk.access}</span>
+              <span>{desk.kind === 'launch' ? 'Launch desk' : desk.market} · {desk.access}</span>
             </div>
             <small>
               {isOpenDesk(desk.id)
@@ -87,7 +87,7 @@ export function HouseDirectory({ activeDeskId, onVisit, onHome }: { activeDeskId
         </p>
       )}
       <p className={styles.directoryFoot}>
-        Hetty quotes on Base. Jesse quotes on Solana{jesseLive ? ' and can settle live when you choose' : ' for paper records'}. Switching desks does not carry an approval with you.
+        Hetty quotes on Base. Jesse quotes on Solana{jesseLive ? ' and can settle live when you choose' : ' for paper records'}. Halley launches new instruments on Solana — paper only. Switching desks does not carry an approval with you.
       </p>
     </div>
   </details>;
