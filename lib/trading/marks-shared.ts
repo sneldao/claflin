@@ -14,7 +14,7 @@ export interface DeskMark {
      price, present only when the two readings were actually comparable. */
   stockReference?: {
     priceUsd: string;
-    source: 'backed' | 'jupiter-stock-data' | 'robinhood';
+    source: 'backed' | 'jupiter-stock-data' | 'robinhood' | 'coinbase-exchange';
     differenceBps: string | null;
     /** Issuer-declared trading halt — surfaced, never hidden (Isabel/rhj). */
     halted?: boolean;

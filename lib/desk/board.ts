@@ -77,6 +77,8 @@ const SOURCE_LABELS: Readonly<Record<string, string>> = Object.freeze({
   'jupiter-price-v3': 'Jupiter Price',
   backed: 'Backed',
   'jupiter-stock-data': 'Jupiter stock data',
+  'coinbase-exchange': 'Coinbase Exchange',
+  robinhood: 'rhj /prices',
 });
 
 export function sourceLabel(source: string | null | undefined): string | null {

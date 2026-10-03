@@ -3,6 +3,7 @@ import { BASE, baseRpcCandidates, feedAbi, isTransientRpcError, withRpcRetry } f
 import { DESK_INSTRUMENTS } from './catalog';
 import { referenceObservation } from './quotes';
 import type { DeskMark, MarksResult } from './marks-shared';
+import { readBaseStockReference, referenceDifferenceBps, type BaseStockReferenceResult } from './marks/base-stock-reference';
 
 export type { DeskMark, MarksResult } from './marks-shared';
 
@@ -45,19 +46,41 @@ export function createChainlinkFeedReader(): FeedReader {
   };
 }
 
-export function createMarksService(readFeeds: FeedReader, clock = Date.now) {
+export function createMarksService(
+  readFeeds: FeedReader,
+  clock = Date.now,
+  options: {
+    readStockReference?: (instrument: typeof DESK_INSTRUMENTS[number]) => Promise<BaseStockReferenceResult>;
+  } = {},
+) {
+  const readStockRef = options.readStockReference ?? readBaseStockReference;
   return async (): Promise<MarksResult> => {
     const instruments = DESK_INSTRUMENTS.filter(s => s.quoteSupported);
-    const readings = await readFeeds(instruments.map(s => s.chainlinkFeed));
+    const [readings, stockRefs] = await Promise.all([
+      readFeeds(instruments.map(s => s.chainlinkFeed)),
+      Promise.all(instruments.map(stock => readStockRef(stock))),
+    ]);
     const now = clock();
     return {
       asOf: now,
-      marks: instruments.map((stock, i) => ({
-        instrumentId: stock.id,
-        symbol: stock.symbol,
-        name: stock.name,
-        reference: referenceObservation(readings[i] ?? null, now),
-      })),
+      marks: instruments.map((stock, i) => {
+        const mark: DeskMark = {
+          instrumentId: stock.id,
+          symbol: stock.symbol,
+          name: stock.name,
+          reference: referenceObservation(readings[i] ?? null, now),
+        };
+        const stockRef = stockRefs[i];
+        if (stockRef.kind === 'ok') {
+          const tokenUsdPerToken = mark.reference.priceUsdPerToken;
+          mark.stockReference = {
+            priceUsd: stockRef.value.priceUsd,
+            source: 'coinbase-exchange',
+            differenceBps: referenceDifferenceBps(tokenUsdPerToken, stockRef.value.priceUsd),
+          };
+        }
+        return mark;
+      }),
     };
   };
 }
