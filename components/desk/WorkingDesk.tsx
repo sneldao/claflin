@@ -25,11 +25,13 @@ function WorkingDeskContent() {
   const desk = useTradingDesk();
 
   if (desk.entryPhase === 'pending') {
-    return <HouseFoyer onEnter={desk.enterDesk} />;
+    /* Destination not yet resolved — the foyer shell renders with the scene
+       held still so a desk URL never boots WebGL in this pass-through. */
+    return <HouseFoyer onEnter={desk.enterDesk} sceneLive={false} />;
   }
 
   if (desk.entryPhase === 'foyer') {
-    return <HouseFoyer onEnter={desk.enterDesk} />;
+    return <HouseFoyer onEnter={desk.enterDesk} sceneLive />;
   }
 
   if (desk.deskId === 'hetty' && desk.open) {

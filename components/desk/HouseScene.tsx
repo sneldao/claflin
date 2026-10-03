@@ -28,7 +28,11 @@ type HouseSceneApi = {
   setTour(progress: number | null): void;
 };
 
-const INITIAL_SCENE: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false };
+/* The provider starts still so a desk URL (?view=compact) that passes through
+   the pending foyer never boots WebGL — the desk surface's own still:true lands
+   in the same effect flush, before the scene ever resolves. A foyer destination
+   flips still off on its first effect and the scene boots from there. */
+const INITIAL_SCENE: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: true };
 
 const HouseSceneContext = createContext<HouseSceneApi | null>(null);
 

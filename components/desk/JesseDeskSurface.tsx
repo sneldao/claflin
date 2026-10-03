@@ -407,6 +407,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             lineTargetId="jesse-line"
             live={jesseLive}
             hideCue={roomView}
+            eager={roomView}
           />
           <div className={styles.deskInscription}>
             <span>The tape runs all night.</span>

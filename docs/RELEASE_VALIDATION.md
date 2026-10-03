@@ -52,11 +52,16 @@ standalone cleanup; Docker/deployment packaging was not certified by this pass.
 
 ## Performance is not accepted
 
-The [Room budget](PERFORMANCE_ROOM_VIEW.md) records the feature-repair build's
-local SwiftShader baseline, before the small dependency updates. Room paint,
-mount and frame rate miss the desktop targets; both views transfer 1,573,768
-gzipped JavaScript bytes and mount WebGL. A passing regression comparison does
-not mean the absolute targets are met. Real Android and iOS checks remain open.
+The [Room budget](PERFORMANCE_ROOM_VIEW.md) originally recorded the
+feature-repair build's local SwiftShader baseline: Room paint, mount and frame
+rate missed the desktop targets and both views transferred 1,573,768 gzipped
+JavaScript bytes while mounting WebGL. The subsequent per-view payload split —
+recorded as that doc's newer baseline — keeps Compact from ever mounting WebGL
+and cuts its payload by ~249KB, and the scene now boots exactly once. The
+absolute targets remain unmet: Compact still exceeds the <200KB payload budget
+and Room still exceeds its payload budget. A passing regression comparison
+does not mean the absolute targets are met. Real Android and iOS checks remain
+open.
 
 ## Deferred dependency work
 

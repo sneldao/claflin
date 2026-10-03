@@ -14,6 +14,7 @@ export function ReceiverShell({
   lineTargetId,
   live,
   hideCue = false,
+  eager = true,
 }: {
   stage: DeskInstrumentStage;
   label: string;
@@ -23,12 +24,16 @@ export function ReceiverShell({
   live: boolean;
   /** Room already says the H shortcut once at the line foot — hide the duplicate. */
   hideCue?: boolean;
+  /** The 3D receiver is room furniture. Compact passes false so the desk ships
+      the poster only and never fetches Three.js (per-view payload split). */
+  eager?: boolean;
 }) {
   return (
     <div className={styles.instrumentShell} data-stage={stage}>
       <div className={styles.instrument} data-stage={stage}>
         <DeskInstrument
-          eager
+          eager={eager}
+          allowScene={eager}
           poster="/desk-receiver.webp"
           stage={stage}
           label={label}

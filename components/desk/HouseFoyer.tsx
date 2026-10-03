@@ -51,7 +51,7 @@ function instructionForMark(mark: DeskMark): string {
  * Claflin foyer — the market and the brokers' lines are the hero: a live
  * market clock, the tape, and one card per desk whose line is connected.
  */
-export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null, recordId?: string | null) => void }) {
+export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseDeskId, offeringId?: string, intent?: EntryIntent | null, recordId?: string | null) => void; /** False while entry is still pending — the shared scene stays still so a desk URL never boots WebGL in the pass-through. */ sceneLive?: boolean }) {
   const openDesks = HOUSE_DESKS.filter(desk => isOpenDesk(desk.id));
   const planned = HOUSE_DESKS.filter(desk => !isOpenDesk(desk.id));
   /* Every open desk gets a line — voice desks take calls, typed-only desks
@@ -105,7 +105,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     commitInstruction(instruction, 'picked');
   };
 
-  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: false });
+  const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: !sceneLive });
   const graphics = useHouseGraphics();
   const sceneApi = useHouseSceneApi();
 

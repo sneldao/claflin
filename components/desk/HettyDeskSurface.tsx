@@ -454,6 +454,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             brokerName="Hetty"
             lineTargetId="hetty"
             live={hettyLive}
+            eager={roomView}
           />
           <div className={styles.deskInscription}>
             <span>The tape runs all night.</span>

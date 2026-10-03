@@ -12,7 +12,7 @@ function stageCaption(stage: DeskInstrumentStage, brokerName: string) {
   return 'LIFT TO SPEAK';
 }
 
-export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS', eager = false, poster, reviewing = stage === 'confirmation', brokerName = 'Hetty', lineTargetId = 'hetty' }: { stage: DeskInstrumentStage; label?: string; eager?: boolean; poster?: string; reviewing?: boolean; brokerName?: string; lineTargetId?: string }) {
+export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS', eager = false, allowScene = true, poster, reviewing = stage === 'confirmation', brokerName = 'Hetty', lineTargetId = 'hetty' }: { stage: DeskInstrumentStage; label?: string; eager?: boolean; /** Hard gate on the Three.js import — false never resolves the scene module, not even eagerly. */ allowScene?: boolean; poster?: string; reviewing?: boolean; brokerName?: string; lineTargetId?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<DeskInstrumentController | null>(null);
@@ -21,7 +21,7 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
   const reviewRef = useRef(reviewing);
   const [ready, setReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [allowScene, setAllowScene] = useState(eager);
+  const [allowSceneState, setAllowScene] = useState(eager && allowScene);
   /* The receiver is the room's switch: the room reads the line's truth from
      the call panel's own state attribute and mirrors it onto the instrument
      (it renders beside the panel, not inside it). */
@@ -78,9 +78,10 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
   }, []);
 
   // Defer Three.js until the instrument is on-screen and the main thread is idle.
+  // allowScene === false (Compact receiver) never arms the scene or loads three.
   useEffect(() => {
     const host = hostRef.current;
-    if (!host || reducedMotion) {
+    if (!host || reducedMotion || !allowScene) {
       setAllowScene(false);
       return;
     }
@@ -92,7 +93,7 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
     let idleId = 0;
     let timeoutId = 0;
     const arm = () => {
-      if (cancelled || allowScene) return;
+      if (cancelled || allowSceneState) return;
       const win = window as Window & {
         requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
         cancelIdleCallback?: (id: number) => void;
@@ -117,15 +118,15 @@ export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAP
       if (idleId && typeof win.cancelIdleCallback === 'function') win.cancelIdleCallback(idleId);
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  // allowScene omitted intentionally — arm once per mount/reducedMotion flip
+  // allowSceneState omitted intentionally — arm once per mount/reducedMotion flip
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion, eager]);
+  }, [reducedMotion, eager, allowScene]);
 
   useEffect(() => {
     let cancelled = false;
     const host = hostRef.current;
     const canvas = canvasRef.current;
-    if (!host || !canvas || reducedMotion || !allowScene || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!host || !canvas || reducedMotion || !allowSceneState || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       controllerRef.current?.dispose();
       controllerRef.current = null;
       setReady(false);

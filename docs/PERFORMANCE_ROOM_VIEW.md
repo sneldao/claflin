@@ -14,30 +14,42 @@ The plan (Phase 0.4) calls out that the pinned-hero + scroll-driven camera + len
 
 The numbers are starting points, not promises. They get refined against measured baselines.
 
-## Recorded headless baseline (2026-10-03)
+## Recorded headless baseline (2026-10-03, after the per-view split)
 
-The feature-repair build was measured at 19:40 UTC in local production mode,
-1280×800 headless Chromium with the ANGLE/SwiftShader software renderer and
-stubbed provider reads. This baseline predates the subsequent small dependency
-updates; it is not a measurement of a deployment or the later dependency build.
+Measured at 23:12 UTC in local production mode, 1280×800 headless Chromium with
+the ANGLE/SwiftShader software renderer and stubbed provider reads. Not a
+deployment or real-device measurement.
 
 | View | First paint (ms) | WebGL mount (ms) | Median fps | JS payload (gzipped bytes) |
 |---|---:|---:|---:|---:|
-| Compact | 1,172 | 1,301 | 59.88 | 1,573,768 |
-| Room | 2,968 | 2,988 | 1.54 | 1,573,768 |
+| Compact | 1,076 | not mounted | 59.88 | 1,324,712 |
+| Room | 900 | 1,145 | 30.03 | 1,571,612 |
 
-Room misses the desktop paint, mount and frame-rate targets. Both views exceed
-their payload budgets, and Compact still mounts WebGL. The desired per-view
-payload split is therefore not established. Re-measure after scene/payload
-changes and verify on real Android and iOS hardware before claiming acceptance.
-The [release validation record](RELEASE_VALIDATION.md) separates these results
-from tests, browser journeys and provider certification.
+Compact no longer mounts WebGL or fetches the scene/instrument chunks — the
+per-view payload split is established at the structural level. The Compact
+payload target (<200KB) is not yet met; the remaining weight is framework and
+provider SDK code, not the room scene. Room still exceeds its payload budget
+and must still be verified on real Android and iOS hardware before claiming
+acceptance. The pre-split baseline (Compact and Room both at 1,573,768 bytes
+with Compact mounting WebGL at ~1,301ms) was replaced by this one.
+
+The regression gate tolerance policy: payload bytes gate strictly at 15%
+(deterministic build-to-build); paint and WebGL mount allow 3× because
+same-build runs on this shared machine measured 948→3,660ms paint; frame
+fields gate only when both the baseline and the measured run sampled an
+active scene — the scene renders on demand, so an idle run measures nothing
+about frame cost.
 
 ## Per-view split
 
-Target: Compact ships without Three.js; Room lazy-loads the scene. The current
-shared scene implementation does not establish that payload split. Measure both
+Target: Compact ships without Three.js; Room lazy-loads the scene. Measure both
 views before claiming that the target is met.
+
+Mechanism, reworked 2026-10-03: the shared scene provider boots still, so a
+desk URL in Compact never mounts WebGL through the foyer pass-through, and the
+receiver's eager Three.js import is tied to Room (`eager={roomView}`) so
+Compact fetches the poster only. Measured: Compact's `webglMountMs` stays unset
+and its payload drops by ~249KB gzipped; see the recorded baseline below.
 
 - **Compact** (`?view=compact`): the same controller, with a compact working surface.
 - **Room** (`?view=room`): the spatial working surface. Reduced motion retains a still presentation.
