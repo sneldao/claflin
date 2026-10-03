@@ -1,0 +1,296 @@
+/* The receipt as a portrait. The slip inside is unchanged; this
+ * envelope is what gives the receipt its design weight. A real
+ * paper artifact, not a row in a table.
+ *
+ * The portrait is honest. It carries:
+ *   - the desk nameplate (kicker)
+ *   - the date in longhand
+ *   - a stamp with the desk's mode (paper / live)
+ *   - the slip itself, in mode: 'receipt'
+ *   - a transaction-hash chip for live Base / Solana fills
+ *   - a brass corner on each corner
+ *   - a small footer row of affordances owned by the caller
+ *
+ * No invented copy. No fake decorations. Every word on the portrait
+ * is also in the slip or in a fact the slip already carries. */
+
+.portrait {
+  position: relative;
+  isolation: isolate;
+  background:
+    /* the paper texture — a single subtle gradient that suggests
+       deckle-edge ivory without literally drawing it */
+    linear-gradient(180deg, #f4ecd6 0%, #ede2c0 100%);
+  color: #2a2620;
+  padding: clamp(28px, 4vw, 44px) clamp(28px, 5vw, 56px) clamp(24px, 3.6vw, 40px);
+  border: 1px solid rgba(110, 88, 50, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(255, 250, 235, 0.6) inset,
+    0 6px 22px -12px rgba(50, 30, 0, 0.18);
+  max-width: 640px;
+  margin-inline: auto;
+  /* a slight rotation so the portrait doesn't look screen-perfect —
+     the paper has weight, but it isn't crooked enough to feel like
+     a meme. */
+  transform: rotate(-0.4deg);
+}
+
+.portrait[data-mode='live'] {
+  /* live settles carry a faint amber thread, so the slip's mode
+     reads at a glance. the colour is the same palette brass
+     already lives in, just a touch warmer. */
+  background: linear-gradient(180deg, #f7ebcd 0%, #ecdcab 100%);
+  border-color: rgba(168, 110, 30, 0.28);
+}
+
+/* brass corners — small marks at each corner. They're not the
+ * framing; they're a hint that this is a real artifact. */
+.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(184, 142, 60, 0.55);
+  border-style: solid;
+  border-width: 0;
+}
+.corner[data-position='tl'] {
+  top: 6px; left: 6px;
+  border-top-width: 1.5px; border-left-width: 1.5px;
+}
+.corner[data-position='tr'] {
+  top: 6px; right: 6px;
+  border-top-width: 1.5px; border-right-width: 1.5px;
+}
+.corner[data-position='bl'] {
+  bottom: 6px; left: 6px;
+  border-bottom-width: 1.5px; border-left-width: 1.5px;
+}
+.corner[data-position='br'] {
+  bottom: 6px; right: 6px;
+  border-bottom-width: 1.5px; border-right-width: 1.5px;
+}
+
+/* the header: kicker, date, stamp. Each on its own line; the
+ * stamp sits in the upper-right so the slip is the centre. */
+.header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'kicker stamp'
+    'date   stamp';
+  align-items: start;
+  column-gap: clamp(20px, 4vw, 40px);
+  row-gap: 10px;
+  padding-bottom: clamp(18px, 2.4vw, 26px);
+  border-bottom: 1px solid rgba(110, 88, 50, 0.22);
+  margin-bottom: clamp(18px, 2.4vw, 26px);
+}
+
+.kicker {
+  grid-area: kicker;
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6c5a2a;
+}
+
+.kickerDesk {
+  font-weight: 600;
+  color: #3d3219;
+}
+
+.kickerDot {
+  color: rgba(110, 88, 50, 0.5);
+}
+
+.kickerMarket {
+  color: #6c5a2a;
+}
+
+.kickerVenue {
+  color: #8a7440;
+}
+
+.date {
+  grid-area: date;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-display), Fraunces, serif;
+  color: #2a2620;
+}
+
+.dateLonghand {
+  font-style: italic;
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.dateCompact {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a7440;
+}
+
+/* the stamp — a circular brass mark with the mode text. */
+.stamp {
+  grid-area: stamp;
+  position: relative;
+  width: clamp(82px, 8vw, 100px);
+  height: clamp(82px, 8vw, 100px);
+  border-radius: 50%;
+  border: 2.5px solid rgba(168, 70, 30, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  /* a slight rotation makes the stamp look applied, not generated */
+  transform: rotate(-7deg);
+  color: rgba(168, 70, 30, 0.85);
+  background: rgba(255, 250, 235, 0.25);
+  /* a faint dashed inner ring, a stamp detail */
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 250, 235, 0.45),
+    inset 0 0 0 5px rgba(168, 70, 30, 0.4);
+}
+
+.stamp[data-mode='live'] {
+  border-color: rgba(150, 90, 25, 0.85);
+  color: rgba(150, 90, 25, 0.95);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 250, 235, 0.5),
+    inset 0 0 0 5px rgba(150, 90, 25, 0.5);
+}
+
+.stampText {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  line-height: 1.15;
+  text-transform: uppercase;
+  padding: 0 6px;
+}
+
+/* the slip lives in the centre. We render the existing WrittenSlip
+ * here — the portrait is a frame, not a new document. */
+.slipSlot {
+  position: relative;
+  margin-inline: auto;
+  /* slip styles assume a transparent surface; the portrait provides
+     the ivory. */
+  background: transparent;
+}
+
+.slipSlot :global(.writtenSlip) {
+  background: transparent;
+}
+
+/* the footer: tx hash (live) or honest copy (paper), then any
+ * affordances the caller wires up. */
+.footer {
+  margin-top: clamp(20px, 3vw, 32px);
+  padding-top: clamp(14px, 2vw, 20px);
+  border-top: 1px solid rgba(110, 88, 50, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.modeFootnote {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6c5a2a;
+}
+
+.txHash {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.78rem;
+  text-decoration: none;
+  color: #2a2620;
+  padding: 6px 10px;
+  border: 1px solid rgba(110, 88, 50, 0.4);
+  background: rgba(255, 250, 235, 0.6);
+}
+
+.txHash:hover {
+  background: rgba(255, 250, 235, 0.9);
+}
+
+.txHashLabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: #8a7440;
+}
+
+.txHashValue {
+  color: #2a2620;
+}
+
+.txHashGo {
+  color: #8a7440;
+}
+
+.trailing {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #4a3f24;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 540px) {
+  /* on phones the header collapses to one column; the stamp moves
+     to the right of the date on its own line. */
+  .header {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'kicker'
+      'date'
+      'stamp';
+  }
+  .stamp {
+    justify-self: end;
+    margin-top: 4px;
+  }
+  .portrait {
+    transform: none; /* a slight rotation on mobile just looks broken */
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portrait {
+    transform: none;
+  }
+  .stamp {
+    transform: none;
+  }
+}
