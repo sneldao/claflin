@@ -7,14 +7,14 @@
  * `lib/brokers/contracts.ts` and scans `components/` and `app/` for
  * any string that would have matched a forbidden phrase.
  *
- * Plain Node, no tsx/tsc — the patterns are small and the contracts
- * are mirrored here as a static block. If a desk adds a new
- * forbidden phrase, the mirror must be updated.
+ * Node 24 strips the contracts' types; no duplicate regex registry.
  *
  * Exit 0 = clean. Exit 1 = violations. Exit 2 = internal.
  */
 
-import { readdir, stat, createReadStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import { readdir, stat } from 'node:fs/promises';
+import { BROKER_CONTRACTS } from '../lib/brokers/contracts.ts';
 import { join, relative } from 'node:path';
 import { createInterface } from 'node:readline';
 
@@ -28,40 +28,9 @@ const SKIP_DIRS = new Set([
   'node_modules', '.next', 'dist', 'build', 'coverage', 'test-results', 'docs',
 ]);
 
-/** Mirror of lib/brokers/contracts.ts — keep in sync. */
-const COMMON_FORBIDDEN = [
-  { category: 'recommendation', pattern: /\b(?:you should|you must|I'd recommend|we recommend|I recommend)\b/i },
-  { category: 'prediction', pattern: /\b(?:the price will|I think (?:it|NVDA|AAPL|[A-Z]{1,5}) will|it will (?:go up|go down|moon|tank|soar|crash)|guaranteed|to the moon)\b/i },
-  { category: 'portfolio advice', pattern: /\b(?:put all your (?:money|funds|portfolio)|you can'?t lose|risk-free|free money)\b/i },
-  { category: 'pretend authority', pattern: /\b(?:I (?:am a|have a) (?:licensed|registered|chartered) (?:financial|investment) (?:advisor|adviser|analyst|broker|planner))\b/i },
-  { category: 'compare to its own past', pattern: /\b(?:I called (?:it|this) when|as I (?:said|warned) (?:before|earlier|last (?:week|month)))\b/i },
-];
-
-const PER_DESK = {
-  hetty: [
-    { category: 'overconfidence', pattern: /\b(?:this is a sure thing|cannot lose|will definitely)\b/i },
-  ],
-  jesse: [
-    { category: 'fomo', pattern: /\b(?:don’?t miss (?:out|this)|last chance|get in before (?:it|everyone))\b/i },
-  ],
-  isabel: [],
-  halley: [
-    { category: 'fake provenance', pattern: /\b(?:this token is backed by|fully collateralized|audited and safe)\b/i },
-  ],
-  arbitrum: [],
-};
-
-/**
- * Build the merged per-desk forbidden list. Each desk carries the
- * common list and its own extras.
- */
-function forbiddenFor(deskId) {
-  return [...COMMON_FORBIDDEN, ...(PER_DESK[deskId] ?? [])];
-}
-
 async function* walk(dir) {
   let entries;
-  try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+  entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
@@ -84,8 +53,8 @@ async function scanFile(file) {
   for await (const line of stream) {
     lineNo += 1;
     if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue;
-    for (const deskId of Object.keys(forbiddenFor)) {
-      for (const { category, pattern } of forbiddenFor(deskId)) {
+    for (const [deskId, contract] of Object.entries(BROKER_CONTRACTS)) {
+      for (const { category, pattern } of contract.forbiddenPhrases) {
         const re = new RegExp(pattern.source, pattern.flags);
         const m = re.exec(line);
         if (m) {
@@ -100,22 +69,26 @@ async function scanFile(file) {
 
 async function main() {
   const violations = [];
+  let scanned = 0;
   for (const top of SCAN_DIRS) {
     const dir = join(ROOT, top);
     try {
       const s = await stat(dir);
       if (!s.isDirectory()) continue;
-    } catch {
-      continue;
+    } catch (err) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
     }
     for await (const file of walk(dir)) {
       if (SKIP_FILES.has(relative(ROOT, file))) continue;
+      scanned += 1;
       const found = await scanFile(file);
       for (const v of found) violations.push(v);
     }
   }
+  if (scanned === 0) throw new Error('No source files were scanned; run from the repository root.');
   if (violations.length === 0) {
-    process.stdout.write('check-broker-voice: clean — no client copy matches a forbidden phrase.\n');
+    process.stdout.write(`check-broker-voice: clean — scanned ${scanned} source files against the broker contracts.\n`);
     return;
   }
   process.stderr.write(`check-broker-voice: ${violations.length} violation(s)\n\n`);

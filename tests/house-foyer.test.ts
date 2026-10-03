@@ -312,7 +312,14 @@ describe('house foyer', () => {
     const rail = getRootElement().querySelector('nav[aria-label="The rooms"]');
     assert.ok(rail, 'the register renders');
     const stops = rail!.querySelectorAll('a');
-    assert.equal(stops.length, 6, 'one stop per room');
+    const sections = getRootElement().querySelectorAll('#main-content > section');
+    assert.equal(stops.length, 7, 'one stop per room');
+    assert.equal(sections.length, stops.length, 'the register and direct sections stay aligned');
+    assert.deepEqual(
+      [...stops].map(stop => stop.getAttribute('href')),
+      [...sections].map(section => `#${section.id}`),
+    );
+    assert.equal(getRootElement().querySelectorAll('#house-example').length, 1);
     assert.equal(stops[0].getAttribute('aria-current'), 'true', 'the line is current on arrival');
     assert.equal(stops[1].getAttribute('aria-current'), null, 'no second current stop');
   });

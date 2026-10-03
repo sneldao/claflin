@@ -441,7 +441,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             <DeskObjects />
           </>
         )}
-        <aside className={styles.support} aria-label="The Base desk’s direct line">
+        <aside className={styles.support} aria-label="Hetty’s direct line">
           <HettyCall desk={desk} liveMode={liveMode} take={roomView ? null : take} compactPlate={roomView} onLiveChange={handleLiveChange} onUserSpoken={handleUserSpoken} onAgentSpoken={handleAgentSpoken} onLineApplied={mergeSlipProv} />
           {blankSlip && filing?.deskId === 'hetty' && (
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('hetty', 'last_filing'); desk.openRecord(filing.recordId); }} />

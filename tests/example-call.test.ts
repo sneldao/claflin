@@ -43,7 +43,7 @@ describe('example call — accepted shape', () => {
       source: 'jesse',
       recordedAt: Date.parse('2026-09-21T14:00:00Z'),
       reviewedBy: 'editorial@example.com',
-      intent: { side: 'buy', amount: '100', quote: 'USDC', symbol: 'AAPLx' },
+      intent: { side: 'buy', amount: '100' },
       transcript: [
         { speaker: 'caller', text: 'Buy 100 USDC of Apple on Jesse.' },
         { speaker: 'broker', text: 'Filing paper on the Jesse desk for 100 USDC of AAPLx.' },

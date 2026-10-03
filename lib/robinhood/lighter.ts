@@ -175,7 +175,7 @@ export interface BookWalk {
   spreadBps: string | null;
 }
 
-function topOfBook(book: LighterBook) {
+export function topOfBook(book: LighterBook) {
   const bestBid = book.bids[0]?.price ?? null;
   const bestAsk = book.asks[0]?.price ?? null;
   const bid = bestBid !== null ? Number(bestBid) : NaN;

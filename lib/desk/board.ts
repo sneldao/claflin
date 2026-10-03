@@ -29,7 +29,7 @@ export const PRODUCT_FACTS: Partial<Record<MarketMandateId, ProductFacts>> = Obj
   'coinbase-tokenized-stocks': Object.freeze({
     what: 'A B20 token issued by Coinbase on Base: a beneficial claim on one share held 1:1 at a regulated custodian.',
     rights: 'Economic exposure, not a shareholder listing. Cash dividends raise the token’s multiplier instead of paying out, so one token is not always one share.',
-    eligibility: 'Offered to eligible non-US persons only. The chain does not check this; you must.',
+    eligibility: 'Offered to eligible non-US persons only. Eligibility requires a separate check; the chain does not establish it.',
     sourceLabel: 'Base tokenized stocks guide',
     sourceUrl: 'https://docs.base.org/base-chain/asset-issuance/tokenized-stocks-on-base',
   }),
@@ -70,6 +70,7 @@ export interface BoardRow {
    */
   venueMark: string | null;
   venueMarkSource: string | null;
+  venueMarkAt: number | null;
   venueMarkVolume24hUsd: string | null;
   /** Signed gap, token vs stock reference, in basis points — only when the
    *  desk observed both legs and the mark is fresh. */
@@ -150,6 +151,7 @@ export function boardRow(offering: InstrumentOffering, mark: DeskMark | undefine
     stockRefSource: sourceLabel(mark?.stockReference?.source),
     venueMark: Number.isFinite(venueValue) && venueValue > 0 ? venueValue.toFixed(2) : null,
     venueMarkSource: sourceLabel(mark?.venueMark?.source),
+    venueMarkAt: observedAtMs(mark?.venueMark?.observedAt),
     venueMarkVolume24hUsd: mark?.venueMark?.volume24hUsd ?? null,
     gapBps: Number.isFinite(gap) ? gap : null,
     gapNote: gapNoteFor(mark, markState),

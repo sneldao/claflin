@@ -25,7 +25,8 @@
  *   - import paths / variable names
  */
 
-import { readdir, stat, createReadStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import { readdir, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { createInterface } from 'node:readline';
 
@@ -58,7 +59,7 @@ const RULES = [
 
 async function* walk(dir) {
   let entries;
-  try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+  entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
@@ -80,7 +81,7 @@ async function scanFile(file) {
     // Best-effort comment-line skip.
     if (/^\s*(\/\/|\*|\/\*)/.test(line)) continue;
     for (const { pattern, reason } of RULES) {
-      const re = new RegExp(pattern.source, pattern.flags);
+      const re = new RegExp(pattern.source, `${pattern.flags}g`);
       let m;
       while ((m = re.exec(line)) !== null) {
         const before = line[m.index - 1];
@@ -98,22 +99,26 @@ async function scanFile(file) {
 
 async function main() {
   const violations = [];
+  let scanned = 0;
   for (const top of SCAN_DIRS) {
     const dir = join(ROOT, top);
     try {
       const s = await stat(dir);
       if (!s.isDirectory()) continue;
-    } catch {
-      continue;
+    } catch (err) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
     }
     for await (const file of walk(dir)) {
       if (SKIP_FILES.has(relative(ROOT, file))) continue;
+      scanned += 1;
       const found = await scanFile(file);
       for (const v of found) violations.push(v);
     }
   }
+  if (scanned === 0) throw new Error('No source files were scanned; run from the repository root.');
   if (violations.length === 0) {
-    process.stdout.write('check-desk-copy: clean — all desk copy routes through lib/desktop.canon.ts.\n');
+    process.stdout.write(`check-desk-copy: clean — scanned ${scanned} source files for forbidden desk labels.\n`);
     return;
   }
   process.stderr.write(`check-desk-copy: ${violations.length} violation(s)\n\n`);

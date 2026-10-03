@@ -18,6 +18,7 @@ export interface DeskMark {
     differenceBps: string | null;
     /** Issuer-declared trading halt — surfaced, never hidden (Isabel/rhj). */
     halted?: boolean;
+    observedAt?: number;
   };
   /**
    * Optional third leg — the desk's venue mark (e.g. Lighter orderbook
@@ -29,6 +30,7 @@ export interface DeskMark {
   venueMark?: {
     priceUsd: string;
     source: 'lighter';
+    observedAt?: number;
     /** Per-symbol realized 24h volume on the venue, when the adapter
         can read it. Null when not supported. */
     volume24hUsd?: string | null;

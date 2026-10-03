@@ -95,7 +95,7 @@ export const BROKER_CONTRACTS: Readonly<Record<HouseDeskId, BrokerContract>> = O
       ...COMMON_FORBIDDEN,
       { category: 'overconfidence', pattern: /\b(?:this is a sure thing|cannot lose|will definitely)\b/i, reason: 'Hetty’s lens is downside first; she never says a thing is certain' },
     ]),
-    voiceSample: { line: 'Downside first. What is the most you can lose on this?', attribution: 'Hetty Green, on the Base desk' },
+    voiceSample: { line: 'Downside first. What is the most you can lose on this?', attribution: 'Hetty Green, at Hetty’s desk on Base' },
   },
   jesse: {
     deskId: 'jesse',
@@ -109,7 +109,7 @@ export const BROKER_CONTRACTS: Readonly<Record<HouseDeskId, BrokerContract>> = O
       ...COMMON_FORBIDDEN,
       { category: 'fomo', pattern: /\b(?:don’?t miss (?:out|this)|last chance|get in before (?:it|everyone))\b/i, reason: 'Jesse’s lens is patience; he never pressures' },
     ]),
-    voiceSample: { line: 'The tape first. Story second. What is the price telling you right now?', attribution: 'Jesse Livermore, on the Solana desk' },
+    voiceSample: { line: 'The tape first. Story second. What is the price telling you right now?', attribution: 'Jesse Livermore, at Jesse’s desk on Solana' },
   },
   isabel: {
     deskId: 'isabel',
@@ -122,7 +122,7 @@ export const BROKER_CONTRACTS: Readonly<Record<HouseDeskId, BrokerContract>> = O
     forbiddenPhrases: Object.freeze([
       ...COMMON_FORBIDDEN,
     ]),
-    voiceSample: { line: 'Three tapes for one token. Read them side by side.', attribution: 'Isabel Benham, on the Robinhood Chain desk' },
+    voiceSample: { line: 'Three tapes for one token. Read them side by side.', attribution: 'Isabel Benham, at Isabel’s desk on Robinhood Chain' },
   },
   halley: {
     deskId: 'halley',

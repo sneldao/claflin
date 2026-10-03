@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CURRENT_EXAMPLE_CALL, EXAMPLE_CALL_CRITERIA, EXAMPLE_CALL_LABEL } from '@/lib/foyer/example-call';
+import { CURRENT_EXAMPLE_CALL, EXAMPLE_CALL_CRITERIA, EXAMPLE_CALL_LABEL, type ExampleCall, type ExampleCallState } from '@/lib/foyer/example-call';
 import foyerStyles from '@/components/desk/HouseFoyer.module.css';
 
 /**
@@ -15,18 +15,18 @@ import foyerStyles from '@/components/desk/HouseFoyer.module.css';
  * Until a recording is accepted, the section renders the criteria, not a
  * fake. The criteria are the bar the first accepted recording will clear.
  */
-export function AnnotatedExampleCall() {
-  const state = CURRENT_EXAMPLE_CALL;
+export function AnnotatedExampleCall({ state = CURRENT_EXAMPLE_CALL }: { state?: ExampleCallState }) {
+  return state.kind === 'accepted'
+    ? <AcceptedExampleCall call={state.call} />
+    : <ExampleCallEmpty state={state} />;
+}
+
+function AcceptedExampleCall({ call }: { call: ExampleCall }) {
   const [showCaptions, setShowCaptions] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [activeTurn, setActiveTurn] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  if (state.kind !== 'accepted') {
-    return <ExampleCallEmpty state={state} />;
-  }
-
-  const { call } = state;
   const recordedDate = new Date(call.recordedAt);
   const dateLabel = recordedDate.toISOString().slice(0, 10);
 
@@ -46,14 +46,15 @@ export function AnnotatedExampleCall() {
     if (!audio || !audioUnlocked) return;
     const onTime = () => {
       const t = audio.currentTime;
-      // Even time slices per turn; the real recording's timestamps would
-      // arrive with the call fixture.
-      const idx = Math.min(call.transcript.length - 1, Math.floor(t));
+      let idx = -1;
+      call.transcript.forEach((turn, index) => {
+        if (turn.startSeconds !== undefined && turn.startSeconds <= t) idx = index;
+      });
       setActiveTurn(idx);
     };
     audio.addEventListener('timeupdate', onTime);
     return () => audio.removeEventListener('timeupdate', onTime);
-  }, [audioUnlocked, call.transcript.length]);
+  }, [audioUnlocked, call.transcript]);
 
   return (
     <section
@@ -87,14 +88,14 @@ export function AnnotatedExampleCall() {
             ))}
           </ol>
           <div className={foyerStyles.exampleCallControls}>
-            <button
+            {call.audioSrc ? <button
               type="button"
               onClick={onPlay}
               className={foyerStyles.exampleCallPlay}
               aria-label="Play the recorded call"
             >
               ▶ Play the recording
-            </button>
+            </button> : <span>Transcript only · no audio recording attached</span>}
             <label className={foyerStyles.exampleCallCaptions}>
               <input
                 type="checkbox"
@@ -106,7 +107,7 @@ export function AnnotatedExampleCall() {
           </div>
           {call.intent && (
             <p className={foyerStyles.exampleCallIntent}>
-              Intent: {call.intent.side ?? '?'} {call.intent.amount ?? '?'} {call.intent.quote ?? ''} of {call.intent.symbol ?? '?'}
+              Intent: {call.intent.side ?? '?'} {call.intent.amount ?? '?'} {call.slip.quoteAsset} of {call.slip.symbol}
             </p>
           )}
         </div>
@@ -135,10 +136,7 @@ export function AnnotatedExampleCall() {
         </p>
       )}
 
-      <audio ref={audioRef} preload="none" aria-hidden="true">
-        {/* The src is set by the editorial pipeline when a recording is
-            accepted. Until then the audio element is silent. */}
-      </audio>
+      {call.audioSrc && <audio ref={audioRef} src={call.audioSrc} preload="none" aria-hidden="true" />}
     </section>
   );
 }

@@ -25,6 +25,8 @@ import { parseDictatedTradeIntent } from '@/lib/trading/dictation-parser';
 import { dictationTicketLine } from '@/lib/trading/voice-tools';
 import { BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import { WrittenSlip } from './WrittenSlip';
+import { ReceiptPortrait } from './ReceiptPortrait';
+import { getHouseDesk } from '@/lib/house';
 import { QuoteReview } from './QuoteReview';
 import { SignalCaption } from './SignalCaption';
 import { HETTY_VOCAB, slipOneLine, slipSentence, slipValidity, draftComplete } from '@/lib/desk/written-slip';
@@ -736,6 +738,7 @@ export const TradeTicket = memo(function TradeTicket({
         <p className={styles.quoteBoundary}>Nothing to approve yet. No funds move.</p>
         <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>
       </div> : quote && recorded ? (
+        <ReceiptPortrait desk={getHouseDesk('hetty')!} filedAt={filedRecord?.createdAt ?? null}>
         <WrittenSlip
           mode="receipt"
           draft={state.draft}
@@ -772,6 +775,7 @@ export const TradeTicket = memo(function TradeTicket({
             </details>
           </>}
         />
+        </ReceiptPortrait>
       ) : quote ? (
         <WrittenSlip
           mode="review"

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
 
 /* CI pins IPv4 end to end: GitHub runners export HOSTNAME (the machine
    name), which the standalone server would otherwise bind to, and
@@ -23,7 +24,9 @@ export default defineConfig({
        a dev server's first-request compiles would eat the test timeouts.
        `postbuild` prunes .next/server under NODE_ENV=production, so the
        standalone server is the only runnable production output. */
-    command: process.env.CI ? 'node .next/standalone/server.js' : 'pnpm dev',
+    command: process.env.CI
+      ? existsSync('.next/server') ? 'pnpm exec next start --hostname 127.0.0.1' : 'node .next/standalone/server.js'
+      : 'pnpm dev',
     ...(process.env.CI ? { env: { PORT: '3000', HOSTNAME: '127.0.0.1' } } : {}),
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

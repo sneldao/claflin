@@ -62,7 +62,7 @@ const METHODS: Readonly<Record<HouseDeskId, BrokerExaminationMethod>> = {
       'Who must keep the rails working for this product to mean what it says?',
     ],
     boundary:
-      'Educational perspective only. Isabel Benham is remembered as a railroad and credit analyst — not as the first woman with an NYSE seat (that was Muriel Siebert, 1967). The Robinhood Chain desk is paper-only; this lens never loads a ticket.',
+      'Educational perspective only. Isabel Benham is remembered as a railroad and credit analyst — not as the first woman with an NYSE seat (that was Muriel Siebert, 1967). Isabel’s desk is paper-only; this lens never loads a ticket.',
     sources: [
       {
         label: 'Harvard Baker Library — Muriel Siebert NYSE seat, 1967',

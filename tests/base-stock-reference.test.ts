@@ -1,7 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
-import { readBaseStockReference, readAllBaseStockReferences, referenceDifferenceBps, readCoinbaseExchangeTicker, DEFAULT_MAX_AGE_MS } from '../lib/trading/marks/base-stock-reference';
+import { readBaseStockReference, readAllBaseStockReferences, referenceDifferenceBps, readCoinbaseExchangeTicker } from '../lib/trading/marks/base-stock-reference';
+
+const NOW = Date.parse('2026-10-03T14:00:00Z');
+const ONE_SHARE = 10n ** 18n;
+function ticker(price: string, observedAt = NOW) {
+  return Response.json({ price, time: new Date(observedAt).toISOString() });
+}
 
 /**
  * The Base stock reference is the underlying-equity spot price (NVDA on
@@ -14,12 +20,12 @@ describe('base stock reference — Coinbase Exchange read', () => {
   it('parses a well-formed ticker response', async () => {
     const fakeFetch = (async (url: string) => {
       assert.match(url, /api\.exchange\.coinbase\.com\/products\/NVDA-USD\/ticker/);
-      return new Response(JSON.stringify({ price: '123.45' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return ticker('123.45');
     }) as typeof fetch;
     const result = await readCoinbaseExchangeTicker('NVDA-USD', fakeFetch);
     assert.ok('priceUsd' in result);
     assert.equal(result.priceUsd, '123.45');
-    assert.ok(result.observedAt > 0);
+    assert.equal(result.observedAt, NOW);
   });
 
   it('returns a transport error on a non-2xx response', async () => {
@@ -37,18 +43,22 @@ describe('base stock reference — Coinbase Exchange read', () => {
   });
 
   it('returns a bad-response error when the price is non-positive', async () => {
-    const fakeFetch = (async () => new Response(JSON.stringify({ price: '0' }), { status: 200 })) as typeof fetch;
+    const fakeFetch = (async () => ticker('0')) as typeof fetch;
     const result = await readCoinbaseExchangeTicker('NVDA-USD', fakeFetch);
     assert.ok('error' in result);
     assert.equal(result.error, 'bad-response');
+  });
+  it('requires a real provider timestamp', async () => {
+    const result = await readCoinbaseExchangeTicker('NVDA-USD', async () => Response.json({ price: '100' }));
+    assert.ok('error' in result);
   });
 });
 
 describe('base stock reference — instrument reads', () => {
   it('returns ok with a positive price for a healthy read', async () => {
     const instrument = DESK_INSTRUMENTS[0];
-    const now = Date.now();
-    const fakeFetch = (async () => new Response(JSON.stringify({ price: '500.00' }), { status: 200 })) as typeof fetch;
+    const now = NOW;
+    const fakeFetch = (async () => ticker('500.00')) as typeof fetch;
     const result = await readBaseStockReference(instrument, { fetcher: fakeFetch, now });
     assert.equal(result.kind, 'ok');
     if (result.kind !== 'ok') return;
@@ -61,18 +71,21 @@ describe('base stock reference — instrument reads', () => {
 
   it('returns unavailable when the read is older than maxAgeMs', async () => {
     const instrument = DESK_INSTRUMENTS[0];
-    const fakeFetch = (async () => new Response(JSON.stringify({ price: '500' }), { status: 200 })) as typeof fetch;
-    // The read's observedAt uses the first clock tick; the comparison
-    // `now` uses the second tick. So the read is older by one tick.
-    // With maxAgeMs: 0, the staleness check fires.
-    let ticks = 0;
-    // First call: now=1_000_010 (later); second call: observedAt=1_000_000
-    // (earlier). With maxAgeMs: 0, the read is stale.
-    const clock = () => ticks++ === 0 ? 1_000_010 : 1_000_000;
-    const result = await readBaseStockReference(instrument, { fetcher: fakeFetch, clock, maxAgeMs: 0 });
+    const fakeFetch = (async () => ticker('500', NOW - 86_400_000)) as typeof fetch;
+    const result = await readBaseStockReference(instrument, { fetcher: fakeFetch, now: NOW });
     assert.equal(result.kind, 'unavailable');
     if (result.kind !== 'unavailable') return;
     assert.equal(result.reason.kind, 'stale');
+  });
+  it('checks freshness after transport completes and rejects future observations', async () => {
+    const slow = await readBaseStockReference(DESK_INSTRUMENTS[0], {
+      fetcher: async () => ticker('100'), clock: () => NOW + 300_001,
+    });
+    assert.equal(slow.kind, 'unavailable');
+    const future = await readBaseStockReference(DESK_INSTRUMENTS[0], {
+      fetcher: async () => ticker('100', NOW + 1), now: NOW,
+    });
+    assert.equal(future.kind, 'unavailable');
   });
 
   it('returns unavailable with a transport reason on a network error', async () => {
@@ -85,8 +98,8 @@ describe('base stock reference — instrument reads', () => {
   });
 
   it('returns a row for every Base instrument in batch', async () => {
-    const fakeFetch = (async () => new Response(JSON.stringify({ price: '100.00' }), { status: 200 })) as typeof fetch;
-    const all = await readAllBaseStockReferences({ fetcher: fakeFetch });
+    const fakeFetch = (async () => ticker('100.00')) as typeof fetch;
+    const all = await readAllBaseStockReferences({ fetcher: fakeFetch, now: NOW });
     assert.equal(all.size, DESK_INSTRUMENTS.length);
     for (const instrument of DESK_INSTRUMENTS) {
       assert.ok(all.has(instrument.id), `missing row for ${instrument.symbol}`);
@@ -97,16 +110,16 @@ describe('base stock reference — instrument reads', () => {
 describe('base stock reference — gap math', () => {
   it('returns positive bps when the token is above the underlying', () => {
     // 110 / 100 - 1 = 0.10 = 1000 bps
-    assert.equal(referenceDifferenceBps('110', '100'), '1000.0');
+    assert.equal(referenceDifferenceBps('110', '100', ONE_SHARE), '1000.0');
   });
 
   it('returns negative bps when the token is below the underlying', () => {
     // 95 / 100 - 1 = -0.05 = -500 bps
-    assert.equal(referenceDifferenceBps('95', '100'), '-500.0');
+    assert.equal(referenceDifferenceBps('95', '100', ONE_SHARE), '-500.0');
   });
 
   it('returns 0.0 when the two legs are equal', () => {
-    assert.equal(referenceDifferenceBps('100', '100'), '0.0');
+    assert.equal(referenceDifferenceBps('100', '100', ONE_SHARE), '0.0');
   });
 
   it('returns null when either leg is missing', () => {
@@ -122,7 +135,14 @@ describe('base stock reference — gap math', () => {
 
   it('returns one decimal place, like Jesse and Isabel', () => {
     // 100.123 / 100 = 1.00023 → 12.3 bps → one decimal
-    assert.equal(referenceDifferenceBps('100.123', '100'), '12.3');
+    assert.equal(referenceDifferenceBps('100.123', '100', ONE_SHARE), '12.3');
+  });
+  it('normalizes corporate actions and suppresses unknown or invalid bases', () => {
+    assert.equal(referenceDifferenceBps('110', '100', 1_100_000_000_000_000_000n), '0.0');
+    assert.equal(referenceDifferenceBps('110', '100'), null);
+    assert.equal(referenceDifferenceBps(undefined, '100', ONE_SHARE), null);
+    assert.equal(referenceDifferenceBps('-100', '100', ONE_SHARE), null);
+    assert.equal(referenceDifferenceBps('100', '100', 0n), null);
   });
 });
 
@@ -137,9 +157,9 @@ describe('base stock reference — honesty', () => {
     let requestedUrl = '';
     const fakeFetch = (async (url: string) => {
       requestedUrl = url;
-      return new Response(JSON.stringify({ price: '1' }), { status: 200 });
+      return ticker('1');
     }) as typeof fetch;
-    await readBaseStockReference(DESK_INSTRUMENTS[0], { fetcher: fakeFetch });
+    await readBaseStockReference(DESK_INSTRUMENTS[0], { fetcher: fakeFetch, now: NOW });
     // The product id is "<TICKER>-USD" with the underlying uppercase.
     assert.match(requestedUrl, /\/products\/[A-Z]+-USD\/ticker/);
   });

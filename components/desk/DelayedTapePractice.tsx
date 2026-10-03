@@ -40,7 +40,7 @@ export function DelayedTapePractice() {
           <h1>{DELAYED_TAPE_INTRO.title}</h1>
           <p className={styles.summary}>{DELAYED_TAPE_INTRO.summary}</p>
           <p className={styles.back}>
-            Your ticket on the Base desk is unchanged while you are here.
+            Your ticket on Hetty’s desk is unchanged while you are here.
           </p>
         </header>
 

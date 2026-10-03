@@ -330,8 +330,6 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           marks={{ hetty: hettyMarks, jesse: jesseMarks, isabel: isabelMarks }}
         />
 
-        <AnnotatedExampleCall />
-
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
           <h2 id="house-method-title">How the line works.</h2>
           <div className={foyerStyles.methodRows}>

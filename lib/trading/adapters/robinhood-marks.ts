@@ -23,6 +23,7 @@ export function createRobinhoodMarkAdapter(
   readFeeds: FeedReader = createRobinhoodFeedReader(),
   readBook: BookReader = fetchLighterBook,
   readBookStats: BookStatsReader = fetchLighterBookStats,
+  readPrices: typeof fetchRhjPrices = fetchRhjPrices,
 ): MarkAdapter {
   return {
     source: 'chainlink',
@@ -31,7 +32,7 @@ export function createRobinhoodMarkAdapter(
       const instruments = ROBINHOOD_INSTRUMENTS.filter(i => i.quoteSupported);
       const [readings, prices, bookStats] = await Promise.all([
         readFeeds(instruments.map(i => i.chainlinkFeed)),
-        fetchRhjPrices().catch(() => null),
+        readPrices().catch(() => null),
         readBookStats().catch(() => null),
       ]);
       // Read Lighter books in parallel — each book's failure is local
@@ -62,6 +63,7 @@ export function createRobinhoodMarkAdapter(
             venueMark = {
               priceUsd: top.midPrice,
               source: 'lighter' as const,
+              observedAt: now,
               volume24hUsd: stats?.dailyQuoteVolume ?? null,
             };
           }

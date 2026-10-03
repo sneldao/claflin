@@ -143,6 +143,7 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
                 <th scope="col">Rail · venue</th>
                 <th scope="col" className={foyerStyles.num}>Token mark</th>
                 <th scope="col" className={foyerStyles.num}>Stock ref</th>
+                <th scope="col" className={foyerStyles.num}>Venue mark</th>
                 <th scope="col" className={foyerStyles.num}>Gap</th>
                 <th scope="col"><span className={foyerStyles.srOnly}>Desk</span></th>
               </tr>
@@ -179,6 +180,15 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
                         {row.stockRef ? <span>${row.stockRef}</span> : <span className={foyerStyles.boardMissing}>—</span>}
                         {row.stockRefSource && <span className={foyerStyles.boardSub}>{row.stockRefSource}</span>}
                       </td>
+                      <td className={foyerStyles.num} data-label="Venue mark">
+                        {row.venueMark ? <span>${row.venueMark}</span> : <span className={foyerStyles.boardMissing}>—</span>}
+                        {row.venueMarkSource && <span className={foyerStyles.boardSub}>
+                          {row.venueMarkSource}{row.venueMarkAt ? ` · ${formatObservedAt(row.venueMarkAt)}` : ''}
+                        </span>}
+                        {row.venueMarkVolume24hUsd && <span className={foyerStyles.boardSub}>
+                          24h volume · {row.venueMarkVolume24hUsd} USDG
+                        </span>}
+                      </td>
                       <td className={foyerStyles.num} data-label="Gap">
                         {row.gapBps != null
                           ? <span className={foyerStyles.boardGap} data-sign={Math.sign(row.gapBps)}>{formatGap(row.gapBps)}</span>
@@ -190,7 +200,7 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
                       </td>
                     </tr>
                     <tr id={detailsId} className={foyerStyles.boardDetails} hidden={!expanded}>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <RowDetails row={row} />
                       </td>
                     </tr>

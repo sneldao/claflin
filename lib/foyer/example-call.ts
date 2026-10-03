@@ -25,6 +25,8 @@ export interface ExampleCallTurn {
   speaker: 'caller' | 'broker';
   /** The transcript of the turn. Plain text, no markup. */
   text: string;
+  /** Actual recording offset, when supplied by the editor. */
+  startSeconds?: number;
 }
 
 export interface ExampleCallSlip {
@@ -63,6 +65,8 @@ export interface ExampleCall {
   /** The intent the caller spoke. Carried through the desks, the slip, and
    *  the eventual paper record. */
   intent: EntryIntent;
+  /** Same-origin recording, when available. Transcript-only examples omit it. */
+  audioSrc?: string;
 }
 
 /**
@@ -121,5 +125,16 @@ export function isValidExampleCall(call: unknown): call is ExampleCall {
   if (typeof c.slip !== 'object' || c.slip === null) return false;
   const slip = c.slip as Record<string, unknown>;
   if (slip.mode !== 'paper') return false;
+  for (const field of ['symbol', 'quoteAsset', 'amount', 'fill', 'venue']) {
+    if (typeof slip[field] !== 'string' || slip[field].length === 0) return false;
+  }
+  if (!Number.isFinite(c.recordedAt)) return false;
+  if (typeof slip.quotedAt !== 'number' || !Number.isFinite(slip.quotedAt) || slip.quotedAt <= 0) return false;
+  if (typeof slip.expiresAt !== 'number' || !Number.isFinite(slip.expiresAt) || slip.expiresAt <= slip.quotedAt) return false;
+  if (typeof c.intent !== 'object' || c.intent === null) return false;
+  if (c.audioSrc !== undefined && (typeof c.audioSrc !== 'string' || !/^\/(?!\/)/.test(c.audioSrc))) return false;
+  if (c.transcript.some(turn => turn.startSeconds !== undefined && (
+    typeof turn.startSeconds !== 'number' || !Number.isFinite(turn.startSeconds) || turn.startSeconds < 0
+  ))) return false;
   return true;
 }

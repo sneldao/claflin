@@ -29,6 +29,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Desk copy and broker contracts
+        run: pnpm check:canon && pnpm check:broker-voice
+
   test:
     name: Tests
     runs-on: ubuntu-latest

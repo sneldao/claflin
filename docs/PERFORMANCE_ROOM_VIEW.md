@@ -16,12 +16,16 @@ The numbers are starting points, not promises. They get refined against measured
 
 ## Per-view split
 
-The plan: Compact ships without Three.js at all; Room is the only view that lazy-loads the scene. The split lives in `components/desk/HouseScene.tsx` (already lazy via dynamic import inside `NightDeskScene`).
+Target: Compact ships without Three.js; Room lazy-loads the scene. The current
+shared scene implementation does not establish that payload split. Measure both
+views before claiming that the target is met.
 
-- **Compact** (`?view=compact` or default for visitors on a low-end profile): no WebGL. Static end-state from the fixture study. Same controller.
-- **Room** (`?view=room`): WebGL mounts after the static still paints. Reduced motion keeps the still and skips the WebGL mount.
+- **Compact** (`?view=compact`): the same controller, with a compact working surface.
+- **Room** (`?view=room`): the spatial working surface. Reduced motion retains a still presentation.
 
-The viewport gate (mobile < 768px defaults to Compact) is enforced client-side after the user opts in via `?view=room` on a flagged device class. The flag is `GRAPHICS_STORAGE_KEY` (`claflin.graphics.v1`) — visitors can opt in to WebGL on mobile and the system will remember the choice per browser.
+View and graphics preferences are separate. `GRAPHICS_STORAGE_KEY`
+(`claflin.graphics.v1`) remembers the graphics preference per browser; explicit
+Room/Compact choices do not grant a different trading capability.
 
 ## Reduced-motion end-state contract
 
@@ -37,18 +41,24 @@ The reduced-motion path renders in < 200ms after first paint on a mid-tier Andro
 
 ## Measuring
 
-`scripts/measure-room-budget.mjs` runs a Playwright build in a headed Chromium and records:
+After `pnpm exec next build --webpack`, run `node scripts/measure-room-budget.mjs`.
+It starts the local production server and measures both views in headless Chromium:
 
 - First paint (static) and WebGL mount timestamps
 - fps samples (median, p95) over a 5s scroll-through
 - JS payload split: gzipped bundle bytes for `/?view=compact` and `/?view=room`
-- The renderer's draw call count, triangle count, and shader cost
+- Draw calls and triangles per sampled frame, and CPU shader-compilation time (not GPU shader cost)
 
-The script writes `metrics.json` to `.room-budget/` on the repo root. Numbers are committed on every test run; regressions > 15% from the previous baseline fail the build.
+The script writes `metrics.latest.json` to `.room-budget/` (git-ignored). A successful
+run promotes that measurement to `metrics.json`; regressions > 15% from the previous
+successful baseline fail without replacing it. Missing Chromium or measurements
+fail instead of producing a passing placeholder. `--url=http://127.0.0.1:3000`
+uses an already-running local production server. Provider reads are stubbed; this
+is a rendering measurement, not provider certification.
 
 The hardware gate is a real device:
 
-- Cloud desktop (Playwright Chromium) — *required* for every PR.
+- Local/CI desktop (Playwright Chromium) — run the measurement command on the production build. The renderer is recorded per view; a headless baseline is not real-device certification.
 - One real Android device with Chrome remote debugging — *required* before the World’s Fair submission and before the Stocklana-equivalent release. BrowserStack / Sauce Labs is *not* a substitute; the doc’s position is that the room must be there on a phone, and a phone is a phone.
 - One real iOS device with Safari — *required* before the same release.
 

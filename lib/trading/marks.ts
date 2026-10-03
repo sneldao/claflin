@@ -14,7 +14,7 @@ export type { DeskMark, MarksResult } from './marks-shared';
  * substitute for a reviewed estimate.
  */
 
-export type FeedReading = { answer: bigint; decimals: number; updatedAt: number } | null;
+export type FeedReading = { answer: bigint; decimals: number; updatedAt: number; multiplierRaw?: bigint } | null;
 export type FeedReader = (feeds: readonly string[]) => Promise<FeedReading[]>;
 
 /** Read each Chainlink feed once per RPC candidate, tolerating per-feed failure. */
@@ -27,11 +27,20 @@ export function createChainlinkFeedReader(): FeedReader {
       const provider = new ethers.JsonRpcProvider(request, BASE, { staticNetwork: true, batchMaxCount: 10, batchStallTime: 16 });
       try {
         return await withRpcRetry(async () => {
+          const blockTag = await provider.getBlockNumber();
           return await Promise.all(feeds.map(async (feedAddress) => {
             try {
               const feed = new ethers.Contract(feedAddress, feedAbi, provider);
-              const [round, decimals] = await Promise.all([feed.latestRoundData(), feed.decimals()]);
-              return { answer: BigInt(round.answer), decimals: Number(decimals), updatedAt: Number(round.updatedAt) };
+              const stock = DESK_INSTRUMENTS.find(s => s.chainlinkFeed.toLowerCase() === feedAddress.toLowerCase());
+              const token = stock ? new ethers.Contract(stock.contractAddress, ['function multiplier() view returns (uint256)'], provider) : null;
+              const [round, decimals, multiplier] = await Promise.all([
+                feed.latestRoundData({ blockTag }), feed.decimals({ blockTag }),
+                token ? token.multiplier({ blockTag }).catch(() => null) : null,
+              ]);
+              return {
+                answer: BigInt(round.answer), decimals: Number(decimals), updatedAt: Number(round.updatedAt),
+                ...(multiplier !== null ? { multiplierRaw: BigInt(multiplier) } : {}),
+              };
             } catch { return null; }
           }));
         });
@@ -76,7 +85,10 @@ export function createMarksService(
           mark.stockReference = {
             priceUsd: stockRef.value.priceUsd,
             source: 'coinbase-exchange',
-            differenceBps: referenceDifferenceBps(tokenUsdPerToken, stockRef.value.priceUsd),
+            observedAt: stockRef.value.observedAt,
+            differenceBps: mark.reference.status === 'observed'
+              ? referenceDifferenceBps(tokenUsdPerToken, stockRef.value.priceUsd, readings[i]?.multiplierRaw ?? null)
+              : null,
           };
         }
         return mark;

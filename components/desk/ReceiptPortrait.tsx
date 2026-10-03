@@ -1,11 +1,10 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import type { HouseDesk, HouseDeskId } from '@/lib/house';
-import { DESK_CANON, getDeskCanon } from '@/lib/desktop.canon';
+import type { HouseDesk } from '@/lib/house';
+import { getDeskCanon } from '@/lib/desktop.canon';
 import { getBaseExplorerTxUrl } from '@/lib/base-chain';
 import { formatRecordedTime } from '@/lib/trading/desk-documents';
-import deskStyles from './WorkingDesk.module.css';
 import receiptStyles from './ReceiptPortrait.module.css';
 
 /**
@@ -50,7 +49,7 @@ export interface ReceiptPortraitProps {
 
 /** A small kicker rendered above the slip: desk + market + venue. */
 function ReceiptKicker({ desk }: { desk: HouseDesk }) {
-  const canon = getDeskCanon(desk.id) ?? DESK_CANON.find(d => d.id === desk.id);
+  const canon = getDeskCanon(desk.id);
   const venue = canon?.venue ? ` · ${canon.venue}` : '';
   return (
     <p className={receiptStyles.kicker}>
@@ -70,7 +69,8 @@ function ReceiptDate({ filedAt, dateLabel }: { filedAt: number | null; dateLabel
   const label = dateLabel ?? (filedAt ? formatRecordedTime(filedAt) : '—');
   // Long form: "Saturday, the 3rd of October" — only on the portrait, never
   // in the slip itself. The slip's compact timestamp is the source of truth.
-  const ts = filedAt ?? Date.now();
+  if (filedAt === null) return <p className={receiptStyles.date}>{dateLabel}</p>;
+  const ts = filedAt;
   const d = new Date(ts);
   const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
   const day = d.getDate();
@@ -97,7 +97,7 @@ function ReceiptDate({ filedAt, dateLabel }: { filedAt: number | null; dateLabel
  * stamp is decorative copy, not a status banner; the slip's own
  * mode stamp is the source of truth.
  */
-function ReceiptStamp({ mode, desk }: { mode: 'paper' | 'live'; desk: HouseDesk }) {
+function ReceiptStamp({ mode }: { mode: 'paper' | 'live' }) {
   const text = mode === 'live' ? 'FILED · LIVE SETTLED' : 'FILED ON PAPER';
   return (
     <div className={receiptStyles.stamp} data-mode={mode} aria-hidden="true">
@@ -164,7 +164,7 @@ export function ReceiptPortrait({
       <header className={receiptStyles.header}>
         <ReceiptKicker desk={desk} />
         <ReceiptDate filedAt={filedAt} dateLabel={dateLabel} />
-        <ReceiptStamp mode={mode} desk={desk} />
+        <ReceiptStamp mode={mode} />
       </header>
 
       <div className={receiptStyles.slipSlot}>
@@ -177,7 +177,7 @@ export function ReceiptPortrait({
           {!txHash && (
             <span className={receiptStyles.modeFootnote}>
               Paper filing · no funds moved · kept in this browser
-              {desk.id === 'hetty' && ' · backed up to your account when signed in'}
+              {desk.id === 'hetty' && ' · account backup is best-effort when signed in'}
             </span>
           )}
         </div>
@@ -187,7 +187,3 @@ export function ReceiptPortrait({
     </article>
   );
 }
-
-// Re-export the desk's local styles for callers that want to compose
-// the receipt inside a ticket surface.
-export const receiptStylesExport = receiptStyles;

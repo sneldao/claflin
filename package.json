@@ -21,6 +21,7 @@
     "check:desk-copy": "node scripts/check-desk-copy.mjs",
     "check:canon": "node scripts/check-desk-copy.mjs",
     "check:broker-voice": "node scripts/check-broker-voice.mjs",
+    "check:room-budget": "node scripts/measure-room-budget.mjs",
     "test:comprehension": "tsx --test tests/comprehension.test.ts"
   },
   "dependencies": {

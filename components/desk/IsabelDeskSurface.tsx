@@ -269,7 +269,7 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
       <div className={styles.grid}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        <aside className={styles.support} aria-label="The Robinhood Chain desk’s direct line">
+        <aside className={styles.support} aria-label="Isabel’s direct line">
           <IsabelCall isabel={isabel} />
         </aside>
         {viewed ? (
@@ -280,7 +280,7 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
             <span>ROBINHOOD STOCK TOKENS<small>CHAIN 4663</small></span>
             <span className={styles.paperNumber}>—</span>
           </div>
-          <h1 id="isabel-ticket-title">The Robinhood Chain desk.</h1>
+          <h1 id="isabel-ticket-title">Isabel’s desk.</h1>
           <p className={styles.product}>
             Stock tokens issued by Robinhood Assets (Jersey) Limited. Paper estimates and
             records only — an estimate is never an order.

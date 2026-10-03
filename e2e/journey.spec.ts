@@ -51,6 +51,10 @@ test.describe('house journey', () => {
     await expect(page).not.toHaveURL(/desk=/);
     /* Nothing prices or files from the foyer. */
     await expect(page.getByRole('button', { name: 'Price it' })).toHaveCount(0);
+    await expect(page.locator('#house-example')).toHaveCount(1);
+    const stops = await page.getByRole('navigation', { name: 'The rooms' }).locator('a').evaluateAll(elements => elements.map(el => el.getAttribute('href')));
+    const rooms = await page.locator('#main-content > section').evaluateAll(elements => elements.map(el => `#${el.id}`));
+    expect(stops).toEqual(rooms);
   });
 
   test('an instruction lights the lines and names the products that carry it', async ({ page }) => {
@@ -81,6 +85,7 @@ test.describe('house journey', () => {
     await page.getByRole('button', { name: 'Price it' }).first().click();
     await page.getByRole('button', { name: 'Save paper record' }).first().click();
     await expect(page.getByText(FILED).first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Filed receipt' })).toBeVisible();
 
     // The record is kept in this browser.
     const kept = await page.evaluate(prefix => Object.keys(localStorage).filter(key => key.startsWith(prefix)).length, PAPER_PREFIX);
@@ -103,6 +108,7 @@ test.describe('house journey', () => {
     await expect(page).toHaveURL(/desk=hetty/);
     await expect(page).toHaveURL(/record=/);
     await expect(page.getByText(FILED).first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Filed receipt' })).toBeVisible();
   });
 
   test('the same journey on a phone', async ({ page }) => {

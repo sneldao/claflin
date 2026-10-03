@@ -39,7 +39,7 @@ export const BROKER_VOICE: Partial<Record<HouseDeskId, {
     rail: 'Backed xStocks · Solana',
     lens: 'Reads the tape first — price action and timing.',
     bio:
-      'Jesse Livermore (1877–1940) learned the tape in bucket shops before he learned the market, and kept his own line in a pocket notebook long before he trusted it to memory. The Solana desk borrows his discipline: price action and timing first, story second.',
+      'Jesse Livermore (1877–1940) learned the tape in bucket shops before he learned the market, and kept his own line in a pocket notebook long before he trusted it to memory. Jesse’s desk borrows his discipline: price action and timing first, story second.',
   },
   isabel: {
     namedFor: 'Isabel Benham (1909–2013)',

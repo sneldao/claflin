@@ -13,6 +13,8 @@ import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
 import { JesseLiveSettle } from './JesseLiveSettle';
 import { WrittenSlip } from './WrittenSlip';
+import { ReceiptPortrait } from './ReceiptPortrait';
+import { getHouseDesk } from '@/lib/house';
 import { QuoteReview } from './QuoteReview';
 import { GapStrip } from './GapStrip';
 import { SignalCaption } from './SignalCaption';
@@ -184,6 +186,7 @@ export const JesseTicket = memo(function JesseTicket({
         <div className={styles.ticketSurface} key="receipt">
         <h1 id="instruction-title" ref={reviewRef} tabIndex={-1}>{filed.heading}</h1>
         {foreground.kind === 'receipt' && <SignalCaption captionKey="stampThud" />}
+        <ReceiptPortrait desk={getHouseDesk('jesse')!} filedAt={record?.createdAt ?? null}>
         <WrittenSlip
           mode="receipt"
           draft={draft}
@@ -216,6 +219,7 @@ export const JesseTicket = memo(function JesseTicket({
             </>
           }
         />
+        </ReceiptPortrait>
         </div>
       </section>
     );

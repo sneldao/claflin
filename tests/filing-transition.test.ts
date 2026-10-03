@@ -136,6 +136,7 @@ describe('mobile filing integration through actual buttons', () => {
     assert.equal(main?.getAttribute('data-foreground'), 'receipt', 'the grid should be in receipt foreground');
     assert.equal(main?.getAttribute('data-ledger'), 'true', 'the grid should know a ledger is present');
     assert.ok(container.querySelector('[data-ticket-view="receipt"]'), 'the receipt should be rendered');
+    assert.ok(container.querySelector('[aria-label="Filed receipt"][data-mode="paper"]'), 'the receipt portrait is mounted');
     assert.ok(container.querySelector('#paper-ledger'), 'the compact ledger should be rendered alongside the receipt');
   });
 });
