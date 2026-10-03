@@ -1,6 +1,6 @@
 # Performance Notes
 
-**Scope:** Source-based implementation notes and verification priorities, updated 2026-09-09 after the seated first pass. These are not measured performance results. Browser QA of that pass was skipped.
+**Scope:** Historical source notes from the seated first pass (2026-09-09), plus verification priorities. Browser QA of that pass was skipped. For current measurements and unmet targets, use [Room performance budget](PERFORMANCE_ROOM_VIEW.md); [release validation](RELEASE_VALIDATION.md) records the 2026-10-03 integrated checks. The historical mechanisms below are not a current source inventory or measured improvement claim.
 
 [Product Direction](PRODUCT_DIRECTION.md) sets the priority: facilitate intended trades through a responsive desk. [ROADMAP.md](../ROADMAP.md) owns sequencing. Optimize time to a valid quote, clear review, reliable execution, and verified outcome—not time spent reading or talking. Publications, ranking, and the scene must not sit on the critical trading path.
 
@@ -14,7 +14,7 @@
 
 Establish measured baselines and budgets before adding substantial imagery, ambience, or dimensional rendering. Record the device, network, build mode, scenario, and result. No numerical improvement or release claim should be inferred from the existence of an optimization.
 
-## Current source map
+## Historical source map (2026-09-09)
 
 | Surface | Current mechanism | Caveat or next verification |
 |---|---|---|
@@ -48,7 +48,9 @@ These are planned requirements, not capabilities of the current use-case ranking
 
 ## Verification
 
-For implementation changes, use the relevant `pnpm test`, `pnpm typecheck`, and `pnpm exec next build --webpack` commands, then perform scoped runtime checks when authorized. The direct build avoids destructive standalone postbuild cleanup; the existing `pnpm lint` configuration limitation is documented in the README. Development compilation time is not production load performance.
+For implementation changes, use the relevant `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm exec next build --webpack` commands, then perform scoped runtime checks when authorized. The direct build avoids destructive standalone postbuild cleanup. Lint passed with warnings in the [2026-10-03 validation](RELEASE_VALIDATION.md). Development compilation time is not production load performance.
+
+After the production build, `pnpm check:room-budget` measures both presentations in headless Chromium with provider reads stubbed. It detects regressions against the previous successful baseline, not absolute target compliance. Do not treat a SwiftShader result or a passing measurement command as Android/iOS hardware acceptance.
 
 Measure and inspect:
 

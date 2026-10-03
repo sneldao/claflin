@@ -14,6 +14,25 @@ The plan (Phase 0.4) calls out that the pinned-hero + scroll-driven camera + len
 
 The numbers are starting points, not promises. They get refined against measured baselines.
 
+## Recorded headless baseline (2026-10-03)
+
+The feature-repair build was measured at 19:40 UTC in local production mode,
+1280×800 headless Chromium with the ANGLE/SwiftShader software renderer and
+stubbed provider reads. This baseline predates the subsequent small dependency
+updates; it is not a measurement of a deployment or the later dependency build.
+
+| View | First paint (ms) | WebGL mount (ms) | Median fps | JS payload (gzipped bytes) |
+|---|---:|---:|---:|---:|
+| Compact | 1,172 | 1,301 | 59.88 | 1,573,768 |
+| Room | 2,968 | 2,988 | 1.54 | 1,573,768 |
+
+Room misses the desktop paint, mount and frame-rate targets. Both views exceed
+their payload budgets, and Compact still mounts WebGL. The desired per-view
+payload split is therefore not established. Re-measure after scene/payload
+changes and verify on real Android and iOS hardware before claiming acceptance.
+The [release validation record](RELEASE_VALIDATION.md) separates these results
+from tests, browser journeys and provider certification.
+
 ## Per-view split
 
 Target: Compact ships without Three.js; Room lazy-loads the scene. The current
@@ -37,7 +56,10 @@ For every interactive state the WebGL scene expresses, the reduced-motion path m
 - Filing ceremony (slam → thud → sheen) → immediate end-state with a one-time caption.
 - Camera ride on scroll → static; positions in the document order.
 
-The reduced-motion path renders in < 200ms after first paint on a mid-tier Android. The contract is verified in `tests/comprehension.test.ts` (the surface must always carry the labels and roles the user relies on, regardless of motion) and in a manual pass.
+The reduced-motion target is a complete end-state within 200ms after first paint
+on a mid-tier Android. `tests/comprehension.test.ts` checks source contracts for
+essential labels and roles; it does not measure this latency or certify the
+manual/hardware pass. Those checks remain release work.
 
 ## Measuring
 

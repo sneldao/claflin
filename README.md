@@ -64,6 +64,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | House identity and desk directory | `lib/house.ts` |
 | Mandates, concrete offerings, desk coverage and estimate envelopes | `lib/desk/contracts.ts`, `lib/desk/mandates.ts`, `lib/desk/offerings.ts`, `lib/desk/registry.ts`, `lib/desk/estimates.ts` |
 | Entry parsing, saved desk preference and `?offering=` validation | `lib/house-entry.ts` |
+| Canonical desk identity, broker voice contracts and accepted example-call data | `lib/desktop.canon.ts`, `lib/brokers/contracts.ts`, `lib/foyer/example-call.ts`, `components/foyer/AnnotatedExampleCall.tsx` |
 | Period desk notes and words of the house (one note or term of the day, never advice) | `lib/desk-notes.ts` |
 | Sourced education catalog, broker examination methods, delayed-tape practice | `lib/education/`, `components/desk/EducationTopic.tsx`, `app/practice/delayed-tape/` |
 | Root document, foyer and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/HouseFoyer.tsx`, `components/desk/HouseOfferings.tsx`, `components/desk/WorkingDesk.tsx` |
@@ -84,6 +85,7 @@ Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sd
 | Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 | Live execution journal (approvals, submitted/confirmed swaps) | `lib/trading/live-journal.ts`, `lib/trading/useLiveJournal.ts`, `lib/trading/useDeskExecution.ts` |
 | Desk slips (commemorative first-paper / first-live keepsakes) | `lib/trading/desk-slips.ts`, [docs/DESK_SLIPS.md](docs/DESK_SLIPS.md) |
+| Filed paper receipt portraits | `components/desk/ReceiptPortrait.tsx`, mounted by Hetty and Jesse tickets for filing and archive views |
 | Delight: spoken-line caption, since-last-visit tray deltas, ledger export | `lib/trading/tray-deltas.ts`, `lib/trading/ledger-export.ts` (wired in `WorkingDesk.tsx`, `DeskBoard.tsx`, `TradeTicket.tsx`, `PaperLedger.tsx`) |
 | Optional account, paper backup, transcript write | `components/auth/AuthProvider.tsx`, `lib/auth.ts`, `lib/trading/usePaperSync.ts`, `app/api/paper/route.ts`, `app/api/hetty/transcript/route.ts` |
 | Voice dictation input (AssemblyAI) | `app/api/dictation/route.ts`, `lib/dictation/useDictation.ts`, `lib/trading/dictation-parser.ts`, `components/desk/TradeTicket.tsx`, [docs/DICTATION.md](docs/DICTATION.md) |
@@ -101,7 +103,11 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - `pnpm typecheck` — TypeScript verification.
 - `pnpm exec next build --webpack` — production compilation without the repository's destructive standalone postbuild cleanup. Deployment packaging is a separate operation.
 - `pnpm lint` — ESLint; currently reports warnings but no errors.
-- Current cutover checks use source contracts and HTTP responses, not a browser automation session. Earlier paper-desk browser checks do not establish visual acceptance of every subsequent change.
+- `pnpm check:canon` and `pnpm check:broker-voice` — scan source copy against the canonical desk labels and broker contracts; an empty scan fails.
+- `CI=true pnpm test:e2e` — maintained desktop and phone journeys against a previously built production bundle. Install Chromium first with `pnpm exec playwright install chromium`. Four maintained journeys pass; 14 legacy tests remain explicitly skipped, not accepted.
+- `pnpm check:room-budget` — after a production build, measure both views in local headless Chromium and compare against the previous successful baseline. A passing regression check does not establish that the absolute budgets or real-device gates are met.
+
+The [2026-10-03 validation record](docs/RELEASE_VALIDATION.md) covers the integrated feature repairs and dependency updates: 1,311 tests, typecheck, copy checks, production build and the four maintained browser journeys passed; lint reported 44 warnings and no errors. Provider stubs and local checks do not certify live voice, wallet execution, hosted CI, every recovery path, or real-device performance.
 
 ## Product rules
 
@@ -127,8 +133,10 @@ Older voice, billing, registry and webhook modules remain implementation scaffol
 - [Eligibility & venue compliance](docs/ELIGIBILITY.md): house policy on restricted-security instruments — who owns the check per desk, what paper surfaces never carry, and what a live flag requires first.
 - [Meteora Launch Desk — design plan](docs/METEORA_LAUNCH_DESK.md): Halley — LINE 4, **Scope 1 built paper-first** (pair-first tracker-token launch, USDC fallback, Pyth-anchored curve estimates, DAMM v2 graduation path, ConvAI voice line); devnet spike green; live launch designed, not implemented.
 - [Roadmap](ROADMAP.md): current state and next release gates.
+- [Release validation](docs/RELEASE_VALIDATION.md): dated integration evidence, deferred dependency upgrades, and outstanding acceptance.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.
 - [Architecture](docs/AGENTIC_ARCHITECTURE.md): domain boundaries, integration evidence and retained implementation references.
 - [Performance](docs/PERFORMANCE.md): runtime requirements and verification.
+- [Room performance budget](docs/PERFORMANCE_ROOM_VIEW.md): measurement command, headless results, unmet payload/frame targets, and real-device gates.
 - [Deployment](docs/DEPLOYMENT.md) and [Hetzner deployment](docs/HETZNER_DEPLOYMENT.md): infrastructure reference; deploy frontend and API versions together when proxying `/api/*`.
 - [Widget architecture](docs/WIDGET_ARCHITECTURE.md), [Redis keys](docs/REDIS_KEYS.md), and [payment security](docs/SECURITY_ARCHITECTURE_COMPARISON.md): retained service references, not the primary client experience.
