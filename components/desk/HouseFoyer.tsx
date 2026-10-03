@@ -33,7 +33,8 @@ type WireMark = { key: string; rail: 'BASE' | 'SOL' | 'RH'; mark: DeskMark };
    loop keys both rail and lamp pool off main.children, so keep aligned. */
 const ROOMS = [
   { id: 'the-line', label: 'Line' },
-  { id: 'the-tape', label: 'Tape' },
+  { id: 'the-tape', label: 'Wire' },
+  { id: 'house-example', label: 'Example' },
   { id: 'house-offerings', label: 'Board' },
   { id: 'house-method', label: 'Method' },
   { id: 'house-desks', label: 'Desks' },
