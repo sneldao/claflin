@@ -70,6 +70,7 @@ export async function readCoinbaseExchangeTicker(
   productId: string,
   fetcher: typeof fetch = fetch,
   timeoutMs = 4_000,
+  clock: () => number = Date.now,
 ): Promise<{ priceUsd: string; observedAt: number } | { error: 'transport' | 'bad-response'; message: string }> {
   const url = `https://api.exchange.coinbase.com/products/${encodeURIComponent(productId)}/ticker`;
   const controller = new AbortController();
@@ -91,7 +92,7 @@ export async function readCoinbaseExchangeTicker(
     if (!Number.isFinite(asNumber) || asNumber <= 0) {
       return { error: 'bad-response', message: 'Coinbase Exchange price is not a positive number' };
     }
-    return { priceUsd: asNumber.toString(), observedAt: Date.now() };
+    return { priceUsd: asNumber.toString(), observedAt: clock() };
   } catch (err) {
     return { error: 'transport', message: err instanceof Error ? err.message : 'transport error' };
   } finally {
@@ -113,14 +114,16 @@ export async function readBaseStockReference(
     fetcher?: typeof fetch;
     maxAgeMs?: number;
     now?: number;
+    clock?: () => number;
   } = {},
 ): Promise<BaseStockReferenceResult> {
   const fetcher = options.fetcher ?? fetch;
   const maxAgeMs = options.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
-  const now = options.now ?? Date.now();
+  const clock = options.clock ?? (() => options.now ?? Date.now());
+  const now = clock();
 
   const productId = coinbaseProductId(instrument.underlyingSymbol);
-  const read = await readCoinbaseExchangeTicker(productId, fetcher);
+  const read = await readCoinbaseExchangeTicker(productId, fetcher, 4_000, clock);
   if ('error' in read) {
     return { kind: 'unavailable', reason: { kind: read.error, message: read.message } };
   }

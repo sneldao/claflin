@@ -62,7 +62,14 @@ describe('base stock reference — instrument reads', () => {
   it('returns unavailable when the read is older than maxAgeMs', async () => {
     const instrument = DESK_INSTRUMENTS[0];
     const fakeFetch = (async () => new Response(JSON.stringify({ price: '500' }), { status: 200 })) as typeof fetch;
-    const result = await readBaseStockReference(instrument, { fetcher: fakeFetch, now: Date.now() + DEFAULT_MAX_AGE_MS + 1 });
+    // The read's observedAt uses the first clock tick; the comparison
+    // `now` uses the second tick. So the read is older by one tick.
+    // With maxAgeMs: 0, the staleness check fires.
+    let ticks = 0;
+    // First call: now=1_000_010 (later); second call: observedAt=1_000_000
+    // (earlier). With maxAgeMs: 0, the read is stale.
+    const clock = () => ticks++ === 0 ? 1_000_010 : 1_000_000;
+    const result = await readBaseStockReference(instrument, { fetcher: fakeFetch, clock, maxAgeMs: 0 });
     assert.equal(result.kind, 'unavailable');
     if (result.kind !== 'unavailable') return;
     assert.equal(result.reason.kind, 'stale');

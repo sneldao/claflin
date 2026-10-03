@@ -82,3 +82,4 @@ public/audio/*.wav
 .blackboxcli/
 .aider*
 .deploy
+.room-budget/
