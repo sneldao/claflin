@@ -23,6 +23,7 @@ import { HouseOfferings } from './HouseOfferings';
 import { HouseTurret } from './HouseTurret';
 import { HouseDesks } from './HouseDesks';
 import { HouseAnswers } from './HouseAnswers';
+import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
 
@@ -325,6 +326,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
           instructionSource={instructionSource}
           marks={{ hetty: hettyMarks, jesse: jesseMarks, isabel: isabelMarks }}
         />
+
+        <AnnotatedExampleCall />
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
           <h2 id="house-method-title">How the line works.</h2>

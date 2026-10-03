@@ -1392,6 +1392,264 @@
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px) clamp(48px, 8vh, 96px);
 }
 
+/* ————— Example call (proof before the ask) ————— */
+
+.exampleCall {
+  position: relative;
+  z-index: 2;
+  background: var(--night);
+  padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px) clamp(48px, 8vh, 96px);
+  border-top: 1px solid rgba(179, 144, 90, 0.18);
+}
+
+.exampleCall[data-state="pending"],
+.exampleCall[data-state="rejected"] {
+  /* Honest empty state — different from the accepted variant so the
+     label is unmistakable. */
+  background: linear-gradient(180deg, var(--night) 0%, #0c0a08 100%);
+}
+
+.exampleCallKicker {
+  margin: 0 0 18px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.exampleCallTitle {
+  margin: 0 0 clamp(28px, 4vh, 44px);
+  max-width: 22ch;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: clamp(28px, 3.6vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #f2e8d0;
+}
+
+.exampleCallReason {
+  margin: 0 0 22px;
+  max-width: 60ch;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.exampleCallCriteriaLabel {
+  margin: 0 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.exampleCallCriteria {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 64ch;
+}
+
+.exampleCallCriteria li {
+  position: relative;
+  padding: 12px 0 12px 28px;
+  border-top: 1px solid rgba(179, 144, 90, 0.15);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.exampleCallCriteria li:last-child {
+  border-bottom: 1px solid rgba(179, 144, 90, 0.15);
+}
+
+.exampleCallCriteria li::before {
+  content: "·";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  color: var(--brass);
+  font-weight: 700;
+}
+
+/* The accepted call — two columns: transcript + slip. */
+
+.exampleCallGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(24px, 5vw, 64px);
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .exampleCallGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.exampleCallTranscript {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #e8ddc2;
+}
+
+.exampleCallTranscript ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exampleCallTurn {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 18px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(179, 144, 90, 0.18);
+  transition: background 200ms ease;
+}
+
+.exampleCallTurn[data-active="true"] {
+  background: rgba(179, 144, 90, 0.08);
+}
+
+.exampleCallSpeaker {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  color: var(--brass);
+  align-self: start;
+  padding-top: 4px;
+}
+
+.exampleCallTurn[data-speaker="caller"] .exampleCallText {
+  color: #f2e8d0;
+}
+
+.exampleCallTurn[data-speaker="broker"] .exampleCallText {
+  color: #d8cdb2;
+  font-style: italic;
+}
+
+.exampleCallText {
+  font-family: var(--font-prose), "IBM Plex Sans", system-ui, sans-serif;
+}
+
+.exampleCallControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(179, 144, 90, 0.25);
+}
+
+.exampleCallPlay {
+  appearance: none;
+  background: var(--brass);
+  color: var(--night);
+  border: none;
+  padding: 10px 18px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.exampleCallPlay:hover {
+  background: #d4b07a;
+}
+
+.exampleCallCaptions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.exampleCallIntent {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  background: rgba(179, 144, 90, 0.08);
+  border-left: 2px solid var(--brass);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.78rem;
+  color: #d8cdb2;
+}
+
+.exampleCallSlip {
+  background: #0c0a08;
+  border: 1px solid rgba(179, 144, 90, 0.35);
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.exampleCallSlipKicker {
+  margin: 0 0 14px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.exampleCallSlip dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+
+.exampleCallSlip dl > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exampleCallSlip dt {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8f8265;
+}
+
+.exampleCallSlip dd {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.88rem;
+  color: #f2e8d0;
+}
+
+.exampleCallSlipCaveat {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(179, 144, 90, 0.25);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.exampleCallCaption {
+  margin: 16px 0 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exampleCallTurn {
+    transition: none;
+  }
+}
+
 .method h2 {
   margin: 0 0 clamp(32px, 5vh, 56px);
   max-width: 16ch;
