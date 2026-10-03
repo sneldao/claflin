@@ -96,7 +96,7 @@ export const PRESTOCKS_ABOUT =
 /** Foyer hero — one lede, one boundary. The lede is the plain sentence
  *  under the headline: what the house is, without the theme. */
 export const FOYER_LEDE =
-  'Trade tokenized US stocks by voice, onchain, any hour.';
+  'Trade tokenized US stocks by voice — any hour.';
 
 /** Foyer headline follows the listing exchange's session. `pending` is the
  *  SSR / first-paint line, before the client knows the time. */

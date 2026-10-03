@@ -149,7 +149,7 @@ describe('house foyer', () => {
     assert.match(html, /How the line works\./);
     assert.match(html, /THE TAPE RUNS ALL NIGHT\. EVERY SLIP ON THE RECORD\./);
     assert.doesNotMatch(html, /THE HOUSE KEEPS THE RECORD/);
-    assert.match(html, /Trade tokenized US stocks by voice, onchain, any hour\./, 'plain lede under the headline');
+    assert.match(html, /Trade tokenized US stocks by voice — any hour\./, 'plain lede under the headline');
     assert.match(html, /Base · AI broker/);
     assert.match(html, /Solana · AI broker/);
     /* Isabel is LINE 3 — a voice line like the others: lamp, ring, and a

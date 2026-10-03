@@ -128,8 +128,8 @@
   outline: none;
 }
 
-/* Focus pull — JS sets --room-dim per room; the veil lowers the lamps on
-   whatever lies outside the reading plane. Clicks and text pass through. */
+/* Lamp pool — JS sets --room-glow per room; the room under the reading
+   plane gets a pool of warm lamplight rather than dimming the rest. */
 .main > * {
   position: relative;
 }
@@ -139,10 +139,10 @@
   position: absolute;
   inset: 0;
   z-index: 30;
-  background: #0a0f16;
-  opacity: var(--room-dim, 0);
+  background: radial-gradient(72% 55% at 50% 34%, rgba(227, 207, 158, 0.10), rgba(227, 207, 158, 0.035) 55%, transparent 78%);
+  opacity: var(--room-glow, 0);
   pointer-events: none;
-  transition: opacity 140ms linear;
+  transition: opacity 160ms linear;
 }
 
 .hero {
@@ -442,54 +442,12 @@
 /* ————— The turret: one line into the house, a lamp per desk ————— */
 
 .turret {
-  position: relative;
   display: grid;
   align-content: start;
   gap: 12px;
   padding: clamp(48px, 9vh, 120px) 0 24px;
   min-width: 0;
   max-width: 640px;
-}
-
-/* The cast — arcs from the spoken line to every place the ask can land. */
-.casts {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.cast {
-  fill: none;
-  stroke: rgba(227, 207, 158, 0.8);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 5px rgba(227, 207, 158, 0.45));
-}
-
-.cast[data-kind='launch'] {
-  stroke: rgba(216, 164, 94, 0.9);
-  stroke-width: 2;
-}
-
-.castTip {
-  fill: rgba(227, 207, 158, 0.9);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .cast {
-    animation: castDraw 0.55s cubic-bezier(0.3, 0.6, 0.3, 1) backwards;
-  }
-}
-
-@keyframes castDraw {
-  from { stroke-dashoffset: 100; opacity: 0.2; }
-  to { stroke-dashoffset: 0; opacity: 1; }
 }
 
 .talkBar {
@@ -1486,6 +1444,53 @@
   gap: 18px;
 }
 
+/* The cards are dealt, not rendered — each settles onto the table in
+   turn, and the plate slides in from the right edge like a die cast
+   against the grain. Armed only when JS marks the section data-deal;
+   data-dealt releases the hand. */
+@media (prefers-reduced-motion: no-preference) {
+  .desks[data-deal]:not([data-dealt]) .deskCard {
+    opacity: 0;
+    transform: translateY(34px) rotate(-1.5deg);
+    transform-origin: 50% 120%;
+  }
+
+  .desks[data-deal]:not([data-dealt]) .launchRow {
+    opacity: 0;
+    transform: translateX(46px) rotate(0.8deg);
+  }
+
+  .desks[data-dealt] .deskCard,
+  .desks[data-dealt] .launchRow {
+    transition:
+      opacity 0.5s ease,
+      transform 0.75s cubic-bezier(0.2, 0.75, 0.25, 1.05);
+    transition-delay: calc(var(--i, 0) * 95ms);
+  }
+}
+
+/* Where supported, the card nearest the reading plane warms — a dealt
+   slip catching the lamp as it passes center. Scroll-driven, no JS. */
+@keyframes cardWarm {
+  0%, 100% { box-shadow: 0 1px 0 rgba(120, 95, 55, 0.2); }
+  50% {
+    box-shadow:
+      0 10px 34px rgba(227, 207, 158, 0.16),
+      0 0 0 1px rgba(227, 207, 158, 0.4),
+      0 1px 0 rgba(120, 95, 55, 0.2);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .deskCard {
+      animation: cardWarm linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+
 /* The launch desk stands apart — a different room, not a fourth broker card.
    Ink-dipped rather than paper: the tape desks are printed cards, this is the
    plate they print from. Set right against the left-aligned grid; the stamp
@@ -1679,9 +1684,23 @@
 }
 
 .deskQuote {
+  flex: 1;
   margin: 0;
   padding-left: 14px;
   border-left: 2px solid var(--brass-dim);
+}
+
+/* Isabel has no surviving line to quote — the slot still takes the same
+   measure so the card rows keep their symmetry; a fleuron stands in. */
+.deskQuoteSlot {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 4.4em;
+  padding-left: 14px;
+  border-left: 2px solid rgba(179, 144, 90, 0.28);
+  font-size: 1.15rem;
+  color: var(--brass-dim);
 }
 
 .deskQuote p {

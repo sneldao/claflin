@@ -117,8 +117,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     };
   }, [sceneApi]);
 
-  /* Focus pull — the room nearest the reading plane stays lit while its
-     neighbors fall into lamp-low shadow via a --room-dim veil. DOM-only so
+  /* Lamp pool — the room under the reading plane warms with a pool of
+     lamplight (--room-glow) while the rest stay as they are. DOM-only so
      it works in still mode; skipped under reduced motion. */
   useEffect(() => {
     const main = mainRef.current;
@@ -132,8 +132,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
       for (const room of rooms) {
         const box = room.getBoundingClientRect();
         const center = box.top + box.height / 2;
-        const dist = Math.max(0, Math.abs(center - focal) - band) / window.innerHeight;
-        room.style.setProperty('--room-dim', Math.min(0.42, dist * 1.4).toFixed(3));
+        const dist = Math.max(0, Math.abs(center - focal) - band) / (window.innerHeight * 0.5);
+        room.style.setProperty('--room-glow', Math.max(0, 1 - dist).toFixed(3));
       }
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
@@ -144,7 +144,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
       if (raf) cancelAnimationFrame(raf);
-      for (const room of rooms) room.style.removeProperty('--room-dim');
+      for (const room of rooms) room.style.removeProperty('--room-glow');
     };
   }, []);
 
@@ -427,7 +427,8 @@ function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: M
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, []);
+    /* The tape mounts only once marks land — rerun when the track appears. */
+  }, [wireMarks.length]);
 
   return (
     <section className={foyerStyles.wire} aria-label="Live reference marks">

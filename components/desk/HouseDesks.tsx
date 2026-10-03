@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import type { HouseDesk, HouseDeskId } from '@/lib/house';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
 import { signatureLine } from '@/lib/desk-notes';
@@ -9,24 +9,29 @@ import { launchDeskSeen, markLaunchDeskSeen } from '@/lib/desk/launch-explainer'
 import { NameplateNote } from './NameplateNote';
 import foyerStyles from './HouseFoyer.module.css';
 
-function DeskCard({ desk, deskHref, onOpen }: {
+function DeskCard({ desk, index, deskHref, onOpen }: {
   desk: HouseDesk;
+  index: number;
   deskHref: (id: HouseDeskId) => string;
   onOpen: (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const voice = BROKER_VOICE[desk.id];
   const line = signatureLine(desk.id);
   return (
-    <article className={foyerStyles.deskCard}>
+    <article className={foyerStyles.deskCard} style={{ '--i': index } as CSSProperties}>
       <p className={foyerStyles.deskMeta}>{LINE_IDENTITY} · {voice?.rail ?? desk.market}</p>
       <h3 className={foyerStyles.deskName}>{desk.shortName}</h3>
       {voice && <p className={foyerStyles.deskLens}>{voice.lens}</p>}
       {!voice && <p className={foyerStyles.deskLens}>{desk.approach} Typed instructions only — no line.</p>}
-      {line && (
+      {line ? (
         <blockquote className={foyerStyles.deskQuote}>
           <p>{line.text}</p>
           <cite>— {line.attribution}</cite>
         </blockquote>
+      ) : (
+        /* No recorded line survives for her — the slot holds a fleuron so
+           the card keeps the same measure as the desks that do quote one. */
+        <div className={foyerStyles.deskQuoteSlot} aria-hidden="true">❦</div>
       )}
       <NameplateNote deskId={desk.id} namedFor={voice?.namedFor ?? desk.name} />
       <a className={foyerStyles.deskOpen} href={deskHref(desk.id)} onClick={onOpen(desk.id)}>
@@ -42,8 +47,9 @@ function DeskCard({ desk, deskHref, onOpen }: {
  * the first time a caller reaches for it, the explainer stands open to its
  * left before the door does. Entry marks the gate seen — peeking does not.
  */
-function LaunchPlate({ desk, deskHref, onOpen }: {
+function LaunchPlate({ desk, index, deskHref, onOpen }: {
   desk: HouseDesk;
+  index: number;
   deskHref: (id: HouseDeskId) => string;
   onOpen: (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
@@ -85,7 +91,7 @@ function LaunchPlate({ desk, deskHref, onOpen }: {
   };
 
   return (
-    <div className={foyerStyles.launchRow}>
+    <div className={foyerStyles.launchRow} style={{ '--i': index } as CSSProperties}>
       {open && (
         <aside ref={explainerRef} id={explainerId} className={foyerStyles.launchExplainer} aria-label="About the launch desk">
           <p className={foyerStyles.deskMeta}>{LAUNCH_DESK_EXPLAINER.kicker}</p>
@@ -164,22 +170,45 @@ export function HouseDesks({ desks, deskHref, onOpen }: {
 }) {
   const tape = desks.filter(desk => desk.kind !== 'launch');
   const launch = desks.filter(desk => desk.kind === 'launch');
+  const sectionRef = useRef<HTMLElement>(null);
+
+  /* The cards are dealt, not rendered: armed hidden before paint, then
+     each settles onto the table in turn as the section enters view. No-JS
+     and reduced motion get the cards plainly. */
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || typeof IntersectionObserver === 'undefined') {
+      section.setAttribute('data-dealt', '');
+      return;
+    }
+    section.setAttribute('data-deal', '');
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        section.setAttribute('data-dealt', '');
+        io.disconnect();
+      }
+    }, { threshold: 0.12 });
+    io.observe(section);
+    return () => io.disconnect();
+  }, []);
+
   if (tape.length === 0 && launch.length === 0) return null;
   return (
-    <section className={foyerStyles.desks} id="house-desks" aria-labelledby="house-desks-title">
+    <section ref={sectionRef} className={foyerStyles.desks} id="house-desks" aria-labelledby="house-desks-title">
       <div className={foyerStyles.sectionIntro}>
         <p className={foyerStyles.kicker}>THE DESKS</p>
         <h2 id="house-desks-title">Meet the brokers.</h2>
       </div>
       {tape.length > 0 && (
         <div className={foyerStyles.deskCards}>
-          {tape.map(desk => (
-            <DeskCard key={desk.id} desk={desk} deskHref={deskHref} onOpen={onOpen} />
+          {tape.map((desk, index) => (
+            <DeskCard key={desk.id} desk={desk} index={index} deskHref={deskHref} onOpen={onOpen} />
           ))}
         </div>
       )}
-      {launch.map(desk => (
-        <LaunchPlate key={desk.id} desk={desk} deskHref={deskHref} onOpen={onOpen} />
+      {launch.map((desk, index) => (
+        <LaunchPlate key={desk.id} desk={desk} index={tape.length + index} deskHref={deskHref} onOpen={onOpen} />
       ))}
     </section>
   );

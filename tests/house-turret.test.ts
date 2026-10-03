@@ -190,22 +190,6 @@ describe('house turret (component)', () => {
     assert.ok(getRootElement().querySelector('.launchLineBlock'), 'Escape restores the home state');
   });
 
-  it('the cast: the spoken line is the origin, every landing carries a marker', async () => {
-    await mount();
-    assert.ok(getRootElement().querySelector('form[data-cast-origin]'), 'the talk bar is the cast origin');
-    /* Every lamp is a potential landing; Halley's carries the launch kind. */
-    const lampTargets = Array.from(getRootElement().querySelectorAll('[data-lamp] [data-cast-target]'));
-    assert.equal(lampTargets.length, 4, 'one cast marker per open line lamp — planned lines take none');
-    const halleyLamp = lampTargets.find(el => el.getAttribute('data-cast-target') === 'halley');
-    assert.equal(halleyLamp?.getAttribute('data-cast-kind'), 'launch');
-    /* A matched ask puts its landings on the book — the continue buttons
-       take the arcs while the roll's lamps sit inside closed lines. */
-    await type('buy Apple for 100 USDC');
-    const choices = Array.from(getRootElement().querySelectorAll('button[data-cast-target]'));
-    assert.equal(choices.length, 3, 'one landing per desk that carries it');
-    assert.ok(choices.every(el => el.getAttribute('data-cast-kind') === 'tape'));
-  });
-
   it('never touches the microphone until the caller holds the line', async () => {
     await mount();
     await type('buy Apple');
