@@ -104,4 +104,24 @@ describe('desk slips', () => {
     rememberSlipDedication('agent', '   ');
     assert.equal(takeSlipDedication(), null);
   });
+
+  it('accepts Halley in the deskId enum (he files paper launches too)', () => {
+    const store = storage();
+    const halleyQuote: QuoteEstimate = { ...quote, outputSymbol: 'AAPLx', intent: { ...intent, instrumentId: 'sol:fake-mint' } };
+    const halleyRecord: PaperRecord = {
+      ...paperRecord(),
+      deskId: 'halley',
+      id: 'halley-paper-1',
+      quote: halleyQuote,
+    };
+    // The schema now accepts 'halley' — mint a slip and assert it
+    // round-trips through load.
+    const slip = mintFirstPaperSlip(store, halleyRecord, now);
+    assert.equal(slip.deskId, 'halley');
+    assert.equal(slip.kind, 'first-paper');
+    assert.equal(slip.disclaimer, DESK_SLIP_DISCLAIMER);
+    const loaded = loadDeskSlips(store, 'halley');
+    assert.equal(loaded.length, 1);
+    assert.equal(loaded[0].id, slip.id);
+  });
 });

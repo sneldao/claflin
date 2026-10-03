@@ -44,7 +44,7 @@ const slipSchema = z.object({
   version: z.literal(1),
   id: z.string().min(1).max(120),
   kind: z.enum(['first-paper', 'first-live']),
-  deskId: z.enum(['hetty', 'jesse', 'isabel', 'arbitrum']),
+  deskId: z.enum(['hetty', 'jesse', 'isabel', 'halley', 'arbitrum']),
   mintedAt: z.number().int().positive(),
   symbol: z.string().min(1).max(40),
   instrumentId: z.string().min(1).max(120),
