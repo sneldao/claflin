@@ -56,7 +56,7 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "jsdom": "25.0.1",
     "postcss": "^8.5.28",
-    "tsx": "^4.7.0",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
