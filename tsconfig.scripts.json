@@ -11,6 +11,7 @@
     "scripts/funnel-report.mts",
     "lib/trading/pool-unlock.ts",
     "lib/funnel/report.ts",
-    "lib/funnel/store.ts"
+    "lib/funnel/store.ts",
+    "lib/desktop.canon.ts"
   ]
 }
