@@ -19,6 +19,20 @@ export interface DeskMark {
     /** Issuer-declared trading halt — surfaced, never hidden (Isabel/rhj). */
     halted?: boolean;
   };
+  /**
+   * Optional third leg — the desk's venue mark (e.g. Lighter orderbook
+   * midpoint for Isabel). When present, the board renders all three
+   * legs (token mark · stock ref · venue mark) with their sources and
+   * freshness, never blended. Source union is a small set; the venue
+   * adapter is the only place that should mint these.
+   */
+  venueMark?: {
+    priceUsd: string;
+    source: 'lighter';
+    /** Per-symbol realized 24h volume on the venue, when the adapter
+        can read it. Null when not supported. */
+    volume24hUsd?: string | null;
+  };
 }
 
 export interface MarksResult {

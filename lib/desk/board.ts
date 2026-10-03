@@ -62,6 +62,15 @@ export interface BoardRow {
   /** The desk's own stock reference for the same instrument, if any. */
   stockRef: string | null;
   stockRefSource: string | null;
+  /**
+   * Optional third leg — the venue mark (e.g. Lighter midpoint for
+   * Isabel). When present the board renders it with its source and
+   * any volume context. Honest `null` when the venue leg is not
+   * observed; never computed from the token mark.
+   */
+  venueMark: string | null;
+  venueMarkSource: string | null;
+  venueMarkVolume24hUsd: string | null;
   /** Signed gap, token vs stock reference, in basis points — only when the
    *  desk observed both legs and the mark is fresh. */
   gapBps: number | null;
@@ -79,6 +88,7 @@ const SOURCE_LABELS: Readonly<Record<string, string>> = Object.freeze({
   'jupiter-stock-data': 'Jupiter stock data',
   'coinbase-exchange': 'Coinbase Exchange',
   robinhood: 'rhj /prices',
+  lighter: 'Lighter',
 });
 
 export function sourceLabel(source: string | null | undefined): string | null {
@@ -120,6 +130,7 @@ export function boardRow(offering: InstrumentOffering, mark: DeskMark | undefine
   const rawGap = mark?.stockReference?.differenceBps;
   const gap = markState === 'observed' && rawGap != null ? Number(rawGap) : NaN;
   const stockValue = mark?.stockReference ? Number(mark.stockReference.priceUsd) : NaN;
+  const venueValue = mark?.venueMark ? Number(mark.venueMark.priceUsd) : NaN;
   const { address, url } = explorerFor(offering);
   return {
     offeringId: offering.offeringId,
@@ -137,6 +148,9 @@ export function boardRow(offering: InstrumentOffering, mark: DeskMark | undefine
     markAt: observedAtMs(mark?.reference.updatedAt),
     stockRef: Number.isFinite(stockValue) && stockValue > 0 ? stockValue.toFixed(2) : null,
     stockRefSource: sourceLabel(mark?.stockReference?.source),
+    venueMark: Number.isFinite(venueValue) && venueValue > 0 ? venueValue.toFixed(2) : null,
+    venueMarkSource: sourceLabel(mark?.venueMark?.source),
+    venueMarkVolume24hUsd: mark?.venueMark?.volume24hUsd ?? null,
     gapBps: Number.isFinite(gap) ? gap : null,
     gapNote: gapNoteFor(mark, markState),
     address,
