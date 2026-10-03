@@ -339,6 +339,14 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
       {(lineDesks.length > 0 || planned.length > 0) && (() => {
         const matched = reading.kind === 'matched';
+        // The match count for *this* desk — how many offerings on this
+        // desk's market carry what was said. Renders as a small
+        // brass chip on the line key when more than one, so the
+        // visitor knows the choice is real before they pick.
+        const matchesForDesk = (deskId: HouseDeskId): number => {
+          if (reading.kind !== 'matched') return 0;
+          return reading.matches.filter(match => match.deskIds.includes(deskId)).length;
+        };
         const renderLine = (desk: HouseDesk) => {
           const launch = desk.kind === 'launch';
           const lamp = lampFor(reading, desk.id);
@@ -352,12 +360,23 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
              answer a call, typed-only desks like Isabel take the
              instruction field. Never a fake "Talk" affordance. */
           const voice = DESK_CAPABILITIES[desk.id].voice !== null;
+          const matchCount = matchesForDesk(desk.id);
           return (
             <li key={desk.id} className={foyerStyles.lineKey} data-lamp={lamp}>
               <span className={foyerStyles.keyLamp} aria-hidden="true" />
               <span className={foyerStyles.lineNumber}>LINE {lineNumber(desk.id)}</span>
               <div className={foyerStyles.keyIdentity}>
-                <h2 className={foyerStyles.keyName}>{desk.shortName}</h2>
+                <h2 className={foyerStyles.keyName}>
+                  {desk.shortName}
+                  {matchCount > 1 && (
+                    <span
+                      className={foyerStyles.keyCount}
+                      aria-label={`${matchCount} offerings match this line`}
+                    >
+                      {matchCount}
+                    </span>
+                  )}
+                </h2>
                 <p className={foyerStyles.keyRail}>
                   {desk.market} · {launch ? LAUNCH_LINE.rail : LINE_IDENTITY}{voice ? '' : ' · typed only'}
                   {words && <span className={foyerStyles.lampWords}> · {words}</span>}
