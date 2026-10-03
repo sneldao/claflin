@@ -317,6 +317,8 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
         <LiveWire hetty={hettyMarks} jesse={jesseMarks} isabel={isabelMarks} onPick={pickFromWire} />
 
+        <AnnotatedExampleCall />
+
         <HouseOfferings
           onEnter={(...args: Parameters<typeof onEnter>) => {
             commitInstruction(wireInstruction, instructionSource);

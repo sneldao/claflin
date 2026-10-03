@@ -555,6 +555,19 @@
   color: var(--muted);
 }
 
+.talkHintLink {
+  color: var(--brass);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.4);
+  padding-bottom: 1px;
+  font-style: italic;
+}
+
+.talkHintLink:hover {
+  border-bottom-color: var(--brass);
+  color: #d4b07a;
+}
+
 .turretStatus {
   display: grid;
   gap: 6px;

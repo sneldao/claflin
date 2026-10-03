@@ -121,6 +121,11 @@ export const TURRET_COPY = {
   lampQuiet: 'Not on this line',
   planned: 'coming soon',
   handset: 'The house line, wherever you are on the page.',
+  /** First-visit affordance: a small inline link to the example call
+   *  below. Renders alongside the hint when no recording is in the
+   *  foreground — the visitor sees the desk work *before* they have
+   *  to lift the receiver. */
+  hearTheDesk: 'Hear the desk work',
 } as const;
 
 /** What an onchain gap on the wire is measured against. */

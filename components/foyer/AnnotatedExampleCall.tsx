@@ -57,6 +57,7 @@ export function AnnotatedExampleCall() {
 
   return (
     <section
+      id="house-example"
       className={foyerStyles.exampleCall}
       aria-labelledby="example-call-title"
       data-state="accepted"
@@ -151,6 +152,7 @@ export function AnnotatedExampleCall() {
 function ExampleCallEmpty({ state }: { state: { kind: 'pending' | 'rejected'; reason: string; recordedAt: number | null; reviewedBy: string | null } }) {
   return (
     <section
+      id="house-example"
       className={foyerStyles.exampleCall}
       aria-labelledby="example-call-title"
       data-state={state.kind}

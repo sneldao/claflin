@@ -266,6 +266,19 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
       <p id="turret-talk-hint" className={foyerStyles.talkHint}>
         {asked ? TURRET_COPY.micNote : TURRET_COPY.hint}
+        {' · '}
+        <a
+          href="#house-example"
+          className={foyerStyles.talkHintLink}
+          onClick={event => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            const target = document.getElementById('house-example');
+            target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+        >
+          {TURRET_COPY.hearTheDesk}
+        </a>
       </p>
 
       <div className={foyerStyles.turretStatus} role="status" aria-live="polite">
