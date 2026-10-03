@@ -236,7 +236,12 @@ export function WrittenSlip<D extends SlipDraftLike = SlipDraftLike>({
   const validity = mode === 'review' && quote ? slipValidity(quote.expiresAt, now) : null;
 
   return (
-    <div className={styles.writtenSlip} data-mode={mode} data-lapsed={validity?.state === 'lapsed' ? 'true' : undefined}>
+    <div
+      className={styles.writtenSlip}
+      data-mode={mode}
+      data-lapsed={validity?.state === 'lapsed' ? 'true' : undefined}
+      data-live={quote && (quote as { mode?: 'paper' | 'live' }).mode === 'live' ? 'true' : undefined}
+    >
       {mode === 'review' && freshness !== undefined && (
         <i
           className={styles.slipFresh}

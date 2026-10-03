@@ -1786,7 +1786,32 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
    The instruction is a sentence, not a form. Values write in ink; each
    carries a small mark saying where the desk got it. Blanks are underlined
    gaps that open an editor in place. */
-.writtenSlip { min-width: 0; }
+/* The slip's mode changes its material subtly. The paper slip is
+ * ivory; the review slip has a warmer tint; the receipt slip is
+ * filed-paper ivory with a thin amber thread (only when the receipt
+ * is a live settlement, via data-mode='receipt' + data-live='true'
+ * set by the desk). Drafts stay cool so the user feels they are
+ * still composing. */
+.writtenSlip { min-width: 0; transition: background 240ms ease-out; }
+.writtenSlip[data-mode='draft'] {
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 250, 235, 0.45) 100%);
+}
+
+.writtenSlip[data-mode='review'] {
+  background: linear-gradient(180deg, #f6efd9 0%, #efe5c2 100%);
+}
+
+.writtenSlip[data-mode='receipt'] {
+  background: linear-gradient(180deg, #f4ecd6 0%, #ede2c0 100%);
+  /* The receipt is signed paper — the user shouldn't feel like they
+   * can still edit. A subtle inset shadow makes the slip look
+   * settled into the page. */
+  box-shadow: inset 0 1px 0 rgba(255, 250, 235, 0.7);
+}
+
+.writtenSlip[data-mode='receipt'][data-live='true'] {
+  background: linear-gradient(180deg, #f7ebcd 0%, #ecdcab 100%);
+}
 .slipVerbatim {
   margin: 0 0 14px !important;
   padding: 10px 12px;
@@ -1845,14 +1870,58 @@ dialog.drawerPanel::backdrop { background: #030b08a6; }
 }
 /* A thin brass rule draining the quote's seconds — Hetty's slipHeading
    bar, now shared by both desks' review slips. */
+/* The slip's freshness rule. A real paper-timer that drains while
+ * the review window is open. The rule is thicker than the original
+ * 2px brass bar so the user can *see* the seconds going — a small
+ * detail that turns a numeric countdown into a physical sensation. */
 .slipFresh {
-  height: 2px;
+  display: block;
+  height: 4px;
   border-radius: 2px;
-  margin: 0 0 8px;
-  transform-origin: left;
-  transform: scaleX(var(--review-fresh, 1));
-  background: var(--desk-brass);
-  opacity: 0.7;
+  margin: 0 0 10px;
+  /* The bar's full width is a single brass rule; the *drained* part
+   * is paper-coloured, so the rule visibly retreats. The bar drains
+   * from the right edge as freshness drops from 1 to 0. */
+  background: linear-gradient(
+    to right,
+    var(--desk-brass) 0%,
+    var(--desk-brass) calc(var(--review-fresh, 1) * 100%),
+    rgba(110, 88, 50, 0.18) calc(var(--review-fresh, 1) * 100%),
+    rgba(110, 88, 50, 0.18) 100%
+  );
+  position: relative;
+  transition: background 200ms linear;
+}
+
+.slipFresh::after {
+  /* a thin highlight on top so the rule catches a light, suggesting
+   * a paper-timer's brushed surface. Visible only when the bar is
+   * full — when the bar drains, the highlight drains with it. */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(var(--review-fresh, 1) * 100%);
+  height: 1px;
+  background: rgba(255, 245, 220, 0.65);
+  transition: width 200ms linear;
+}
+
+.writtenSlip[data-lapsed='true'] .slipFresh {
+  background: linear-gradient(
+    to right,
+    rgba(168, 70, 30, 0.7) 0%,
+    rgba(168, 70, 30, 0.7) 100%
+  );
+  /* the lapsed state is steady, not animated — the user knows the
+   * window is closed. */
+}
+.writtenSlip[data-lapsed='true'] .slipFresh::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slipFresh, .slipFresh::after { transition: none; }
 }
 
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
