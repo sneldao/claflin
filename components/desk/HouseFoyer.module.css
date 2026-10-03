@@ -129,9 +129,12 @@
 }
 
 /* Lamp pool — JS sets --room-glow per room; the room under the reading
-   plane gets a pool of warm lamplight rather than dimming the rest. */
+   plane gets a pool of warm lamplight rather than dimming the rest.
+   z-index makes each room its own stacking context: a room's glow stays
+   inside it, and the book paints over the pinned hero as it slides past. */
 .main > * {
   position: relative;
+  z-index: 1;
 }
 
 .main > *::after {
@@ -167,6 +170,33 @@
   background:
     linear-gradient(90deg, rgba(10, 13, 17, 0.88) 0%, rgba(10, 13, 17, 0.55) 34%, transparent 60%),
     linear-gradient(0deg, rgba(10, 13, 17, 0.7), transparent 40%);
+}
+
+/* The house holds while the book slides past — the hero pins at the top and
+   yields as the rooms travel through its frame. Desktop and motion-friendly
+   only: mobile keeps normal flow (a taller-than-viewport hero can't pin
+   cleanly), reduced motion never pins. */
+@media (min-width: 761px) and (prefers-reduced-motion: no-preference) {
+  .hero {
+    position: sticky;
+    top: 0;
+  }
+
+  .hero .copy,
+  .hero .mobilePromise,
+  .hero .turret > *:not(.handset) {
+    opacity: calc(1 - var(--hero-exit, 0));
+    transform: translateY(calc(var(--hero-exit, 0) * -36px));
+  }
+}
+
+/* Once the book has covered it, the hero steps out of the reading order —
+   the docked handset keeps its own visibility. */
+.hero[data-away] .copy,
+.hero[data-away] .mobilePromise,
+.hero[data-away] .turret > *:not(.handset) {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .copy {
@@ -1838,6 +1868,46 @@
   }
 }
 
+/* On desktop the pinned hero yields the frame — the house line docks as a
+   pill at the foot of the page so the line is always in reach. */
+@media (min-width: 761px) {
+  .handset {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: min(620px, 78vw);
+    padding: 8px 8px 8px 20px;
+    background: rgba(12, 24, 20, 0.94);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(197, 172, 120, 0.38);
+    border-radius: 999px;
+    box-shadow: 0 14px 44px rgba(5, 8, 12, 0.55);
+    transform: translate(-50%, 160%);
+    transition: transform var(--dur-2, 240ms) var(--ease-swift, ease);
+  }
+
+  .handset[data-shown='true'] {
+    transform: translate(-50%, 0);
+  }
+
+  .handsetStatus {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #e3cf9e;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .handset {
     transition: none;
@@ -1865,6 +1935,64 @@
   line-height: 1.6;
   letter-spacing: 0;
   color: #7d7359;
+}
+
+/* ————— The brass register — a page-edge marker for the room you're in ————— */
+
+.roomRail {
+  position: fixed;
+  right: clamp(10px, 1.8vw, 24px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.roomRail a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 3px 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(201, 189, 160, 0.4);
+  transition: color var(--dur-1, 160ms) ease;
+}
+
+/* The tick sits at the page's edge — a rule mark, longer and lit when
+   the room is the one on the table. */
+.roomRail a i {
+  width: 14px;
+  height: 1px;
+  background: rgba(197, 172, 120, 0.38);
+  transition: width 240ms ease, background 240ms ease, box-shadow 240ms ease;
+}
+
+.roomRail a:hover,
+.roomRail a:focus-visible {
+  color: #e3cf9e;
+}
+
+.roomRail a[aria-current] {
+  color: #e3cf9e;
+}
+
+.roomRail a[aria-current] i {
+  width: 26px;
+  background: #e3cf9e;
+  box-shadow: 0 0 7px rgba(227, 207, 158, 0.45);
+}
+
+@media (max-width: 900px) {
+  .roomRail {
+    display: none;
+  }
 }
 
 .footer {

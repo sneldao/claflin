@@ -28,6 +28,17 @@ import foyerStyles from './HouseFoyer.module.css';
 
 type WireMark = { key: string; rail: 'BASE' | 'SOL' | 'RH'; mark: DeskMark };
 
+/* The brass register — one stop per room, in document order. The measure
+   loop keys both rail and lamp pool off main.children, so keep aligned. */
+const ROOMS = [
+  { id: 'the-line', label: 'Line' },
+  { id: 'the-tape', label: 'Tape' },
+  { id: 'house-offerings', label: 'Board' },
+  { id: 'house-method', label: 'Method' },
+  { id: 'house-desks', label: 'Desks' },
+  { id: 'house-answers', label: 'Answers' },
+] as const;
+
 /** The house-book instruction a wire mark stands for — the plain underlying ticker. */
 function instructionForMark(mark: DeskMark): string {
   return offeringForInstrument(mark.instrumentId)?.underlyingSymbol
@@ -117,23 +128,49 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
     };
   }, [sceneApi]);
 
-  /* Lamp pool — the room under the reading plane warms with a pool of
-     lamplight (--room-glow) while the rest stay as they are. DOM-only so
-     it works in still mode; skipped under reduced motion. */
+  /* Room measure — one scroll loop drives three signals:
+       · the lamp pool warms the room under the reading plane (--room-glow)
+       · the brass register marks the current room (aria-current)
+       · the pinned hero yields the frame (--hero-exit → data-away) as the
+         book slides in
+     The register and hero exit run in every mode — they're layout, not
+     motion; only the glow is skipped under reduced motion. */
+  const railRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const main = mainRef.current;
-    if (!main || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!main) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rooms = Array.from(main.children) as HTMLElement[];
+    const hero = rooms[0];
+    const stops = railRef.current ? Array.from(railRef.current.querySelectorAll('a')) : [];
     let raf = 0;
     const measure = () => {
       raf = 0;
       const focal = window.innerHeight * 0.5;
       const band = window.innerHeight * 0.3;
-      for (const room of rooms) {
+      let active = 0;
+      let best = -1;
+      rooms.forEach((room, i) => {
         const box = room.getBoundingClientRect();
         const center = box.top + box.height / 2;
         const dist = Math.max(0, Math.abs(center - focal) - band) / (window.innerHeight * 0.5);
-        room.style.setProperty('--room-glow', Math.max(0, 1 - dist).toFixed(3));
+        const glow = Math.max(0, 1 - dist);
+        if (!reduced) room.style.setProperty('--room-glow', glow.toFixed(3));
+        if (glow > best) { best = glow; active = i; }
+      });
+      stops.forEach((stop, i) => {
+        if (i === active) stop.setAttribute('aria-current', 'true');
+        else stop.removeAttribute('aria-current');
+      });
+      /* The pin exists only on wide, motion-allowed viewports — the same
+         gate the CSS uses, so the exit signal never fires where it can't. */
+      const pinned = !reduced && window.innerWidth > 760;
+      const exit = hero && pinned && hero.offsetHeight > 0
+        ? Math.min(1, Math.max(0, window.scrollY / (hero.offsetHeight * 0.8)))
+        : 0;
+      if (hero) {
+        hero.style.setProperty('--hero-exit', exit.toFixed(3));
+        hero.toggleAttribute('data-away', exit > 0.75);
       }
     };
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(measure); };
@@ -237,7 +274,7 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
       </header>
 
       <main id="main-content" tabIndex={-1} ref={mainRef} className={foyerStyles.main}>
-        <section className={foyerStyles.hero} aria-labelledby="foyer-title">
+        <section className={foyerStyles.hero} id="the-line" aria-labelledby="foyer-title">
           <div className={foyerStyles.copy}>
             <p className={foyerStyles.kicker} data-exchange={clock?.exchange ?? 'pending'}>
               <span className={foyerStyles.clockLamp} aria-hidden="true" />
@@ -326,6 +363,16 @@ export function HouseFoyer({ onEnter }: { onEnter: (id: HouseDeskId, offeringId?
 
         <HouseAnswers />
       </main>
+
+      {/* The brass register — which room you're in, and a way to jump. */}
+      <nav ref={railRef} className={foyerStyles.roomRail} aria-label="The rooms">
+        {ROOMS.map(room => (
+          <a key={room.id} href={`#${room.id}`}>
+            <span>{room.label}</span>
+            <i aria-hidden="true" />
+          </a>
+        ))}
+      </nav>
 
       <footer className={foyerStyles.footer}>
         <HouseMark small className={foyerStyles.footerMark} />
@@ -431,7 +478,7 @@ function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: M
   }, [wireMarks.length]);
 
   return (
-    <section className={foyerStyles.wire} aria-label="Live reference marks">
+    <section className={foyerStyles.wire} id="the-tape" aria-label="Live reference marks">
       <span className={foyerStyles.wireLabel}>LIVE REFERENCE MARKS</span>
       {wireMarks.length === 0 ? (
         <p className={foyerStyles.wireNote} role={failed ? 'status' : undefined}>

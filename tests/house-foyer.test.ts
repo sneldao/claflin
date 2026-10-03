@@ -171,6 +171,13 @@ describe('house foyer', () => {
     assert.doesNotMatch(html, /ILLUSTRATIVE EXAMPLE/);
     assert.doesNotMatch(html, /0\.490 Apple units/);
     assert.doesNotMatch(html, /0\.245 Apple units/);
+    /* The brass register — one anchored stop per room, in document order. */
+    assert.match(html, /aria-label="The rooms"/);
+    assert.match(html, /id="the-line"/);
+    assert.match(html, /id="the-tape"/);
+    for (const stop of ['the-line', 'the-tape', 'house-offerings', 'house-method', 'house-desks', 'house-answers']) {
+      assert.match(html, new RegExp(`href="#${stop}"`), `register stop for ${stop}`);
+    }
   });
 
   it('SSR of the real entry tree renders the foyer headline first paint', () => {
@@ -296,6 +303,18 @@ describe('house foyer', () => {
     assert.match(text(getRootElement()), /AAPLc/);
     assert.match(text(getRootElement()), /AAPLx/);
     assert.doesNotMatch(text(getRootElement()), /TSLAx/);
+  });
+
+  it('the brass register marks the first room on arrival', async () => {
+    root = createRoot(getRootElement());
+    await act(async () => root!.render(createElement(HouseFoyer, { onEnter: () => {} })));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    const rail = getRootElement().querySelector('nav[aria-label="The rooms"]');
+    assert.ok(rail, 'the register renders');
+    const stops = rail!.querySelectorAll('a');
+    assert.equal(stops.length, 6, 'one stop per room');
+    assert.equal(stops[0].getAttribute('aria-current'), 'true', 'the line is current on arrival');
+    assert.equal(stops[1].getAttribute('aria-current'), null, 'no second current stop');
   });
 
   it('carries Jesse’s Solana marks on the wire with the stock-reference gap', async () => {

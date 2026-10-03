@@ -45,6 +45,14 @@ const TOUR_ORDER: NightDeskView[] = ['desk', 'evidence', 'review', 'ledger'];
 const TOUR_POSITIONS = new THREE.CatmullRomCurve3(TOUR_ORDER.map(v => VIEWS[v].position), false, 'catmullrom', 0.5);
 const TOUR_TARGETS = new THREE.CatmullRomCurve3(TOUR_ORDER.map(v => VIEWS[v].target), false, 'catmullrom', 0.5);
 
+/* Where the lamp's light rests in each room — blotter, then the evidence
+   board, then the desk from above, then the open book. */
+const LAMP_AIM_HOME = new THREE.Vector3(0.6, 0, -0.6);
+const TOUR_LAMP_AIM = new THREE.CatmullRomCurve3(
+  [LAMP_AIM_HOME.clone(), ANCHOR_POINTS.evidence.clone(), ANCHOR_POINTS.review.clone(), ANCHOR_POINTS.ledger.clone()],
+  false, 'catmullrom', 0.5,
+);
+
 function roundedSlab(w: number, d: number, h: number, radius: number, material: THREE.Material) {
   const shape = new THREE.Shape();
   const left = -w / 2;
@@ -570,6 +578,8 @@ export function createNightDeskScene(
   let ledgerTarget = 0;
   let lampGlow = 1;
   let lampTarget = 1;
+  const lampAim = LAMP_AIM_HOME.clone();
+  const lampAimGoal = LAMP_AIM_HOME.clone();
   /* The walk: engaged by the foyer's scroll listener. tourT is the damped
      position on the curve; tourGoal is where the scroll bar says we are. */
   let tour = false;
@@ -622,11 +632,30 @@ export function createNightDeskScene(
     targetGoal.copy(pose.target);
     applyFraming();
     ledgerTarget = view === 'ledger' ? 0.65 : 0;
+    lampAimGoal.copy(LAMP_AIM_HOME);
   }
   function applyTour(t: number) {
     TOUR_POSITIONS.getPoint(t, posGoal);
     TOUR_TARGETS.getPoint(t, targetGoal);
     applyFraming();
+    /* Each room takes the floor: the lamp's light follows the walk — blotter,
+       evidence board, the desk from above, the open book — and the house
+       warms the deeper you go. A slip lands on the desk once you're inside,
+       then files itself beside the book at the end of the walk. */
+    TOUR_LAMP_AIM.getPoint(t, lampAimGoal);
+    lampTarget = 0.8 + t * 0.35;
+    if (t > 0.8) {
+      paperSlip.visible = true;
+      paperGoal.set(2.1, 0.15, 1.1);
+      paperSpinGoal = 0.45;
+    } else if (t > 0.12) {
+      paperSlip.visible = true;
+      paperGoal.set(0.1, 0.17, 0.6);
+      paperSpinGoal = -0.05;
+    } else if (stage === 'arrival') {
+      paperGoal.set(-4.5, 0.15, 0.5);
+      paperSpinGoal = 0.2;
+    }
     /* The book opens as the walk arrives at it. */
     ledgerTarget = t > 0.7 ? 0.65 : 0;
   }
@@ -639,6 +668,7 @@ export function createNightDeskScene(
     camTarget.copy(targetGoal);
     ledgerOpen = ledgerTarget;
     lampGlow = lampTarget;
+    lampAim.copy(lampAimGoal);
     paperPos.copy(paperGoal);
     paperSlip.position.copy(paperGoal);
     paperSlip.rotation.y = paperSpinGoal;
@@ -662,10 +692,12 @@ export function createNightDeskScene(
     parallax.lerp(parallaxGoal, blend);
     ledgerOpen += (ledgerTarget - ledgerOpen) * blend;
     lampGlow += (lampTarget - lampGlow) * blend;
+    lampAim.lerp(lampAimGoal, blend);
     paperPos.lerp(paperGoal, blend);
     paperSpin += (paperSpinGoal - paperSpin) * blend;
     coverPivot.rotation.z = ledgerOpen;
     lampLight.intensity = 45 * lampGlow;
+    lampLight.target.position.copy(lampAim);
     paperSlip.position.copy(paperPos);
     paperSlip.rotation.y = paperSpin;
     if (paperPos.distanceTo(paperGoal) < 0.01 && paperGoal.x < -4) paperSlip.visible = false;
@@ -685,6 +717,7 @@ export function createNightDeskScene(
       camPos.distanceTo(posGoal) + camTarget.distanceTo(targetGoal) +
       Math.abs(parallax.x - parallaxGoal.x) + Math.abs(parallax.y - parallaxGoal.y) +
       Math.abs(ledgerTarget - ledgerOpen) + Math.abs(lampTarget - lampGlow) +
+      lampAim.distanceTo(lampAimGoal) +
       (tour ? Math.abs(tourGoal - tourT) : 0) +
       paperPos.distanceTo(paperGoal) + Math.abs(paperSpinGoal - paperSpin);
     if (unsettled > 0.0008) frame = requestAnimationFrame(renderFrame);
@@ -770,6 +803,7 @@ export function createNightDeskScene(
         if (!tour) return;
         tour = false;
         applyView();
+        applyStage();
         schedule();
         return;
       }

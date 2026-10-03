@@ -82,6 +82,27 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
     observer.observe(bar);
     return () => observer.disconnect();
   }, []);
+  /* On desktop the hero pins, so the bar never leaves the viewport — "away"
+     there means the book has slid over it: most of the hero scrolled past. */
+  const [heroAway, setHeroAway] = useState(false);
+  useEffect(() => {
+    const bar = barRef.current;
+    const room = bar?.closest('section');
+    if (!room) return;
+    /* Same gate as the CSS pin — no pin under reduced motion, so no dock. */
+    const measure = () => setHeroAway(
+      window.innerWidth > 760
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      && window.scrollY > room.offsetHeight * 0.72,
+    );
+    measure();
+    window.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
 
   const reading = readInstruction(instruction);
   const deskIds = lineDesks.map(desk => desk.id);
@@ -114,15 +135,15 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
      been held past SPACE_HOLD_MS, and a shorter press scrolls exactly as the
      browser would. Once the talk bar has scrolled away, Space is left to the
      browser entirely — the docked handset stays a pointer/focus control. */
-  const lineRef = useRef({ begin, release, barAway });
-  useEffect(() => { lineRef.current = { begin, release, barAway }; });
+  const lineRef = useRef({ begin, release, barAway: false, heroAway: false });
+  useEffect(() => { lineRef.current = { begin, release, barAway, heroAway }; });
   useEffect(() => {
     const ownsSpace = (target: EventTarget | null) => (target as HTMLElement | null)?.closest?.(OWNS_SPACE);
     let pending: ReturnType<typeof setTimeout> | null = null;
     let pressed = false;
     const down = (event: KeyboardEvent) => {
       if (event.code !== 'Space' || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (ownsSpace(event.target) || lineRef.current.barAway) return;
+      if (ownsSpace(event.target) || lineRef.current.barAway || lineRef.current.heroAway) return;
       event.preventDefault();
       if (event.repeat || pressed) return;
       pressed = true;
@@ -392,7 +413,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
 
       {boundary}
 
-      <div className={foyerStyles.handset} data-shown={barAway || isRecording || isTranscribing} aria-hidden={!(barAway || isRecording || isTranscribing)}>
+      <div className={foyerStyles.handset} data-shown={barAway || heroAway || isRecording || isTranscribing} aria-hidden={!(barAway || heroAway || isRecording || isTranscribing)}>
         <p className={foyerStyles.handsetStatus} aria-hidden="true">
           {reply ?? (heard && instruction === heard ? `${TURRET_COPY.heard} “${heard}”` : TURRET_COPY.handset)}
         </p>
@@ -401,7 +422,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
           data-talk
           className={`${foyerStyles.talkButton} ${foyerStyles.handsetButton}`}
           aria-pressed={isRecording}
-          tabIndex={barAway ? 0 : -1}
+          tabIndex={barAway || heroAway ? 0 : -1}
           disabled={isTranscribing}
           onPointerDown={onPointerDown}
           onPointerUp={release}
