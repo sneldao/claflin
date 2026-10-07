@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { PrivyProvider, usePrivy, useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { BASE_CHAIN_ID } from '@/lib/base-chain';
-import { DeskAuthContext, type DeskAuth } from './AuthProvider';
+import type { AccountBridgeProps, DeskAuth } from './AuthProvider';
 
-/** Loaded via next/dynamic — the Privy SDK stays out of the anonymous bundle. */
-function Inner({ children }: { children: React.ReactNode }) {
+/** Loaded on account activation; publishes identity without remounting the paper app. */
+function Inner({ onChange, request }: AccountBridgeProps) {
   const { ready, authenticated, user, login, logout, getAccessToken, linkWallet } = usePrivy();
   const { sendTransaction: privySend } = useSendTransaction();
   const { wallets } = useWallets();
@@ -58,10 +58,18 @@ function Inner({ children }: { children: React.ReactNode }) {
       },
     };
   }, [ready, authenticated, user, login, logout, getAccessToken, linkWallet, privySend, wallets]);
-  return <DeskAuthContext.Provider value={value}>{children}</DeskAuthContext.Provider>;
+  useEffect(() => { onChange(value); }, [onChange, value]);
+  const handled = useRef(0);
+  useEffect(() => {
+    if (!ready || !request || handled.current === request.id) return;
+    handled.current = request.id;
+    if (request.action === 'login') login();
+    else linkWallet();
+  }, [ready, request, login, linkWallet]);
+  return null;
 }
 
-export default function PrivyBackedAuth({ children }: { children: React.ReactNode }) {
+export default function PrivyBackedAuth(props: AccountBridgeProps) {
   return (
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
@@ -71,7 +79,7 @@ export default function PrivyBackedAuth({ children }: { children: React.ReactNod
         appearance: { theme: 'dark', accentColor: '#c9a961' },
       }}
     >
-      <Inner>{children}</Inner>
+      <Inner {...props} />
     </PrivyProvider>
   );
 }

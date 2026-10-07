@@ -83,6 +83,63 @@ The trial worktree was removed; the validated main dependency versions remain.
   not a runtime migration.
 - Do not merge already-integrated branches again or revive the stale Devin work.
 
+## Follow-up: 2026-10-05, uncommitted release candidate
+
+Optional account services, Jesse's default voice transport, desk views and the
+live-only Solana wallet panel now load separately. Account activation keeps the
+paper subtree mounted; desk controllers remain mounted across view changes.
+The default voice gate preserves ring-on-arrival and cancellation. AssemblyAI
+selection and provider failover remain owned by the desk surface.
+
+Before verification stopped, 1,328 unit tests passed, typecheck and changed-code
+lint passed, and production builds passed for the main loading changes. The
+original four maintained journeys and four added recovery/keyboard scenarios
+passed. New missing-record and transport-on-ring cases remain unrun; 14 legacy
+browser cases remain skipped. Fixtures do not certify live account or voice
+services, device accessibility or user comprehension.
+
+Code review then fixed cancel-then-ring during an in-flight transport import,
+cleared pending intent on unmount/handoff, and guarded disabled account actions.
+A regression case was added but not run. Temporary attribution scripts were
+removed. Latest edits need fresh verification; historical passing counts do not
+certify the final patch.
+
+The owner requested no further browser automation or heavy builds due to CPU
+load. Both final build attempts were stopped; the current `.next` output may be
+incomplete and must not be deployed. No commit, push or deployment occurred.
+
+### Owner-run checks before release
+
+Run sequentially when resources permit: typecheck, lint, unit suite, a complete
+`pnpm build`, maintained browser scenarios and the Room budget measurement.
+Set `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED`, `NEXT_PUBLIC_JESSE_LIVE_ENABLED`,
+`JESSE_LIVE_ENABLED`, `NEXT_PUBLIC_HALLEY_LIVE_ENABLED` and `HALLEY_LIVE_ENABLED`
+to `false` for paper-only verification. Port 3000 was occupied in this session;
+use an isolated local server rather than testing against an unrelated process.
+
+Manually verify sign-in, returning-account restoration, sign-out, explicit
+anonymous-record import, parked drafts across desk switches, ring/cancel/H,
+and provider failover. Account restoration currently checks an app-owned
+activation marker plus legacy `privy:` storage keys; the latter is a provider
+implementation assumption that needs verification. Review the outstanding
+Compact budget and timing comparison in [Room budget](PERFORMANCE_ROOM_VIEW.md)
+before accepting a paper-only production release and its smoke checks.
+
+## Halley first-use guidance: Phase 1, uncommitted
+
+Halley's surface now includes a static comet emblem in a fixed portrait slot,
+a three-step paper-launch guide, and a visible no-mint boundary. A first-use
+button fills an editable NVDA example without estimating or filing. Visible
+field hints explain the anchor, curve, supply and graduation threshold; the
+estimate button identifies missing required fields. The header displays the
+actual draft/review stage instead of an empty placeholder. No avatar service,
+Rive runtime, new dependency or live launch path was added.
+
+Regression tests were added in `tests/halley-plate.test.ts`. Browser review,
+full typecheck/build and test execution remain owner-run checks under the
+CPU restriction. Verify desktop/phone layout, example editing, visible hints,
+progress through estimate/file/archive, and keyboard focus before release.
+
 ## Remaining release gates
 
 - Accept a real example-call recording/transcript/slip; the current pending

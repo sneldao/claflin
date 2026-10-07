@@ -11,7 +11,7 @@ import { EducationTopicTrigger } from './EducationTopic';
 import { MarketEvidence } from '../solana/MarketEvidence';
 import { PreStocksEvidence } from '../solana/PreStocksEvidence';
 import { VenueDuplexEvidence } from '../solana/VenueDuplexEvidence';
-import { JesseLiveSettle } from './JesseLiveSettle';
+import dynamic from 'next/dynamic';
 import { WrittenSlip } from './WrittenSlip';
 import { ReceiptPortrait } from './ReceiptPortrait';
 import { getHouseDesk } from '@/lib/house';
@@ -34,6 +34,11 @@ import evidence from "./EvidencePanel.module.css";
 type SlipHandEdit = (partial: Partial<JesseDraft>, field: Parameters<JesseDesk['edit']>[1]) => ReturnType<JesseDesk['edit']>;
 
 export { GapStrip } from './GapStrip';
+
+const JesseLiveSettle = dynamic(
+  () => import('./JesseLiveSettle').then(module => module.JesseLiveSettle),
+  { ssr: false },
+);
 
 const SLIP_INSTRUMENTS = SOLANA_INSTRUMENTS.filter(s => s.quoteSupported);
 

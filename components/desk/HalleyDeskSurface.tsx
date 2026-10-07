@@ -6,9 +6,18 @@ import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import { EvidencePanel, EvidenceRow } from './EvidencePanel';
 import { ModeStamp } from './ModeStamp';
+import { HalleyPlate } from './HalleyPlate';
+import {
+  CURVE_HINTS,
+  HALLEY_EXAMPLE,
+  isBlankDraft,
+  missingLaunchFields,
+  stageLabel,
+} from '@/lib/meteora/plate';
+import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
-import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from '@/lib/meteora/contracts';
+import { LAUNCH_CURVE_PRESETS } from '@/lib/meteora/contracts';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
@@ -24,13 +33,6 @@ function money(value: string | null | undefined): string {
   if (!Number.isFinite(n)) return value;
   return n >= 100 ? n.toFixed(2) : n.toPrecision(4);
 }
-
-const CURVE_LABELS: Record<LaunchCurvePreset, string> = {
-  'equity-pair': 'Equity pair — anchored band',
-  flat: 'Flat — near-linear',
-  long: 'Long — slow early discovery',
-  exponential: 'Exponential — steep tail',
-};
 
 function recordLine(record: HalleyPaperRecord): string {
   const i = record.estimate.intent;
@@ -99,7 +101,7 @@ function HalleyRecordView({ record, onClose, onRemove }: {
 /**
  * Halley's desk — Meteora DBC launches on Solana. Name a tracker token, pick
  * the anchor equity and the quote asset, see the projected curve, file a
- * paper launch — or, when the live gate is on, sign the launch yourself.
+ * paper launch. No live launch path is implemented.
  * Voice may draft and estimate; it never signs.
  */
 export function HalleyDeskSurface({ desk }: { desk: Desk }) {
@@ -115,7 +117,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const secondsLeft = estimate ? Math.max(0, Math.ceil((estimate.expiresAt - reviewNow) / 1000)) : 0;
 
   const draft = halley.state.draft;
-  const complete = Boolean(draft.name && draft.symbol && draft.quoteSymbol && draft.supply && draft.graduationQuote);
+  const missing = missingLaunchFields(draft);
+  const complete = missing.length === 0;
+  const blank = halley.state.stage === 'draft' && isBlankDraft(draft);
+  const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
 
   return (
     <DeskRoom
@@ -135,6 +140,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         <DeskObjects />
         <aside className={styles.support} aria-label="The launch desk’s direct line">
           <HalleyCall halley={halley} />
+          <HalleyPlate stage={viewed ? 'saved' : halley.state.stage} draft={draft} />
         </aside>
         {viewed ? (
           <HalleyRecordView record={viewed} onClose={halley.dismissRecord} onRemove={halley.removeRecord} />
@@ -142,12 +148,13 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         <section id="instruction" className={styles.ticket} aria-labelledby="halley-ticket-title" data-ticket-view="open" data-desk-open="true">
           <div className={styles.paperTop}>
             <span>METEORA LAUNCHES<small>DBC → DAMM V2</small></span>
-            <span className={styles.paperNumber}>—</span>
+            <span className={styles.paperNumber}>{stageLabel(halley.state.stage)}</span>
           </div>
           <h1 id="halley-ticket-title">The launch desk.</h1>
           <p className={styles.product}>
-            A bonding-curve launch on Meteora, opened at the equity’s price —
-            not at zero. The launched token is a tracker; it is not stock ownership.
+            Project a tracker-token launch curve on Meteora using an equity mark
+            or an unanchored starting price. Paper only: no token is minted.
+            A tracker is not stock ownership.
           </p>
           <details className={styles.productDetails}>
             <summary>What a launch is, and what it is not</summary>
@@ -211,27 +218,53 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               </div>
             ) : (
               <>
+                {blank && (
+                  <div className={plate.lead} id="halley-lead">
+                    <p className={plate.leadText}>Name a tracker. Anchor it to an equity. See the curve.</p>
+                    <div>
+                      <button
+                        type="button"
+                        className={styles.secondary}
+                        onClick={() => {
+                          halley.edit({ ...HALLEY_EXAMPLE });
+                          document.getElementById('halley-name')?.focus({ preventScroll: true });
+                        }}
+                      >
+                        Fill an example (NVDA tracker)
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className={styles.fields}>
                   <label htmlFor="halley-name">Tracker name</label>
-                  <input
-                    id="halley-name"
-                    autoComplete="off"
-                    value={draft.name ?? ''}
-                    placeholder="NVDA tracker"
-                    onChange={event => halley.edit({ name: event.target.value || null })}
-                  />
+                  <div className={plate.control}>
+                    <input
+                      id="halley-name"
+                      autoComplete="off"
+                      value={draft.name ?? ''}
+                      placeholder="NVDA tracker"
+                      aria-describedby="halley-name-hint"
+                      onChange={event => halley.edit({ name: event.target.value || null })}
+                    />
+                    <p id="halley-name-hint" className={plate.hint}>The token’s display name, 2–40 characters.</p>
+                  </div>
 
                   <label htmlFor="halley-symbol">Symbol</label>
-                  <input
-                    id="halley-symbol"
-                    autoComplete="off"
-                    value={draft.symbol ?? ''}
-                    placeholder="NVDAT"
-                    onChange={event => halley.edit({ symbol: event.target.value.toUpperCase() || null })}
-                  />
+                  <div className={plate.control}>
+                    <input
+                      id="halley-symbol"
+                      autoComplete="off"
+                      value={draft.symbol ?? ''}
+                      placeholder="NVDAT"
+                      aria-describedby="halley-symbol-hint"
+                      onChange={event => halley.edit({ symbol: event.target.value.toUpperCase() || null })}
+                    />
+                    <p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p>
+                  </div>
 
                   <span id="halley-anchor-label">Anchor equity</span>
-                  <div role="group" aria-labelledby="halley-anchor-label" className={styles.amountChips}>
+                  <div className={plate.control}>
+                  <div role="group" aria-labelledby="halley-anchor-label" aria-describedby="halley-anchor-hint" className={styles.amountChips}>
                     {SOLANA_INSTRUMENTS.map(i => i.underlyingSymbol).map(sym => (
                       <button key={sym} type="button"
                         aria-pressed={draft.anchorSymbol === sym}
@@ -242,6 +275,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       aria-pressed={draft.anchorSymbol === null}
                       className={styles.amountChip} data-active={draft.anchorSymbol === null}
                       onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
+                  </div>
+
+                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price. None, or an unavailable mark, uses 1 quote unit instead; the estimate discloses it.</p>
                   </div>
 
                   <span id="halley-quote-label">Quote in</span>
@@ -255,19 +291,25 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
 
                   <span id="halley-curve-label">Curve</span>
-                  <div role="group" aria-labelledby="halley-curve-label" className={styles.amountChips}>
+                  <div className={plate.control}>
+                  <div role="group" aria-labelledby="halley-curve-label" aria-describedby="halley-curve-hint" className={styles.amountChips}>
                     {LAUNCH_CURVE_PRESETS.map(c => (
                       <button key={c} type="button"
-                        aria-pressed={draft.curve === c}
-                        className={styles.amountChip} data-active={draft.curve === c}
-                        title={CURVE_LABELS[c]}
+                        aria-pressed={(draft.curve ?? 'equity-pair') === c}
+                        className={styles.amountChip} data-active={(draft.curve ?? 'equity-pair') === c}
+                        title={CURVE_HINTS[c]}
                         onClick={() => halley.edit({ curve: c })}>{c === 'equity-pair' ? 'equity pair' : c}</button>
                     ))}
                   </div>
 
+                    <p id="halley-curve-hint" className={plate.hint}>{curveHint}</p>
+                  </div>
+
                   <label htmlFor="halley-supply">Supply</label>
+                  <div className={plate.control}>
                   <input
                     id="halley-supply"
+                    aria-describedby="halley-supply-hint"
                     inputMode="numeric"
                     autoComplete="off"
                     value={draft.supply ?? ''}
@@ -275,15 +317,22 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onChange={event => halley.edit({ supply: event.target.value || null })}
                   />
 
+                    <p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection. Enter a positive whole number.</p>
+                  </div>
+
                   <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
+                  <div className={plate.control}>
                   <input
                     id="halley-grad"
+                    aria-describedby="halley-grad-hint"
                     inputMode="decimal"
                     autoComplete="off"
                     value={draft.graduationQuote ?? ''}
                     placeholder="150"
                     onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
                   />
+                    <p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2. This does not launch a pool.</p>
+                  </div>
                 </div>
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}
                 {halley.storageError && <p className={styles.notice} role="alert">{halley.storageError}</p>}
@@ -292,11 +341,13 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     type="button"
                     className={styles.primary}
                     disabled={halley.state.stage === 'estimating' || !complete}
+                    aria-describedby={!complete ? 'halley-needed' : undefined}
                     onClick={halley.estimate}
                   >
                     {halley.state.stage === 'estimating' ? 'Drawing the curve…' : 'See the launch'}
                   </button>
                 </div>
+                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.join(', ')}.</p>
               </>
             )}
           </div>

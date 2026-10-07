@@ -40,6 +40,37 @@ fields gate only when both the baseline and the measured run sampled an
 active scene — the scene renders on demand, so an idle run measures nothing
 about frame cost.
 
+## Follow-up measurement: 2026-10-05
+
+Uncommitted paper-only build, fresh storage, configured optional account tier,
+local headless Chromium at 1280×800 with SwiftShader and stubbed API reads.
+The same Jesse routes and loaded-script gzip definition were retained.
+
+| View | Before follow-up (gzipped bytes) | Latest recorded bytes | Target |
+|---|---:|---:|---:|
+| Compact | 1,313,878 | 299,150 | <200,000 |
+| Room | 1,560,778 | 546,050 | <600,000 |
+
+Initial JS fell about 77% in Compact and 65% in Room. Room meets its payload
+budget in this measurement; Compact remains about 99KB over target. Fresh paper
+visitors defer account services and Jesse's default voice transport; returning
+accounts and active calls intentionally load more code. Desk views and the
+live-only Solana wallet panel are also split without moving controller ownership.
+
+Observed large loaded baseline chunks included Privy at about 488KB and 103KB
+and LiveKit at about 139KB gzipped. Remaining entry/framework chunks were about
+87KB, 66KB and 63KB. Temporary module-attribution tooling was removed after the
+expanded diagnostic build stalled. These are chunk sizes, not precise additive
+per-package gzip costs. Per-script paths and sizes remain in budget output for
+repeatable diagnostics; do not change the metric or weaken targets to pass.
+
+The latest relative timing gate failed: Room paint was 384ms versus an earlier
+84ms sample, and WebGL mount was about 1,324ms versus 223ms. Both latest values
+meet desktop absolute timing targets, but the relative failure is unresolved.
+No threshold was relaxed. Compact did not mount WebGL. Real-device acceptance
+and final measurements remain pending; builds and browser work stopped at the
+owner's request. See [release validation](RELEASE_VALIDATION.md) for scope.
+
 ## Per-view split
 
 Target: Compact ships without Three.js; Room lazy-loads the scene. Measure both

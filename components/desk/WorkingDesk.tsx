@@ -5,13 +5,15 @@ import { HOUSE_DESKS, isOpenDesk } from '@/lib/house';
 import { DeskObjects } from './BrokerageRoom';
 import { ClosedDesk } from './ClosedDesk';
 import { DeskRoom } from './DeskRoom';
-import { HettyDeskSurface } from './HettyDeskSurface';
-import { IsabelDeskSurface } from './IsabelDeskSurface';
-import { HalleyDeskSurface } from './HalleyDeskSurface';
-import { JesseDeskSurface } from './JesseDeskSurface';
+import dynamic from 'next/dynamic';
 import { HouseFoyer } from './HouseFoyer';
 import { HouseSceneProvider } from './HouseScene';
 import styles from './WorkingDesk.module.css';
+
+const HettyDeskSurface = dynamic(() => import('./HettyDeskSurface').then(module => module.HettyDeskSurface));
+const IsabelDeskSurface = dynamic(() => import('./IsabelDeskSurface').then(module => module.IsabelDeskSurface));
+const HalleyDeskSurface = dynamic(() => import('./HalleyDeskSurface').then(module => module.HalleyDeskSurface));
+const JesseDeskSurface = dynamic(() => import('./JesseDeskSurface').then(module => module.JesseDeskSurface));
 
 export function WorkingDesk() {
   return (

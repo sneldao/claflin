@@ -120,7 +120,12 @@ export function buildStorageState(records: PaperRecord[]) {
   };
 }
 
-export async function mockApi(page: Page, { now, staleMarkId }: { now?: number; staleMarkId?: string } = {}) {
+export async function mockApi(page: Page, { now, staleMarkId, failQuotes = 0, expiredQuotes = 0 }: {
+  now?: number;
+  staleMarkId?: string;
+  failQuotes?: number;
+  expiredQuotes?: number;
+} = {}) {
   const time = now ?? Date.now();
   const quoteId = `quote-${time}`;
   await page.route('**/api/desk/*/marks', async route => {
@@ -139,7 +144,14 @@ export async function mockApi(page: Page, { now, staleMarkId }: { now?: number; 
     if (!found) {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'unknown_instrument' }) });
     }
-    const quote = makeEstimate(found, side, amount, quoteId, time);
+    if (failQuotes-- > 0) {
+      return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'venue_unavailable', message: 'The venue is unavailable. Please retry.' } }) });
+    }
+    const quote = makeEstimate(found, side, amount, quoteId, now ?? Date.now());
+    if (expiredQuotes-- > 0) {
+      quote.quotedAt = Date.now() - 35000;
+      quote.expiresAt = Date.now() - 5000;
+    }
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(quote) });
   });
 }

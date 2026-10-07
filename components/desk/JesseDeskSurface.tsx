@@ -8,8 +8,7 @@ import { DeskRoom } from './DeskRoom';
 import { JesseTicket } from './JesseTicket';
 import { JesseLedger } from './JesseLedger';
 import { JesseCommandBar } from './JesseCommandBar';
-import { JesseCall } from './JesseCall';
-import { JesseCallAssemblyAI } from './JesseCallAssemblyAI';
+import { JesseCallGate as JesseCall } from './JesseCallGate';
 import { JESSE_VOICE_DEFAULT, jesseVoiceProvider, type JesseVoiceProvider } from '@/lib/solana/flags';
 import { BlotterHearables } from './BlotterHearables';
 import { LastFilingLine } from './LastFilingLine';
@@ -49,6 +48,11 @@ import ticker from './DeskTicker.module.css';
 import { countRetrieval } from '@/lib/funnel/client';
 
 const NO_MARKS: DeskMark[] = [];
+
+const JesseCallAssemblyAI = dynamic(
+  () => import('./JesseCallAssemblyAI').then(m => m.JesseCallAssemblyAI),
+  { ssr: false },
+);
 
 const RoomPresentation = dynamic(
   () => import('./RoomPresentation').then(m => m.RoomPresentation),

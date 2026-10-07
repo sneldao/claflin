@@ -139,6 +139,9 @@ async function measureView(browser, view) {
       fpsMedian: median > 0 ? 1000 / median : null,
       frameIntervalP95Ms: percentile(sample.intervals, 0.95),
       jsGzipBytes: [...scripts.values()].reduce((total, size) => total + size, 0),
+      scripts: [...scripts.entries()]
+        .map(([url, gzipBytes]) => ({ path: new URL(url).pathname, gzipBytes }))
+        .sort((a, b) => b.gzipBytes - a.gzipBytes),
       drawCallsPerFrame: sample.drawCallsPerFrame,
       trianglesPerFrame: sample.trianglesPerFrame,
       shaderCompileCpuMs: sample.shaderCompileCpuMs,
