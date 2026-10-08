@@ -125,7 +125,7 @@ implementation assumption that needs verification. Review the outstanding
 Compact budget and timing comparison in [Room budget](PERFORMANCE_ROOM_VIEW.md)
 before accepting a paper-only production release and its smoke checks.
 
-## Halley first-use guidance: Phase 1, uncommitted
+## Halley first-use guidance: Phase 1, committed in 3891237
 
 Halley's surface now includes a static comet emblem in a fixed portrait slot,
 a three-step paper-launch guide, and a visible no-mint boundary. A first-use
@@ -139,6 +139,27 @@ Regression tests were added in `tests/halley-plate.test.ts`. Browser review,
 full typecheck/build and test execution remain owner-run checks under the
 CPU restriction. Verify desktop/phone layout, example editing, visible hints,
 progress through estimate/file/archive, and keyboard focus before release.
+
+## Halley Room integration, uncommitted
+
+Halley now uses the shared Room presentation and scene owner, with persisted
+Room/Compact preferences and query overrides. The controller and paper-only
+launch workflow are unchanged. Both views retain the launch form and guide;
+Room adds the shared receiver, document-driven scene posture and a static,
+pointer-inert celestial accent. Compact uses the receiver poster without
+arming its Three.js scene. No new rendering dependency was added.
+
+Changing views during a connected or connecting call is refused with a status
+message, since replacing the presentation shell would otherwise unmount the
+call. End or cancel the call first; paper drafts remain owned above the shell.
+The H shortcut now uses the shared line signal on Halley.
+
+Source regression cases were added in `tests/halley-room.test.ts`; they have
+not been executed. No browser, build or full typecheck was run under the owner's
+CPU restriction. Verify both views, reduced motion, query/preference restoration,
+receiver/H behavior, call-safe switching, review/file/archive posture, mobile
+layout and the celestial layer's visibility before release. This reuses the
+house composition but does not certify visual parity with Jesse's Room.
 
 ## Remaining release gates
 

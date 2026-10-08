@@ -1,12 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import { EvidencePanel, EvidenceRow } from './EvidencePanel';
 import { ModeStamp } from './ModeStamp';
 import { HalleyPlate } from './HalleyPlate';
+import { ReceiverShell } from './ReceiverShell';
+import { useDeskPresentation } from '@/lib/desk/use-desk-presentation';
+import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
+import type { DeskPresentation } from '@/lib/desk-presentation';
+import { projectHalleyToRoom } from '@/lib/meteora/room-presentation';
+import room from './HalleyRoom.module.css';
 import {
   CURVE_HINTS,
   HALLEY_EXAMPLE,
@@ -22,6 +28,11 @@ import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
+
+const RoomPresentation = dynamic(
+  () => import('./RoomPresentation').then(module => module.RoomPresentation),
+  { ssr: false },
+);
 
 const HalleyCall = dynamic(() => import('./HalleyCall').then(m => m.HalleyCall), { ssr: false });
 
@@ -107,6 +118,33 @@ function HalleyRecordView({ record, onClose, onRemove }: {
 export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const halley = desk.halley;
   const reviewNow = useReviewClock(halley.state.stage === 'review');
+  // Bootstrap still; the shared preference hook applies Room only after hydration.
+  const [presentationMode, applyMode] = useState<DeskPresentation>('compact');
+  const [lineLive, setLineLive] = useState(false);
+  const setMode = useDeskPresentation('halley', applyMode, halley.historyReady);
+  const roomView = presentationMode === 'room';
+  const [viewNotice, setViewNotice] = useState<string | null>(null);
+  const changeView = (mode: DeskPresentation) => {
+    if (mode === presentationMode) return;
+    const panel = document.getElementById('halley-line');
+    if (lineLive || panel?.getAttribute('data-call') === 'connecting') {
+      setViewNotice('End or cancel the call before changing views. Your launch instruction stays here.');
+      return;
+    }
+    setViewNotice(null);
+    setLineLive(false);
+    setMode(mode);
+  };
+  useLineHotkey();
+  const projection = projectHalleyToRoom({
+    stage: halley.state.stage,
+    foreground: halley.foreground.kind,
+    live: lineLive,
+  });
+  const reviewing = halley.foreground.kind === 'quotation';
+  const receiverStage = reviewing || halley.foreground.readonly
+    ? 'confirmation' as const
+    : lineLive || halley.inFlight ? 'conversation' as const : 'arrival' as const;
 
   const viewed = halley.viewedRecordId
     ? halley.records.find(record => record.id === halley.viewedRecordId) ?? null
@@ -122,24 +160,54 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const blank = halley.state.stage === 'draft' && isBlankDraft(draft);
   const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
 
-  return (
-    <DeskRoom
-      deskId="halley"
-      activeDesk={desk.activeDesk}
-      open={desk.open}
-      onSwitchDesk={desk.switchDesk}
-      onLeaveDesk={desk.leaveDesk}
-    >
+  const work = (
+    <div className={room.work} data-halley-presentation={presentationMode}>
+      {roomView && (
+        <div className={room.sky} aria-hidden="true">
+          <svg viewBox="0 0 1000 340" fill="none" preserveAspectRatio="xMidYMin slice" focusable="false">
+            <path d="M-80 285 Q360 -160 1040 190" stroke="currentColor" strokeWidth=".7" strokeDasharray="2 9" />
+            <path d="M640 132 L810 38 M640 132 L792 62 M640 132 L765 80" stroke="currentColor" strokeWidth="1" />
+            <circle cx="640" cy="132" r="3" fill="currentColor" />
+            <g fill="currentColor">
+              <circle cx="90" cy="95" r="1" /><circle cx="300" cy="36" r="1.5" />
+              <circle cx="490" cy="74" r="1" /><circle cx="860" cy="140" r="1.2" />
+              <circle cx="940" cy="58" r="1" /><circle cx="420" cy="188" r="1" />
+            </g>
+          </svg>
+        </div>
+      )}
       <ModeStamp
         live={false}
+        presentation={presentationMode}
         hint="Anchored launch curves on Meteora DBC — estimates are projections, never orders."
         market="SOLANA · HALLEY"
-      />
-      <div className={styles.grid}>
-        <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
-        <DeskObjects />
+      >
+        {!roomView && (
+          <div className={styles.presentationToggle} role="group" aria-label="Desk presentation">
+            <button type="button" className={styles.presentationButton} aria-pressed={false} onClick={() => changeView('room')}>Room</button>
+            <button type="button" className={styles.presentationButton} aria-pressed={true} onClick={() => changeView('compact')}>Compact</button>
+          </div>
+        )}
+      </ModeStamp>
+      {viewNotice && <p className={room.caption} role="status">{viewNotice}</p>}
+      {roomView && <p className={room.caption}>The observatory · projected curves, not orders</p>}
+      <div className={`${styles.grid} ${roomView ? room.roomGrid : ''}`} data-presentation={presentationMode} data-foreground={halley.foreground.kind}>
+        {!roomView && <>
+          <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
+          <DeskObjects />
+        </>}
         <aside className={styles.support} aria-label="The launch desk’s direct line">
-          <HalleyCall halley={halley} />
+          <HalleyCall halley={halley} onLiveChange={setLineLive} />
+          <ReceiverShell
+            stage={receiverStage}
+            label={reviewing ? 'REVIEW PAPER CURVE' : 'PAPER LAUNCH / NO MINT'}
+            reviewing={reviewing}
+            brokerName="Halley"
+            lineTargetId="halley-line"
+            live={lineLive}
+            hideCue={roomView}
+            eager={roomView}
+          />
           <HalleyPlate stage={viewed ? 'saved' : halley.state.stage} draft={draft} />
         </aside>
         {viewed ? (
@@ -373,6 +441,35 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         </section>
         )}
       </div>
+    </div>
+  );
+
+  if (roomView) {
+    return (
+      <RoomPresentation
+        desk={desk.activeDesk}
+        stage={projection.stage}
+        view={projection.view}
+        presentation={presentationMode}
+        onPresentation={changeView}
+        onSwitchDesk={desk.switchDesk}
+        onLeaveDesk={desk.leaveDesk}
+      >
+        {work}
+      </RoomPresentation>
+    );
+  }
+  return (
+    <DeskRoom
+      deskId="halley"
+      activeDesk={desk.activeDesk}
+      open={desk.open}
+      lineLive={lineLive}
+      deskStage={halley.state.stage}
+      onSwitchDesk={desk.switchDesk}
+      onLeaveDesk={desk.leaveDesk}
+    >
+      {work}
     </DeskRoom>
   );
 }
