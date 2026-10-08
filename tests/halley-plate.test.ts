@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { isHalleyLaunchIntent, type HalleyDraft } from '../lib/meteora/contracts';
 import { CURVE_HINTS, HALLEY_EXAMPLE, isBlankDraft, launchStep, missingLaunchFields, stageLabel } from '../lib/meteora/plate';
 
@@ -10,6 +11,16 @@ const blank: HalleyDraft = {
 };
 
 describe('Halley first-use guidance', () => {
+  it('keeps the surface syntactically valid, beyond source-text assertions', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    const result = ts.transpileModule(source, {
+      fileName: 'HalleyDeskSurface.tsx',
+      compilerOptions: { jsx: ts.JsxEmit.Preserve, target: ts.ScriptTarget.ESNext },
+      reportDiagnostics: true,
+    });
+    const errors = (result.diagnostics ?? []).filter(diagnostic => diagnostic.category === ts.DiagnosticCategory.Error);
+    assert.deepEqual(errors.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')), []);
+  });
   it('offers a valid editable example without requesting or filing anything', () => {
     assert.equal(isHalleyLaunchIntent(HALLEY_EXAMPLE), true);
     assert.deepEqual(missingLaunchFields(HALLEY_EXAMPLE), []);

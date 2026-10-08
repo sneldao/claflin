@@ -140,7 +140,7 @@ full typecheck/build and test execution remain owner-run checks under the
 CPU restriction. Verify desktop/phone layout, example editing, visible hints,
 progress through estimate/file/archive, and keyboard focus before release.
 
-## Halley Room integration, uncommitted
+## Halley Room integration, committed in 8c2ff27
 
 Halley now uses the shared Room presentation and scene owner, with persisted
 Room/Compact preferences and query overrides. The controller and paper-only
@@ -160,6 +160,21 @@ CPU restriction. Verify both views, reduced motion, query/preference restoration
 receiver/H behavior, call-safe switching, review/file/archive posture, mobile
 layout and the celestial layer's visibility before release. This reuses the
 house composition but does not certify visual parity with Jesse's Room.
+
+## Hosted verification: 2026-10-08
+
+For commit `8c2ff27`, hosted unit tests and secret scanning passed, but lint
+failed on a missing JSX closing brace in Halley's missing-fields message.
+Build, browser acceptance and Docker jobs were skipped. Vercel also reported a
+failed deployment; its detailed logs were inaccessible with the local CLI's
+team permissions. GitHub Pages success does not establish a successful Vercel
+production release.
+
+The closing brace was repaired and a TypeScript syntax regression test added.
+A lightweight parse of the corrected surface returned zero syntax diagnostics.
+The repair still needs hosted lint/typecheck, build and deployment confirmation;
+no local browser or heavy build was run. Earlier source-only reviews missed
+this error and must not be treated as executable validation.
 
 ## Remaining release gates
 

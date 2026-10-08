@@ -415,7 +415,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     {halley.state.stage === 'estimating' ? 'Drawing the curve…' : 'See the launch'}
                   </button>
                 </div>
-                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.join(', ')}.</p>
+                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.join(', ')}.</p>}
               </>
             )}
           </div>
