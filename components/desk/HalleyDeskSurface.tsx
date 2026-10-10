@@ -23,7 +23,9 @@ import {
 import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
+import { HALLEY_LIVE_CLIENT_ENABLED } from '@/lib/meteora/flags';
 import { LAUNCH_CURVE_PRESETS } from '@/lib/meteora/contracts';
+import { draftIntent } from '@/lib/meteora/useHalleyDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
@@ -35,6 +37,11 @@ const RoomPresentation = dynamic(
 );
 
 const HalleyCall = dynamic(() => import('./HalleyCall').then(m => m.HalleyCall), { ssr: false });
+
+const HalleyLiveLaunch = dynamic(
+  () => import('./HalleyLiveLaunch').then(m => m.HalleyLiveLaunch),
+  { ssr: false },
+);
 
 type Desk = ReturnType<typeof useTradingDesk>;
 
@@ -159,6 +166,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const complete = missing.length === 0;
   const blank = halley.state.stage === 'draft' && isBlankDraft(draft);
   const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
+  /* Live launch uses the reviewed estimate's intent when one exists — the
+     terms the caller actually reviewed — else the current draft's. */
+  const liveIntent = HALLEY_LIVE_CLIENT_ENABLED
+    ? (estimate?.intent ?? draftIntent(draft))
+    : null;
 
   const work = (
     <div className={room.work} data-halley-presentation={presentationMode}>
@@ -177,7 +189,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         </div>
       )}
       <ModeStamp
-        live={false}
+        live={HALLEY_LIVE_CLIENT_ENABLED}
         presentation={presentationMode}
         hint="Anchored launch curves on Meteora DBC — estimates are projections, never orders."
         market="SOLANA · HALLEY"
@@ -200,7 +212,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <HalleyCall halley={halley} onLiveChange={setLineLive} />
           <ReceiverShell
             stage={receiverStage}
-            label={reviewing ? 'REVIEW PAPER CURVE' : 'PAPER LAUNCH / NO MINT'}
+            label={reviewing ? 'REVIEW PAPER CURVE' : HALLEY_LIVE_CLIENT_ENABLED ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
             reviewing={reviewing}
             brokerName="Halley"
             lineTargetId="halley-line"
@@ -221,8 +233,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <h1 id="halley-ticket-title">The launch desk.</h1>
           <p className={styles.product}>
             Project a tracker-token launch curve on Meteora using an equity mark
-            or an unanchored starting price. Paper only: no token is minted.
-            A tracker is not stock ownership.
+            or an unanchored starting price.
+            {HALLEY_LIVE_CLIENT_ENABLED
+              ? ' Paper by default; a live launch deploys from your own wallet — you are the token’s creator.'
+              : ' Paper only: no token is minted.'}
+            {' '}A tracker is not stock ownership.
           </p>
           <details className={styles.productDetails}>
             <summary>What a launch is, and what it is not</summary>
@@ -420,6 +435,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             )}
           </div>
 
+          {HALLEY_LIVE_CLIENT_ENABLED && !viewed && (
+            <HalleyLiveLaunch intent={liveIntent} revision={estimate?.quotedAt ?? 0} />
+          )}
           {halley.records.length > 0 && (
             <details className={styles.aboutHetty}>
               <summary>Filed paper ({halley.records.length})</summary>

@@ -94,10 +94,12 @@ ELEVENLABS_AGENT_ISABEL=
 ELEVENLABS_VOICE_ISABEL=EXAVITQu4vr4xnSDxMaL
 ```
 
-Halley’s Meteora launch desk (Solana, paper-only) has its own ConvAI agent —
+Halley’s Meteora launch desk (Solana) has its own ConvAI agent —
 provision with `scripts/create-halley-agent.mjs`, then set the id it prints.
 The desk estimates and files paper launches without it; the call card reports
-the line as not connected:
+the line as not connected. The live launch path sits behind dual flags —
+`HALLEY_LIVE_ENABLED` + `NEXT_PUBLIC_HALLEY_LIVE_ENABLED`, both defaulting
+off; neither alone moves real funds:
 
 ```
 ELEVENLABS_AGENT_HALLEY=
@@ -148,6 +150,18 @@ Optional Jupiter key (paper quotes work keyless; set for higher rate limits):
 
 ```
 JUPITER_API_KEY=
+```
+
+Solana live paths (both off by default; set only as a deliberate release
+decision):
+
+```
+SOLANA_RPC_URL=          # production-grade RPC — not the public endpoint
+JESSE_LIVE_ENABLED=false
+NEXT_PUBLIC_JESSE_LIVE_ENABLED=false
+HALLEY_LIVE_ENABLED=false
+NEXT_PUBLIC_HALLEY_LIVE_ENABLED=false
+# HALLEY_DAMM_CONFIG=    # only overrides the verified migration config
 ```
 
 Optional Sign in (does not gate the desk; not live access):

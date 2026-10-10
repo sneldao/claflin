@@ -36,6 +36,8 @@ SKIP_PATTERNS=(
   # lib/solana/catalog.ts above. The dbc.ts hit is a config key name, not a secret.
   "lib/meteora/catalog.ts"
   "lib/meteora/dbc.ts"
+  # Same class again: public devnet mint/program addresses in the smoke script.
+  "scripts/halley-devnet-launch.ts"
 )
 
 # ─────────────────────────────────────────────

@@ -66,7 +66,7 @@ function emptyState(): HalleyDeskState {
   return { stage: 'draft', draft: { ...EMPTY_DRAFT }, estimate: null, notice: null };
 }
 
-function draftIntent(draft: HalleyDraft): HalleyLaunchIntent | null {
+export function draftIntent(draft: HalleyDraft): HalleyLaunchIntent | null {
   const intent = {
     name: draft.name ?? '',
     symbol: draft.symbol ?? '',

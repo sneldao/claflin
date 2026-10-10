@@ -40,6 +40,12 @@ export const COINBASE_STOCKS_SCOPE: EligibilityScope = {
   issuerTermsUrl: 'https://docs.base.org/base-chain/asset-issuance/tokenized-stocks-on-base',
 };
 
+/** Halley's Meteora launch scope — the launcher is the token's creator. */
+export const METEORA_LAUNCH_SCOPE: EligibilityScope = {
+  id: 'meteora-launch',
+  issuerTermsUrl: 'https://docs.meteora.ag/',
+};
+
 export function loadAttestation(storage: Pick<Storage, 'getItem'> | null, marketId: string): EligibilityAttestation | null {
   if (!storage) return null;
   try {
@@ -71,6 +77,9 @@ export function saveAttestation(storage: Pick<Storage, 'setItem'> | null, market
 export function attestationCopy(scope: { id: string }): string {
   if (scope.id === COINBASE_STOCKS_SCOPE.id) {
     return `Coinbase tokenized stocks are B20 tokens issued by Coinbase on Base — offered to eligible persons in permitted jurisdictions only, and not to US persons. Confirm you are eligible under the issuer's terms before real funds move.`;
+  }
+  if (scope.id === METEORA_LAUNCH_SCOPE.id) {
+    return `A live launch creates a new tracker token from your own wallet — your wallet is the token's creator, and the token is not stock ownership. Any xStock used as the quote asset carries Backed's issuer terms (not offered to US persons or UK retail clients). Confirm you may create and launch this token where you are before a real launch is signed.`;
   }
   return `xStocks are tracker certificates issued by Backed Assets. They are not offered to US persons, not available to UK retail clients, and are excluded in sanctioned jurisdictions. Confirm you are eligible under the issuer's terms before real funds move.`;
 }

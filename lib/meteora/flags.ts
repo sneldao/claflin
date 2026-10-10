@@ -10,6 +10,22 @@
  */
 
 export const HALLEY_PAPER_ENABLED = process.env.NEXT_PUBLIC_HALLEY_PAPER_ENABLED !== 'false';
+
+/**
+ * Live Meteora launch (proposal → wallet sign → broadcast). Default off.
+ * Read at call time so tests and runtime env flips are honest.
+ */
+export function halleyLiveClientEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_HALLEY_LIVE_ENABLED === 'true';
+}
+
+export function halleyLiveServerEnabled(): boolean {
+  return process.env.HALLEY_LIVE_ENABLED === 'true';
+}
+
+export function halleyLiveEnabled(): boolean {
+  return halleyLiveClientEnabled() && halleyLiveServerEnabled();
+}
+
+/** Client bundle alias — Next inlines NEXT_PUBLIC_* at build time. */
 export const HALLEY_LIVE_CLIENT_ENABLED = process.env.NEXT_PUBLIC_HALLEY_LIVE_ENABLED === 'true';
-export const HALLEY_LIVE_SERVER_ENABLED = process.env.HALLEY_LIVE_ENABLED === 'true';
-export const halleyLiveEnabled = () => HALLEY_LIVE_CLIENT_ENABLED && HALLEY_LIVE_SERVER_ENABLED;

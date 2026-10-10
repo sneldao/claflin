@@ -84,11 +84,13 @@ export const DBC_POOL_AUTHORITY = 'FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM'
 /**
  * DAMM v2 migration configs. Not the generic index-0 configs — migration
  * requires a config whose poolCreatorAuthority is the DBC pool authority.
- * Devnet indices 20000–20006 satisfy this; mainnet uses Meteora's published
- * migration config (verify before first live launch — never assume devnet
- * addresses carry over).
+ * Devnet indices 20000–20006 satisfy this; on mainnet the same canonical
+ * config address exists and was verified live 2026-10-10 (enumerated via
+ * CpAmm.getAllConfigs on mainnet RPC: poolCreatorAuthority ==
+ * FhVo3mqL…uM, full-range sqrt prices, default vault, Timestamp
+ * activation — all program requirements). HALLEY_DAMM_CONFIG overrides.
  */
 export const DAMM_V2_MIGRATION_CONFIGS = Object.freeze({
   devnet: '7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd',
-  mainnet: process.env.HALLEY_DAMM_CONFIG ?? '',
+  mainnet: process.env.HALLEY_DAMM_CONFIG ?? '7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd',
 });

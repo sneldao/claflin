@@ -114,6 +114,11 @@ module.exports = {
         NEXT_PUBLIC_JESSE_LIVE_ENABLED: env.NEXT_PUBLIC_JESSE_LIVE_ENABLED || 'false',
         SOLANA_RPC_URL: env.SOLANA_RPC_URL || '',
 
+        // Halley live launch (dual-flag; client flag also baked at build)
+        HALLEY_LIVE_ENABLED: env.HALLEY_LIVE_ENABLED || 'false',
+        NEXT_PUBLIC_HALLEY_LIVE_ENABLED: env.NEXT_PUBLIC_HALLEY_LIVE_ENABLED || 'false',
+        HALLEY_DAMM_CONFIG: env.HALLEY_DAMM_CONFIG || '',
+
         // Feature flags
         NEXT_PUBLIC_DEMO_MODE: env.NEXT_PUBLIC_DEMO_MODE || 'false',
         NEXT_PUBLIC_PAYMENTS_ENABLED: env.NEXT_PUBLIC_PAYMENTS_ENABLED || 'true',
