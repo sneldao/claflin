@@ -238,6 +238,9 @@
 /* Halley's projected launch curve — a sketch of the estimate, not a chart of a trade. */
 .launchCurve { display: block; width: 100%; height: 56px; margin: 10px 0 18px; color: var(--desk-brass); }
 .launchCurve path { vector-effect: non-scaling-stroke; }
+/* The resting equity mark as a rule on the curve — the onchain
+   divergence drawn, dimmer than the live path. */
+.launchCurveResting { stroke: var(--desk-brass); opacity: .45; }
 @media (prefers-reduced-motion: no-preference) {
   /* The curve traces itself like a comet path, then the comet settles at
      graduation. pathLength=1 normalizes the dash math for any shape. */

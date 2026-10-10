@@ -58,14 +58,38 @@ function recordLine(record: HalleyPaperRecord): string {
   return `Launch ${i.symbol} · ${i.quoteSymbol} quote · ${i.curve}`;
 }
 
+type AnchorPosture = {
+  symbol: string;
+  basis: 'pyth-pro' | 'onchain' | 'none';
+  markUsd: string | null;
+  restingEquityUsd: string | null;
+  differenceBps: string | null;
+};
+
 /** The projected curve as inline SVG — sparkline of the estimate's path.
     The path traces itself on arrival and a comet settles at graduation:
-    the observatory's whole motif in one motion. */
-function LaunchCurve({ path }: { path: readonly { progress: string; priceQuote: string }[] }) {
+    the observatory's whole motif in one motion. A resting equity mark —
+    same quote units only — draws as a dashed rule so the onchain
+    divergence is *seen*, not just asserted. */
+function LaunchCurve({ path, restingQuote }: {
+  path: readonly { progress: string; priceQuote: string }[];
+  restingQuote?: number | null;
+}) {
   const drawn = useMemo(() => {
     const ys = path.map(p => Number(p.priceQuote)).filter(Number.isFinite);
     if (ys.length < 2) return null;
-    const min = Math.min(...ys), max = Math.max(...ys);
+    let min = Math.min(...ys), max = Math.max(...ys);
+    /* Include the resting mark in the domain only when it stays within a
+       readable band — beyond ~15% the rule would flatten the curve into
+       noise; the evidence rows still carry the gap. */
+    let resting: number | null = null;
+    if (restingQuote && Number.isFinite(restingQuote) && restingQuote > 0) {
+      const mid = (min + max) / 2 || 1;
+      if (Math.abs(restingQuote - mid) / mid <= 0.15) {
+        resting = restingQuote;
+        min = Math.min(min, resting); max = Math.max(max, resting);
+      }
+    }
     const span = max - min || 1;
     const pts = path.map(p => ({
       x: Number((Number(p.progress) * 100).toFixed(1)),
@@ -74,12 +98,19 @@ function LaunchCurve({ path }: { path: readonly { progress: string; priceQuote: 
     return {
       d: pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' '),
       end: pts[pts.length - 1],
+      restY: resting !== null ? Number((28 - ((resting - min) / span) * 24).toFixed(1)) : null,
     };
-  }, [path]);
+  }, [path, restingQuote]);
   if (!drawn) return null;
   return (
     /* key on the path so each fresh estimate re-runs the transit */
-    <svg key={drawn.d} viewBox="0 0 100 30" className={styles.launchCurve} role="img" aria-label="Projected curve path">
+    <svg key={drawn.d} viewBox="0 0 100 30" className={styles.launchCurve} role="img"
+      aria-label={drawn.restY !== null ? 'Projected curve path — dashed rule marks the resting equity mark' : 'Projected curve path'}>
+      {drawn.restY !== null && (
+        <line className={styles.launchCurveResting} x1="0" x2="100" y1={drawn.restY} y2={drawn.restY} strokeDasharray="2.5 2" strokeWidth="0.9">
+          <title>Resting equity mark — the tape sleeps, the curve reads the onchain price</title>
+        </line>
+      )}
       <path d={drawn.d} fill="none" stroke="currentColor" strokeWidth="1.2" pathLength={1} />
       <circle className={styles.launchCurveComet} cx={drawn.end.x} cy={drawn.end.y} r="1.6" fill="currentColor" />
     </svg>
@@ -116,7 +147,11 @@ function HalleyRecordView({ record, onClose, onRemove }: {
       <h1 id="halley-record-title">{recordLine(record)}</h1>
       <div className={styles.ticketSurface}>
         <p>Filed {new Date(record.createdAt).toLocaleString()} — a paper launch intent. No mint was created and nothing settled.</p>
-        <LaunchCurve path={e.path} />
+        <LaunchCurve path={e.path} restingQuote={
+          e.anchor?.source === 'onchain' && e.anchor.restingEquity && e.intent.quoteSymbol === 'USDC'
+            ? Number(e.anchor.restingEquity.equityUsd)
+            : null
+        } />
         <EvidencePanel
           titleId="halley-record-curve"
           eyebrow="CURVE"
@@ -203,6 +238,28 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const complete = missing.length === 0;
   const blank = halley.state.stage === 'draft' && isBlankDraft(draft);
   const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
+
+  /* Live anchor posture — which basis would anchor right now, read at
+     selection time so the slip itself tells the session story: tape awake
+     → Pyth; tape resting → the onchain mark, with the gap shown. */
+  const [posture, setPosture] = useState<AnchorPosture | null>(null);
+  useEffect(() => {
+    if (!draft.anchorSymbol) return;
+    let cancelled = false;
+    void fetch(`/api/desk/halley/anchor-posture?anchor=${encodeURIComponent(draft.anchorSymbol)}`)
+      .then(async res => (res.ok ? res.json() : null))
+      .then(body => { if (!cancelled && body) setPosture(body as AnchorPosture); })
+      .catch(() => { /* posture is indicative — the estimate is authoritative */ });
+    return () => { cancelled = true; };
+  }, [draft.anchorSymbol]);
+
+  /* The resting equity mark drawn as a rule on the curve — only when the
+     quote is USDC so both prices share units. */
+  const restingQuote = estimate?.anchor?.source === 'onchain'
+    && estimate.anchor.restingEquity
+    && estimate.intent.quoteSymbol === 'USDC'
+    ? Number(estimate.anchor.restingEquity.equityUsd)
+    : null;
   /* Live launch uses the reviewed estimate's intent when one exists — the
      terms the caller actually reviewed — else the current draft's. */
   const liveIntent = liveEnabled
@@ -293,7 +350,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 <h2>
                   {estimate.intent.symbol} opens at {money(estimate.openingPriceQuote)} {estimate.intent.quoteSymbol}
                 </h2>
-                <LaunchCurve path={estimate.path} />
+                <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
                 <EvidencePanel
                   titleId="halley-curve"
                   eyebrow="LAUNCH CURVE"
@@ -346,7 +403,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               <div aria-live="polite">
                 <h2>Filed.</h2>
                 <p className={styles.notice}>A paper launch intent — no mint was created, nothing settled.</p>
-                <LaunchCurve path={estimate.path} />
+                <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
                 <div className={styles.slipActions}>
                   <button type="button" className={styles.primary} onClick={halley.cancel}>New instruction</button>
                 </div>
@@ -413,6 +470,15 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
 
                     <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read.</p>
+                    {posture && posture.symbol === draft.anchorSymbol && (
+                      <p className={plate.hint} role="status" data-testid="halley-anchor-posture">
+                        {posture.basis === 'onchain' && posture.markUsd
+                          ? `Right now: onchain ${posture.symbol}x at $${money(posture.markUsd)} — the equity tape rests${posture.restingEquityUsd ? ` at $${money(posture.restingEquityUsd)}` : ''}${posture.differenceBps ? `, a ${posture.differenceBps} bps gap` : ''}; the onchain mark would anchor.`
+                          : posture.basis === 'pyth-pro' && posture.markUsd
+                            ? `Right now: the equity tape is awake — ${posture.symbol} at $${money(posture.markUsd)} would anchor.`
+                            : 'Right now: neither basis is reporting — the estimate will say so plainly.'}
+                      </p>
+                    )}
                   </div>
 
                   <span id="halley-quote-label">Quote in</span>
