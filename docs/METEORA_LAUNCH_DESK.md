@@ -119,6 +119,8 @@ Mirrors the `lib/jesse/desk-tools.ts` table. Handlers execute in the caller's br
 
 The `equity-pair` band reuses the house's existing Pyth ingestion and the reference-difference math from the Jesse market contract — the same data path that powers the venue/reference duplex, redirected into a launch price anchor.
 
+**Anchor posture (2026-10-11):** the equity mark is canonical while the tape is awake. When it rests — nights, weekends, holidays — the anchor falls back to the **live onchain xStock venue mark** (`readVenueDuplex`, the same jupiter-price-v3 evidence Jesse's tape shows): the launch stays anchored around the clock because the venue never closes. Pair launches read both legs on one basis, never mixed; the resting equity reading and the venue-versus-equity gap ride along as `restingEquity` evidence — a comparison, never an arbitrage. Only when neither basis answers does the estimate refuse (`anchor_stale`/`anchor_unavailable`), and unanchored launches remain an explicit user choice.
+
 ## 7. Live launch (implemented 2026-10-10 — reuses the Jesse live pattern)
 
 The live path landed as `lib/meteora/live-{contracts,prepare,submit,store,ledger,flags}.ts` + `/api/desk/halley/live/{prepare,submit,reconcile}` + `components/desk/HalleyLiveLaunch.tsx`, mirroring `lib/solana/live-*`:
