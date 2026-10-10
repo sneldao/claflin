@@ -332,10 +332,14 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
                       File a paper record<span aria-hidden="true"> · {secondsLeft}s</span>
                     </button>
                   ) : (
-                    <p className={styles.notice} role="status">This estimate has lapsed — request a fresh one.</p>
+                    <button type="button" className={styles.primary} onClick={isabel.quote}>
+                      Fresh estimate<span aria-hidden="true"> ↻</span>
+                    </button>
                   )}
+                  <button type="button" className={styles.secondary} onClick={isabel.revise}>Adjust the slip</button>
                   <button type="button" className={styles.secondary} onClick={isabel.cancel}>Discard</button>
                 </div>
+                {expired && <p className={styles.notice} role="status">This estimate has lapsed — the figures above are its last reading.</p>}
               </div>
             ) : isabel.state.stage === 'saved' && isabel.state.quote ? (
               <div aria-live="polite">

@@ -56,6 +56,8 @@ export interface IsabelDesk extends DeskDocumentSession {
   viewedRecordId: string | null;
   foreground: DeskForegroundDocument;
   edit: (partial: Partial<IsabelDraft>) => void;
+  /** Leave review and return to the slip with the draft untouched. */
+  revise: () => void;
   quote: () => void;
   file: () => boolean;
   cancel: () => void;
@@ -185,6 +187,8 @@ export function useIsabelDesk(
     setViewedRecordId(null);
   }, [persistDraft]);
 
+  const revise = useCallback(() => edit({}), [edit]);
+
   const cancel = useCallback(() => {
     genRef.current += 1;
     const storage = storageOf();
@@ -282,6 +286,7 @@ export function useIsabelDesk(
     viewedRecordId,
     foreground,
     edit,
+    revise,
     quote,
     file,
     cancel,

@@ -26,6 +26,7 @@ import {
 } from '../lib/meteora/paper';
 import { resolveAnchor } from '../lib/meteora/anchor';
 import { useHalleyDesk, type HalleyDesk } from '../lib/meteora/useHalleyDesk';
+import { ApiError } from '../lib/api-client';
 import type { PaperStorage } from '../lib/trading/paper-records';
 import type { SnapshotStore } from '../lib/solana/market/snapshots';
 import { feedMappingFor } from '../lib/solana/market/feeds';
@@ -371,6 +372,71 @@ describe('halley desk session', () => {
     assert.equal(desk!.state.stage, 'draft');
     assert.match(desk!.state.notice ?? '', /stale/);
     assert.equal(desk!.state.estimate, null);
+  });
+
+  it('carries the server error code so the surface can offer recovery', async () => {
+    await render(async () => {
+      throw new ApiError('http', 'The NVDA equity mark is stale — drop the anchor.', { status: 409, code: 'anchor_stale' });
+    });
+    await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' }));
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'draft');
+    assert.equal(desk!.state.noticeCode, 'anchor_stale');
+    assert.match(desk!.state.notice ?? '', /stale/);
+  });
+
+  it('drops the anchor and redraws in one step — the unanchored recovery path', async () => {
+    const estimate = estimateLaunch({ ...intent, anchorSymbol: null }, null, now);
+    let calls = 0;
+    await render(async (i) => {
+      calls += 1;
+      if (calls === 1) {
+        throw new ApiError('http', 'The NVDA equity mark is stale — drop the anchor.', { status: 409, code: 'anchor_stale' });
+      }
+      assert.equal(i.anchorSymbol, null);
+      return estimate;
+    });
+    await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' }));
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.noticeCode, 'anchor_stale');
+
+    await act(async () => desk!.estimateUnanchored());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'review');
+    assert.equal(desk!.state.draft.anchorSymbol, null);
+    assert.equal(desk!.state.noticeCode, null);
+    assert.equal(calls, 2);
+  });
+
+  it('revise leaves review with the draft untouched — nothing refilled', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' }));
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'review');
+
+    await act(async () => desk!.revise());
+    assert.equal(desk!.state.stage, 'draft');
+    assert.equal(desk!.state.estimate, null);
+    assert.equal(desk!.state.draft.symbol, 'NVDAT');
+    assert.equal(desk!.state.draft.graduationQuote, '150');
+  });
+
+  it('a lapsed review re-estimates from the kept draft', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' }));
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'review');
+
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'review');
+    assert.equal(desk!.state.draft.symbol, 'NVDAT');
   });
 
   it('opens, dismisses, and removes filed records', async () => {

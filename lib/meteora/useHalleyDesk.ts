@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DeskDocumentSession, DeskForegroundDocument } from '../desk/contracts';
+import { ApiError } from '../api-client';
 import {
   isHalleyLaunchIntent,
   type HalleyDraft,
@@ -38,6 +39,9 @@ export interface HalleyDeskState {
   draft: HalleyDraft;
   estimate: HalleyLaunchEstimate | null;
   notice: string | null;
+  /** Server error code behind the notice (e.g. `anchor_stale`) — drives
+      one-click recovery actions in the surface. */
+  noticeCode: string | null;
 }
 
 export interface HalleyDesk extends DeskDocumentSession {
@@ -49,7 +53,11 @@ export interface HalleyDesk extends DeskDocumentSession {
   viewedRecordId: string | null;
   foreground: DeskForegroundDocument;
   edit: (partial: Partial<HalleyDraft>) => void;
+  /** Leave review and return to the slip with the draft untouched. */
+  revise: () => void;
   estimate: () => void;
+  /** Recovery path for anchor errors: drop the anchor and redraw in one step. */
+  estimateUnanchored: () => void;
   file: () => boolean;
   cancel: () => void;
   openRecord: (id: string) => void;
@@ -63,7 +71,7 @@ const EMPTY_DRAFT: HalleyDraft = {
 };
 
 function emptyState(): HalleyDeskState {
-  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, estimate: null, notice: null };
+  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, estimate: null, notice: null, noticeCode: null };
 }
 
 export function draftIntent(draft: HalleyDraft): HalleyLaunchIntent | null {
@@ -163,7 +171,7 @@ export function useHalleyDesk(
       persistDraft(draft);
       /* An edit rewrites the launch instruction — an estimate bound to the
          old draft can no longer be filed under it. */
-      return { stage: 'draft', draft, estimate: null, notice: null };
+      return { stage: 'draft', draft, estimate: null, notice: null, noticeCode: null };
     });
     setViewedRecordId(null);
   }, [persistDraft]);
@@ -175,26 +183,40 @@ export function useHalleyDesk(
     setState(emptyState());
   }, [storageOf]);
 
-  const estimate = useCallback(() => {
-    const current = stateRef.current;
-    const intent = draftIntent(current.draft);
-    if (!intent || current.stage === 'estimating') return;
+  const runEstimate = useCallback((draft: HalleyDraft) => {
+    const intent = draftIntent(draft);
+    if (!intent) return;
     const gen = ++genRef.current;
-    setState({ stage: 'estimating', draft: current.draft, estimate: null, notice: null });
+    setState({ stage: 'estimating', draft, estimate: null, notice: null, noticeCode: null });
     void (async () => {
       let result: HalleyLaunchEstimate;
       try {
         result = await estimatePort(intent);
       } catch (error) {
         if (genRef.current !== gen) return;
-        setState({ stage: 'draft', draft: current.draft, estimate: null,
-          notice: error instanceof Error ? error.message : 'The desk could not project this curve. Please retry.' });
+        setState({ stage: 'draft', draft, estimate: null,
+          notice: error instanceof Error ? error.message : 'The desk could not project this curve. Please retry.',
+          noticeCode: error instanceof ApiError ? error.code : null });
         return;
       }
       if (genRef.current !== gen) return;
-      setState({ stage: 'review', draft: current.draft, estimate: result, notice: null });
+      setState({ stage: 'review', draft, estimate: result, notice: null, noticeCode: null });
     })();
   }, [estimatePort]);
+
+  const estimate = useCallback(() => {
+    const current = stateRef.current;
+    if (current.stage === 'estimating') return;
+    runEstimate(current.draft);
+  }, [runEstimate]);
+
+  const revise = useCallback(() => edit({}), [edit]);
+
+  const estimateUnanchored = useCallback(() => {
+    const draft = { ...stateRef.current.draft, anchorSymbol: null };
+    persistDraft(draft);
+    runEstimate(draft);
+  }, [persistDraft, runEstimate]);
 
   const file = useCallback((): boolean => {
     const current = stateRef.current;
@@ -208,12 +230,13 @@ export function useHalleyDesk(
         : [record, ...existing]);
       const draft = { ...current.draft };
       persistDraft({ ...EMPTY_DRAFT });
-      setState({ stage: 'saved', draft, estimate: record.estimate, notice: null });
+      setState({ stage: 'saved', draft, estimate: record.estimate, notice: null, noticeCode: null });
       setViewedRecordId(record.id);
       return true;
     } catch (error) {
       setState(latest => ({ ...latest,
-        notice: error instanceof Error ? error.message : 'The record could not be filed. Review a fresh estimate.' }));
+        notice: error instanceof Error ? error.message : 'The record could not be filed. Review a fresh estimate.',
+        noticeCode: null }));
       return false;
     }
   }, [now, storageOf, persistDraft]);
@@ -246,7 +269,9 @@ export function useHalleyDesk(
     viewedRecordId,
     foreground,
     edit,
+    revise,
     estimate,
+    estimateUnanchored,
     file,
     cancel,
     openRecord,

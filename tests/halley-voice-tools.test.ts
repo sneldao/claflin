@@ -25,6 +25,7 @@ const emptyState = (): HalleyDeskState => ({
   draft: { name: null, symbol: null, anchorSymbol: null, quoteSymbol: null, curve: null, supply: null, graduationQuote: null },
   estimate: null,
   notice: null,
+  noticeCode: null,
 });
 
 const fg = (kind: DeskForegroundDocument['kind']): DeskForegroundDocument => ({
@@ -131,7 +132,9 @@ describe('halley desk tools', () => {
       viewedRecordId: null,
       foreground: fg('draft'),
       edit: () => {},
+      revise: () => {},
       estimate: () => {},
+      estimateUnanchored: () => {},
       file: () => false,
       cancel: () => {},
       openRecord: () => {},

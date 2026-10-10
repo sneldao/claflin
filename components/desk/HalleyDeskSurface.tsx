@@ -142,7 +142,8 @@ function HalleyRecordView({ record, onClose, onRemove }: {
 /**
  * Halley's desk — Meteora DBC launches on Solana. Name a tracker token, pick
  * the anchor equity and the quote asset, see the projected curve, file a
- * paper launch. No live launch path is implemented.
+ * paper launch. When live flags are on, a wallet-signed launch ceremony
+ * mounts below the slip.
  * Voice may draft and estimate; it never signs.
  */
 export function HalleyDeskSurface({ desk }: { desk: Desk }) {
@@ -321,10 +322,14 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       File a paper launch<span aria-hidden="true"> · {secondsLeft}s</span>
                     </button>
                   ) : (
-                    <p className={styles.notice} role="status">This estimate has lapsed — request a fresh one.</p>
+                    <button type="button" className={styles.primary} onClick={halley.estimate}>
+                      Fresh estimate<span aria-hidden="true"> ↻</span>
+                    </button>
                   )}
+                  <button type="button" className={styles.secondary} onClick={halley.revise}>Adjust the slip</button>
                   <button type="button" className={styles.secondary} onClick={halley.cancel}>Discard</button>
                 </div>
+                {expired && <p className={styles.notice} role="status">This estimate has lapsed — the figures above are its last reading.</p>}
               </div>
             ) : halley.state.stage === 'saved' && estimate ? (
               <div aria-live="polite">
@@ -396,7 +401,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
                   </div>
 
-                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price. None, or an unavailable mark, uses 1 quote unit instead; the estimate discloses it.</p>
+                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — marks rest while the market sleeps. None, or an unavailable mark, uses 1 quote unit instead; the estimate discloses it.</p>
                   </div>
 
                   <span id="halley-quote-label">Quote in</span>
@@ -457,6 +462,16 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
                 </div>
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}
+                {(halley.state.noticeCode === 'anchor_stale' || halley.state.noticeCode === 'anchor_unavailable') && (
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    disabled={halley.state.stage === 'estimating'}
+                    onClick={halley.estimateUnanchored}
+                  >
+                    Drop the anchor — redraw unanchored
+                  </button>
+                )}
                 {halley.storageError && <p className={styles.notice} role="alert">{halley.storageError}</p>}
                 <div className={styles.slipActions}>
                   <button

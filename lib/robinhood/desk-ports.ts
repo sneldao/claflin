@@ -23,7 +23,7 @@ export function createIsabelQuotePort(fetch = fetchJson): (intent: IsabelIntent)
         signal: controller.signal,
         cache: 'no-store',
       });
-      if (!response.ok) throw new Error(response.error.friendlyMessage || response.error.message);
+      if (!response.ok) throw response.error;
       return parseRobinhoodEstimate(response.data);
     } finally {
       clearTimeout(timeout);

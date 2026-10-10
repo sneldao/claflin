@@ -25,7 +25,10 @@ export function createHalleyEstimatePort(fetch = fetchJson): (intent: HalleyLaun
         signal: controller.signal,
         cache: 'no-store',
       });
-      if (!response.ok) throw new Error(response.error.friendlyMessage || response.error.message);
+      /* Throw the typed error itself — its message is the server's specific
+         wording (e.g. "drop the anchor") and its code drives recovery
+         actions in the surface. */
+      if (!response.ok) throw response.error;
       return parseHalleyEstimate(response.data);
     } finally {
       clearTimeout(timeout);
