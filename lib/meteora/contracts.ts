@@ -70,14 +70,21 @@ export interface HalleyDraft {
 /** The anchor evidence — where the opening price came from. */
 export interface HalleyAnchor {
   symbol: string;
-  source: 'pyth-pro';
-  /** Equity USD price per share, serialized. */
+  /** 'pyth-pro' — the equity feed; 'onchain' — the live xStock venue mark,
+      used while the equity tape rests. Never a fabricated price. */
+  source: 'pyth-pro' | 'onchain';
+  /** The observed USD mark used for the opening price — per share for
+      equity, per token for onchain. */
   equityUsd: string;
-  /** For pair launches: equityUsd(base) / equityUsd(quote). */
+  /** For pair launches: anchor mark / quote mark, same basis. */
   pairRatio: string | null;
   quoteEquityUsd: string | null;
   observedAt: number;
   status: 'observed' | 'stale' | 'unavailable';
+  /** Present on onchain anchors: the resting equity reading the onchain
+      mark replaced, and the venue-versus-reference gap — evidence, not
+      an arbitrage claim. */
+  restingEquity?: { equityUsd: string; differenceBps: string | null } | null;
 }
 
 /** One point on the projected price path — estimate, never an order. */

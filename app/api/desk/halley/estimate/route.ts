@@ -49,18 +49,19 @@ export async function GET(req: Request): Promise<Response> {
   }
   try {
     const anchor = await resolveAnchor(intent.anchorSymbol, intent.quoteSymbol);
-    /* Fail closed: a requested anchor that cannot be evidenced — missing
-       feed or stale mark — refuses the estimate rather than repricing the
-       opening at 1.0 under a false sense of anchoring. Omitting the anchor
-       parameter remains an allowed, disclosed unanchored launch. */
+    /* Fail closed: a requested anchor that cannot be evidenced on EITHER
+       basis — equity mark stale or missing AND the onchain venue mark
+       unread — refuses the estimate rather than repricing the opening at
+       1.0 under a false sense of anchoring. Omitting the anchor parameter
+       remains an allowed, disclosed unanchored launch. */
     if (intent.anchorSymbol && anchor?.status !== 'observed') {
       const stale = anchor?.status === 'stale';
       return Response.json(
         {
           error: stale ? 'anchor_stale' : 'anchor_unavailable',
           message: stale
-            ? `The ${intent.anchorSymbol} equity mark is stale — the tape may be closed or the feed resting. Try again when marks are live, or drop the anchor.`
-            : `No live ${intent.anchorSymbol} equity mark is available on this deployment.`,
+            ? `The ${intent.anchorSymbol} mark could not be evidenced — the equity tape rests and the onchain mark did not answer either. Try again, or drop the anchor.`
+            : `No live ${intent.anchorSymbol} mark is available — no equity reading and no onchain venue price on this deployment.`,
         },
         { status: 422, headers },
       );

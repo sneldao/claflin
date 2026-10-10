@@ -25,6 +25,7 @@ import {
   saveHalleyPaperRecord,
 } from '../lib/meteora/paper';
 import { resolveAnchor } from '../lib/meteora/anchor';
+import { buildVenueDuplex, unavailableVenueDuplex } from '../lib/solana/market/venue-duplex';
 import { useHalleyDesk, type HalleyDesk } from '../lib/meteora/useHalleyDesk';
 import { ApiError } from '../lib/api-client';
 import type { PaperStorage } from '../lib/trading/paper-records';
@@ -113,6 +114,22 @@ describe('halley curve estimate', () => {
     assert.ok(Math.abs(Number(estimate.openingPriceQuote) - 0.7) < 0.02);
     assert.match(estimate.assumptions, /NVDA\/AAPL ratio/);
     assert.match(estimate.assumptions, /badged xStock mint/);
+  });
+
+  it('discloses an onchain anchor honestly — resting equity rides along as evidence', () => {
+    const onchainAnchor: HalleyAnchor = {
+      symbol: 'NVDA', source: 'onchain', equityUsd: '230.40', pairRatio: null,
+      quoteEquityUsd: null, observedAt: now, status: 'observed',
+      restingEquity: { equityUsd: '229.33', differenceBps: '46.5' },
+    };
+    const estimate = estimateLaunch(intent, onchainAnchor, now);
+    assert.match(estimate.assumptions, /live onchain NVDA venue mark/);
+    assert.match(estimate.assumptions, /equity tape rests/);
+    assert.match(estimate.assumptions, /not an arbitrage/);
+    /* The wire schema round-trips the onchain evidence untouched. */
+    const parsed = parseHalleyEstimate(JSON.parse(JSON.stringify(estimate)));
+    assert.equal(parsed.anchor?.source, 'onchain');
+    assert.equal(parsed.anchor?.restingEquity?.differenceBps, '46.5');
   });
 
   it('serializes every estimate-boundary number as a string', () => {
@@ -255,28 +272,32 @@ describe('halley anchor resolver', () => {
     return { [feedId]: { feedId, symbol: 'Equity.US.NVDA/USD', price, confidence: '0.01', generatedAt, receivedAt: generatedAt, session: 'regular' as const, publisherCount: 20 } };
   }
 
+  /* A duplex port that never answers — the default would hit live venue
+     APIs, which tests must not do. */
+  const noDuplex = async () => unavailableVenueDuplex(null, ['venue-price-unavailable']);
+
   it('reads the equity mark through the verified feed mapping', async () => {
     const now = 1_900_000_000_000;
     const aapl = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'AAPL')!;
     const store = storeWith(equitySnap(aapl.id, '260.71', now - 1_000));
-    const anchor = await resolveAnchor('AAPL', 'USDC', now, store);
+    const anchor = await resolveAnchor('AAPL', 'USDC', now, store, { duplex: noDuplex });
     assert.equal(anchor?.status, 'observed');
     assert.equal(anchor?.equityUsd, '260.71');
     assert.equal(anchor?.source, 'pyth-pro');
   });
 
-  it('marks a sleeping feed stale, never fresh', async () => {
+  it('marks a sleeping feed stale when the onchain mark cannot be read either', async () => {
     const now = 1_900_000_000_000;
     const aapl = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'AAPL')!;
     const store = storeWith(equitySnap(aapl.id, '260.71', now - 30 * 60_000));
-    const anchor = await resolveAnchor('AAPL', 'USDC', now, store);
+    const anchor = await resolveAnchor('AAPL', 'USDC', now, store, { duplex: noDuplex });
     assert.equal(anchor?.status, 'stale');
   });
 
   it('marks an unknown equity unavailable rather than fabricating a price', async () => {
-    const anchor = await resolveAnchor('ZZZZ', 'USDC', Date.now(), storeWith({}));
+    const anchor = await resolveAnchor('ZZZZ', 'USDC', Date.now(), storeWith({}), { duplex: noDuplex });
     assert.equal(anchor?.status, 'unavailable');
-    const noFeed = await resolveAnchor('AAPL', 'USDC', Date.now(), storeWith({}));
+    const noFeed = await resolveAnchor('AAPL', 'USDC', Date.now(), storeWith({}), { duplex: noDuplex });
     assert.equal(noFeed?.status, 'unavailable');
   });
 
@@ -285,15 +306,56 @@ describe('halley anchor resolver', () => {
     const aapl = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'AAPL')!;
     const nvda = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'NVDA')!;
     const store = storeWith({ ...equitySnap(aapl.id, '260', now - 1_000), ...equitySnap(nvda.id, '182', now - 1_000) });
-    const anchor = await resolveAnchor('NVDA', 'AAPLx', now, store);
+    const anchor = await resolveAnchor('NVDA', 'AAPLx', now, store, { duplex: noDuplex });
     assert.equal(anchor?.status, 'observed');
     assert.ok(Math.abs(Number(anchor!.pairRatio) - 182 / 260) < 1e-9);
     assert.equal(anchor?.quoteEquityUsd, '260');
 
     const half = storeWith(equitySnap(nvda.id, '182', now - 1_000));
-    const broken = await resolveAnchor('NVDA', 'AAPLx', now, half);
+    const broken = await resolveAnchor('NVDA', 'AAPLx', now, half, { duplex: noDuplex });
     assert.equal(broken?.status, 'stale');
     assert.equal(broken?.pairRatio, null);
+  });
+
+  it('anchors to the live onchain mark while the equity tape rests', async () => {
+    const now = 1_900_000_000_000;
+    const aapl = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'AAPL')!;
+    const store = storeWith(equitySnap(aapl.id, '336.08', now - 48 * 60 * 60_000));
+    const duplex = async ({ instrumentId }: { instrumentId: string }) =>
+      buildVenueDuplex({ instrumentId: instrumentId as never, referencePrice: 336.08, referenceSource: 'jupiter-stock-data', venuePrice: 336.05 });
+    const anchor = await resolveAnchor('AAPL', 'USDC', now, store, { duplex });
+    assert.equal(anchor?.status, 'observed');
+    assert.equal(anchor?.source, 'onchain');
+    assert.equal(anchor?.equityUsd, '336.05');
+    assert.equal(anchor?.restingEquity?.equityUsd, '336.08');
+    assert.ok(anchor?.restingEquity?.differenceBps !== null);
+  });
+
+  it('reads both pair legs onchain — never a mixed basis', async () => {
+    const now = 1_900_000_000_000;
+    const nvda = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'NVDA')!;
+    const store = storeWith(equitySnap(nvda.id, '182', now - 48 * 60 * 60_000));
+    const duplex = async ({ instrumentId }: { instrumentId: string }) => {
+      const venue = instrumentId === nvda.id ? 182.5 : 336.05;
+      const ref = instrumentId === nvda.id ? 182 : 336.08;
+      return buildVenueDuplex({ instrumentId: instrumentId as never, referencePrice: ref, referenceSource: 'jupiter-stock-data', venuePrice: venue });
+    };
+    const anchor = await resolveAnchor('NVDA', 'AAPLx', now, store, { duplex });
+    assert.equal(anchor?.status, 'observed');
+    assert.equal(anchor?.source, 'onchain');
+    assert.ok(Math.abs(Number(anchor!.pairRatio) - 182.5 / 336.05) < 1e-9);
+    assert.equal(anchor?.quoteEquityUsd, '336.05');
+  });
+
+  it('never calls the venue when the equity mark is awake', async () => {
+    const now = 1_900_000_000_000;
+    const aapl = SOLANA_INSTRUMENTS.find(i => i.underlyingSymbol === 'AAPL')!;
+    const store = storeWith(equitySnap(aapl.id, '260.71', now - 1_000));
+    let called = false;
+    const duplex = async (args: { instrumentId: string }) => { called = true; return unavailableVenueDuplex(null, []); };
+    const anchor = await resolveAnchor('AAPL', 'USDC', now, store, { duplex });
+    assert.equal(anchor?.source, 'pyth-pro');
+    assert.equal(called, false);
   });
 });
 

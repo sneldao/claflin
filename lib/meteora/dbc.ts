@@ -163,7 +163,9 @@ export function estimateLaunch(
   const pair = quote.underlyingSymbol !== null;
   const assumptions = [
     'Estimate only — a projection of the curve configuration, never an order or a fill.',
-    anchored
+    anchored && anchor.source === 'onchain'
+      ? `Opening price anchored to the live onchain ${anchor.symbol} venue mark (${anchor.status} at quote time) — the equity tape rests; the venue does not.${anchor.restingEquity ? ` Resting equity reference $${anchor.restingEquity.equityUsd}${anchor.restingEquity.differenceBps ? `, gap ${anchor.restingEquity.differenceBps} bps` : ''} — a comparison, not an arbitrage.` : ''}${pair && anchor.pairRatio ? ' Pair legs both read on the same onchain basis.' : ''}`
+      : anchored
       ? `Opening price anchored to Pyth ${anchor.symbol}${pair && anchor.pairRatio ? `/${quote.underlyingSymbol} ratio` : ''} (${anchor.status} at quote time).`
       : anchor !== null
         ? `Equity anchor ${anchor.symbol} was ${anchor.status} at quote time — the opening price defaults to 1.0 quote unit and is NOT anchored.`

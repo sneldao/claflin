@@ -304,8 +304,19 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <EvidenceRow
                         label="Anchor"
                         value={estimate.anchor ? `${estimate.anchor.symbol} at $${money(estimate.anchor.equityUsd)}` : 'Unanchored — opens at 1.0'}
-                        source={estimate.anchor ? `Pyth Pro · ${estimate.anchor.status}` : 'no equity mark'}
+                        source={estimate.anchor
+                          ? estimate.anchor.source === 'onchain'
+                            ? `onchain mark · ${estimate.anchor.status}`
+                            : `Pyth Pro · ${estimate.anchor.status}`
+                          : 'no equity mark'}
                       />
+                      {estimate.anchor?.restingEquity && (
+                        <EvidenceRow
+                          label="Equity ref"
+                          value={`$${money(estimate.anchor.restingEquity.equityUsd)} · resting`}
+                          source={estimate.anchor.restingEquity.differenceBps ? `onchain gap ${estimate.anchor.restingEquity.differenceBps} bps` : 'equity tape closed'}
+                        />
+                      )}
                       {estimate.anchor?.pairRatio && estimate.anchor.quoteEquityUsd && (
                         <EvidenceRow label="Pair ratio" value={`${money(estimate.anchor.pairRatio)} ${estimate.intent.quoteSymbol}`} source={`$${money(estimate.anchor.equityUsd)} / $${money(estimate.anchor.quoteEquityUsd)}`} />
                       )}
@@ -401,7 +412,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
                   </div>
 
-                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — marks rest while the market sleeps. None, or an unavailable mark, uses 1 quote unit instead; the estimate discloses it.</p>
+                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read.</p>
                   </div>
 
                   <span id="halley-quote-label">Quote in</span>

@@ -41,12 +41,16 @@ const solanaAddress = z.string().min(32).max(44);
 
 const anchorSchema = z.object({
   symbol: z.string().min(1).max(10),
-  source: z.literal('pyth-pro'),
+  source: z.enum(['pyth-pro', 'onchain']),
   equityUsd: z.string().max(40),
   pairRatio: z.string().max(40).nullable(),
   quoteEquityUsd: z.string().max(40).nullable(),
   observedAt: z.number().int().min(0),
   status: z.enum(['observed', 'stale', 'unavailable']),
+  restingEquity: z.object({
+    equityUsd: z.string().max(40),
+    differenceBps: z.string().max(20).nullable(),
+  }).strict().nullable().optional(),
 }).strict();
 
 const estimateSchema = z.object({

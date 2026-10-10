@@ -90,7 +90,7 @@ export function resolveHalleyCurve(query: string): LaunchCurvePreset | null {
 
 const HALLEY_EXPLANATIONS: Record<HalleyExplainTopic, string> = {
   'anchor':
-    'Most launches open at zero and let the crowd guess. This desk moors the opening price to a known one — the equity’s Pyth mark for a dollar-quoted launch, or the ratio of two equities for a pair launch. Anchored does not mean pegged: it sets where the curve starts, then the curve does the discovering.',
+    'Most launches open at zero and let the crowd guess. This desk moors the opening price to a known one — the equity’s Pyth mark for a dollar-quoted launch, or the ratio of two equities for a pair launch. While the equity tape rests, the live onchain mark anchors instead. Anchored does not mean pegged: it sets where the curve starts, then the curve does the discovering.',
   'graduation':
     'A launch on this desk lives on a Meteora bonding curve until the graduation line — the amount of quote asset collected that you set on the slip. Crossing it migrates the pool into DAMM v2, a full liquidity venue, with ten percent of the liquidity permanently locked. The estimate’s path shows where that line sits.',
   'tracker-token':
