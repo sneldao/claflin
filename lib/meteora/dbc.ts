@@ -37,7 +37,7 @@ export const HALLEY_BASE_DECIMALS = 6;
    Higher weight = more liquidity in that segment = slower price movement
    there: 'long' loads the early segments, 'exponential' loads the tail.
    flat/equity-pair differ in anchor source, not shape. */
-const PRESET_WEIGHTS: Record<LaunchCurvePreset, number[]> = {
+export const PRESET_WEIGHTS: Record<LaunchCurvePreset, number[]> = {
   flat: Array(16).fill(1),
   'equity-pair': Array(16).fill(1),
   long: [4, 4, 4, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],

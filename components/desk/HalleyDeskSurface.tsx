@@ -15,6 +15,7 @@ import { projectHalleyToRoom } from '@/lib/meteora/room-presentation';
 import room from './HalleyRoom.module.css';
 import {
   CURVE_HINTS,
+  CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
   isBlankDraft,
   missingLaunchFields,
@@ -24,7 +25,7 @@ import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
 import { HALLEY_LIVE_CLIENT_ENABLED } from '@/lib/meteora/flags';
-import { LAUNCH_CURVE_PRESETS } from '@/lib/meteora/contracts';
+import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from '@/lib/meteora/contracts';
 import { draftIntent } from '@/lib/meteora/useHalleyDesk';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
@@ -57,23 +58,45 @@ function recordLine(record: HalleyPaperRecord): string {
   return `Launch ${i.symbol} · ${i.quoteSymbol} quote · ${i.curve}`;
 }
 
-/** The projected curve as inline SVG — sparkline of the estimate's path. */
+/** The projected curve as inline SVG — sparkline of the estimate's path.
+    The path traces itself on arrival and a comet settles at graduation:
+    the observatory's whole motif in one motion. */
 function LaunchCurve({ path }: { path: readonly { progress: string; priceQuote: string }[] }) {
-  const points = useMemo(() => {
+  const drawn = useMemo(() => {
     const ys = path.map(p => Number(p.priceQuote)).filter(Number.isFinite);
     if (ys.length < 2) return null;
     const min = Math.min(...ys), max = Math.max(...ys);
     const span = max - min || 1;
-    return path.map((p, i) => {
-      const x = (Number(p.progress) * 100).toFixed(1);
-      const y = (28 - ((Number(p.priceQuote) - min) / span) * 24).toFixed(1);
-      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-    }).join(' ');
+    const pts = path.map(p => ({
+      x: Number((Number(p.progress) * 100).toFixed(1)),
+      y: Number((28 - ((Number(p.priceQuote) - min) / span) * 24).toFixed(1)),
+    }));
+    return {
+      d: pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' '),
+      end: pts[pts.length - 1],
+    };
   }, [path]);
-  if (!points) return null;
+  if (!drawn) return null;
   return (
-    <svg viewBox="0 0 100 30" className={styles.launchCurve} role="img" aria-label="Projected curve path">
-      <path d={points} fill="none" stroke="currentColor" strokeWidth="1.2" />
+    /* key on the path so each fresh estimate re-runs the transit */
+    <svg key={drawn.d} viewBox="0 0 100 30" className={styles.launchCurve} role="img" aria-label="Projected curve path">
+      <path d={drawn.d} fill="none" stroke="currentColor" strokeWidth="1.2" pathLength={1} />
+      <circle className={styles.launchCurveComet} cx={drawn.end.x} cy={drawn.end.y} r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** The preset's liquidity profile in miniature — the shape the curve
+    actually carries, shown before the estimate runs. */
+function CurveGlyph({ preset }: { preset: LaunchCurvePreset }) {
+  const shape = CURVE_WEIGHT_SHAPES[preset];
+  const max = Math.max(...shape);
+  return (
+    <svg viewBox="0 0 32 12" className={plate.curveGlyph} aria-hidden="true" focusable="false">
+      {shape.map((w, i) => {
+        const h = 2 + (w / max) * 8;
+        return <rect key={i} x={i * 2} y={12 - h} width="1.4" height={h} fill="currentColor" />;
+      })}
     </svg>
   );
 }
@@ -394,7 +417,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                         aria-pressed={(draft.curve ?? 'equity-pair') === c}
                         className={styles.amountChip} data-active={(draft.curve ?? 'equity-pair') === c}
                         title={CURVE_HINTS[c]}
-                        onClick={() => halley.edit({ curve: c })}>{c === 'equity-pair' ? 'equity pair' : c}</button>
+                        onClick={() => halley.edit({ curve: c })}>
+                        <CurveGlyph preset={c} />
+                        {c === 'equity-pair' ? 'equity pair' : c}
+                      </button>
                     ))}
                   </div>
 

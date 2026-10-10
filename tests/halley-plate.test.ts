@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { isHalleyLaunchIntent, type HalleyDraft } from '../lib/meteora/contracts';
-import { CURVE_HINTS, HALLEY_EXAMPLE, isBlankDraft, launchStep, missingLaunchFields, stageLabel } from '../lib/meteora/plate';
+import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, isBlankDraft, launchStep, missingLaunchFields, stageLabel } from '../lib/meteora/plate';
+import { PRESET_WEIGHTS } from '../lib/meteora/dbc';
+import { LAUNCH_CURVE_PRESETS } from '../lib/meteora/contracts';
 
 const blank: HalleyDraft = {
   name: null, symbol: null, anchorSymbol: null, quoteSymbol: null,
@@ -58,5 +60,10 @@ describe('Halley first-use guidance', () => {
     assert.match(source, /Still needed:/);
     assert.match(source, /<HalleyPlate stage=\{viewed \? 'saved'/);
     assert.doesNotMatch(source, /CURVE_LABELS/);
+  });
+  it('draws every chip glyph from the same weights the launch config sends', () => {
+    for (const preset of LAUNCH_CURVE_PRESETS) {
+      assert.deepEqual([...CURVE_WEIGHT_SHAPES[preset]], PRESET_WEIGHTS[preset]);
+    }
   });
 });

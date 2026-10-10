@@ -36,6 +36,16 @@ export function isBlankDraft(draft: HalleyDraft): boolean {
   return Object.values(draft).every(value => value === null || value === '');
 }
 
+/** Miniature liquidity-weight profiles drawn inside the curve chips — the
+    same 16-segment weights buildLaunchConfig sends to the SDK (kept in
+    step with PRESET_WEIGHTS by tests/halley-plate.test.ts). */
+export const CURVE_WEIGHT_SHAPES: Record<LaunchCurvePreset, readonly number[]> = {
+  flat: Array(16).fill(1),
+  'equity-pair': Array(16).fill(1),
+  long: [4, 4, 4, 4, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+  exponential: [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4],
+};
+
 /** Plain-language reading of each curve preset, shown beside the chips. */
 export const CURVE_HINTS: Record<LaunchCurvePreset, string> = {
   'equity-pair': 'Even liquidity weights; an xStock quote expresses the opening price as an equity ratio when both marks are observed.',

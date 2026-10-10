@@ -107,6 +107,16 @@
 .leadText { margin: 0 !important; font: italic 400 16px/1.5 var(--font-display), serif; }
 .needed { margin: 10px 0 0 !important; font-size: 12px; line-height: 1.5; color: var(--desk-paper-muted); }
 
+/* The curve chip's liquidity profile — small, quiet, currentColor. */
+.curveGlyph {
+  display: block;
+  width: 34px;
+  height: 12px;
+  margin-bottom: 3px;
+  opacity: .65;
+}
+[data-active="true"] .curveGlyph { opacity: .95; }
+
 @media (max-width: 760px) {
   /* Stacked above the slip, the plate keeps the steps and drops the picture. */
   .plate { margin-top: 18px; padding-top: 16px; }
