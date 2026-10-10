@@ -328,7 +328,9 @@ describe('halley anchor resolver', () => {
     assert.equal(anchor?.source, 'onchain');
     assert.equal(anchor?.equityUsd, '336.05');
     assert.equal(anchor?.restingEquity?.equityUsd, '336.08');
-    assert.ok(anchor?.restingEquity?.differenceBps !== null);
+    /* The gap compares the venue mark against the RESTING EQUITY it
+       replaced — not a third reference. 336.05 vs 336.08 ≈ −0.9 bps. */
+    assert.equal(anchor?.restingEquity?.differenceBps, '-0.9');
   });
 
   it('reads both pair legs onchain — never a mixed basis', async () => {

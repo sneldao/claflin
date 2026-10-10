@@ -14,7 +14,7 @@ import { SOLANA_INSTRUMENTS } from '../solana/catalog';
 import { feedMappingFor } from '../solana/market/feeds';
 import { fileSnapshotStore } from '../solana/market/snapshot-file';
 import { readFeedSnapshot, type SnapshotStore } from '../solana/market/snapshots';
-import { readVenueDuplex } from '../solana/market/venue-duplex';
+import { readVenueDuplex, venueReferenceDifferenceBps } from '../solana/market/venue-duplex';
 import { quoteMintForSymbol } from './catalog';
 import type { HalleyAnchor } from './contracts';
 
@@ -93,10 +93,10 @@ async function resolveEquityBasis(
 async function onchainUsd(
   instrumentId: string,
   duplex: typeof readVenueDuplex,
-): Promise<{ price: string; differenceBps: string | null; observedAt: number } | null> {
+): Promise<{ price: string; observedAt: number } | null> {
   const d = await duplex({ instrumentId });
   if (!d.venuePrice || !(Number(d.venuePrice) > 0)) return null;
-  return { price: d.venuePrice, differenceBps: d.referenceDifferenceBps, observedAt: d.observedAt };
+  return { price: d.venuePrice, observedAt: d.observedAt };
 }
 
 /**
@@ -127,8 +127,11 @@ async function resolveOnchainBasis(
     if (Number.isFinite(b) && Number.isFinite(q) && q > 0) pairRatio = (b / q).toString();
   }
 
-  const resting = equity.equityUsd !== '0' && equity.equityUsd !== ''
-    ? { equityUsd: equity.equityUsd, differenceBps: base.differenceBps }
+  /* The gap is always computed against the SAME pair the evidence shows:
+     the resting equity reading versus the live onchain mark — never a
+     third reference that would mislabel the comparison. */
+  const resting = Number(equity.equityUsd) > 0
+    ? { equityUsd: equity.equityUsd, differenceBps: venueReferenceDifferenceBps(Number(equity.equityUsd), Number(base.price)) }
     : null;
 
   return {
