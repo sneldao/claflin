@@ -37,17 +37,17 @@ export async function GET(req: Request): Promise<Response> {
     const connection = new Connection(process.env.SOLANA_RPC_URL ?? 'https://solana-rpc.publicnode.com', 'confirmed');
     const client = DynamicBondingCurveClient.create(connection, 'confirmed');
     const pool = new PublicKey(poolParam);
-    const [poolResult, progress, threshold] = await Promise.all([
-      client.state.getPool(pool),
-      client.state.getPoolQuoteTokenCurveProgress(pool),
-      client.state.getPoolMigrationQuoteThreshold(pool),
-    ]);
+    const poolResult = await client.state.getPool(pool);
     if (!poolResult) {
       return Response.json(
         { error: 'pool_not_found', message: 'No DBC pool at this address on the configured cluster.' },
         { status: 404, headers },
       );
     }
+    const [progress, threshold] = await Promise.all([
+      client.state.getPoolQuoteTokenCurveProgress(pool),
+      client.state.getPoolMigrationQuoteThreshold(pool),
+    ]);
     const poolState = poolResult.poolState;
     const config = poolState.config ? await client.state.getPoolConfig(poolState.config) : null;
     return Response.json(
