@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketBell } from '@/lib/use-market-clock';
-import { bellLine } from '@/lib/market-clock';
+import { bellLine, formatBellCountdown, type MarketClock, type NextBell } from '@/lib/market-clock';
 import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
@@ -316,7 +316,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} isabel={isabelMarks} onPick={pickFromWire} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} isabel={isabelMarks} market={market} onPick={pickFromWire} />
 
         <AnnotatedExampleCall />
 
@@ -416,7 +416,7 @@ function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null, isabel: MarksRea
   ];
 }
 
-function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: MarksRead | null; isabel: MarksRead | null; onPick: (symbol: string) => void }) {
+function LiveWire({ hetty, jesse, isabel, market, onPick }: { hetty: MarksRead; jesse: MarksRead | null; isabel: MarksRead | null; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void }) {
   const wireMarks = wireMarksOf(hetty, jesse, isabel);
   const failed = hetty.failed && (jesse?.failed ?? true) && (isabel?.failed ?? true);
 
@@ -507,6 +507,18 @@ function LiveWire({ hetty, jesse, isabel, onPick }: { hetty: MarksRead; jesse: M
           </div>
         </div>
       )}
+      {/* The house hours — the thesis in one strip: the listing exchange
+          keeps a session; every onchain rail under this roof does not. */}
+      <p className={foyerStyles.wireHours} aria-label="House hours">
+        <span className={foyerStyles.wireHoursLabel}>House hours</span>
+        <span data-state={market?.clock.exchange ?? 'pending'}>
+          NYSE {market ? market.clock.exchange : '—'}
+          {market?.bell ? ` · ${market.bell.kind} in ${formatBellCountdown(market.bell.minutes)}` : ''}
+        </span>
+        <span data-state="open">SOLANA open</span>
+        <span data-state="open">BASE open</span>
+        <span data-state="open">RH CHAIN open</span>
+      </p>
     </section>
   );
 }

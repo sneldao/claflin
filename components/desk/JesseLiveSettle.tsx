@@ -245,7 +245,8 @@ export function JesseLiveSettle({
       {note && <p className={styles.notice} role="status">{note}</p>}
       {solscanUrl && (
         <p className={styles.liveMeta}>
-          <a href={solscanUrl} target="_blank" rel="noreferrer">View on Solscan</a>
+          {phase === 'confirmed' ? 'Settled on mainnet — ' : ''}
+          <a href={solscanUrl} target="_blank" rel="noreferrer">signature on Solscan ↗</a>
         </p>
       )}
       {phase === 'unknown' && (

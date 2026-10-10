@@ -27,6 +27,7 @@ import { focusLedgerTitle, paperOutcomeCopy } from '@/lib/trading/outcomes';
 import { getEducationTopic } from '@/lib/education';
 import { EVIDENCE_DISCLAIMER, BLANK_SLIP_TITLE, SLIP_ACTIONS } from '@/lib/desk/ui-copy';
 import type { DeskMark } from '@/lib/trading/marks-shared';
+import type { MarketClock } from '@/lib/market-clock';
 import styles from '../desk/WorkingDesk.module.css';
 import evidence from "./EvidencePanel.module.css";
 
@@ -69,6 +70,7 @@ export const JesseTicket = memo(function JesseTicket({
   entryWords = null,
   carriedNote = null,
   mark = null,
+  clock = null,
   blankSlip = false,
   exampleSymbol = 'AAPLx',
   quietEvidence = false,
@@ -84,6 +86,9 @@ export const JesseTicket = memo(function JesseTicket({
   carriedNote?: string | null;
   /** The venue mark for the drafted instrument — its stock-reference gap heads the slip. */
   mark?: DeskMark | null;
+  /** The market clock — the draft slip says when the exchange rests and
+      only the onchain book is printing. */
+  clock?: MarketClock | null;
   /** Room first paint: blank blotter until the line (or hand) puts work on it. */
   blankSlip?: boolean;
   /** The symbol the blank slip's ghost example names — the tape's widest gap. */
@@ -392,6 +397,10 @@ export const JesseTicket = memo(function JesseTicket({
               ? <>Your instruction: <em>{entryWords}</em></>
               : 'Speak or type an instruction, e.g. “buy 100 USDC of AAPLx”.'}
       </p>
+      {clock?.exchange === 'closed' && (
+        <p className={styles.sessionLine} role="status">The exchange is shut — the slip reads the live onchain book.</p>
+      )}
+      {mark && <GapStrip mark={mark} />}
       <DraftForm
         draft={draft}
         side={side}

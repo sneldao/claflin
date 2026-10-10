@@ -900,6 +900,7 @@
   position: relative;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   min-height: 54px;
   background: var(--night);
@@ -929,6 +930,32 @@
   line-height: 1.6;
   color: var(--muted);
 }
+
+/* The house hours — one quiet strip under the tape naming each rail's
+   session: the listing exchange keeps hours, the chains do not. */
+.wireHours {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  margin: 0;
+  padding: 5px 18px 6px;
+  border-top: 1px solid rgba(179, 144, 90, 0.16);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.wireHoursLabel {
+  color: var(--brass-dim);
+  letter-spacing: 0.2em;
+}
+
+.wireHours span[data-state="open"] { color: var(--brass); }
+.wireHours span[data-state="closed"] { color: var(--muted); }
+.wireHours span[data-state="pending"] { color: var(--muted); opacity: .6; }
 
 .wireWindow {
   flex: 1;

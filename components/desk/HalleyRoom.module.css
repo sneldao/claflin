@@ -24,4 +24,7 @@
 @media (max-width: 760px) {
   .sky { height: 200px; inset-inline: 0; opacity: .18; }
 }
-/* Celestial marks remain still for all visitors, including reduced motion. */
+/* The comet transits the orbit on a slow clock; reduced motion stills it. */
+@media (prefers-reduced-motion: reduce) {
+  .skyComet { display: none; }
+}

@@ -161,7 +161,7 @@ export function estimateLaunch(
 
   const anchored = anchor !== null && anchor.status === 'observed';
   const pair = quote.underlyingSymbol !== null;
-  const assumptions = [
+  const assumptionClauses = [
     'Estimate only — a projection of the curve configuration, never an order or a fill.',
     anchored && anchor.source === 'onchain'
       ? `Opening price anchored to the live onchain ${anchor.symbol} venue mark (${anchor.status} at quote time) — the equity tape rests; the venue does not.${anchor.restingEquity ? ` Resting equity reference $${anchor.restingEquity.equityUsd}${anchor.restingEquity.differenceBps ? `, gap ${anchor.restingEquity.differenceBps} bps` : ''} — a comparison, not an arbitrage.` : ''}${pair && anchor.pairRatio ? ' Pair legs both read on the same onchain basis.' : ''}`
@@ -174,7 +174,8 @@ export function estimateLaunch(
     `${LOCKED_LIQUIDITY_BPS / 100}% of migrated liquidity is permanently locked (protocol minimum).`,
     'The launched token is a tracker/exposure token — it is not, and does not claim to be, stock ownership.',
     pair ? `Quote asset ${quote.symbol} is a badged xStock mint (Meteora token badge verified on mainnet).` : '',
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean) as string[];
+  const assumptions = assumptionClauses.join(' ');
 
   return {
     version: 1,
@@ -207,5 +208,6 @@ export function estimateLaunch(
     quotedAt: now,
     expiresAt: now + 60_000,
     assumptions,
+    assumptionClauses,
   };
 }

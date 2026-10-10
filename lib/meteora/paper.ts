@@ -84,6 +84,7 @@ const estimateSchema = z.object({
   quotedAt: z.number().int().positive(),
   expiresAt: z.number().int().positive(),
   assumptions: z.string().min(1).max(2000),
+  assumptionClauses: z.array(z.string().min(1).max(500)).max(12).optional(),
 }).strict();
 
 /** Internal consistency only — a filed estimate keeps its provenance even if

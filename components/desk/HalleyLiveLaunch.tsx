@@ -236,7 +236,12 @@ export function HalleyLiveLaunch({
   }, [wallet, proposal, ledger]);
 
   return (
-    <section className={styles.liveBox} data-source="halley-live" aria-labelledby="halley-live-title">
+    <section
+      className={styles.liveBox}
+      data-source="halley-live"
+      data-outcome={phase === 'confirmed' ? 'filled' : phase === 'failed' ? 'failed' : undefined}
+      aria-labelledby="halley-live-title"
+    >
       <p className={styles.eyebrow}>LIVE · METEORA DBC · SOLANA</p>
       <h2 id="halley-live-title">Launch it for real.</h2>
       <p className={styles.liveMeta}>
@@ -307,16 +312,31 @@ export function HalleyLiveLaunch({
         </p>
       )}
       {note && <p className={styles.notice} role="status">{note}</p>}
-      {links && (links.solscanUrl || links.configSolscanUrl || links.mintUrl || links.poolUrl) && (
-        <p className={styles.liveMeta}>
-          {links.configSolscanUrl && <a href={links.configSolscanUrl} target="_blank" rel="noreferrer">Config tx</a>}
-          {' '}
-          {links.solscanUrl && <a href={links.solscanUrl} target="_blank" rel="noreferrer">Launch tx</a>}
-          {' '}
-          {links.mintUrl && <a href={links.mintUrl} target="_blank" rel="noreferrer">Mint</a>}
-          {' '}
-          {links.poolUrl && <a href={links.poolUrl} target="_blank" rel="noreferrer">Pool</a>}
-        </p>
+      {/* The instrument's on-chain record — mint, pool and both signatures,
+          linked so the launch is verifiable from the slip itself. */}
+      {links && proposal && (links.solscanUrl || links.configSolscanUrl || links.mintUrl || links.poolUrl) && (
+        <div className={styles.instrumentRecord} role="group" aria-label="On-chain record">
+          <p className={styles.eyebrow}>On-chain record · mainnet</p>
+          <ul className={styles.instrumentRecordRows}>
+            <li>
+              <span>Mint</span>
+              <a href={links.mintUrl ?? `https://solscan.io/account/${proposal.baseMint}`} target="_blank" rel="noreferrer">{shortAddress(proposal.baseMint)} ↗</a>
+            </li>
+            <li>
+              <span>Pool</span>
+              <a href={links.poolUrl ?? `https://solscan.io/account/${proposal.pool}`} target="_blank" rel="noreferrer">{shortAddress(proposal.pool)} ↗</a>
+            </li>
+            {links.configSolscanUrl && (
+              <li><span>Curve config</span><a href={links.configSolscanUrl} target="_blank" rel="noreferrer">tx ↗</a></li>
+            )}
+            {links.solscanUrl && (
+              <li><span>Pool + mint</span><a href={links.solscanUrl} target="_blank" rel="noreferrer">tx ↗</a></li>
+            )}
+          </ul>
+          <p className={styles.instrumentRecordNote}>
+            {proposal.intent.symbol} was created by your wallet — the house is venue, never issuer.
+          </p>
+        </div>
       )}
       {phase === 'unknown' && (
         <p className={styles.liveMeta}>

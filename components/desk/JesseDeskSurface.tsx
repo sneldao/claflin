@@ -395,11 +395,13 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
             <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('jesse', 'last_filing'); jesse.openRecord(filing.recordId); }} />
           )}
           {roomView ? (
-            <details className={styles.typeInstead}>
-              <summary>Type instead</summary>
+            /* The typed path is a first-class door, not a fallback — a
+               judge without a mic still reaches the whole desk. */
+            <div className={styles.typeInstead} data-open="true">
+              <p className={styles.typeInsteadLabel}>Type instead — the same desk answers</p>
               <JesseCommandBar jesse={jesse} onHeard={onTyped} onParsed={(parse, result, priorDraft) => recordParsed(parse, result, priorDraft, 'typed')} />
               {blotter}
-            </details>
+            </div>
           ) : (
             <JesseCommandBar jesse={jesse} onHeard={onTyped} onParsed={(parse, result, priorDraft) => recordParsed(parse, result, priorDraft, 'typed')} />
           )}
@@ -424,6 +426,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
           entryWords={entryWords}
           carriedNote={carriedNote}
           mark={selectedMark}
+          clock={clock}
           blankSlip={blankSlip}
           exampleSymbol={widestGap(deskMarks)?.symbol ?? 'AAPLx'}
           quietEvidence={roomView}

@@ -132,6 +132,19 @@ function CurveGlyph({ preset }: { preset: LaunchCurvePreset }) {
   );
 }
 
+/** The estimate's reading as a broker's note — separate clauses when the
+    estimate carries them, the joined sentence for older records. */
+function AssumptionNote({ estimate }: { estimate: { assumptions: string; assumptionClauses?: readonly string[] } }) {
+  if (!estimate.assumptionClauses || estimate.assumptionClauses.length === 0) {
+    return <p>{estimate.assumptions}</p>;
+  }
+  return (
+    <ul className={styles.assumptionClauses}>
+      {estimate.assumptionClauses.map((clause, i) => <li key={i}>{clause}</li>)}
+    </ul>
+  );
+}
+
 function HalleyRecordView({ record, onClose, onRemove }: {
   record: HalleyPaperRecord;
   onClose: () => void;
@@ -163,7 +176,7 @@ function HalleyRecordView({ record, onClose, onRemove }: {
               <EvidenceRow label="Graduates" value={`${money(e.graduationPriceQuote)} ${e.intent.quoteSymbol}`} source={`${e.intent.graduationQuote} ${e.intent.quoteSymbol} collected → DAMM v2`} />
             </>
           )}
-          about={<p>{e.assumptions}</p>}
+          about={<AssumptionNote estimate={e} />}
         />
         <div className={styles.slipActions}>
           <button type="button" className={styles.primary} onClick={onClose}>Back to the desk</button>
@@ -274,6 +287,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             <path d="M-80 285 Q360 -160 1040 190" stroke="currentColor" strokeWidth=".7" strokeDasharray="2 9" />
             <path d="M640 132 L810 38 M640 132 L792 62 M640 132 L765 80" stroke="currentColor" strokeWidth="1" />
             <circle cx="640" cy="132" r="3" fill="currentColor" />
+            {/* The comet transits the orbit on a slow clock — the observatory
+                breathes without a word of copy. Reduced motion stills it. */}
+            <circle r="1.6" fill="currentColor" className={room.skyComet}>
+              <animateMotion dur="90s" repeatCount="indefinite" path="M-80 285 Q360 -160 1040 190" />
+            </circle>
             <g fill="currentColor">
               <circle cx="90" cy="95" r="1" /><circle cx="300" cy="36" r="1.5" />
               <circle cx="490" cy="74" r="1" /><circle cx="860" cy="140" r="1.2" />
@@ -382,7 +400,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <EvidenceRow label="Migration" value="DAMM v2 · 10% locked" source={`fees ${estimate.tradingFeeBps}bps trade / ${estimate.migrationFeeBps}bps migrate`} />
                     </>
                   )}
-                  about={<p>{estimate.assumptions}</p>}
+                  about={<AssumptionNote estimate={estimate} />}
                 />
                 <div className={styles.slipActions}>
                   {!expired ? (
@@ -574,14 +592,22 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               <summary>Filed paper ({halley.records.length})</summary>
               <div className={styles.popoverPanel}>
                 <ul className={styles.ledgerLines}>
-                  {halley.records.map(record => (
-                    <li key={record.id}>
-                      <button type="button" onClick={() => halley.openRecord(record.id)}>
-                        <strong>{recordLine(record)}</strong>
-                        <span>{new Date(record.createdAt).toLocaleDateString()}</span>
-                      </button>
-                    </li>
-                  ))}
+                  {halley.records.map(record => {
+                    /* The ledger says which basis the record was filed
+                       under — the mark's provenance stays legible. */
+                    const anchor = record.estimate.anchor;
+                    const basis = !anchor || anchor.status !== 'observed'
+                      ? 'unanchored'
+                      : anchor.source === 'onchain' ? 'onchain mark' : 'Pyth mark';
+                    return (
+                      <li key={record.id}>
+                        <button type="button" onClick={() => halley.openRecord(record.id)}>
+                          <strong>{recordLine(record)}</strong>
+                          <span>{new Date(record.createdAt).toLocaleDateString()} · {basis}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             </details>

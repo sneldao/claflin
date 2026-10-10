@@ -137,6 +137,10 @@ export interface HalleyLaunchEstimate {
   quotedAt: number;
   expiresAt: number;
   assumptions: string;
+  /** The same reading as separate clauses — the slip renders it as a
+      broker's note instead of one long sentence. Optional: older filed
+      estimates predate the field. */
+  assumptionClauses?: readonly string[];
 }
 
 export type DeskRevision = SharedDeskRevision<'halley'>;
