@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -128,6 +128,19 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   // Bootstrap still; the shared preference hook applies Room only after hydration.
   const [presentationMode, applyMode] = useState<DeskPresentation>('compact');
   const [lineLive, setLineLive] = useState(false);
+  /* The build flag only seeds this — the API probe is the honest answer on
+     deployments whose bundle never received NEXT_PUBLIC_* (Jesse's pattern). */
+  const [liveEnabled, setLiveEnabled] = useState(HALLEY_LIVE_CLIENT_ENABLED);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch('/api/desk/halley/live/status')
+      .then(async res => {
+        const body = await res.json() as { enabled?: boolean };
+        if (!cancelled && body.enabled === true) setLiveEnabled(true);
+      })
+      .catch(() => { /* keep build-time flag */ });
+    return () => { cancelled = true; };
+  }, []);
   const setMode = useDeskPresentation('halley', applyMode, halley.historyReady);
   const roomView = presentationMode === 'room';
   const [viewNotice, setViewNotice] = useState<string | null>(null);
@@ -168,7 +181,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
   /* Live launch uses the reviewed estimate's intent when one exists — the
      terms the caller actually reviewed — else the current draft's. */
-  const liveIntent = HALLEY_LIVE_CLIENT_ENABLED
+  const liveIntent = liveEnabled
     ? (estimate?.intent ?? draftIntent(draft))
     : null;
 
@@ -189,7 +202,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         </div>
       )}
       <ModeStamp
-        live={HALLEY_LIVE_CLIENT_ENABLED}
+        live={liveEnabled}
         presentation={presentationMode}
         hint="Anchored launch curves on Meteora DBC — estimates are projections, never orders."
         market="SOLANA · HALLEY"
@@ -212,7 +225,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <HalleyCall halley={halley} onLiveChange={setLineLive} />
           <ReceiverShell
             stage={receiverStage}
-            label={reviewing ? 'REVIEW PAPER CURVE' : HALLEY_LIVE_CLIENT_ENABLED ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
+            label={reviewing ? 'REVIEW PAPER CURVE' : liveEnabled ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
             reviewing={reviewing}
             brokerName="Halley"
             lineTargetId="halley-line"
@@ -234,7 +247,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <p className={styles.product}>
             Project a tracker-token launch curve on Meteora using an equity mark
             or an unanchored starting price.
-            {HALLEY_LIVE_CLIENT_ENABLED
+            {liveEnabled
               ? ' Paper by default; a live launch deploys from your own wallet — you are the token’s creator.'
               : ' Paper only: no token is minted.'}
             {' '}A tracker is not stock ownership.
@@ -435,7 +448,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             )}
           </div>
 
-          {HALLEY_LIVE_CLIENT_ENABLED && !viewed && (
+          {liveEnabled && !viewed && (
             <HalleyLiveLaunch intent={liveIntent} revision={estimate?.quotedAt ?? 0} />
           )}
           {halley.records.length > 0 && (
