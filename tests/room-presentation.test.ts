@@ -53,6 +53,9 @@ describe('room presentation', () => {
     /* The market clock moved into the mast. */
     assert.match(room, /useMarketClock/);
     assert.match(room, /<RoomMarketClock clock=\{clock\} \/>/);
+    /* The account affordance is shared — the room nav must not lose the
+       way into (or out of) an account that the compact nav keeps. */
+    assert.match(room, /<DeskAuthChip/);
     assert.doesNotMatch(source('components/desk/JesseDeskSurface.tsx'), /RoomMarketClock/);
     assert.doesNotMatch(source('components/desk/HettyDeskSurface.tsx'), /RoomMarketClock/);
   });

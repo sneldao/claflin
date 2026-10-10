@@ -523,6 +523,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         onPresentation={setMode}
         onSwitchDesk={desk.switchDesk}
         onLeaveDesk={desk.leaveDesk}
+        showPaperImport
+        anonymousCount={anonymousCount}
+        importStatus={importStatus}
+        onImportAnonymous={() => { void importAnonymousRecords(); }}
         tape={tapeState}
         tapeAt={tapeAt}
       >

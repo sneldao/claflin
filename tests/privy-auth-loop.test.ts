@@ -1,7 +1,7 @@
 import './jsdom-setup';
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createRequire } from 'node:module';
 import Module from 'node:module';
@@ -35,18 +35,20 @@ process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID = 'test-client';
 
 /* Must come after the stub is in the cache — the component reads the SDK
    at module load. */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const PrivyBackedAuth = req('../components/auth/PrivyBackedAuth').default;
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { LazyDeskAuthProvider, useDeskAuth } = req('../components/auth/AuthProvider') as typeof import('../components/auth/AuthProvider');
 
 let published: ReturnType<typeof useDeskAuth> | null = null;
-let consumerRenders = 0;
+let publishes = 0;
 function Reader() {
-  published = useDeskAuth();
-  /* A publish loop keeps re-rendering consumers forever; cap it so the
-     regression fails fast instead of spinning inside act. */
-  if (++consumerRenders > 80) throw new Error('auth publish loop: exceeded 80 renders');
+  const current = useDeskAuth();
+  /* Each changed DeskAuth object refires this effect — a publish loop
+     churns it forever, so cap it and fail fast instead of spinning
+     inside act. */
+  useEffect(() => {
+    published = current;
+    if (++publishes > 80) throw new Error('auth publish loop: exceeded 80 publishes');
+  }, [current]);
   return null;
 }
 
@@ -56,7 +58,7 @@ describe('Privy-backed account publishing', () => {
     resetContainer();
     window.localStorage.clear();
     published = null;
-    consumerRenders = 0;
+    publishes = 0;
     root = createRoot(getRootElement());
   });
   afterEach(async () => { await act(async () => root.unmount()); });
@@ -72,9 +74,9 @@ describe('Privy-backed account publishing', () => {
     assert.equal(published!.authenticated, true);
     assert.equal(published!.userId, 'user-1');
     assert.equal(published!.walletAddress, '0xAbC00000000000000000000000000000000000aa');
-    const rendersAfterPublish = consumerRenders;
+    const publishesAfterSettle = publishes;
     await act(async () => {});
-    /* Identity unchanged → no further renders should have been caused. */
-    assert.equal(consumerRenders, rendersAfterPublish);
+    /* Identity unchanged → no further publishes should have been caused. */
+    assert.equal(publishes, publishesAfterSettle);
   });
 });

@@ -70,6 +70,15 @@ export const LAUNCH_DESK_EXPLAINER = {
   enter: 'Enter the launch desk',
   dismiss: 'Not now',
   ask: 'What is this desk?',
+  /* What the desk enables, as the sequence a launch actually takes —
+     rendered as the plate's foot strip so the wide card explains itself
+     without opening the explainer. */
+  moves: [
+    'Name a tracker token',
+    'Anchor the opening to a live mark',
+    'Set the curve and the graduation line',
+    'Review the estimate — then file the record',
+  ],
 } as const;
 
 /** The launch desk's turret presence — not another row on the tape roll, so

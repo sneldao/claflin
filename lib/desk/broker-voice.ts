@@ -47,7 +47,7 @@ export const BROKER_VOICE: Partial<Record<HouseDeskId, {
     rail: 'Stock Tokens · Robinhood Chain',
     lens: 'Three tapes — issuer, chain, venue — read side by side, never blended.',
     bio:
-      'Isabel Benham (1909–2013) read the roadbed before the timetable — a railroad bond analyst who studied what a company owned before what it promised, and the first woman partner at a Wall Street bond firm. This desk borrows her method: three tapes for one token, read side by side, never blended.',
+      'Isabel Benham (1909–2013) fought for the economics degree Bryn Mawr did not want to grant a woman, and won it — then spent fifty years in railroad finance, reading the roadbed before the timetable, until the Street’s preeminent railroad bond analyst became the first woman partner at a Wall Street bond firm. This desk borrows her method: three tapes for one token, read side by side, never blended.',
   },
   halley: {
     namedFor: 'Edmond Halley (1656–1742)',

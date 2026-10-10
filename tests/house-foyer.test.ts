@@ -417,6 +417,14 @@ describe('house foyer', () => {
     assert.equal(window.localStorage.getItem('claflin.launchdesk.v1.seen'), '1', 'entry marks the gate seen');
   });
 
+  it('the plate reads its own moves — the desk explains itself without the explainer', () => {
+    const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
+    /* The move vocabulary is unique to the plate's foot strip. */
+    for (const move of ['Name a tracker token', 'Anchor the opening to a live mark', 'Set the curve and the graduation line', 'file the record']) {
+      assert.match(html, new RegExp(move), `plate carries the move "${move}"`);
+    }
+  });
+
   it('a seen caller gets the door directly — the gate never re-asks', async () => {
     window.localStorage.setItem('claflin.launchdesk.v1.seen', '1');
     let entered: string | null = null;

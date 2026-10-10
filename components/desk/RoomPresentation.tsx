@@ -10,6 +10,7 @@ import { RoomMarketClock } from './RoomMarketClock';
 import { useHouseGraphics, useHouseScene } from './HouseScene';
 import { GraphicsControl } from './GraphicsControl';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
+import { DeskAuthChip } from './DeskAuthChip';
 import { useMarketClock } from '@/lib/use-market-clock';
 import type { DeskPresentation } from '@/lib/desk-presentation';
 import styles from './WorkingDesk.module.css';
@@ -27,6 +28,10 @@ export function RoomPresentation({
   onPresentation,
   onSwitchDesk,
   onLeaveDesk,
+  showPaperImport = false,
+  anonymousCount = 0,
+  importStatus = 'idle',
+  onImportAnonymous,
   tape,
   tapeAt = null,
   children,
@@ -38,6 +43,10 @@ export function RoomPresentation({
   onPresentation: (mode: DeskPresentation) => void;
   onSwitchDesk: (id: HouseDeskId) => void;
   onLeaveDesk: () => void;
+  showPaperImport?: boolean;
+  anonymousCount?: number;
+  importStatus?: 'idle' | 'pending' | 'done' | 'failed';
+  onImportAnonymous?: () => void;
   /** Reference-tape freshness from the active desk — warms the shared lamp. */
   tape?: 'fresh' | 'stale';
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
@@ -110,6 +119,12 @@ export function RoomPresentation({
                 </button>
               </div>
             </details>
+            <DeskAuthChip
+              showPaperImport={showPaperImport}
+              anonymousCount={anonymousCount}
+              importStatus={importStatus}
+              onImportAnonymous={onImportAnonymous}
+            />
           </nav>
         </div>
       </header>

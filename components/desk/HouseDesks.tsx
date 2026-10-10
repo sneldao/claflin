@@ -149,6 +149,9 @@ function LaunchPlate({ desk, index, deskHref, onOpen }: {
             </button>
           )}
         </div>
+        <ol className={foyerStyles.launchPlateMoves}>
+          {LAUNCH_DESK_EXPLAINER.moves.map(move => <li key={move}>{move}</li>)}
+        </ol>
       </article>
     </div>
   );

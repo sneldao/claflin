@@ -109,6 +109,7 @@ describe('explain_concept voice tool', () => {
     assert.match(explainConceptResult('who are you'), /Hetty Green \(1834–1916\)/);
     assert.match(explainConceptResult('who are you'), /An AI character/);
     assert.match(explainConceptResult('who is Isabel'), /Isabel Benham \(1909–2013\)/);
+    assert.match(explainConceptResult('who is Isabel'), /Bryn Mawr/);
     assert.match(explainConceptResult('what is Halley named for'), /Edmond Halley \(1656–1742\)/);
     assert.match(explainConceptResult('who is the broker'), /Hetty Green/);
     /* A bare name with no name-ask stays a method/education question. */

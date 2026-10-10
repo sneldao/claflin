@@ -1845,9 +1845,10 @@
 
 /* The launch desk stands apart — a different room, not a fourth broker card.
    Ink-dipped rather than paper: the tape desks are printed cards, this is the
-   plate they print from. Set right against the left-aligned grid; the stamp
-   runs down the side, the name reads across, the way in is brass. The first
-   reach for it opens the explainer on its left before the door opens. */
+   plate they print from. It runs the full width beneath the card grid — the
+   extra measure carries the moves strip, so what the desk enables reads at a
+   glance without opening the explainer. The first reach still opens the
+   explainer on its left before the door opens. */
 .launchRow {
   display: flex;
   gap: 18px;
@@ -1856,8 +1857,8 @@
 }
 
 .launchPlate {
-  flex: 0 0 min(460px, 46%);
-  margin-left: auto;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 20px 26px;
   color: var(--ink, #e8e6d9);
   background: linear-gradient(160deg, #131b16, var(--deep, #0c1814));
@@ -1932,6 +1933,49 @@
   color: var(--ink, #e8e6d9);
 }
 
+/* The launch sequence, typeset as one ruled line across the plate's foot —
+   the wide card earns its measure by saying what the desk enables. */
+.launchPlateMoves {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  list-style: none;
+  border-top: 1px solid rgba(197, 172, 120, 0.22);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--muted, #aeb9aa);
+  counter-reset: move;
+}
+
+.launchPlateMoves li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.launchPlateMoves li::before {
+  counter-increment: move;
+  content: counter(move);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  color: var(--brass);
+}
+
+.launchPlateMoves li + li {
+  margin-left: 18px;
+}
+
+.launchPlateMoves li:not(:last-child)::after {
+  content: '→';
+  margin-left: 18px;
+  color: rgba(197, 172, 120, 0.55);
+}
+
 /* The explainer — a paper notice stood to the left of the ink plate. */
 .launchExplainer {
   flex: 1 1 320px;
@@ -1994,7 +2038,10 @@
   .launchPlate {
     flex: none;
     width: 100%;
-    margin-left: 0;
+  }
+
+  .launchPlateMoves li {
+    white-space: normal;
   }
 }
 

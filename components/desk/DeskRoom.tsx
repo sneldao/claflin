@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { HOUSE, type HouseDesk, type HouseDeskId } from '@/lib/house';
-import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { useRoomTone } from '@/lib/desk-tone';
+import { DeskAuthChip } from './DeskAuthChip';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { HouseMark } from './HouseMark';
 import { BrokerageRoom } from './BrokerageRoom';
@@ -47,7 +47,6 @@ export function DeskRoom({
   tapeAt?: number | null;
   children: ReactNode;
 }) {
-  const auth = useDeskAuth();
   const tone = useRoomTone(lineLive);
   const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true, tape, tapeAt });
 
@@ -150,44 +149,12 @@ export function DeskRoom({
             <span className={scene.soundBars} aria-hidden="true"><i /><i /><i /><i /></span>
             {tone.enabled ? (lineLive ? 'Sound paused' : 'Sound on') : 'Sound'}
           </button>
-          {auth.enabled && (auth.authenticated ? (
-            <span className={scene.authChip}>
-              <span className={scene.authLabel} title={auth.label ?? 'Signed in'}>{auth.label ?? 'Signed in'}</span>
-              {showPaperImport && anonymousCount > 0 && onImportAnonymous && (
-                <button
-                  type="button"
-                  className={scene.authLink}
-                  disabled={importStatus === 'pending'}
-                  onClick={() => { void onImportAnonymous(); }}
-                  title={`Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'} left on this browser before you signed in`}
-                >
-                  {importStatus === 'pending'
-                    ? 'Importing…'
-                    : `Import ${anonymousCount} paper ${anonymousCount === 1 ? 'record' : 'records'}`}
-                </button>
-              )}
-              {showPaperImport && anonymousCount === 0 && importStatus === 'failed' && onImportAnonymous && (
-                <button type="button" className={scene.authLink} onClick={() => { void onImportAnonymous(); }}>
-                  Retry import
-                </button>
-              )}
-              {showPaperImport && anonymousCount === 0 && importStatus === 'done' && (
-                <span className={scene.authLabel} role="status">Imported</span>
-              )}
-              <button type="button" onClick={auth.logout}>Sign out</button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={scene.authLink}
-              onClick={auth.login}
-              title={showPaperImport
-                ? "Optional. Keeps your paper record and Hetty's saved lines on your account instead of only this browser."
-                : 'Optional account sign-in. Jesse paper records stay in this browser.'}
-            >
-              {showPaperImport ? 'Sign in to keep your record' : 'Sign in'}
-            </button>
-          ))}
+          <DeskAuthChip
+            showPaperImport={showPaperImport}
+            anonymousCount={anonymousCount}
+            importStatus={importStatus}
+            onImportAnonymous={onImportAnonymous}
+          />
         </nav>
       </header>
       <main id="main-content" tabIndex={-1} ref={mainRef} className={scene.main}>
