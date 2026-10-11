@@ -123,16 +123,23 @@ export function explainHalleyTopic(topic: HalleyExplainTopic): string {
   return HALLEY_EXPLANATIONS[topic];
 }
 
-export function describeLaunchTerms(estimate: HalleyLaunchEstimate): string {
+export function describeLaunchTerms(estimate: HalleyLaunchEstimate, mode: 'paper' | 'live' = 'paper'): string {
   const i = estimate.intent;
   const anchor = estimate.anchor?.status === 'observed'
     ? `anchored to ${estimate.anchor.symbol}`
     : 'unanchored';
-  return `${i.symbol} — ${spokenAmount(i.supply)} tokens on a ${i.curve} curve, ${anchor}, opening near ${spokenAmount(estimate.openingPriceQuote)} ${i.quoteSymbol}, graduating at ${spokenAmount(i.graduationQuote)} ${i.quoteSymbol} collected. Paper only.`;
+  const tail = mode === 'live'
+    ? 'A projection — the wallet ceremony on screen decides any real mint.'
+    : 'Paper only.';
+  return `${i.symbol} — ${spokenAmount(i.supply)} tokens on a ${i.curve} curve, ${anchor}, opening near ${spokenAmount(estimate.openingPriceQuote)} ${i.quoteSymbol}, graduating at ${spokenAmount(i.graduationQuote)} ${i.quoteSymbol} collected. ${tail}`;
 }
 
 /** Context-aware opening — recognition before interrogation. */
-export function halleyOpeningLine(state: HalleyDeskState, foreground: DeskForegroundDocument): string {
+export function halleyOpeningLine(
+  state: HalleyDeskState,
+  foreground: DeskForegroundDocument,
+  mode: 'paper' | 'live' = 'paper',
+): string {
   if (foreground.kind === 'missing') {
     return 'Claflin, Halley speaking. That record is no longer here. Shall we return to the slip?';
   }
@@ -143,6 +150,9 @@ export function halleyOpeningLine(state: HalleyDeskState, foreground: DeskForegr
     return 'Claflin, Halley speaking. A curve is being drawn. Shall we wait for it together?';
   }
   if (foreground.kind === 'quotation' && state.estimate) {
+    if (mode === 'live') {
+      return `Claflin, Halley speaking. The projected curve is on the slip — ${describeLaunchTerms(state.estimate, 'live')} Continue to wallet review on screen to launch for real; filing paper never mints. What would you like to clarify?`;
+    }
     return `Claflin, Halley speaking. The projected curve is on the slip — ${describeLaunchTerms(state.estimate)} What would you like to clarify?`;
   }
   const draft = state.draft;

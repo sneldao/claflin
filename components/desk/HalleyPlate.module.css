@@ -105,6 +105,20 @@
 }
 .lead { margin: 0 0 18px; display: grid; gap: 10px; }
 .leadText { margin: 0 !important; font: italic 400 16px/1.5 var(--font-display), serif; }
+/* Stage headings span the two-column fields grid — a ruled section break,
+   not a misplaced cell. */
+.stageHeading {
+  grid-column: 1 / -1;
+  margin: 14px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--desk-paper-rule, #d8cdb4);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--desk-brass);
+}
+.stageHeading:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .needed { margin: 10px 0 0 !important; font-size: 12px; line-height: 1.5; color: var(--desk-paper-muted); }
 
 /* The curve chip's liquidity profile — small, quiet, currentColor. */

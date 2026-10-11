@@ -65,7 +65,7 @@ export const EVIDENCE_DISCLAIMER =
 export const LAUNCH_DESK_EXPLAINER = {
   kicker: 'THE LAUNCH DESK',
   title: 'This desk makes instruments; it does not trade them.',
-  body: 'Name a tracker token, pick its quote (USDC or an xStock), anchor its opening to an equity’s mark, choose the curve, set graduation. The estimate is a projection, never an order; a filed launch is a paper record in this browser. The token is a tracker — it is not stock ownership, and the house is not the issuer.',
+  body: 'Name a tracker token, pick its quote (USDC or an xStock), anchor its opening to an equity’s mark, choose the curve, set graduation. The estimate is a projection, never an order; a filed launch is a paper record in this browser and never creates the token. When the desk offers it, a separate wallet-signed ceremony can create the real token — the slip says plainly whether that path is open. The token is a tracker — it is not stock ownership, and the house is not the issuer.',
   redirect: 'If you meant to buy a stock token, the tape desks are above.',
   enter: 'Enter the launch desk',
   dismiss: 'Not now',

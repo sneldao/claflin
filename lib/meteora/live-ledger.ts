@@ -11,6 +11,7 @@
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
 import { fetchJson } from '../api-client';
 import type { SignatureStatus } from '../solana/tx-status';
+import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from './contracts';
 
 const KEY = 'claflin.halley.live-ledger.v1';
 const MAX_PER_WALLET = 20;
@@ -28,6 +29,11 @@ export interface HalleyLaunchRecord {
   quoteSymbol: string;
   baseMint: string;
   pool: string;
+  /** Optional display fields captured from the proposal intent at record
+      time — absent on entries written before they existed. */
+  name?: string;
+  anchorSymbol?: string | null;
+  curve?: LaunchCurvePreset;
   submittedAt: number;
   status: HalleyLaunchStatus;
   lastCheckedAt: number | null;
@@ -49,6 +55,9 @@ function parseRecord(value: unknown): HalleyLaunchRecord | null {
   return {
     ...r,
     configSignature: typeof r.configSignature === 'string' ? r.configSignature : null,
+    name: typeof r.name === 'string' && r.name ? r.name : undefined,
+    anchorSymbol: typeof r.anchorSymbol === 'string' ? r.anchorSymbol : r.anchorSymbol === null ? null : undefined,
+    curve: LAUNCH_CURVE_PRESETS.includes(r.curve as LaunchCurvePreset) ? r.curve : undefined,
     lastCheckedAt: typeof r.lastCheckedAt === 'number' ? r.lastCheckedAt : null,
   };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -24,9 +24,8 @@ import {
 import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
-import { HALLEY_LIVE_CLIENT_ENABLED } from '@/lib/meteora/flags';
 import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from '@/lib/meteora/contracts';
-import { draftIntent } from '@/lib/meteora/useHalleyDesk';
+import { halleyLiveIntent, liveStatusFromResponse, type HalleyLiveStatus } from '@/lib/meteora/live-status';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
@@ -200,26 +199,72 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   // Bootstrap still; the shared preference hook applies Room only after hydration.
   const [presentationMode, applyMode] = useState<DeskPresentation>('compact');
   const [lineLive, setLineLive] = useState(false);
-  /* The build flag only seeds this — the API probe is the honest answer on
-     deployments whose bundle never received NEXT_PUBLIC_* (Jesse's pattern). */
-  const [liveEnabled, setLiveEnabled] = useState(HALLEY_LIVE_CLIENT_ENABLED);
+  /* The runtime status endpoint is the only authority for the live path —
+     the build-time flag never shows live on its own (Jesse's probe pattern). */
+  const [liveStatus, setLiveStatus] = useState<HalleyLiveStatus>('checking');
+  const [liveWasEnabled, setLiveWasEnabled] = useState(false);
+  const [statusRetry, setStatusRetry] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    void fetch('/api/desk/halley/live/status')
+    void fetch('/api/desk/halley/live/status', { cache: 'no-store' })
       .then(async res => {
-        const body = await res.json() as { enabled?: boolean };
-        if (!cancelled && body.enabled === true) setLiveEnabled(true);
+        const body = await res.json().catch(() => null) as { enabled?: boolean } | null;
+        const next = liveStatusFromResponse(res.status, body);
+        if (!cancelled) {
+          setLiveStatus(next);
+          if (next === 'enabled') setLiveWasEnabled(true);
+        }
       })
-      .catch(() => { /* keep build-time flag */ });
+      .catch(() => { if (!cancelled) setLiveStatus('unavailable'); });
     return () => { cancelled = true; };
-  }, []);
+  }, [statusRetry]);
+  /* The caller's selected path. Paper is the SSR-first stance; live becomes
+     the default only once the probe says it is open — and never over an
+     explicit paper choice. A call connected or ringing before the probe
+     resolves pins the then-effective mode so a late answer can never
+     recontextualize a live voice session. */
+  const [modeChosen, setModeChosen] = useState<'paper' | 'live' | null>(null);
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [callRinging, setCallRinging] = useState(false);
+  const liveIntent = halleyLiveIntent(modeChosen, liveStatus, liveWasEnabled);
+  const mode = liveIntent && liveStatus === 'enabled' ? 'live' : 'paper';
+  const pinModeForCall = useCallback(() => {
+    setModeChosen(m => m ?? mode);
+  }, [mode]);
+  const handleLineLive = useCallback((live: boolean) => {
+    setLineLive(live);
+    if (live) pinModeForCall();
+  }, [pinModeForCall]);
+  const handleRinging = useCallback((ringing: boolean) => {
+    setCallRinging(ringing);
+    if (ringing) pinModeForCall();
+  }, [pinModeForCall]);
+  const callActive = lineLive || callRinging;
+  const chooseMode = (next: 'paper' | 'live') => {
+    if (next === mode) return;
+    if (callActive) {
+      setViewNotice('End or cancel the call before changing modes. Your launch instruction stays here.');
+      return;
+    }
+    if (liveBusy) {
+      setViewNotice('The wallet ceremony is in motion — let it settle before changing modes.');
+      return;
+    }
+    if (next === 'live' && liveStatus !== 'enabled') {
+      setViewNotice(liveStatus === 'checking'
+        ? 'Still checking whether the live launch path is open on this deployment.'
+        : 'The live launch path is not open on this deployment right now — paper stays available.');
+      return;
+    }
+    setViewNotice(null);
+    setModeChosen(next);
+  };
   const setMode = useDeskPresentation('halley', applyMode, halley.historyReady);
   const roomView = presentationMode === 'room';
   const [viewNotice, setViewNotice] = useState<string | null>(null);
   const changeView = (mode: DeskPresentation) => {
     if (mode === presentationMode) return;
-    const panel = document.getElementById('halley-line');
-    if (lineLive || panel?.getAttribute('data-call') === 'connecting') {
+    if (callActive) {
       setViewNotice('End or cancel the call before changing views. Your launch instruction stays here.');
       return;
     }
@@ -273,10 +318,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     && estimate.intent.quoteSymbol === 'USDC'
     ? Number(estimate.anchor.restingEquity.equityUsd)
     : null;
-  /* Live launch uses the reviewed estimate's intent when one exists — the
-     terms the caller actually reviewed — else the current draft's. */
-  const liveIntent = liveEnabled
-    ? (estimate?.intent ?? draftIntent(draft))
+  /* The ceremony binds to the reviewed estimate's intent only — never a
+     draft, never a lapsed estimate. */
+  const reviewIntent = halley.state.stage === 'review' && estimate && !expired
+    ? estimate.intent
     : null;
 
   const work = (
@@ -301,7 +346,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         </div>
       )}
       <ModeStamp
-        live={liveEnabled}
+        live={mode === 'live'}
         presentation={presentationMode}
         hint="Anchored launch curves on Meteora DBC — estimates are projections, never orders."
         market="SOLANA · HALLEY"
@@ -321,10 +366,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <DeskObjects />
         </>}
         <aside className={styles.support} aria-label="The launch desk’s direct line">
-          <HalleyCall halley={halley} onLiveChange={setLineLive} />
+          <HalleyCall halley={halley} deskMode={mode} liveBusy={liveBusy} onLiveChange={handleLineLive} onRingingChange={handleRinging} />
           <ReceiverShell
             stage={receiverStage}
-            label={reviewing ? 'REVIEW PAPER CURVE' : liveEnabled ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
+            label={reviewing ? 'REVIEW LAUNCH CURVE' : mode === 'live' ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
             reviewing={reviewing}
             brokerName="Halley"
             lineTargetId="halley-line"
@@ -332,7 +377,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             hideCue={roomView}
             eager={roomView}
           />
-          <HalleyPlate stage={viewed ? 'saved' : halley.state.stage} draft={draft} />
+          <HalleyPlate stage={viewed ? 'saved' : halley.state.stage} draft={draft} mode={mode} />
         </aside>
         {viewed ? (
           <HalleyRecordView record={viewed} onClose={halley.dismissRecord} onRemove={halley.removeRecord} />
@@ -346,8 +391,8 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <p className={styles.product}>
             Project a tracker-token launch curve on Meteora using an equity mark
             or an unanchored starting price.
-            {liveEnabled
-              ? ' Paper by default; a live launch deploys from your own wallet — you are the token’s creator.'
+            {mode === 'live'
+              ? ' A live launch deploys from your own wallet — you are the token’s creator.'
               : ' Paper only: no token is minted.'}
             {' '}A tracker is not stock ownership.
           </p>
@@ -363,6 +408,43 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           </details>
 
           <div className={styles.ticketSurface}>
+            <div role="group" aria-label="Launch path" className={styles.amountChips} data-halley-mode={mode}>
+              <button type="button" className={styles.amountChip} aria-pressed={mode === 'live'} data-active={mode === 'live'} onClick={() => chooseMode('live')}>
+                Create a real token
+              </button>
+              <button type="button" className={styles.amountChip} aria-pressed={mode === 'paper'} data-active={mode === 'paper'} onClick={() => chooseMode('paper')}>
+                Explore on paper
+              </button>
+            </div>
+            <p className={plate.hint}>
+              {mode === 'live'
+                ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate. A tracker is a new token, not equity, not pegged to the stock.'
+                : 'Paper path — project the curve and file a record in this browser; nothing is minted. A tracker is a new token, not equity, not pegged to the stock.'}
+            </p>
+            {liveStatus !== 'enabled' && (
+              <p className={plate.hint} role="status">
+                {liveStatus === 'checking'
+                  ? 'Checking whether the live launch path is open on this deployment…'
+                  : liveStatus === 'disabled'
+                    ? 'The live launch path is not open on this deployment — paper stays available.'
+                    : 'The live launch check did not answer — paper stays available.'}
+                {callActive
+                  ? modeChosen === 'live'
+                    ? ' The live path closed — the call keeps its rung guidance; end and re-ring for the updated path.'
+                    : ' The current call keeps the mode it rang with; end it to take a different path.'
+                  : ''}
+                {' '}
+                {liveStatus === 'unavailable' && (
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    onClick={() => { setLiveStatus('checking'); setStatusRetry(n => n + 1); }}
+                  >
+                    Check again
+                  </button>
+                )}
+              </p>
+            )}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
                 <h2>
@@ -404,16 +486,23 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 />
                 <div className={styles.slipActions}>
                   {!expired ? (
-                    <button type="button" className={styles.primary} onClick={() => { halley.file(); }}>
-                      File a paper launch<span aria-hidden="true"> · {secondsLeft}s</span>
-                    </button>
+                    mode === 'live' ? (
+                      <a href="#halley-live" className={styles.primary}>
+                        Continue to wallet review<span aria-hidden="true"> · {secondsLeft}s</span>
+                      </a>
+                    ) : (
+                      <button type="button" className={styles.primary} disabled={liveBusy} onClick={() => { halley.file(); }}>
+                        File a paper launch<span aria-hidden="true"> · {secondsLeft}s</span>
+                      </button>
+                    )
                   ) : (
-                    <button type="button" className={styles.primary} onClick={halley.estimate}>
+                    <button type="button" className={styles.primary} disabled={liveBusy} onClick={halley.estimate}>
                       Fresh estimate<span aria-hidden="true"> ↻</span>
                     </button>
                   )}
-                  <button type="button" className={styles.secondary} onClick={halley.revise}>Adjust the slip</button>
-                  <button type="button" className={styles.secondary} onClick={halley.cancel}>Discard</button>
+                  <button type="button" className={styles.secondary} disabled={liveBusy} onClick={halley.revise}>Adjust the slip</button>
+                  <button type="button" className={styles.secondary} disabled={liveBusy} onClick={halley.cancel}>Discard</button>
+                  {liveBusy && <p className={styles.notice} role="status">The wallet ceremony is in motion — the slip waits until it settles.</p>}
                 </div>
                 {expired && <p className={styles.notice} role="status">This estimate has lapsed — the figures above are its last reading.</p>}
               </div>
@@ -423,7 +512,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 <p className={styles.notice}>A paper launch intent — no mint was created, nothing settled.</p>
                 <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
                 <div className={styles.slipActions}>
-                  <button type="button" className={styles.primary} onClick={halley.cancel}>New instruction</button>
+                  <button type="button" className={styles.primary} disabled={liveBusy} onClick={halley.cancel}>New instruction</button>
                 </div>
               </div>
             ) : (
@@ -435,6 +524,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <button
                         type="button"
                         className={styles.secondary}
+                        disabled={liveBusy}
                         onClick={() => {
                           halley.edit({ ...HALLEY_EXAMPLE });
                           document.getElementById('halley-name')?.focus({ preventScroll: true });
@@ -446,6 +536,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
                 )}
                 <div className={styles.fields}>
+                  <h3 className={plate.stageHeading}>Name the tracker</h3>
                   <label htmlFor="halley-name">Tracker name</label>
                   <div className={plate.control}>
                     <input
@@ -472,6 +563,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     <p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p>
                   </div>
 
+                  <h3 className={plate.stageHeading}>Anchor the opening</h3>
                   <span id="halley-anchor-label">Anchor equity</span>
                   <div className={plate.control}>
                   <div role="group" aria-labelledby="halley-anchor-label" aria-describedby="halley-anchor-hint" className={styles.amountChips}>
@@ -487,7 +579,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
                   </div>
 
-                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read.</p>
+                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read. The anchor sets the starting reference — never a peg.</p>
                     {posture && posture.symbol === draft.anchorSymbol && (
                       <p className={plate.hint} role="status" data-testid="halley-anchor-posture">
                         {posture.basis === 'onchain' && posture.markUsd
@@ -509,6 +601,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     ))}
                   </div>
 
+                  <h3 className={plate.stageHeading}>Set the economics</h3>
                   <span id="halley-curve-label">Curve</span>
                   <div className={plate.control}>
                   <div role="group" aria-labelledby="halley-curve-label" aria-describedby="halley-curve-hint" className={styles.amountChips}>
@@ -539,7 +632,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onChange={event => halley.edit({ supply: event.target.value || null })}
                   />
 
-                    <p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection. Enter a positive whole number.</p>
+                    <p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number.</p>
                   </div>
 
                   <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
@@ -553,7 +646,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     placeholder="150"
                     onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
                   />
-                    <p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2. This does not launch a pool.</p>
+                    <p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool.</p>
                   </div>
                 </div>
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}
@@ -561,7 +654,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   <button
                     type="button"
                     className={styles.secondary}
-                    disabled={halley.state.stage === 'estimating'}
+                    disabled={halley.state.stage === 'estimating' || liveBusy}
                     onClick={halley.estimateUnanchored}
                   >
                     Drop the anchor — redraw unanchored
@@ -572,11 +665,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   <button
                     type="button"
                     className={styles.primary}
-                    disabled={halley.state.stage === 'estimating' || !complete}
+                    disabled={halley.state.stage === 'estimating' || !complete || liveBusy}
                     aria-describedby={!complete ? 'halley-needed' : undefined}
                     onClick={halley.estimate}
                   >
-                    {halley.state.stage === 'estimating' ? 'Drawing the curve…' : 'See the launch'}
+                    {halley.state.stage === 'estimating' ? 'Drawing the curve…' : mode === 'live' ? 'Review projected launch' : 'See paper projection'}
                   </button>
                 </div>
                 {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.join(', ')}.</p>}
@@ -584,8 +677,15 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             )}
           </div>
 
-          {liveEnabled && !viewed && (
-            <HalleyLiveLaunch intent={liveIntent} revision={estimate?.quotedAt ?? 0} />
+          {liveIntent && liveWasEnabled && !viewed && (
+            <HalleyLiveLaunch
+              intent={reviewIntent}
+              revision={reviewIntent ? estimate?.quotedAt ?? 0 : 0}
+              stale={halley.state.stage === 'review' && expired}
+              closed={liveStatus !== 'enabled'}
+              onRefreshEstimate={halley.estimate}
+              onBusyChange={setLiveBusy}
+            />
           )}
           {halley.records.length > 0 && (
             <details className={styles.aboutHetty}>

@@ -61,6 +61,76 @@ describe('Halley first-use guidance', () => {
     assert.match(source, /<HalleyPlate stage=\{viewed \? 'saved'/);
     assert.doesNotMatch(source, /CURVE_LABELS/);
   });
+  it('offers an explicit paper/live choice above the work, answered by the runtime probe', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(source, /aria-label="Launch path"/);
+    assert.match(source, /aria-pressed=\{mode === 'live'\}/);
+    assert.match(source, /aria-pressed=\{mode === 'paper'\}/);
+    assert.match(source, /Create a real token/);
+    assert.match(source, /Explore on paper/);
+    /* The status endpoint is authoritative — the build flag alone never
+       shows live, and failure closes to paper. */
+    assert.match(source, /\/api\/desk\/halley\/live\/status/);
+    assert.match(source, /setLiveStatus\('unavailable'\)/);
+    assert.doesNotMatch(source, /HALLEY_LIVE_CLIENT_ENABLED/);
+    /* Live is the default only after the probe answers enabled — and a
+       later failure closes the rendered path back to paper, even over a
+       live selection or a call-pinned mode. */
+    assert.match(source, /halleyLiveIntent\(modeChosen, liveStatus, liveWasEnabled\)/);
+    assert.match(source, /liveIntent && liveStatus === 'enabled' \? 'live' : 'paper'/);
+    /* The wallet ceremony stays mounted once live was seen — a mid-flight
+       probe flip closes its controls instead of unmounting it. */
+    assert.match(source, /liveIntent && liveWasEnabled && !viewed/);
+    assert.match(source, /closed=\{liveStatus !== 'enabled'\}/);
+    /* Mode switching waits for a connected or connecting call, same rule
+       as view switching. */
+    assert.match(source, /End or cancel the call before changing modes/);
+    /* The voice line is told the selected mode. */
+    assert.match(source, /deskMode=\{mode\}/);
+    assert.match(source, /<HalleyPlate[^>]*mode=\{mode\}/);
+    /* While the wallet ceremony runs, review controls and mode changes wait. */
+    assert.match(source, /disabled=\{liveBusy\} onClick=\{halley\.revise\}/);
+    assert.match(source, /disabled=\{liveBusy\} onClick=\{halley\.cancel\}/);
+    assert.match(source, /The wallet ceremony is in motion — let it settle before changing modes/);
+  });
+  it('keeps one continuous draft → review → wallet journey in live mode', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(source, /Review projected launch/);
+    assert.match(source, /See paper projection/);
+    assert.match(source, /Continue to wallet review/);
+    assert.match(source, /href="#halley-live"/);
+    /* Paper filing stays possible and never becomes a live prerequisite. */
+    assert.match(source, /File a paper launch/);
+    /* The ceremony mounts only on the selected live path after a live
+       probe answer, and is fed the unexpired reviewed intent only. */
+    assert.match(source, /liveIntent && liveWasEnabled && !viewed/);
+    assert.match(source, /intent=\{reviewIntent\}/);
+    assert.match(source, /!expired\s*\?\s*estimate\.intent\s*:\s*null/s);
+    assert.match(source, /stale=\{halley\.state\.stage === 'review' && expired\}/);
+    assert.match(source, /onBusyChange=\{setLiveBusy\}/);
+    /* Stage headings guide the same seven fields — nothing added. */
+    for (const heading of ['Name the tracker', 'Anchor the opening', 'Set the economics']) {
+      assert.match(source, new RegExp(`<h3 className=\\{plate\\.stageHeading\\}>${heading}</h3>`));
+    }
+    /* The heading class spans the whole fields grid — it can never push
+       a label/control pair into the wrong column. */
+    const css = readFileSync(new URL('../components/desk/HalleyPlate.module.css', import.meta.url), 'utf8');
+    assert.match(css, /\.stageHeading \{[^}]*grid-column: 1 \/ -1/s);
+    assert.match(source, /starting reference — never a peg/);
+    assert.match(source, /an economic term of the token/);
+  });
+  it('never shows a live path done from a paper filing alone', () => {
+    const plate = readFileSync(new URL('../components/desk/HalleyPlate.tsx', import.meta.url), 'utf8');
+    /* Live step three is the wallet ceremony, plainly named. */
+    assert.match(plate, /Review and sign with your wallet/);
+    /* On the live path, a paper-saved stage still reads as step three
+       open — nothing counts as live-done. */
+    assert.match(plate, /mode === 'live' && stage === 'saved' \? 3 : launchStep\(stage, draft\)/);
+    /* Paper keeps its saved-means-done reading. */
+    assert.equal(launchStep('saved', HALLEY_EXAMPLE), 'done');
+    /* The live stamp names the signer; it never claims the mint happened. */
+    assert.match(plate, /Live path · your wallet signs the mint/);
+  });
   it('draws every chip glyph from the same weights the launch config sends', () => {
     for (const preset of LAUNCH_CURVE_PRESETS) {
       assert.deepEqual([...CURVE_WEIGHT_SHAPES[preset]], PRESET_WEIGHTS[preset]);

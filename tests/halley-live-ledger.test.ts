@@ -61,6 +61,22 @@ describe('halley launch ledger', () => {
     assert.equal(loadLaunches(storage, WALLET).length, 1);
   });
 
+  it('carries optional display fields from the proposal intent and stays readable without them', () => {
+    const storage = memStorage();
+    upsertLaunch(storage, launch({ name: 'Test Tracker', anchorSymbol: 'NVDA', curve: 'flat' }));
+    const mine = loadLaunches(storage, WALLET);
+    assert.equal(mine[0].name, 'Test Tracker');
+    assert.equal(mine[0].anchorSymbol, 'NVDA');
+    assert.equal(mine[0].curve, 'flat');
+    /* Older rows have no such fields — they parse with them absent, never
+       fabricated. */
+    upsertLaunch(storage, launch({ proposalId: 'p2' }));
+    assert.equal(loadLaunches(storage, WALLET).find(r => r.proposalId === 'p2')?.name, undefined);
+    /* A malformed curve string is dropped, not kept. */
+    upsertLaunch(storage, launch({ proposalId: 'p3', curve: 'bogus' as never }));
+    assert.equal(loadLaunches(storage, WALLET).find(r => r.proposalId === 'p3')?.curve, undefined);
+  });
+
   it('maps the two-signature chain truth to honest launch statuses', () => {
     assert.equal(launchesFromChainStatuses('finalized', 'confirmed', 'submitted'), 'confirmed');
     assert.equal(launchesFromChainStatuses('confirmed', 'notFound', 'submitted'), 'partial');

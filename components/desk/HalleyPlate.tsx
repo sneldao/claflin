@@ -32,13 +32,17 @@ function CometEmblem() {
  * Says what the launch desk is for and where the caller stands in it. It reads
  * the draft and stage only; it never edits them or claims a result.
  */
-export function HalleyPlate({ stage, draft, portrait }: {
+export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
   stage: PlateStage;
   draft: HalleyDraft;
+  /** The caller's selected path — the stamp and the last step name it. */
+  mode?: 'paper' | 'live';
   /** Optional replacement for the emblem, e.g. a future character. */
   portrait?: ReactNode;
 }) {
-  const current = launchStep(stage, draft);
+  /* Paper 'done' means a filing — on the live path nothing is done until a
+     wallet-signed mint is verified, so 'saved' reads as step 3 still open. */
+  const current = mode === 'live' && stage === 'saved' ? 3 : launchStep(stage, draft);
   return (
     <section className={styles.plate} aria-labelledby="halley-plate-title">
       <figure className={styles.portrait}>
@@ -49,22 +53,27 @@ export function HalleyPlate({ stage, draft, portrait }: {
       <p className={styles.lede}>
         The tape desks price existing tokens. Here, you plan a new tracker and review its projected launch curve.
       </p>
-      <ol className={styles.steps} aria-label="Steps to a paper launch">
+      <ol className={styles.steps} aria-label={mode === 'live' ? 'Steps to a launch' : 'Steps to a paper launch'}>
         {LAUNCH_STEPS.map((step, index) => {
           const number = index + 1;
           const state = current === 'done' || number < current ? 'done' : number === current ? 'current' : 'todo';
+          const live3 = mode === 'live' && number === 3;
+          const title = live3 ? 'Review and sign with your wallet' : step.title;
+          const detail = live3
+            ? 'Review the projected curve, then continue to the wallet ceremony — your wallet signs the mint.'
+            : step.detail;
           return (
-            <li key={step.title} className={styles.step} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
+            <li key={title} className={styles.step} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
               <strong>
-                {step.title}
+                {title}
                 {state === 'done' && <span className={styles.srOnly}> (done)</span>}
               </strong>
-              {step.detail}
+              {detail}
             </li>
           );
         })}
       </ol>
-      <p className={styles.stamp}>Paper only · no token is minted</p>
+      <p className={styles.stamp}>{mode === 'live' ? 'Live path · your wallet signs the mint' : 'Paper only · no token is minted'}</p>
     </section>
   );
 }

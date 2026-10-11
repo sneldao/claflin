@@ -1,7 +1,7 @@
 /**
  * Halley's line — live ElevenLabs ConvAI session. Client tools execute
- * against useHalleyDesk in the caller's browser. Paper only — the desk
- * has no execution path, so the line can draft, estimate, and file
+ * against useHalleyDesk in the caller's browser. The line has no
+ * execution path in either mode — it can draft, estimate, and file
  * launch records, never sign or submit a real DBC launch.
  *
  * Same reliability model as TennieCall/JesseCall: every terminal event
@@ -78,12 +78,15 @@ function receiverClick(): void {
 
 function HalleyCallInner({
   halley,
+  deskMode = 'paper',
+  liveBusy = false,
   take = null,
   compactPlate = false,
   captions,
   onCaption,
   onClearDiscussion,
   onLiveChange,
+  onRingingChange,
   onUserSpoken,
   onAgentSpoken,
   endNote,
@@ -93,12 +96,17 @@ function HalleyCallInner({
   onSessionFailed,
 }: {
   halley: HalleyDesk;
+  /** The caller's selected path on the slip — voice still never signs. */
+  deskMode?: 'paper' | 'live';
+  /** A wallet ceremony is mid-flight — mutating tools politely refuse. */
+  liveBusy?: boolean;
   take?: string | null;
   compactPlate?: boolean;
   captions: Caption[];
   onCaption: (caption: Caption) => void;
   onClearDiscussion: () => void;
   onLiveChange?: (live: boolean) => void;
+  onRingingChange?: (ringing: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
   endNote: string | null;
@@ -109,12 +117,23 @@ function HalleyCallInner({
 }) {
   const halleyRef = useRef(halley);
   useEffect(() => { halleyRef.current = halley; });
+  const modeRef = useRef(deskMode);
+  useEffect(() => { modeRef.current = deskMode; });
+  /* The mode a call actually rang with — frozen at startSession so a later
+     status flip or selection can never recontextualize the session. */
+  const callModeRef = useRef<'paper' | 'live'>('paper');
+  const busyRef = useRef(liveBusy);
+  useEffect(() => { busyRef.current = liveBusy; });
   const captionsRef = useRef(captions);
   useEffect(() => { captionsRef.current = captions; });
   const onCaptionRef = useRef(onCaption);
   useEffect(() => { onCaptionRef.current = onCaption; });
 
-  const handlers = useMemo(() => halleyToolHandlers({ desk: () => halleyRef.current }), []);
+  const handlers = useMemo(() => halleyToolHandlers({
+    desk: () => halleyRef.current,
+    mode: () => callModeRef.current,
+    busy: () => busyRef.current,
+  }), []);
   useConversationClientTool<HalleyTools>('name_launch', p => handlers.name_launch(p));
   useConversationClientTool<HalleyTools>('choose_quote', p => handlers.choose_quote(p));
   useConversationClientTool<HalleyTools>('choose_anchor', p => handlers.choose_anchor(p));
@@ -199,6 +218,7 @@ function HalleyCallInner({
   const live = conversation.status === 'connected';
   const sdkConnecting = conversation.status === 'connecting';
   const ringing = dialing || sdkConnecting;
+  useEffect(() => { onRingingChange?.(ringing); }, [ringing, onRingingChange]);
 
   const statusRef = useRef(conversation.status);
   useEffect(() => { statusRef.current = conversation.status; });
@@ -300,7 +320,8 @@ function HalleyCallInner({
       return;
     }
     const d = halleyRef.current;
-    const ticketOpening = halleyOpeningLine(d.state, d.foreground);
+    callModeRef.current = modeRef.current;
+    const ticketOpening = halleyOpeningLine(d.state, d.foreground, callModeRef.current);
     const resume = mode === 'resume' && captionsRef.current.length > 0;
     const prior = resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Halley') : null;
     const opening = resume ? openingWithResume(ticketOpening, captionsRef.current) : ticketOpening;
@@ -312,7 +333,7 @@ function HalleyCallInner({
           desk_foreground: d.foreground.kind,
           desk_symbol: d.state.draft.symbol ?? '',
           desk_stage: d.state.stage,
-          desk_mode: 'paper',
+          desk_mode: callModeRef.current,
           prior_discussion: prior ?? '',
           discussion_resume: resume ? 'yes' : 'no',
         },
@@ -474,16 +495,22 @@ function HalleyCallInner({
  */
 export const HalleyCall = memo(function HalleyCall({
   halley,
+  deskMode = 'paper',
+  liveBusy = false,
   take = null,
   compactPlate = false,
   onLiveChange,
+  onRingingChange,
   onUserSpoken,
   onAgentSpoken,
 }: {
   halley: HalleyDesk;
+  deskMode?: 'paper' | 'live';
+  liveBusy?: boolean;
   take?: string | null;
   compactPlate?: boolean;
   onLiveChange?: (live: boolean) => void;
+  onRingingChange?: (ringing: boolean) => void;
   onUserSpoken?: (text: string) => void;
   onAgentSpoken?: (text: string) => void;
 }) {
@@ -506,12 +533,15 @@ export const HalleyCall = memo(function HalleyCall({
     <ConversationProvider key={sessionKey}>
       <HalleyCallInner
         halley={halley}
+        deskMode={deskMode}
+        liveBusy={liveBusy}
         take={take}
         compactPlate={compactPlate}
         captions={captions}
         onCaption={(c) => setCaptions(prev => appendCaption(prev, c))}
         onClearDiscussion={() => { setCaptions([]); setEndNote(null); setCallError(null); }}
         onLiveChange={handleLiveChange}
+        onRingingChange={onRingingChange}
         onUserSpoken={onUserSpoken}
         onAgentSpoken={onAgentSpoken}
         endNote={endNote}

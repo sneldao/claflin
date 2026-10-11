@@ -44,6 +44,12 @@ export type HalleyToolName =
 export interface HalleyToolContext {
   /** The desk as it is right now — read fresh on every call. */
   desk: () => HalleyDesk;
+  /** The caller's selected path — 'live' only when the visitor chose it on
+      screen; the tools themselves still cannot sign or submit. */
+  mode?: () => 'paper' | 'live';
+  /** A wallet ceremony is mid-flight — mutating tools politely refuse so a
+      spoken edit can never strand a prepared or half-signed proposal. */
+  busy?: () => boolean;
   /** Count of finished caller utterances so far — see Tennie's note. */
   userTurn?: () => number;
 }
@@ -55,8 +61,11 @@ const ESTIMATE_POLL_MS = 150;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Record<HalleyToolName, HalleyToolHandler> {
+export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolContext): Record<HalleyToolName, HalleyToolHandler> {
   let pendingDelete: { id: string; turn: number; at: number } | null = null;
+  const deskMode = () => mode?.() ?? 'paper';
+  const CEREMONY_BUSY = 'The wallet ceremony is in motion on screen — let it settle, then tell me the change.';
+  const ceremonyBusy = () => busy?.() === true;
 
   const returnToTicket = (d: HalleyDesk) => {
     d.dismissRecord();
@@ -72,6 +81,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async name_launch(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const name = String(p.name ?? '').trim();
       const symbol = String(p.symbol ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!name || name.length < 2 || name.length > 40) {
@@ -87,6 +97,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async choose_quote(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const query = String(p.quote ?? '');
       const quote = resolveHalleyQuote(query);
       if (!quote) {
@@ -101,6 +112,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async choose_anchor(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const query = String(p.anchor ?? '');
       if (/^(none|no\s+anchor|unanchored|nothing)$/i.test(query.trim())) {
         d.edit({ anchorSymbol: null });
@@ -117,6 +129,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async choose_curve(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const query = String(p.curve ?? '');
       const curve = resolveHalleyCurve(query);
       if (!curve) {
@@ -129,6 +142,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async set_supply(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const clean = String(p.supply ?? '').trim().replace(/[,_\s]/g, '');
       if (!/^[1-9]\d*$/.test(clean)) {
         return `"${clean || 'That'}" is not a usable supply — say a whole number of tokens, like a million.`;
@@ -140,6 +154,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async set_graduation(p) {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const clean = String(p.amount ?? '').trim().replace(/[,_\s]/g, '');
       if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean) || !/[1-9]/.test(clean)) {
         return `"${clean || 'That'}" is not a usable graduation line — say a positive amount of the quote asset.`;
@@ -151,6 +166,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async request_launch_estimate() {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       const draft = d.state.draft;
       if (!draft.name || !draft.symbol) return 'Name the launch first — a name and a symbol.';
       if (!draft.quoteSymbol) return 'Pick the quote asset — USDC, or an xStock for a pair.';
@@ -163,6 +179,9 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
         await sleep(ESTIMATE_POLL_MS);
         const current = desk();
         if (current.state.stage === 'review' && current.state.estimate) {
+          if (deskMode() === 'live') {
+            return `Projected curve on the slip: ${describeLaunchTerms(current.state.estimate, 'live')} Tell the caller to continue to wallet review on screen — a paper filing never creates the mint.`;
+          }
           return `Projected curve on the slip: ${describeLaunchTerms(current.state.estimate)} Ask whether the caller wants to file this paper launch.`;
         }
         if (current.state.stage === 'draft') {
@@ -177,6 +196,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async file_paper_launch() {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       if (d.foreground.kind === 'receipt') return 'That launch is already filed.';
       if (!d.historyReady) return 'Browser storage is unavailable, so nothing can be recorded right now.';
       if (d.state.stage !== 'review' || !d.state.estimate) {
@@ -187,13 +207,15 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
       const filed = d.file();
       if (!filed) return desk().state.notice ?? 'The record could not be filed. Review a fresh estimate.';
       const estimate = desk().state.estimate;
+      const liveNote = deskMode() === 'live' ? ' It is a paper record — not the path to a live mint.' : '';
       return estimate
-        ? `Filed — ${describeLaunchTerms(estimate)} It's in the paper ledger. No mint was created.`
-        : 'Filed — it is in the paper ledger. No mint was created.';
+        ? `Filed — ${describeLaunchTerms(estimate)} It's in the paper ledger. No mint was created.${liveNote}`
+        : `Filed — it is in the paper ledger. No mint was created.${liveNote}`;
     },
 
     async open_record(p) {
       const { d } = guard();
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       if (!d.historyReady) return 'Browser storage is unavailable, so the records cannot be read right now.';
       const entry = findHalleyRecord(d.records, d.foreground.recordId, String(p.query ?? ''));
       if (!entry) return d.records.length === 0 ? 'There are no paper launches on file yet.' : 'No filed record matches that.';
@@ -240,6 +262,7 @@ export function halleyToolHandlers({ desk, userTurn }: HalleyToolContext): Recor
     async cancel_instruction() {
       const { d, refusal } = guard();
       if (refusal) return refusal;
+      if (ceremonyBusy()) return CEREMONY_BUSY;
       d.cancel();
       return 'The slip is clear.';
     },

@@ -86,6 +86,20 @@ describe('halley voice tools', () => {
     assert.match(line, /Paper only/);
   });
 
+  it('in live mode the readback is a projection that defers to the wallet ceremony', () => {
+    const estimate = estimateLaunch(intent, anchor, 1_900_000_000_000);
+    const line = describeLaunchTerms(estimate, 'live');
+    assert.doesNotMatch(line, /Paper only/);
+    assert.match(line, /wallet ceremony/);
+    const state = emptyState();
+    state.stage = 'review';
+    state.estimate = estimate;
+    const opening = halleyOpeningLine(state, fg('quotation'), 'live');
+    assert.match(opening, /Continue to wallet review on screen/);
+    assert.match(opening, /filing paper never mints/);
+    assert.doesNotMatch(opening, /paper-only/i);
+  });
+
   it('says plainly that a tracker token is not stock ownership', () => {
     assert.match(explainHalleyTopic('tracker-token'), /not.*claim.*stock ownership/i);
     assert.match(explainHalleyTopic('paper-mode'), /never an order|Nothing mints/i);
@@ -182,6 +196,49 @@ describe('halley desk tools', () => {
     const desk = fakeDesk();
     assert.match(await handlers(desk).explain_concept({ topic: 'the anchor' }), /Pyth mark/);
     assert.match(await handlers(desk).explain_concept({ topic: 'the weather' }), /do not have a reviewed explanation/);
+  });
+
+  it('in live mode the estimate success routes the caller to wallet review, never to filing paper', async () => {
+    const estimate = estimateLaunch(intent, anchor, 1_900_000_000_000);
+    const desk = fakeDesk({
+      state: { ...emptyState(), draft: { ...intent } },
+      estimate() {
+        this.state = { ...this.state, stage: 'review', estimate };
+        this.foreground = fg('quotation');
+      },
+    });
+    const live = halleyToolHandlers({ desk: () => desk, mode: () => 'live' });
+    const answer = await live.request_launch_estimate({});
+    assert.match(answer, /continue to wallet review on screen/);
+    assert.match(answer, /paper filing never creates the mint/);
+    assert.doesNotMatch(answer, /wants to file this paper launch/);
+  });
+
+  it('in paper mode the estimate success still offers a paper filing', async () => {
+    const estimate = estimateLaunch(intent, anchor, 1_900_000_000_000);
+    const desk = fakeDesk({
+      state: { ...emptyState(), draft: { ...intent } },
+      estimate() {
+        this.state = { ...this.state, stage: 'review', estimate };
+        this.foreground = fg('quotation');
+      },
+    });
+    const answer = await handlers(desk).request_launch_estimate({});
+    assert.match(answer, /file this paper launch/);
+  });
+
+  it('file_paper_launch stays explicit paper-only even under the live path', async () => {
+    const estimate = estimateLaunch(intent, anchor, 1_900_000_000_000);
+    const state = { ...emptyState(), stage: 'review' as const, estimate };
+    const desk = fakeDesk({
+      state,
+      foreground: fg('quotation'),
+      file: () => true,
+    });
+    const live = halleyToolHandlers({ desk: () => desk, mode: () => 'live' });
+    const answer = await live.file_paper_launch({});
+    assert.match(answer, /No mint was created/);
+    assert.match(answer, /not the path to a live mint/);
   });
 });
 
