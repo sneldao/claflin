@@ -201,10 +201,20 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
         lenis = instance;
         const snapInstance = new snapModule.default(instance, {
           type: 'proximity',
-          distanceThreshold: '65%',
+          /* Threshold is viewport-relative — at 65% a tall room's middle
+             still fell inside the claim zone and every pause snapped back
+             to the room's top. 20% keeps the settle at boundaries only. */
+          distanceThreshold: '20%',
           debounce: 120,
         });
-        snapInstance.addElements(Array.from(mainRef.current.children) as HTMLElement[]);
+        /* One stop per room, plus marked sub-stops (the launch plate is its
+           own room inside the desks section — it must be reachable, not
+           buried between two section boundaries). */
+        const stops = [
+          ...Array.from(mainRef.current.children),
+          ...Array.from(mainRef.current.querySelectorAll('[data-snap-stop]')),
+        ] as HTMLElement[];
+        snapInstance.addElements(stops);
         snap = snapInstance;
       })
       .catch(() => { /* native scroll stands if the module fails to load */ });

@@ -134,7 +134,7 @@ function LaunchPlate({ desk, index, deskHref, onOpen }: {
   };
 
   return (
-    <div className={foyerStyles.launchRow} style={{ '--i': index } as CSSProperties}>
+    <div className={foyerStyles.launchRow} data-snap-stop style={{ '--i': index } as CSSProperties}>
       {open && (
         <aside ref={explainerRef} id={explainerId} className={foyerStyles.launchExplainer} aria-label="About the launch desk">
           <p className={foyerStyles.deskMeta}>{LAUNCH_DESK_EXPLAINER.kicker}</p>

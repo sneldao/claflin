@@ -2,6 +2,7 @@ import './jsdom-setup';
 import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -21,6 +22,7 @@ const originalFetch = globalThis.fetch;
 const originalScrollTo = window.scrollTo;
 const originalMatchMedia = window.matchMedia;
 const originalSetItem = window.Storage.prototype.setItem;
+const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 function text(el: Element | null | undefined) {
   return el?.textContent ?? '';
@@ -461,6 +463,20 @@ describe('house foyer', () => {
     assert.equal(enterLink!.getAttribute('href'), '/?desk=halley');
     await act(async () => click(enterLink!));
     assert.equal(entered, 'halley');
+  });
+
+  it('the scroll walk cannot trap a tall room — snap stays a boundary settle', () => {
+    /* distanceThreshold is viewport-relative: at '65%' the desks room's
+       claim zone reached past its middle, so every pause inside snapped
+       back to "Meet the brokers" and the launch plate was unreachable. */
+    const foyer = source('components/desk/HouseFoyer.tsx');
+    assert.match(foyer, /distanceThreshold: '20%'/);
+    assert.doesNotMatch(foyer, /distanceThreshold: '(?:[3-9]\d|100)%'/);
+    /* The launch plate is its own room inside the desks section — it gets
+       a marked sub-stop so snap settles on it instead of burying it. */
+    assert.match(foyer, /querySelectorAll\('\[data-snap-stop\]'\)/);
+    const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
+    assert.match(html, /data-snap-stop/);
   });
 });
 
