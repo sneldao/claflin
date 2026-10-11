@@ -25,6 +25,7 @@ function DeskCard({ desk, index, deskHref, onOpen }: {
   return (
     <article
       className={foyerStyles.deskCard}
+      data-desk={desk.id}
       data-flipped={flipped || undefined}
       style={{ '--i': index } as CSSProperties}
     >

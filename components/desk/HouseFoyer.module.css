@@ -2132,6 +2132,20 @@
   outline-offset: 2px;
 }
 
+/* Hetty's rail is Base — her tab keeps the index-tab cut but runs steel
+   where the others run brass, the same cool sheen her card film wears. */
+.deskCard[data-desk='hetty'] .filmTab {
+  color: #101a26;
+  background: linear-gradient(180deg, #c3d2e4, #8ba3c2);
+  border-color: rgba(64, 92, 128, 0.55);
+}
+
+.deskCard[data-desk='hetty'] .filmWatch {
+  color: #101a26;
+  background: linear-gradient(180deg, #c3d2e4, #8ba3c2);
+  border-color: rgba(20, 30, 44, 0.6);
+}
+
 .filmPoster {
   width: 100%;
   aspect-ratio: 16 / 9;

@@ -28,4 +28,13 @@ export const DESK_FILMS: Partial<Record<HouseDeskId, DeskFilm>> = {
     transcript:
       "Jesse Livermore posted the chalk in a Boston bucket shop at fifteen, and kept his own line in a pocket notebook long before he trusted the market's. The shops threw him out for winning too often — the Boy Plunger, they called him. So he went to New York and read the tape the way nobody else did. In nineteen twenty-nine he took the short side of the greatest crash the Street had ever seen — reputedly a hundred million dollars on a market's ruin. My desk borrows his discipline: price action and timing first, story second.",
   },
+  hetty: {
+    src: '/media/hetty-card-v1.mp4',
+    poster: '/media/hetty-card-v1-poster.jpg',
+    length: '39 s',
+    hook: 'Who Hetty was — the whaling fortune, the panic of ’07 — and what the desk borrows from her.',
+    namesake: 'Hetty Green',
+    transcript:
+      'Hetty Green inherited a whaling fortune and spent fifty years making it the largest a woman had ever held. She kept her own counsel and her own cash — read every balance sheet herself before she trusted a number. When the Street panicked, Hetty was the one with money: she bought when everyone else was selling, and in nineteen oh-seven she helped carry the City of New York itself. They called her the Witch of Wall Street; the record calls her patient. My desk borrows her habit: downside first, conviction second.',
+  },
 };
