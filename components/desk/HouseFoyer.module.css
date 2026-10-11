@@ -2045,16 +2045,152 @@
   }
 }
 
+/* The card is the wrapper — the paper itself is dealt to the two faces so
+   the whole card can turn. Desks with a film carry an index tab on the
+   front; one touch turns the card, and the verso says what the film is —
+   a second touch plays it. */
 .deskCard {
   display: flex;
   flex-direction: column;
+}
+
+.cardFlip {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  perspective: 1400px;
+}
+
+.cardFace {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  min-height: 0;
   padding: 24px 26px;
   color: var(--paper-ink);
   background: linear-gradient(160deg, #efe5ca, var(--paper));
   border: 1px solid rgba(120, 95, 55, 0.34);
   border-top: 3px solid var(--brass-dim);
   border-radius: 3px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.cardFront {
+  position: relative;
+}
+
+.cardBack {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, #e6dabb, #d7c8a4);
+}
+
+.deskCard[data-flipped] .cardFront {
+  transform: rotateY(-180deg);
+}
+
+.deskCard[data-flipped] .cardBack {
+  transform: rotateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cardFace {
+    transition: transform 0.7s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+}
+
+/* The index tab rides the card's top edge — discoverable without raising
+   its voice over the desk itself. */
+.filmTab {
+  position: absolute;
+  top: -12px;
+  right: 18px;
+  z-index: 2;
+  padding: 5px 12px 7px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #1b1408;
+  background: linear-gradient(180deg, #e3cf9e, var(--brass));
+  border: 1px solid rgba(120, 95, 55, 0.5);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  transform: rotate(1.4deg);
+  transition: transform var(--dur-1, 160ms) ease;
+}
+
+.filmTab:hover {
+  transform: rotate(0.4deg) translateY(-2px);
+}
+
+.filmTab:focus-visible {
+  outline: 2px solid #241d10;
+  outline-offset: 2px;
+}
+
+.filmPoster {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid rgba(120, 95, 55, 0.4);
+  border-radius: 2px;
+  filter: sepia(0.25) contrast(0.96);
+}
+
+.filmTitle {
+  margin: 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  color: #241d10;
+}
+
+.filmHook {
+  flex: 1;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: #3a3122;
+}
+
+.filmActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: auto;
+}
+
+.filmWatch {
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 0.84rem;
+  color: #1b1408;
+  background: linear-gradient(180deg, #e3cf9e, var(--brass));
+  border: 1px solid rgba(20, 16, 10, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filmWatch:hover {
+  filter: brightness(1.06);
+}
+
+.filmBack {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  color: #5a4d33;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 .deskMeta {

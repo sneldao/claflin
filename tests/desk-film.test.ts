@@ -5,46 +5,50 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DESK_FILMS } from '../lib/desk-films';
-import { DeskFilm } from '../components/desk/DeskFilm';
-import { RoomPresentation } from '../components/desk/RoomPresentation';
+import { HouseDesks } from '../components/desk/HouseDesks';
 import { HOUSE_DESKS } from '../lib/house';
 
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const jesse = HOUSE_DESKS.find(desk => desk.id === 'jesse')!;
-const hetty = HOUSE_DESKS.find(desk => desk.id === 'hetty')!;
 
-const renderRoom = (desk: typeof jesse) => renderToStaticMarkup(createElement(RoomPresentation, {
-  desk,
-  stage: 'arrival',
-  view: 'desk',
-  presentation: 'room',
-  onPresentation: () => {},
-  onSwitchDesk: () => {},
-  onLeaveDesk: () => {},
-}, createElement('div')));
+const renderDesks = () => renderToStaticMarkup(createElement(HouseDesks, {
+  desks: HOUSE_DESKS,
+  deskHref: (id: string) => `/?desk=${id}`,
+  onOpen: () => () => {},
+}));
 
 describe('desk film', () => {
   it('has a card for jesse and none for desks without one', () => {
     assert.ok(DESK_FILMS.jesse, 'jesse card registered');
     assert.match(DESK_FILMS.jesse!.src, /jesse-card/);
-    assert.match(DESK_FILMS.jesse!.transcript, /bucket shops/);
+    assert.match(DESK_FILMS.jesse!.transcript, /bucket shop/);
+    assert.match(DESK_FILMS.jesse!.transcript, /reputedly/);
+    assert.ok(DESK_FILMS.jesse!.hook && DESK_FILMS.jesse!.namesake);
     assert.ok(!DESK_FILMS.hetty && !DESK_FILMS.isabel && !DESK_FILMS.halley);
   });
 
-  it('renders the chip only where a card exists', () => {
-    const jesseChip = renderToStaticMarkup(createElement(DeskFilm, { deskId: 'jesse' }));
-    assert.match(jesseChip, /The film/);
-    const hettyChip = renderToStaticMarkup(createElement(DeskFilm, { deskId: 'hetty' }));
-    assert.equal(hettyChip, '');
+  it('turns the foyer card over only where a film exists', () => {
+    const html = renderDesks();
+    /* the tab and the verso's title each appear exactly once — jesse only */
+    assert.equal((html.match(/The film/g) ?? []).length, 2);
+    assert.equal((html.match(/Watch the film/g) ?? []).length, 1);
+    /* the verso is inert until the card turns */
+    assert.match(html, /aria-hidden="true"/);
+    /* nothing autoplays: the overlay mounts only on the watch action */
+    assert.doesNotMatch(html, /<video/);
+    assert.doesNotMatch(html, /aria-modal/);
   });
 
-  it('reaches the room nav and the compact nav', () => {
-    assert.match(renderRoom(jesse), /The film/);
-    assert.doesNotMatch(renderRoom(hetty), /The film/);
-    assert.match(source('components/desk/DeskRoom.tsx'), /<DeskFilm deskId=\{deskId\}/);
+  it('lives on the card, not the nav', () => {
+    const card = source('components/desk/HouseDesks.tsx');
+    assert.match(card, /DESK_FILMS\[desk\.id\]/);
+    assert.match(card, /FilmOverlay/);
+    assert.match(card, /aria-expanded=\{flipped\}/);
+    assert.doesNotMatch(source('components/desk/RoomPresentation.tsx'), /DeskFilm/);
+    assert.doesNotMatch(source('components/desk/DeskRoom.tsx'), /DeskFilm/);
     /* the film never preloads the bytes — poster only until chosen */
-    const film = source('components/desk/DeskFilm.tsx');
-    assert.match(film, /poster=\{film\.poster\}/);
-    assert.match(film, /aria-modal="true"/);
+    const overlay = source('components/desk/FilmOverlay.tsx');
+    assert.match(overlay, /poster=\{film\.poster\}/);
+    assert.match(overlay, /aria-modal="true"/);
+    assert.match(overlay, /preload="metadata"/);
   });
 });

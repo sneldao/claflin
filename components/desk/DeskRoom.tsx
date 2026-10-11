@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HOUSE, type HouseDesk, type HouseDeskId } from '@/lib/house';
 import { useRoomTone } from '@/lib/desk-tone';
 import { DeskAuthChip } from './DeskAuthChip';
-import { DeskFilm } from './DeskFilm';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { HouseMark } from './HouseMark';
 import { BrokerageRoom } from './BrokerageRoom';
@@ -150,7 +149,6 @@ export function DeskRoom({
             <span className={scene.soundBars} aria-hidden="true"><i /><i /><i /><i /></span>
             {tone.enabled ? (lineLive ? 'Sound paused' : 'Sound on') : 'Sound'}
           </button>
-          <DeskFilm deskId={deskId} />
           <DeskAuthChip
             showPaperImport={showPaperImport}
             anonymousCount={anonymousCount}

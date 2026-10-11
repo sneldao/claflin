@@ -3,10 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react';
 import type { HouseDesk, HouseDeskId } from '@/lib/house';
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
+import { DESK_FILMS } from '@/lib/desk-films';
 import { signatureLine } from '@/lib/desk-notes';
 import { LAUNCH_DESK_EXPLAINER, LINE_IDENTITY } from '@/lib/desk/ui-copy';
 import { launchDeskSeen, markLaunchDeskSeen } from '@/lib/desk/launch-explainer';
 import { NameplateNote } from './NameplateNote';
+import { FilmOverlay } from './FilmOverlay';
 import foyerStyles from './HouseFoyer.module.css';
 
 function DeskCard({ desk, index, deskHref, onOpen }: {
@@ -17,26 +19,64 @@ function DeskCard({ desk, index, deskHref, onOpen }: {
 }) {
   const voice = BROKER_VOICE[desk.id];
   const line = signatureLine(desk.id);
+  const film = DESK_FILMS[desk.id];
+  const [flipped, setFlipped] = useState(false);
+  const [watching, setWatching] = useState(false);
   return (
-    <article className={foyerStyles.deskCard} style={{ '--i': index } as CSSProperties}>
-      <p className={foyerStyles.deskMeta}>{LINE_IDENTITY} · {voice?.rail ?? desk.market}</p>
-      <h3 className={foyerStyles.deskName}>{desk.shortName}</h3>
-      {voice && <p className={foyerStyles.deskLens}>{voice.lens}</p>}
-      {!voice && <p className={foyerStyles.deskLens}>{desk.approach} Typed instructions only — no line.</p>}
-      {line ? (
-        <blockquote className={foyerStyles.deskQuote}>
-          <p>{line.text}</p>
-          <cite>— {line.attribution}</cite>
-        </blockquote>
-      ) : (
-        /* No recorded line survives for her — the slot holds a fleuron so
-           the card keeps the same measure as the desks that do quote one. */
-        <div className={foyerStyles.deskQuoteSlot} aria-hidden="true">❦</div>
-      )}
-      <NameplateNote deskId={desk.id} namedFor={voice?.namedFor ?? desk.name} />
-      <a className={foyerStyles.deskOpen} href={deskHref(desk.id)} onClick={onOpen(desk.id)}>
-        Visit {desk.shortName}’s desk
-      </a>
+    <article
+      className={foyerStyles.deskCard}
+      data-flipped={flipped || undefined}
+      style={{ '--i': index } as CSSProperties}
+    >
+      <div className={foyerStyles.cardFlip}>
+        <div className={`${foyerStyles.cardFace} ${foyerStyles.cardFront}`} inert={flipped}>
+          {film && (
+            <button
+              type="button"
+              className={foyerStyles.filmTab}
+              aria-expanded={flipped}
+              onClick={() => setFlipped(true)}
+            >
+              The film · {film.length}
+            </button>
+          )}
+          <p className={foyerStyles.deskMeta}>{LINE_IDENTITY} · {voice?.rail ?? desk.market}</p>
+          <h3 className={foyerStyles.deskName}>{desk.shortName}</h3>
+          {voice && <p className={foyerStyles.deskLens}>{voice.lens}</p>}
+          {!voice && <p className={foyerStyles.deskLens}>{desk.approach} Typed instructions only — no line.</p>}
+          {line ? (
+            <blockquote className={foyerStyles.deskQuote}>
+              <p>{line.text}</p>
+              <cite>— {line.attribution}</cite>
+            </blockquote>
+          ) : (
+            /* No recorded line survives for her — the slot holds a fleuron so
+               the card keeps the same measure as the desks that do quote one. */
+            <div className={foyerStyles.deskQuoteSlot} aria-hidden="true">❦</div>
+          )}
+          <NameplateNote deskId={desk.id} namedFor={voice?.namedFor ?? desk.name} />
+          <a className={foyerStyles.deskOpen} href={deskHref(desk.id)} onClick={onOpen(desk.id)}>
+            Visit {desk.shortName}’s desk
+          </a>
+        </div>
+        {film && (
+          <div className={`${foyerStyles.cardFace} ${foyerStyles.cardBack}`} inert={!flipped} aria-hidden={!flipped}>
+            <img className={foyerStyles.filmPoster} src={film.poster} alt="" loading="lazy" />
+            <p className={foyerStyles.deskMeta}>The desk’s card · {film.length}</p>
+            <h3 className={foyerStyles.filmTitle}>The film</h3>
+            <p className={foyerStyles.filmHook}>{film.hook}</p>
+            <div className={foyerStyles.filmActions}>
+              <button type="button" className={foyerStyles.filmWatch} onClick={() => setWatching(true)}>
+                Watch the film
+              </button>
+              <button type="button" className={foyerStyles.filmBack} onClick={() => setFlipped(false)}>
+                Turn back
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      {watching && film && <FilmOverlay film={film} onClose={() => setWatching(false)} />}
     </article>
   );
 }
