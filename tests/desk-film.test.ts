@@ -17,7 +17,7 @@ const renderDesks = () => renderToStaticMarkup(createElement(HouseDesks, {
 }));
 
 describe('desk film', () => {
-  it('has a card for jesse and hetty and none for desks without one', () => {
+  it('has a card for jesse, hetty and tennie and none for desks without one', () => {
     assert.ok(DESK_FILMS.jesse, 'jesse card registered');
     assert.match(DESK_FILMS.jesse!.src, /jesse-card/);
     assert.match(DESK_FILMS.jesse!.transcript, /bucket shop/);
@@ -28,14 +28,19 @@ describe('desk film', () => {
     assert.match(DESK_FILMS.hetty!.transcript, /whaling fortune/);
     assert.match(DESK_FILMS.hetty!.namesake, /Hetty Green/);
     assert.ok(DESK_FILMS.hetty!.hook);
-    assert.ok(!DESK_FILMS.tennie && !DESK_FILMS.halley);
+    assert.ok(DESK_FILMS.tennie, 'tennie card registered');
+    assert.match(DESK_FILMS.tennie!.src, /tennie-card/);
+    assert.match(DESK_FILMS.tennie!.transcript, /Woodhull, Claflin/);
+    assert.match(DESK_FILMS.tennie!.namesake, /Tennie Claflin/);
+    assert.ok(DESK_FILMS.tennie!.hook);
+    assert.ok(!DESK_FILMS.halley);
   });
 
   it('turns the foyer card over only where a film exists', () => {
     const html = renderDesks();
     /* the tab and the verso's title each appear once per film card */
-    assert.equal((html.match(/The film/g) ?? []).length, 4);
-    assert.equal((html.match(/Watch the film/g) ?? []).length, 2);
+    assert.equal((html.match(/The film/g) ?? []).length, 6);
+    assert.equal((html.match(/Watch the film/g) ?? []).length, 3);
     /* the verso is inert until the card turns */
     assert.match(html, /aria-hidden="true"/);
     /* nothing autoplays: the overlay mounts only on the watch action */

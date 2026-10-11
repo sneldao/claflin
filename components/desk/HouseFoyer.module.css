@@ -2146,6 +2146,20 @@
   border-color: rgba(20, 30, 44, 0.6);
 }
 
+/* Tennie's rail is Robinhood — her tab runs banker's green, the greenback
+   shade her era minted, where the others run brass or steel. */
+.deskCard[data-desk='tennie'] .filmTab {
+  color: #0e1d12;
+  background: linear-gradient(180deg, #b5d0b4, #7fa883);
+  border-color: rgba(52, 96, 62, 0.55);
+}
+
+.deskCard[data-desk='tennie'] .filmWatch {
+  color: #0e1d12;
+  background: linear-gradient(180deg, #b5d0b4, #7fa883);
+  border-color: rgba(24, 48, 30, 0.6);
+}
+
 .filmPoster {
   width: 100%;
   aspect-ratio: 16 / 9;
