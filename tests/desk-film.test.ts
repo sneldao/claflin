@@ -33,15 +33,25 @@ describe('desk film', () => {
     assert.match(DESK_FILMS.tennie!.transcript, /Woodhull, Claflin/);
     assert.match(DESK_FILMS.tennie!.namesake, /Tennie Claflin/);
     assert.ok(DESK_FILMS.tennie!.hook);
-    assert.ok(!DESK_FILMS.halley);
+    assert.ok(DESK_FILMS.halley, 'halley card registered');
+    assert.match(DESK_FILMS.halley!.src, /halley-card/);
+    assert.match(DESK_FILMS.halley!.namesake, /Edmond Halley/);
+    assert.equal(DESK_FILMS.halley!.length, '45 s');
+    assert.match(DESK_FILMS.halley!.hook, /wallet that decides/);
+    assert.match(DESK_FILMS.halley!.transcript, /not a share/);
+    assert.match(DESK_FILMS.halley!.transcript, /mark is not a peg/);
+    assert.match(DESK_FILMS.halley!.transcript, /Only your wallet/);
+    assert.equal(Object.keys(DESK_FILMS).length, 4);
   });
 
   it('turns the foyer card over only where a film exists', () => {
     const html = renderDesks();
     /* the reel tab and the portrait kicker each appear once per card */
-    assert.equal((html.match(/The reel ·/g) ?? []).length, 3);
+    /* three flip-card reel tabs plus Halley's direct-plate reel control */
+    assert.equal((html.match(/The reel ·/g) ?? []).length, 4);
     assert.equal((html.match(/A portrait ·/g) ?? []).length, 3);
-    assert.equal((html.match(/Run the reel/g) ?? []).length, 3);
+    assert.equal((html.match(/Run the reel/g) ?? []).length, 4);
+    assert.equal((html.match(/launchPlateReelLabel/g) ?? []).length, 1);
     /* the verso is inert until the card turns */
     assert.match(html, /aria-hidden="true"/);
     /* nothing autoplays: the overlay mounts only on the watch action */
@@ -61,5 +71,28 @@ describe('desk film', () => {
     assert.match(overlay, /poster=\{film\.poster\}/);
     assert.match(overlay, /aria-modal="true"/);
     assert.match(overlay, /preload="metadata"/);
+  });
+
+  it('runs Halley’s reel straight from the launch plate, still on choice', () => {
+    const card = source('components/desk/HouseDesks.tsx');
+    /* the plate reads its own film entry and mounts the overlay itself */
+    const plate = card.slice(card.indexOf('function LaunchPlate'));
+    assert.match(plate, /DESK_FILMS\[desk\.id\]/);
+    assert.match(plate, /launchPlateReel/);
+    assert.match(plate, /setWatching\(true\)/);
+    assert.match(plate, /<FilmOverlay film=\{film\}/);
+    /* nothing renders a video before the caller asks */
+    const html = renderDesks();
+    assert.doesNotMatch(html, /<video/);
+    assert.doesNotMatch(html, /halley-card-v1\.mp4/);
+  });
+
+  it('portals the overlay to the body so house chrome can’t cover it', () => {
+    const overlay = source('components/desk/FilmOverlay.tsx');
+    assert.match(overlay, /createPortal/);
+    assert.match(overlay, /document\.body/);
+    /* the dialog exists only while mounted — no portal in the SSR markup */
+    const html = renderDesks();
+    assert.doesNotMatch(html, /filmOverlay/);
   });
 });

@@ -4,7 +4,7 @@
 **Tracks:** Solana + Base + Robinhood Chain (one submission, up to three tracks).
 **Judging window:** 14 Sept – 12 Oct 2026. Only work inside the window is judged; all prior development must be disclosed on the form — nondisclosure is disqualifying.
 
-**Repo access (do this before submitting):** the repo is private. Rules allow it only if judges are granted access — invite **hackathon@colosseum.com** to the repo and verify the invite landed. This is the most common disqualifying mistake; have someone outside the team open every submitted link in a fresh browser profile.
+**Repo access (do this before submitting):** the repo is **public** — judges can open it directly. If it ever goes private again, rules allow it only if judges are granted access — invite **hackathon@colosseum.com** and verify the invite landed. Either way: have someone outside the team open every submitted link in a fresh browser profile.
 
 ## Links judges should open
 
@@ -17,7 +17,7 @@ The foyer is the entry — it is the three-track story in one screen. One typed 
 - `/` → the house turret: hold Space to dictate or type; "buy Apple" lights all three desks as separate offerings
 - `/?desk=tennie` → Tennie's Robinhood Chain desk (paper-only, voice line live)
 - `/?desk=jesse&view=room` → Jesse's Solana desk, Room view (prefer for judging Jesse)
-- `/?desk=halley` → Halley's Meteora DBC launch desk (tracker-token launches; live path dual-flagged off, devnet-verified)
+- `/?desk=halley` → Halley's Meteora DBC launch desk (tracker-token launches; the launch plate carries his 45 s reel — `Run the reel`; live path enabled behind dual flags, devnet-verified — no mainnet mint yet)
 - `/?desk=hetty` → Hetty's Base desk
 - `?offering=<id>` may be added to a desk link only when that catalog offering covers the desk
 - Last open desk is remembered in `claflin.desk.v1.last` — judges on a fresh profile get the foyer
@@ -38,14 +38,14 @@ Claflin is an existing Deco-futurist brokerage house product. Before the window 
 - **Edmond Halley / Meteora DBC launch desk (all of it)** — entire `lib/meteora/` module: launch intent grammar (name, quote, anchor, curve, supply, graduation), USDC + badged-xStock quote catalog, projected-curve estimates, equity-anchored opening bands that fall back to the live onchain xStock mark when the equity tape rests (weekends/nights stay anchored — venue and resting-equity gap both disclosed), paper launch records, ConvAI line, and a **live two-transaction launch ceremony** (curve config → pool+mint, both wallet-signed, sequential broadcast, `confirmed`/`failed`/`partial`/`unknown` outcomes, dual-signature reconciliation) behind dual env flags — devnet-verified with the production builder (`scripts/halley-devnet-launch.ts`)
 - **Eligibility gate** — Hetty's live path now refuses fail-closed unless the wallet carries Coinbase Verifications (Verified Account + non-restricted Verified Country) and a Coinbase-scoped self-declaration; enforced in the ticket and re-checked inside the execution hook. Halley's live ticket gates on a Meteora-scoped self-declaration (honestly labelled, browser-local)
 
-**Not claimed:** that live settle or live launch is enabled in production (all live flags default off; the Halley live path is devnet-verified, not yet mainnet-enabled); that paper records are fills; that any fixture (`/night-desk?study=1`) is a live market; that Tennie's desk can execute — she is paper-only by design with no live flag; that a Halley tracker token is stock ownership — it is a new exposure token the launcher's own wallet creates.
+**Not claimed:** that live settle is enabled in production (all live flags default off in code; only Halley's launch gate is on); that a mainnet Halley mint has been run — the live launch path is enabled in production and devnet-verified, mainnet unproven; that paper records are fills; that any fixture (`/night-desk?study=1`) is a live market; that Tennie's desk can execute — she is paper-only by design with no live flag; that a Halley tracker token is stock ownership — it is a new exposure token the launcher's own wallet creates.
 
 ## Submission form fields
 
 - **Product name:** Claflin
 - **Brief description:** A voice-first brokerage house for tokenized US equities. A client speaks or types an instruction at the foyer turret; the house resolves it to a concrete offering — issuer, rail, venue — and lights the desk lines that can carry it. Four seated desks today: Coinbase Tokenized Stocks on Base (Hetty), Backed xStocks on Solana (Jesse), Robinhood Stock Tokens on Robinhood Chain (Tennie), and Meteora DBC tracker-token launches on Solana (Halley). Every desk quotes a real venue, labels its evidence honestly, files paper records by default, and never lets voice touch a signature.
 - **Blockchains/tools:** Solana (Jupiter Metis, Backed xStocks, Pyth, Meteora DBC → DAMM v2), Base (Aerodrome, Chainlink, Coinbase Verifications/EAS), Robinhood Chain — chain ID 4663 (Lighter orderbook venue, Chainlink stock feeds, rhj issuer REST), ElevenLabs ConvAI, AssemblyAI, Privy, Next.js.
-- **Repo:** https://github.com/sneldao/claflin — **grant hackathon@colosseum.com access**.
+- **Repo:** https://github.com/sneldao/claflin — public; verify it opens in a fresh profile.
 - **Videos:** two required — a 2–3 min presentation video (the why: market, thesis, who it's for, business plan) and a separate ≤3 min technical demo video (the how; do not pitch in it).
 - **GTM/demand:** [founder to fill — target users, distribution, why now]. Keep it honest; judges weight working product over projection.
 - **Logo/team/location:** [fill on the form; every member must individually register before the deadline].
@@ -64,7 +64,7 @@ If the mic fails on camera, every spoken step has a typed path — same controll
 
 ## Checklist
 
-- [ ] `hackathon@colosseum.com` granted repo access; verified by a non-team member
+- [ ] Repo opens in a fresh browser profile (public today; if it goes private, invite `hackathon@colosseum.com` and verify)
 - [ ] Every team member individually registered before Oct 12 11:59pm PT
 - [ ] `/` verified in a fresh profile: tape lines lit, RH marks on the wire, "buy Apple" lights all three tape desks; launch desk present
 - [ ] Tennie ring tested live: session opens, tool calls drive the ticket, paper filing lands
@@ -73,7 +73,7 @@ If the mic fails on camera, every spoken step has a typed path — same controll
 - [ ] All content in English (rules §12)
 - [ ] Live settle shown only if actually enabled at record time; otherwise stated as off
 - [ ] Logo, GTM, team details filled on the form
-- [ ] Meteora sidetrack (if taken): separate Superteam Earn submission, due 13 Oct 06:59 UTC — see §5 of the plan. Live path is devnet-verified; decide whether mainnet flags open for the judging window
+- [ ] Meteora sidetrack (if taken): separate Superteam Earn submission, due 13 Oct 06:59 UTC — see §5 of the plan. Live path is enabled in production and devnet-verified; a mainnet mint has not been run end-to-end yet
 
 ## House book copy (what judges should read)
 
@@ -82,5 +82,5 @@ If the mic fails on camera, every spoken step has a typed path — same controll
 | Hetty Green | Coinbase Tokenized Stocks | Base / Aerodrome | Base paper (+ gated live behind Coinbase Verifications) |
 | Jesse Livermore | Backed xStocks | Solana / Jupiter | Solana paper (+ dual-flagged live) |
 | Tennie Claflin | Robinhood Stock Tokens | Robinhood Chain / Lighter | Paper-only — estimates, evidence, filing; no live flag |
-| Edmond Halley | Meteora DBC tracker-token launches | Solana / Meteora DBC → DAMM v2 | Launch-desk paper (+ dual-flagged live, devnet-verified; tracker tokens, never stock ownership) |
+| Edmond Halley | Meteora DBC tracker-token launches | Solana / Meteora DBC → DAMM v2 | Launch-desk paper (+ live launch enabled, dual-flagged; devnet-verified, mainnet unproven; tracker tokens, never stock ownership) |
 | Jay Cooke | — | Arbitrum | Planned; a closed room |

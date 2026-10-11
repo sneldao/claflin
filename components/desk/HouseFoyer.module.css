@@ -2055,6 +2055,44 @@
   color: var(--ink, #e8e6d9);
 }
 
+.launchPlateReel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  align-self: flex-start;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.launchPlateReelLabel {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--brass);
+}
+
+.launchPlateReelRun {
+  font-size: 0.74rem;
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.launchPlateReel:hover .launchPlateReelRun {
+  color: var(--ink, #e8e6d9);
+}
+
+.launchPlateReel:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+}
+
 /* The launch sequence, typeset as one ruled line across the plate's foot —
    the wide card earns its measure by saying what the desk enables. */
 .launchPlateMoves {

@@ -77,7 +77,7 @@ export const LAUNCH_DESK_EXPLAINER = {
     'Name a tracker token',
     'Anchor the opening to a live mark',
     'Set the curve and the graduation line',
-    'Review the estimate — then file the record',
+    'Review the estimate — paper or wallet',
   ],
 } as const;
 

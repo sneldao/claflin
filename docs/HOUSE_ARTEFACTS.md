@@ -152,5 +152,8 @@ the targeted suites (the final CSS itself was not re-screenshotted).
 - Telegram-form receipts for filed records (desk-level, not foyer).
 - A pneumatic-tube send-off animation when a paper record files.
 - A chalk board with the day's marks inside METHOD.
-- Halley's reel — the launch desk is a different card shape (wide plate, no
-  flip today), a design decision of its own.
+- ~~Halley's reel~~ — **landed.** The wide plate carries its own
+  `Run the reel` control (`DESK_FILMS.halley`, `foyerStyles.launchPlateReel`)
+  instead of a card flip; `FilmOverlay` portals to `document.body` so the
+  fixed room chrome cannot cover it, locks scroll while mounted, and keeps
+  its footer legible in paper-ink on the light frame.

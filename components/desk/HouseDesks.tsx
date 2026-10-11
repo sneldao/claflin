@@ -95,6 +95,8 @@ function LaunchPlate({ desk, index, deskHref, onOpen }: {
   onOpen: (id: HouseDeskId) => (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const voice = BROKER_VOICE[desk.id];
+  const film = DESK_FILMS[desk.id];
+  const [watching, setWatching] = useState(false);
   const explainerId = `launch-explainer-${desk.id}`;
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(false);
@@ -172,6 +174,16 @@ function LaunchPlate({ desk, index, deskHref, onOpen }: {
             >
               {LAUNCH_DESK_EXPLAINER.ask}
             </button>
+            {film && (
+              <button
+                type="button"
+                className={foyerStyles.launchPlateReel}
+                onClick={() => setWatching(true)}
+              >
+                <span className={foyerStyles.launchPlateReelLabel}>The reel · {film.length}</span>
+                <span className={foyerStyles.launchPlateReelRun}>Run the reel</span>
+              </button>
+            )}
           </div>
           {seen ? (
             <a ref={ctaLinkRef} className={foyerStyles.deskOpen} href={deskHref(desk.id)} onClick={enter}>
@@ -194,6 +206,7 @@ function LaunchPlate({ desk, index, deskHref, onOpen }: {
           {LAUNCH_DESK_EXPLAINER.moves.map(move => <li key={move}>{move}</li>)}
         </ol>
       </article>
+      {watching && film && <FilmOverlay film={film} onClose={() => setWatching(false)} />}
     </div>
   );
 }

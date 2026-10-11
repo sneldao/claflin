@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { DeskFilm } from '@/lib/desk-films';
 import scene from './DeskScene.module.css';
 
 /**
- * The desk's card playing — a paper-framed overlay opened only from the
- * verso of a foyer card. Mounted on choice: the video is inert until the
- * caller asks for it (poster first, metadata preload only).
+ * The desk's card playing — a paper-framed overlay opened from the verso
+ * of a foyer card or the launch plate's reel control. Mounted on choice:
+ * the video is inert until the caller asks for it (poster first,
+ * metadata preload only).
  */
 export function FilmOverlay({ film, onClose }: { film: DeskFilm; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -24,10 +26,16 @@ export function FilmOverlay({ film, onClose }: { film: DeskFilm; onClose: () => 
       if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [close]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal((
     <div
       className={scene.filmOverlay}
       role="dialog"
@@ -60,5 +68,7 @@ export function FilmOverlay({ film, onClose }: { film: DeskFilm; onClose: () => 
         </div>
       </div>
     </div>
+    ),
+    document.body,
   );
 }

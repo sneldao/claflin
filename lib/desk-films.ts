@@ -46,4 +46,13 @@ export const DESK_FILMS: Partial<Record<HouseDeskId, DeskFilm>> = {
     transcript:
       "Tennie Claflin never waited to be let in. In eighteen-seventy, she and her sister opened Woodhull, Claflin and Company on Broad Street — the first brokerage women ever ran on Wall Street — with Vanderbilt's stake behind it, and a ladies' parlor where clients could watch their own book. The papers called her the Lady Broker and meant the laugh. The firm took the accounts the men's houses refused, and its weekly printed what the Street would not say aloud. This house carries her name. My desk borrows her rule: three tapes side by side — and the client let in to read them.",
   },
+  halley: {
+    src: '/media/halley-card-v1.mp4',
+    poster: '/media/halley-card-v1-poster.jpg',
+    length: '45 s',
+    hook: 'An observed opening, a market-discovered path — and the wallet that decides.',
+    namesake: 'Edmond Halley',
+    transcript:
+      'Edmond Halley drew paths from observations. This desk can give a new token an observed place to begin — not a price it must follow. From Breslau’s records, he priced annuities. From earlier sightings, he predicted a comet’s return. Now you name a new tracker token. An observed equity mark can anchor its opening. The token is not a share; the mark is not a peg. Buyers and sellers discover its price on a Meteora curve. If enough quote liquidity arrives, the pool can migrate to deeper trading. The desk draws a projection, not an order. You review the terms. Only your wallet can create the mint.',
+  },
 };
