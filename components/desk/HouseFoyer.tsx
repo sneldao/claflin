@@ -186,41 +186,23 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
     };
   }, []);
 
-  /* Inertial scroll — the page glides and settles at room boundaries
-     (proximity snap only, so a gesture far from a boundary is never
-     claimed). Reduced motion keeps the browser's native scroll. */
+  /* Inertial scroll — the page glides but never repositions the reader.
+     Snap was removed: the rooms load live marks, lazy portraits and the
+     deal animation after mount, so the claim zones kept moving under the
+     reader and pulling the scroll back to a boundary. Reduced motion
+     keeps the browser's native scroll. */
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let lenis: { destroy(): void } | null = null;
-    let snap: { destroy(): void } | null = null;
     let cancelled = false;
-    void Promise.all([import('lenis'), import('lenis/snap')])
-      .then(([lenisModule, snapModule]) => {
+    void import('lenis')
+      .then(lenisModule => {
         if (cancelled || !mainRef.current) return;
-        const instance = new lenisModule.default({ autoRaf: true, duration: 1.1, smoothWheel: true });
-        lenis = instance;
-        const snapInstance = new snapModule.default(instance, {
-          type: 'proximity',
-          /* Threshold is viewport-relative — at 65% a tall room's middle
-             still fell inside the claim zone and every pause snapped back
-             to the room's top. 20% keeps the settle at boundaries only. */
-          distanceThreshold: '20%',
-          debounce: 120,
-        });
-        /* One stop per room, plus marked sub-stops (the launch plate is its
-           own room inside the desks section — it must be reachable, not
-           buried between two section boundaries). */
-        const stops = [
-          ...Array.from(mainRef.current.children),
-          ...Array.from(mainRef.current.querySelectorAll('[data-snap-stop]')),
-        ] as HTMLElement[];
-        snapInstance.addElements(stops);
-        snap = snapInstance;
+        lenis = new lenisModule.default({ autoRaf: true, duration: 1.1, smoothWheel: true });
       })
       .catch(() => { /* native scroll stands if the module fails to load */ });
     return () => {
       cancelled = true;
-      snap?.destroy();
       lenis?.destroy();
     };
   }, []);

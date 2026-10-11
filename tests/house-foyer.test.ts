@@ -465,18 +465,20 @@ describe('house foyer', () => {
     assert.equal(entered, 'halley');
   });
 
-  it('the scroll walk cannot trap a tall room — snap stays a boundary settle', () => {
-    /* distanceThreshold is viewport-relative: at '65%' the desks room's
-       claim zone reached past its middle, so every pause inside snapped
-       back to "Meet the brokers" and the launch plate was unreachable. */
+  it('the scroll walk glides but never repositions the reader — no snap', () => {
+    /* Proximity snap on a page whose rooms keep changing height (live
+       marks, lazy portraits, the deal animation) moved its claim zones
+       under the reader and yanked the scroll back to boundaries. The
+       foyer keeps the lenis glide but loads no snap module and places no
+       snap stops, so a pause mid-room always rests where the reader left
+       it. */
     const foyer = source('components/desk/HouseFoyer.tsx');
-    assert.match(foyer, /distanceThreshold: '20%'/);
-    assert.doesNotMatch(foyer, /distanceThreshold: '(?:[3-9]\d|100)%'/);
-    /* The launch plate is its own room inside the desks section — it gets
-       a marked sub-stop so snap settles on it instead of burying it. */
-    assert.match(foyer, /querySelectorAll\('\[data-snap-stop\]'\)/);
+    assert.doesNotMatch(foyer, /lenis\/snap/);
+    assert.doesNotMatch(foyer, /distanceThreshold|addElements|snapInstance/);
+    assert.match(foyer, /import\('lenis'\)/);
+    assert.doesNotMatch(foyer, /data-snap-stop/);
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
-    assert.match(html, /data-snap-stop/);
+    assert.doesNotMatch(html, /data-snap-stop/);
   });
 });
 
