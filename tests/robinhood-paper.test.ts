@@ -1,22 +1,22 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ISABEL_DRAFT_KEY,
-  ISABEL_MAX_HISTORY,
-  ISABEL_PAPER_PREFIX,
-  clearIsabelDraft,
-  deleteIsabelPaperRecord,
-  loadIsabelDraft,
-  loadIsabelPaperRecords,
-  parseIsabelPaperRecord,
+  TENNIE_DRAFT_KEY,
+  TENNIE_MAX_HISTORY,
+  TENNIE_PAPER_PREFIX,
+  clearTennieDraft,
+  deleteTenniePaperRecord,
+  loadTennieDraft,
+  loadTenniePaperRecords,
+  parseTenniePaperRecord,
   parseRobinhoodEstimate,
-  saveIsabelDraft,
-  saveIsabelPaperRecord,
-  type IsabelPaperRecord,
+  saveTennieDraft,
+  saveTenniePaperRecord,
+  type TenniePaperRecord,
 } from '../lib/robinhood/paper.ts';
 import type { PaperStorage } from '../lib/trading/paper-records.ts';
 import { ROBINHOOD_INSTRUMENTS } from '../lib/robinhood/catalog.ts';
-import type { IsabelDraft, RobinhoodInstrument, RobinhoodPaperEstimate } from '../lib/robinhood/contracts.ts';
+import type { TennieDraft, RobinhoodInstrument, RobinhoodPaperEstimate } from '../lib/robinhood/contracts.ts';
 import type { RobinhoodEvidence } from '../lib/robinhood/duplex.ts';
 
 function memoryStorage(): PaperStorage & { removeItem(key: string): void } {
@@ -36,11 +36,11 @@ function makeQuote(overrides: Partial<RobinhoodPaperEstimate> = {}): RobinhoodPa
   const quotedAt = 1_900_000_000_000;
   return {
     version: 1,
-    id: 'q-isabel-1',
+    id: 'q-tennie-1',
     kind: 'estimate',
     mode: 'paper',
     liveExecutionEnabled: false,
-    deskId: 'isabel',
+    deskId: 'tennie',
     mandateId: 'robinhood-stock-tokens',
     instrumentId: instrument.id,
     network: 'eip155:4663',
@@ -110,8 +110,8 @@ function makeEvidence(i: RobinhoodInstrument): RobinhoodEvidence {
   };
 }
 
-function fileRecord(storage: ReturnType<typeof memoryStorage>, quote = makeQuote()): IsabelPaperRecord {
-  return saveIsabelPaperRecord(storage, { quote, instrument, evidence: makeEvidence(instrument) }, quote.quotedAt + 1000);
+function fileRecord(storage: ReturnType<typeof memoryStorage>, quote = makeQuote()): TenniePaperRecord {
+  return saveTenniePaperRecord(storage, { quote, instrument, evidence: makeEvidence(instrument) }, quote.quotedAt + 1000);
 }
 
 describe('robinhood estimate contract', () => {
@@ -144,32 +144,32 @@ describe('robinhood estimate contract', () => {
     /* Share equivalent exists iff the multiplier was read. */
     assert.throws(() => parseRobinhoodEstimate(makeQuote({ multiplierRaw: null })), /binding/);
     assert.throws(() => parseRobinhoodEstimate(makeQuote({ shareEquivalent: null })), /binding/);
-    /* A live flag can never parse as Isabel paper. */
+    /* A live flag can never parse as Tennie paper. */
     assert.throws(() => parseRobinhoodEstimate({ ...makeQuote(), liveExecutionEnabled: true }));
   });
 });
 
-describe('isabel paper records', () => {
+describe('tennie paper records', () => {
   it('files, reads, lists, and deletes a record in its own namespace', () => {
     const storage = memoryStorage();
     const record = fileRecord(storage);
-    assert.equal(record.deskId, 'isabel');
+    assert.equal(record.deskId, 'tennie');
     assert.equal(record.quote.venue, 'lighter');
-    assert.ok(storage.getItem(ISABEL_PAPER_PREFIX + record.id));
-    const loaded = loadIsabelPaperRecords(storage);
+    assert.ok(storage.getItem(TENNIE_PAPER_PREFIX + record.id));
+    const loaded = loadTenniePaperRecords(storage);
     assert.equal(loaded.length, 1);
     assert.equal(loaded[0].id, record.id);
     assert.equal(loaded[0].evidence?.source, 'venue-triplex');
-    deleteIsabelPaperRecord(storage, record.id);
-    assert.equal(loadIsabelPaperRecords(storage).length, 0);
+    deleteTenniePaperRecord(storage, record.id);
+    assert.equal(loadTenniePaperRecords(storage).length, 0);
   });
 
-  it('keeps Isabel rows out of the legacy v1 book', () => {
+  it('keeps Tennie rows out of the legacy v1 book', () => {
     const storage = memoryStorage();
     fileRecord(storage);
-    /* The v1 loader scans only claflin.paper.v1.* — v2 Isabel rows are
+    /* The v1 loader scans only claflin.paper.v1.* — v2 Tennie rows are
        invisible to it by namespace, not by filtering. */
-    assert.equal(storage.getItem(ISABEL_PAPER_PREFIX + 'q-isabel-1') !== null, true);
+    assert.equal(storage.getItem(TENNIE_PAPER_PREFIX + 'q-tennie-1') !== null, true);
   });
 
   it('is idempotent: re-saving the same quote returns the filed record', () => {
@@ -177,14 +177,14 @@ describe('isabel paper records', () => {
     const first = fileRecord(storage);
     const second = fileRecord(storage);
     assert.equal(second.id, first.id);
-    assert.equal(loadIsabelPaperRecords(storage).length, 1);
+    assert.equal(loadTenniePaperRecords(storage).length, 1);
   });
 
   it('refuses to file an estimate outside its review window', () => {
     const storage = memoryStorage();
     const quote = makeQuote();
     assert.throws(
-      () => saveIsabelPaperRecord(storage, { quote, instrument, evidence: null }, quote.expiresAt),
+      () => saveTenniePaperRecord(storage, { quote, instrument, evidence: null }, quote.expiresAt),
       /fresh estimate/,
     );
   });
@@ -193,37 +193,37 @@ describe('isabel paper records', () => {
     const storage = memoryStorage();
     const record = fileRecord(storage);
     const tampered = JSON.stringify({ ...record, instrumentSnapshot: { ...record.instrumentSnapshot, id: 'rh:0x0000000000000000000000000000000000000000' } });
-    storage.setItem(ISABEL_PAPER_PREFIX + record.id, tampered);
-    assert.throws(() => loadIsabelPaperRecords(storage));
+    storage.setItem(TENNIE_PAPER_PREFIX + record.id, tampered);
+    assert.throws(() => loadTenniePaperRecords(storage));
   });
 
   it('enforces the history cap', () => {
     const storage = memoryStorage();
-    for (let i = 0; i < ISABEL_MAX_HISTORY; i++) {
+    for (let i = 0; i < TENNIE_MAX_HISTORY; i++) {
       fileRecord(storage, makeQuote({ id: `q-${i}` }));
     }
     assert.throws(() => fileRecord(storage, makeQuote({ id: 'q-over' })), /full/);
   });
 });
 
-describe('isabel draft checkpoints', () => {
-  const draft: IsabelDraft = { instrumentId: instrument.id, side: 'buy', amount: '25' };
+describe('tennie draft checkpoints', () => {
+  const draft: TennieDraft = { instrumentId: instrument.id, side: 'buy', amount: '25' };
 
   it('round-trips a partial draft and clears an empty one', () => {
     const storage = memoryStorage();
-    saveIsabelDraft(storage, draft);
-    assert.deepEqual(loadIsabelDraft(storage), draft);
-    saveIsabelDraft(storage, { instrumentId: null, side: null, amount: null });
-    assert.equal(storage.getItem(ISABEL_DRAFT_KEY), null);
-    assert.deepEqual(loadIsabelDraft(storage), { instrumentId: null, side: null, amount: null });
+    saveTennieDraft(storage, draft);
+    assert.deepEqual(loadTennieDraft(storage), draft);
+    saveTennieDraft(storage, { instrumentId: null, side: null, amount: null });
+    assert.equal(storage.getItem(TENNIE_DRAFT_KEY), null);
+    assert.deepEqual(loadTennieDraft(storage), { instrumentId: null, side: null, amount: null });
   });
 
   it('treats a malformed checkpoint as no checkpoint', () => {
     const storage = memoryStorage();
-    storage.setItem(ISABEL_DRAFT_KEY, '{"instrumentId":"sol:bad"}');
-    assert.deepEqual(loadIsabelDraft(storage), { instrumentId: null, side: null, amount: null });
-    saveIsabelDraft(storage, draft);
-    clearIsabelDraft(storage);
-    assert.equal(storage.getItem(ISABEL_DRAFT_KEY), null);
+    storage.setItem(TENNIE_DRAFT_KEY, '{"instrumentId":"sol:bad"}');
+    assert.deepEqual(loadTennieDraft(storage), { instrumentId: null, side: null, amount: null });
+    saveTennieDraft(storage, draft);
+    clearTennieDraft(storage);
+    assert.equal(storage.getItem(TENNIE_DRAFT_KEY), null);
   });
 });

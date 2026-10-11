@@ -31,7 +31,7 @@ export interface DeskQuoteLimits {
 const DESK_QUOTE_LIMITS: Record<HouseDeskId, DeskQuoteLimits> = {
   hetty: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
   jesse: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
-  isabel: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
+  tennie: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
   halley: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
   arbitrum: { buyMax: '10000', sellMax: '1000', quoteDecimals: 6 },
 };

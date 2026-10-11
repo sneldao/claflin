@@ -1,33 +1,33 @@
 /**
- * Isabel's voice tools as one table of handlers over the live desk — same
+ * Tennie's voice tools as one table of handlers over the live desk — same
  * shape as lib/jesse/desk-tools.ts. The policy strings live in
- * ./voice-tools; this file only sequences them against useIsabelDesk.
+ * ./voice-tools; this file only sequences them against useTennieDesk.
  * Paper only: no handler can sign or submit — the desk has no execution
  * path at all.
  */
-import type { IsabelDesk } from './useIsabelDesk';
-import type { IsabelDraft } from './contracts';
+import type { TennieDesk } from './useTennieDesk';
+import type { TennieDraft } from './contracts';
 import {
   chooseRobinhoodInstrumentResult,
   describeEstimateTerms,
-  describeIsabelDesk,
-  describeIsabelEvidence,
-  describeIsabelRecordFor,
-  explainIsabelTopic,
-  findIsabelRecord,
-  isabelExplainTopicChoices,
-  isabelForegroundGuard,
-  nextIsabelInstructionDraft,
-  resolveIsabelExplainTopic,
+  describeTennieDesk,
+  describeTennieEvidence,
+  describeTennieRecordFor,
+  explainTennieTopic,
+  findTennieRecord,
+  tennieExplainTopicChoices,
+  tennieForegroundGuard,
+  nextTennieInstructionDraft,
+  resolveTennieExplainTopic,
   resolveRobinhoodAlias,
-  setIsabelAmountResult,
-  setIsabelInstructionResult,
+  setTennieAmountResult,
+  setTennieInstructionResult,
 } from './voice-tools';
 
 export type ToolParams = Record<string, unknown>;
-export type IsabelToolHandler = (params: ToolParams) => Promise<string>;
+export type TennieToolHandler = (params: ToolParams) => Promise<string>;
 
-export type IsabelToolName =
+export type TennieToolName =
   | 'choose_instrument'
   | 'set_instruction'
   | 'set_amount'
@@ -41,9 +41,9 @@ export type IsabelToolName =
   | 'describe_desk'
   | 'explain_concept';
 
-export interface IsabelToolContext {
+export interface TennieToolContext {
   /** The desk as it is right now — read fresh on every call. */
-  desk: () => IsabelDesk;
+  desk: () => TennieDesk;
   /** Count of finished caller utterances so far. A deletion is confirmed
    *  only by a caller turn that came after it was proposed; a line that
    *  cannot count turns cannot delete by voice. */
@@ -57,19 +57,19 @@ const ESTIMATE_POLL_MS = 150;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Record<IsabelToolName, IsabelToolHandler> {
+export function tennieToolHandlers({ desk, userTurn }: TennieToolContext): Record<TennieToolName, TennieToolHandler> {
   let pendingDelete: { id: string; turn: number; at: number } | null = null;
 
   /* Leave a record view for the ticket. A filed receipt keeps the desk in
      its saved stage, so re-applying the draft moves it back to drafting. */
-  const returnToTicket = (d: IsabelDesk) => {
+  const returnToTicket = (d: TennieDesk) => {
     d.dismissRecord();
     if (d.state.stage === 'saved') d.edit({ ...d.state.draft });
   };
 
   const guard = () => {
     const d = desk();
-    return { d, refusal: isabelForegroundGuard(d.foreground) };
+    return { d, refusal: tennieForegroundGuard(d.foreground) };
   };
 
   return {
@@ -87,10 +87,10 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
       const { d, refusal } = guard();
       if (refusal) return refusal;
       const side = String(p.side ?? '');
-      if (side !== 'buy' && side !== 'sell') return setIsabelInstructionResult(side);
-      const next = nextIsabelInstructionDraft(d.state.draft, side);
+      if (side !== 'buy' && side !== 'sell') return setTennieInstructionResult(side);
+      const next = nextTennieInstructionDraft(d.state.draft, side);
       d.edit(next.draft);
-      return setIsabelInstructionResult(side, next.amountCleared);
+      return setTennieInstructionResult(side, next.amountCleared);
     },
 
     async set_amount(p) {
@@ -101,9 +101,9 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
         return `"${clean || 'That'}" is not a usable amount — say a plain number, like 100 or 0.5.`;
       }
       const side = d.state.draft.side;
-      const partial: Partial<IsabelDraft> = { amount: clean };
+      const partial: Partial<TennieDraft> = { amount: clean };
       d.edit(partial);
-      return setIsabelAmountResult(side, clean);
+      return setTennieAmountResult(side, clean);
     },
 
     async request_estimate() {
@@ -133,7 +133,7 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
 
     async compare_markets() {
       const { d } = guard();
-      return describeIsabelEvidence(d.state);
+      return describeTennieEvidence(d.state);
     },
 
     async record_paper() {
@@ -157,10 +157,10 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
     async open_record(p) {
       const { d } = guard();
       if (!d.historyReady) return 'Browser storage is unavailable, so the records cannot be read right now.';
-      const entry = findIsabelRecord(d.records, d.foreground.recordId, String(p.query ?? ''));
+      const entry = findTennieRecord(d.records, d.foreground.recordId, String(p.query ?? ''));
       if (!entry) return d.records.length === 0 ? 'There are no paper records on file yet.' : 'No filed record matches that.';
       d.openRecord(entry.id);
-      return `Showing the ${describeIsabelRecordFor(entry)}. It is read-only here — say back to the instruction to return to the ticket.`;
+      return `Showing the ${describeTennieRecordFor(entry)}. It is read-only here — say back to the instruction to return to the ticket.`;
     },
 
     async back_to_instruction() {
@@ -175,10 +175,10 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
       if (!d.historyReady) return 'Browser storage is unavailable, so nothing can be deleted right now.';
 
       if (p.confirm !== true) {
-        const entry = findIsabelRecord(d.records, d.foreground.recordId, String(p.query ?? ''));
+        const entry = findTennieRecord(d.records, d.foreground.recordId, String(p.query ?? ''));
         if (!entry) return d.records.length === 0 ? 'There are no paper records on file.' : 'No filed record matches that. Nothing was deleted.';
         pendingDelete = { id: entry.id, turn: userTurn(), at: Date.now() };
-        return `Ask the caller to confirm: delete the ${describeIsabelRecordFor(entry)}? It is removed from this browser and cannot be undone. Wait for an explicit yes, then call delete_record again with confirm true.`;
+        return `Ask the caller to confirm: delete the ${describeTennieRecordFor(entry)}? It is removed from this browser and cannot be undone. Wait for an explicit yes, then call delete_record again with confirm true.`;
       }
 
       const waiting = pendingDelete;
@@ -193,7 +193,7 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
       const entry = d.records.find(r => r.id === waiting.id);
       if (!entry) return 'That record is already gone. Nothing more to do.';
       const onScreen = d.foreground.recordId === entry.id;
-      const described = describeIsabelRecordFor(entry);
+      const described = describeTennieRecordFor(entry);
       d.removeRecord(entry.id);
       if (onScreen) returnToTicket(desk());
       return `Deleted the ${described}. It is gone from this browser.`;
@@ -208,7 +208,7 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
 
     async describe_desk() {
       const { d } = guard();
-      return describeIsabelDesk(d.state, d.foreground, d.records);
+      return describeTennieDesk(d.state, d.foreground, d.records);
     },
 
     async explain_concept(p) {
@@ -216,9 +216,9 @@ export function isabelToolHandlers({ desk, userTurn }: IsabelToolContext): Recor
       if (d.inFlight || d.state.stage === 'quoting') {
         return 'Hold the explanation — an estimate is coming in. Ask again in a moment.';
       }
-      const topic = resolveIsabelExplainTopic(String(p.topic ?? ''));
-      if (!topic) return `I do not have a reviewed explanation for that. I can explain: ${isabelExplainTopicChoices()}.`;
-      return explainIsabelTopic(topic);
+      const topic = resolveTennieExplainTopic(String(p.topic ?? ''));
+      if (!topic) return `I do not have a reviewed explanation for that. I can explain: ${tennieExplainTopicChoices()}.`;
+      return explainTennieTopic(topic);
     },
   };
 }

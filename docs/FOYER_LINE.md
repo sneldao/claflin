@@ -1,7 +1,7 @@
 # The Foyer Is the Line
 
 **Date:** 2026-09-24 · **Status:** Phases 0–2 and 4 shipped on `main` for the Stocklana submission (copy truth, turret, board, desks/answers/footer/handset). Phase 3 waits on an accepted real recording; Phase 5 funnel source is in (docs/FUNNEL_METRICS.md); the pulse still waits on real counters · **Owner:** product lead
-**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again. **Amended 2026-10-02:** Isabel is seated — LINE 3 is a live lamp that lights on her coverage (Robinhood Stock Tokens), with "Talk with Isabel" opening her own ConvAI session. Jay alone remains "coming soon". **Amended 2026-10-03:** Halley is seated — LINE 4 is the Meteora launch desk on Solana (paper-only: estimates and filed launch records, no live launch path) with his own ConvAI session. Jay is LINE 5, still coming soon. **Amended 2026-10-03 (b):** desk `kind` distinguishes rooms — Halley renders as the launch-desk plate below the brokers grid, launch verbs light his lamp by name in the turret, and the directory calls him "Launch desk".
+**Decided 2026-09-24:** Space is the house line in the foyer; `H` stays the desk line inside a room. There is no house-level voice agent; dictation plus lamps routes. The example call waits for an accepted real recording (Phase 3). **Amended 2026-09-28:** Space opens the line only when held past 250 ms while the talk bar is on screen; a tap still scrolls the page, and once the bar has scrolled away Space is the browser's again. **Amended 2026-10-02:** Tennie is seated — LINE 3 is a live lamp that lights on her coverage (Robinhood Stock Tokens), with "Talk with Tennie" opening her own ConvAI session. Jay alone remains "coming soon". **Amended 2026-10-03:** Halley is seated — LINE 4 is the Meteora launch desk on Solana (paper-only: estimates and filed launch records, no live launch path) with his own ConvAI session. Jay is LINE 5, still coming soon. **Amended 2026-10-03 (b):** desk `kind` distinguishes rooms — Halley renders as the launch-desk plate below the brokers grid, launch verbs light his lamp by name in the turret, and the directory calls him "Launch desk".
 **TL;DR:** `/` stops being a page *about* voice trading. It becomes a working **dealer turret**: one push-to-talk line into the house, the verified offerings that match what you said light up, the desk writes a slip, and nothing moves until you sign. Everything else on the page (the board, an example call, the slip anatomy, the desks, straight answers) explains that one action. The page is strongest when NYSE is closed, which is most hours of the week.
 
 This document owns **foyer anatomy and its build sequence**. [Product Direction](PRODUCT_DIRECTION.md) still owns principles and the information hierarchy, and wins any conflict. [ROADMAP.md](../ROADMAP.md) §1a owns sequencing against other work.
@@ -47,7 +47,7 @@ Trade tokenized US stocks by voice, onchain, any hour.        ← plain subhead 
 Paper by default · Only you can sign                          ← FOYER_BOUNDARY, once
 
 ◉ LINE 1  HETTY · Base · AI broker      ◉ LINE 2  JESSE · Solana · AI broker
-◉ LINE 3  ISABEL · RH Chain · AI broker ◉ LINE 4  HALLEY · Solana · AI broker
+◉ LINE 3  TENNIE · RH Chain · AI broker ◉ LINE 4  HALLEY · Solana · AI broker
 ○ LINE 5  JAY · coming soon
 ```
 
@@ -117,7 +117,7 @@ One dense, scannable table. It replaces seven repeated cards.
 
 ### 4.7 Meet the desks (character after comprehension)
 
-Hetty, Jesse and Isabel get one card each in the brokers grid: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing; Isabel: reading the rails — fundamental and sector analysis); a fact-checked, attributed line where one exists (Isabel has none — no verified quotes, so no attribution is invented); a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
+Hetty, Jesse and Tennie get one card each in the brokers grid: AI broker; covers X on Y; how they look at the tape (Hetty: downside first; Jesse: price action and timing; Tennie: reading the rails — fundamental and sector analysis); a fact-checked, attributed line where one exists (Tennie has none — no verified quotes, so no attribution is invented); a short **real** voice sample, or none (Product Direction: previews must be real). This is the only place history leads.
 
 **Halley stands apart.** He is the launch desk — the room that makes the instrument, not a fourth line on the same book — so he leaves the grid for his own plate beneath it: **ink-dipped, not paper** (the tape desks are printed cards; this is the plate they print from), right-aligned against the left-aligned grid, `THE LAUNCH DESK` kicker, and "Bring Halley a launch" where the broker cards say "Visit". The first reach for the plate does not open the door — it stands a paper explainer to the plate's left (what the room makes, what the token is not, and the way back to the tape desks), with "Enter the launch desk" inside. Entry marks the gate seen (`claflin.launchdesk.v1.seen`); return callers get the door directly and a quiet "What is this desk?" can always reopen the panel. A caller skimming for who to trade with should never mistake origination for another tape line (desk `kind: 'launch'` in `lib/house.ts` drives the split everywhere).
 
@@ -127,7 +127,7 @@ Written in the house voice as "Questions callers ask": Is this a real share? Can
 
 ### 4.9 Footer
 
-"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Coming soon: Jay (Arbitrum)" (retires "Later —"). Isabel left this line when she was seated; the copy is generated from the planned-desks list, so it stays correct as desks open.
+"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Coming soon: Jay (Arbitrum)" (retires "Later —"). Tennie left this line when she was seated; the copy is generated from the planned-desks list, so it stays correct as desks open.
 
 ## 5. Design language (foyer-specific additions)
 

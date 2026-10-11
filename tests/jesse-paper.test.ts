@@ -310,7 +310,7 @@ describe('supportsAccountSync', () => {
   it('is Hetty-only; Jesse and unknown desks never sync', () => {
     assert.equal(supportsAccountSync('hetty'), true);
     assert.equal(supportsAccountSync('jesse'), false);
-    assert.equal(supportsAccountSync('isabel'), false);
+    assert.equal(supportsAccountSync('tennie'), false);
     assert.equal(supportsAccountSync('arbitrum'), false);
     assert.equal(supportsAccountSync('no-such-desk'), false);
   });

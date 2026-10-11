@@ -1,7 +1,7 @@
 import { LIVE_EXECUTION_ENABLED } from './trading/domain';
 import type { DeskCapabilities } from './desk/contracts';
 import { JESSE_LIVE_CLIENT_ENABLED, JESSE_PAPER_ENABLED } from './solana/flags';
-import { ISABEL_PAPER_ENABLED } from './robinhood/flags';
+import { TENNIE_PAPER_ENABLED } from './robinhood/flags';
 import { HALLEY_LIVE_CLIENT_ENABLED, HALLEY_PAPER_ENABLED } from './meteora/flags';
 
 /**
@@ -61,15 +61,15 @@ export const HOUSE_DESKS = Object.freeze([
     status: (JESSE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
-    id: 'isabel',
-    name: 'Isabel Benham',
-    shortName: 'Isabel',
+    id: 'tennie',
+    name: 'Tennie C. Claflin',
+    shortName: 'Tennie',
     market: 'Robinhood Chain',
-    approach: 'Fundamental analysis and patient investigation.',
+    approach: 'Access first — the accounts the Street refused, read tape by tape.',
     access: 'Robinhood Stock Tokens on Robinhood Chain · paper',
     capability: 'Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.',
     kind: 'tape' as DeskKind,
-    status: (ISABEL_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
+    status: (TENNIE_PAPER_ENABLED ? 'paper' : 'planned') as DeskStatus,
   }),
   Object.freeze({
     id: 'halley',
@@ -115,10 +115,10 @@ export const OPEN_DESK_ID: HouseDeskId = 'hetty';
 export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   hetty: { quote: true, paper: true, voice: 'elevenlabs-convai', live: LIVE_EXECUTION_ENABLED as boolean },
   jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: JESSE_LIVE_CLIENT_ENABLED },
-  /* Isabel paper filing is gated by NEXT_PUBLIC_ISABEL_PAPER_ENABLED, same
+  /* Tennie paper filing is gated by NEXT_PUBLIC_TENNIE_PAPER_ENABLED, same
      release-flag shape as Jesse's. There is no live flag — her desk is
      paper-only by design (docs/ELIGIBILITY.md §5). */
-  isabel: { quote: true, paper: ISABEL_PAPER_ENABLED, voice: ISABEL_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
+  tennie: { quote: true, paper: TENNIE_PAPER_ENABLED, voice: TENNIE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
   /* Halley's live launch is a dual env gate (client + server), same shape as
      Jesse's — a real DBC launch needs both flags, and neither alone moves
      funds. */
@@ -132,7 +132,7 @@ export function getHouseDesk(id: string): HouseDesk | undefined {
 
 /**
  * Open means quotation and paper filing are both real capabilities.
- * Today Hetty; Jesse and Isabel when their paper flags are on. This is the
+ * Today Hetty; Jesse and Tennie when their paper flags are on. This is the
  * directory /
  * surface routing gate — not the owner of Base v1 documents.
  */

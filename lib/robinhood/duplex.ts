@@ -1,5 +1,5 @@
 /**
- * Isabel's three-way evidence — the fullest honest tape the house runs.
+ * Tennie's three-way evidence — the fullest honest tape the house runs.
  *
  *   issuer  — rhj `/prices`: underlying bid/ask plus `tokenBid`/`tokenAsk`
  *             (multiplier-adjusted server-side). Issuer indicative reference,

@@ -84,7 +84,7 @@ const schema = z.object({
   id: z.string().min(1).max(120),
   kind: z.enum(['approval', 'submitted-swap', 'confirmed-swap']),
   mode: z.literal('live'),
-  deskId: z.enum(['hetty', 'jesse', 'isabel', 'arbitrum']),
+  deskId: z.enum(['hetty', 'jesse', 'tennie', 'arbitrum']),
   createdAt: z.number().int().positive(),
   updatedAt: z.number().int().positive(),
   walletAddress: z.string().min(1).max(80),

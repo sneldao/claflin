@@ -1,6 +1,6 @@
 /**
- * Isabel's line — live ElevenLabs ConvAI session. Client tools execute
- * against useIsabelDesk in the caller's browser. Paper only — her desk has
+ * Tennie's line — live ElevenLabs ConvAI session. Client tools execute
+ * against useTennieDesk in the caller's browser. Paper only — her desk has
  * no execution path, so the line can draft, quote, and file records, never
  * move funds.
  *
@@ -20,12 +20,12 @@ import {
   type DiscussionCaption,
 } from '@/lib/hetty/discussion';
 import {
-  appliedIsabelTicketLine,
-  isabelClosingLine,
-  isabelOpeningLine,
+  appliedTennieTicketLine,
+  tennieClosingLine,
+  tennieOpeningLine,
 } from '@/lib/robinhood/voice-tools';
-import { isabelToolHandlers } from '@/lib/robinhood/desk-tools';
-import type { IsabelDesk } from '@/lib/robinhood/useIsabelDesk';
+import { tennieToolHandlers } from '@/lib/robinhood/desk-tools';
+import type { TennieDesk } from '@/lib/robinhood/useTennieDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LineCaptions } from './BrokerLine';
@@ -36,7 +36,7 @@ type ToolParams = Record<string, unknown>;
 type ToolResult = Promise<string>;
 export type Caption = DiscussionCaption;
 
-type IsabelTools = {
+type TennieTools = {
   choose_instrument: (p: ToolParams) => ToolResult;
   set_instruction: (p: ToolParams) => ToolResult;
   set_amount: (p: ToolParams) => ToolResult;
@@ -73,8 +73,8 @@ function receiverClick(): void {
   } catch { /* silence is fine */ }
 }
 
-function IsabelCallInner({
-  isabel,
+function TennieCallInner({
+  tennie,
   take = null,
   compactPlate = false,
   captions,
@@ -89,7 +89,7 @@ function IsabelCallInner({
   onSessionEnded,
   onSessionFailed,
 }: {
-  isabel: IsabelDesk;
+  tennie: TennieDesk;
   take?: string | null;
   compactPlate?: boolean;
   captions: Caption[];
@@ -104,26 +104,26 @@ function IsabelCallInner({
   onSessionEnded: (note: string | null) => void;
   onSessionFailed: (message: string) => void;
 }) {
-  const isabelRef = useRef(isabel);
-  useEffect(() => { isabelRef.current = isabel; });
+  const tennieRef = useRef(tennie);
+  useEffect(() => { tennieRef.current = tennie; });
   const captionsRef = useRef(captions);
   useEffect(() => { captionsRef.current = captions; });
   const onCaptionRef = useRef(onCaption);
   useEffect(() => { onCaptionRef.current = onCaption; });
 
-  const handlers = useMemo(() => isabelToolHandlers({ desk: () => isabelRef.current }), []);
-  useConversationClientTool<IsabelTools>('choose_instrument', p => handlers.choose_instrument(p));
-  useConversationClientTool<IsabelTools>('set_instruction', p => handlers.set_instruction(p));
-  useConversationClientTool<IsabelTools>('set_amount', p => handlers.set_amount(p));
-  useConversationClientTool<IsabelTools>('request_estimate', () => handlers.request_estimate({}));
-  useConversationClientTool<IsabelTools>('compare_markets', () => handlers.compare_markets({}));
-  useConversationClientTool<IsabelTools>('record_paper', () => handlers.record_paper({}));
-  useConversationClientTool<IsabelTools>('open_record', p => handlers.open_record(p));
-  useConversationClientTool<IsabelTools>('back_to_instruction', () => handlers.back_to_instruction({}));
-  useConversationClientTool<IsabelTools>('delete_record', p => handlers.delete_record(p));
-  useConversationClientTool<IsabelTools>('cancel_instruction', () => handlers.cancel_instruction({}));
-  useConversationClientTool<IsabelTools>('describe_desk', () => handlers.describe_desk({}));
-  useConversationClientTool<IsabelTools>('explain_concept', p => handlers.explain_concept(p));
+  const handlers = useMemo(() => tennieToolHandlers({ desk: () => tennieRef.current }), []);
+  useConversationClientTool<TennieTools>('choose_instrument', p => handlers.choose_instrument(p));
+  useConversationClientTool<TennieTools>('set_instruction', p => handlers.set_instruction(p));
+  useConversationClientTool<TennieTools>('set_amount', p => handlers.set_amount(p));
+  useConversationClientTool<TennieTools>('request_estimate', () => handlers.request_estimate({}));
+  useConversationClientTool<TennieTools>('compare_markets', () => handlers.compare_markets({}));
+  useConversationClientTool<TennieTools>('record_paper', () => handlers.record_paper({}));
+  useConversationClientTool<TennieTools>('open_record', p => handlers.open_record(p));
+  useConversationClientTool<TennieTools>('back_to_instruction', () => handlers.back_to_instruction({}));
+  useConversationClientTool<TennieTools>('delete_record', p => handlers.delete_record(p));
+  useConversationClientTool<TennieTools>('cancel_instruction', () => handlers.cancel_instruction({}));
+  useConversationClientTool<TennieTools>('describe_desk', () => handlers.describe_desk({}));
+  useConversationClientTool<TennieTools>('explain_concept', p => handlers.explain_concept(p));
 
   const [dialing, setDialing] = useState(false);
   const dialCancelledRef = useRef(false);
@@ -184,8 +184,8 @@ function IsabelCallInner({
     onDisconnect: () => {
       onLiveChange?.(false);
       setDialing(false);
-      const d = isabelRef.current;
-      const note = isabelClosingLine(d.state, d.foreground, endedByUserRef.current ? 'ended' : 'dropped');
+      const d = tennieRef.current;
+      const note = tennieClosingLine(d.state, d.foreground, endedByUserRef.current ? 'ended' : 'dropped');
       endedByUserRef.current = false;
       fireEnded(note);
     },
@@ -227,8 +227,8 @@ function IsabelCallInner({
     const endForLeave = () => {
       if (!sessionActiveRef.current && statusRef.current === 'disconnected') return;
       hangUp();
-      const d = isabelRef.current;
-      fireEnded(isabelClosingLine(d.state, d.foreground, 'ended'));
+      const d = tennieRef.current;
+      fireEnded(tennieClosingLine(d.state, d.foreground, 'ended'));
     };
     const onHidden = () => {
       hangUp();
@@ -264,8 +264,8 @@ function IsabelCallInner({
     setDialing(false);
     hangUp();
     endTimerRef.current = setTimeout(() => {
-      const d = isabelRef.current;
-      fireEnded(isabelClosingLine(d.state, d.foreground, 'ended'));
+      const d = tennieRef.current;
+      fireEnded(tennieClosingLine(d.state, d.foreground, 'ended'));
     }, 2000);
   }, [hangUp, fireEnded]);
 
@@ -278,26 +278,26 @@ function IsabelCallInner({
     setDialing(true);
     onActivity();
     receiverClick();
-    const result = await fetchJson<{ signedUrl?: string }>('/api/desk/isabel/session', { method: 'POST', cache: 'no-store' });
+    const result = await fetchJson<{ signedUrl?: string }>('/api/desk/tennie/session', { method: 'POST', cache: 'no-store' });
     if (dialCancelledRef.current || ringGenRef.current !== gen) return;
     if (!result.ok) {
       const e = result.error;
       const msg = e.retryAfterSeconds
         ? `The line is busy. Try again in about ${Math.max(1, Math.ceil(e.retryAfterSeconds / 5) * 5)} seconds.`
         : e.code === 'not_connected'
-          ? 'Isabel’s line is not connected on this deployment.'
+          ? 'Tennie’s line is not connected on this deployment.'
           : e.message;
       fireFailed(msg);
       return;
     }
     if (!result.data.signedUrl) {
-      fireFailed('Isabel’s line is unavailable. Please try again shortly.');
+      fireFailed('Tennie’s line is unavailable. Please try again shortly.');
       return;
     }
-    const d = isabelRef.current;
-    const ticketOpening = isabelOpeningLine(d.state, d.foreground);
+    const d = tennieRef.current;
+    const ticketOpening = tennieOpeningLine(d.state, d.foreground);
     const resume = mode === 'resume' && captionsRef.current.length > 0;
-    const prior = resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Isabel') : null;
+    const prior = resume ? boundedDiscussionContext(captionsRef.current, undefined, 'Tennie') : null;
     const opening = resume ? openingWithResume(ticketOpening, captionsRef.current) : ticketOpening;
     try {
       await (conversation.startSession as unknown as (opts: Record<string, unknown>) => unknown)({
@@ -335,14 +335,14 @@ function IsabelCallInner({
     return () => window.removeEventListener(LINE_SIGNAL_EVENT, onSignal);
   }, [live, ringing, endCall, cancelRing]);
 
-  /* Ring-on-arrival: the foyer's "Talk with Isabel" leaves a one-shot note;
+  /* Ring-on-arrival: the foyer's "Talk with Tennie" leaves a one-shot note;
      the line lifts on mount. */
   useEffect(() => {
-    if (consumeRingOnArrival('isabel')) void ringRef.current('fresh');
+    if (consumeRingOnArrival('tennie')) void ringRef.current('fresh');
   }, []);
 
-  const estimating = isabel.inFlight || isabel.foreground.kind === 'pending';
-  const inReview = isabel.foreground.kind === 'quotation';
+  const estimating = tennie.inFlight || tennie.foreground.kind === 'pending';
+  const inReview = tennie.foreground.kind === 'quotation';
   const speaking = live && conversation.isSpeaking;
   const statusKey = ringing ? 'connecting' : !live ? 'idle' : estimating ? 'estimating' : speaking ? 'speaking' : inReview ? 'review' : conversation.isMuted ? 'muted' : 'on';
   const statusLabel = ringing
@@ -352,7 +352,7 @@ function IsabelCallInner({
       : estimating
         ? 'Requesting estimate'
         : speaking
-          ? 'Isabel speaking'
+          ? 'Tennie speaking'
           : inReview
             ? 'For your review'
             : conversation.isMuted
@@ -361,32 +361,32 @@ function IsabelCallInner({
 
   const lastUser = lastCaption(captions, 'user');
   const lastAgent = lastCaption(captions, 'agent');
-  const applied = live || captions.length > 0 ? appliedIsabelTicketLine(isabel.state, isabel.foreground) : null;
+  const applied = live || captions.length > 0 ? appliedTennieTicketLine(tennie.state, tennie.foreground) : null;
 
-  const callNote = isabel.foreground.kind === 'missing'
+  const callNote = tennie.foreground.kind === 'missing'
     ? 'That paper record is no longer in this browser. Return to the instruction.'
-    : isabel.foreground.kind === 'archive'
+    : tennie.foreground.kind === 'archive'
       ? 'A filed record is on the ticket. It is for reading until you return to the instruction.'
       : live && inReview
-        ? 'The quotation is on the slip. Take your time — Isabel will hold the line.'
+        ? 'The quotation is on the slip. Take your time — Tennie will hold the line.'
         : null;
 
   return (
-    <section id="isabel-line" className={styles.call} aria-labelledby="isabel-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
+    <section id="tennie-line" className={styles.call} aria-labelledby="tennie-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
-        <h2 id="isabel-call-title" className={compactPlate ? styles.srOnly : undefined}>Isabel Benham <small>The Railroad Lady · AI broker on Robinhood Chain</small></h2>
+        <h2 id="tennie-call-title" className={compactPlate ? styles.srOnly : undefined}>Tennie C. Claflin <small>The Lady Broker · AI broker on Robinhood Chain</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>
           <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
           {live ? 'CONNECTED' : ringing ? 'CONNECTING' : 'DIRECT LINE'}
         </span>
       </div>
-      {!live && !ringing && <BrokerLinePlate deskId="isabel" take={take} compact={compactPlate} />}
+      {!live && !ringing && <BrokerLinePlate deskId="tennie" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
         {!live && !ringing && captions.length > 0 && (
           <>
             <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>
-              Resume with Isabel
+              Resume with Tennie
             </button>
             <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); }}>
               Start fresh
@@ -402,13 +402,13 @@ function IsabelCallInner({
               type="button"
               className={styles.callButton}
               data-cue="idle"
-              aria-label={compactPlate ? 'Ring Isabel' : undefined}
+              aria-label={compactPlate ? 'Ring Tennie' : undefined}
               onClick={() => void ring('fresh')}
             >
               <span className={styles.ringLamp} aria-hidden="true" />
-              {compactPlate ? 'Ring' : 'Ring Isabel'}
+              {compactPlate ? 'Ring' : 'Ring Tennie'}
             </button>
-            {compactPlate && <RingExample deskId="isabel" />}
+            {compactPlate && <RingExample deskId="tennie" />}
           </>
         )}
         {ringing && !live && (
@@ -439,14 +439,14 @@ function IsabelCallInner({
       </div>
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
-          <LineCaptions captions={captions} brokerName="Isabel" applied={applied} />
+          <LineCaptions captions={captions} brokerName="Tennie" applied={applied} />
           {captions.length > 4 && (
             <details className={styles.captionHistory}>
               <summary>Conversation ({captions.length})</summary>
               <ol>
                 {captions.map((c, i) => (
                   <li key={`${c.at}-${i}`} data-voice={c.role}>
-                    <span>{c.role === 'user' ? 'You' : 'Isabel'}.</span> {c.text}
+                    <span>{c.role === 'user' ? 'You' : 'Tennie'}.</span> {c.text}
                   </li>
                 ))}
               </ol>
@@ -467,15 +467,15 @@ function IsabelCallInner({
  * Outer shell owns captions / notes so remounting ConversationProvider never
  * wipes the discussion or closing line.
  */
-export const IsabelCall = memo(function IsabelCall({
-  isabel,
+export const TennieCall = memo(function TennieCall({
+  tennie,
   take = null,
   compactPlate = false,
   onLiveChange,
   onUserSpoken,
   onAgentSpoken,
 }: {
-  isabel: IsabelDesk;
+  tennie: TennieDesk;
   take?: string | null;
   compactPlate?: boolean;
   onLiveChange?: (live: boolean) => void;
@@ -499,8 +499,8 @@ export const IsabelCall = memo(function IsabelCall({
 
   return (
     <ConversationProvider key={sessionKey}>
-      <IsabelCallInner
-        isabel={isabel}
+      <TennieCallInner
+        tennie={tennie}
         take={take}
         compactPlate={compactPlate}
         captions={captions}

@@ -34,7 +34,7 @@ describe('instrument identity scheme', () => {
 
 describe('desk quote limits live in the mandate', () => {
   it('gives every desk explicit guardrails', () => {
-    for (const deskId of ['hetty', 'jesse', 'isabel', 'arbitrum'] as const) {
+    for (const deskId of ['hetty', 'jesse', 'tennie', 'arbitrum'] as const) {
       const limits = deskQuoteLimits(deskId);
       assert.equal(limits.buyMax, '10000');
       assert.equal(limits.sellMax, '1000');
@@ -63,11 +63,11 @@ describe('adapter registries', () => {
     assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
     assert.equal(markAdapterFor('jesse').source, 'jupiter-price-v3');
     assert.equal(markAdapterFor('jesse').market, 'Solana');
-    /* Isabel quotes via the Lighter domain order book on Robinhood Chain;
+    /* Tennie quotes via the Lighter domain order book on Robinhood Chain;
        marks are the onchain Chainlink feed with the issuer leg as duplex. */
-    assert.equal(quoteAdapterFor('isabel').venue, 'lighter');
-    assert.equal(markAdapterFor('isabel').source, 'chainlink');
-    assert.equal(markAdapterFor('isabel').market, 'Robinhood Chain');
+    assert.equal(quoteAdapterFor('tennie').venue, 'lighter');
+    assert.equal(markAdapterFor('tennie').source, 'chainlink');
+    assert.equal(markAdapterFor('tennie').market, 'Robinhood Chain');
     for (const deskId of ['arbitrum', 'nope']) {
       assert.equal(codeOf(() => markAdapterFor(deskId)), 'desk_unavailable');
     }

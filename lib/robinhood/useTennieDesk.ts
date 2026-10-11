@@ -1,7 +1,7 @@
 /**
- * Isabel seated-desk session — the Robinhood Chain desk's document owner.
+ * Tennie seated-desk session — the Robinhood Chain desk's document owner.
  *
- * Isabel has no voice line, so there is exactly one actor: the surface. A
+ * Tennie has no voice line, so there is exactly one actor: the surface. A
  * plain generation-guarded async flow replaces Jesse's serialized command
  * queue — the invariants are unchanged: one path files paper (`file` on a
  * fresh estimate under review), edits invalidate an under-review estimate,
@@ -15,31 +15,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DeskDocumentSession, DeskForegroundDocument } from '../desk/contracts';
 import {
-  isIsabelIntent,
+  isTennieIntent,
   isRobinhoodInstrumentId,
-  type IsabelDraft,
-  type IsabelIntent,
+  type TennieDraft,
+  type TennieIntent,
   type RobinhoodInstrumentId,
   type RobinhoodPaperEstimate,
 } from './contracts';
 import { getRobinhoodInstrument } from './catalog';
 import type { RobinhoodEvidence } from './duplex';
 import {
-  clearIsabelDraft,
-  deleteIsabelPaperRecord,
-  loadIsabelDraft,
-  loadIsabelPaperRecords,
-  saveIsabelDraft,
-  saveIsabelPaperRecord,
-  type IsabelPaperRecord,
+  clearTennieDraft,
+  deleteTenniePaperRecord,
+  loadTennieDraft,
+  loadTenniePaperRecords,
+  saveTennieDraft,
+  saveTenniePaperRecord,
+  type TenniePaperRecord,
 } from './paper';
-import { createIsabelEvidencePort, createIsabelQuotePort } from './desk-ports';
+import { createTennieEvidencePort, createTennieQuotePort } from './desk-ports';
 
-export type IsabelStage = 'draft' | 'quoting' | 'review' | 'saved';
+export type TennieStage = 'draft' | 'quoting' | 'review' | 'saved';
 
-export interface IsabelDeskState {
-  stage: IsabelStage;
-  draft: IsabelDraft;
+export interface TennieDeskState {
+  stage: TennieStage;
+  draft: TennieDraft;
   quote: RobinhoodPaperEstimate | null;
   /** The evidence tape fetched for the quote's instrument; null while
    *  loading or when the venue-duplex endpoint could not answer. */
@@ -47,15 +47,15 @@ export interface IsabelDeskState {
   notice: string | null;
 }
 
-export interface IsabelDesk extends DeskDocumentSession {
-  state: IsabelDeskState;
+export interface TennieDesk extends DeskDocumentSession {
+  state: TennieDeskState;
   inFlight: boolean;
-  records: IsabelPaperRecord[];
+  records: TenniePaperRecord[];
   historyReady: boolean;
   storageError: string | null;
   viewedRecordId: string | null;
   foreground: DeskForegroundDocument;
-  edit: (partial: Partial<IsabelDraft>) => void;
+  edit: (partial: Partial<TennieDraft>) => void;
   /** Leave review and return to the slip with the draft untouched. */
   revise: () => void;
   quote: () => void;
@@ -66,7 +66,7 @@ export interface IsabelDesk extends DeskDocumentSession {
   removeRecord: (id: string) => void;
 }
 
-function emptyState(): IsabelDeskState {
+function emptyState(): TennieDeskState {
   return {
     stage: 'draft',
     draft: { instrumentId: null, side: null, amount: null },
@@ -76,7 +76,7 @@ function emptyState(): IsabelDeskState {
   };
 }
 
-function draftIntent(draft: IsabelDraft): IsabelIntent | null {
+function draftIntent(draft: TennieDraft): TennieIntent | null {
   if (!draft.instrumentId || !draft.side || !draft.amount) return null;
   const intent = {
     instrumentId: draft.instrumentId,
@@ -84,13 +84,13 @@ function draftIntent(draft: IsabelDraft): IsabelIntent | null {
     unit: draft.side === 'buy' ? 'USDG' : 'token',
     amount: draft.amount,
   };
-  return isIsabelIntent(intent) ? intent : null;
+  return isTennieIntent(intent) ? intent : null;
 }
 
-function isabelForeground(
-  state: IsabelDeskState,
+function tennieForeground(
+  state: TennieDeskState,
   viewedRecordId: string | null,
-  records: IsabelPaperRecord[] | undefined,
+  records: TenniePaperRecord[] | undefined,
 ): DeskForegroundDocument {
   const viewed = viewedRecordId ? records?.find(r => r.id === viewedRecordId) : undefined;
   const instrumentId = viewed?.quote.intent.instrumentId
@@ -117,21 +117,21 @@ function isabelForeground(
   return { kind: 'draft', quoteId: null, recordId: null, instrumentId, actionable: true, readonly: false };
 }
 
-export function useIsabelDesk(
+export function useTennieDesk(
   ports: {
-    quote?: (intent: IsabelIntent) => Promise<RobinhoodPaperEstimate>;
+    quote?: (intent: TennieIntent) => Promise<RobinhoodPaperEstimate>;
     evidence?: (instrumentId: RobinhoodInstrumentId) => Promise<RobinhoodEvidence | null>;
     storage?: () => (Storage | null);
     now?: () => number;
   } = {},
-): IsabelDesk {
-  const quotePort = useMemo(() => ports.quote ?? createIsabelQuotePort(), [ports.quote]);
-  const evidencePort = useMemo(() => ports.evidence ?? createIsabelEvidencePort(), [ports.evidence]);
+): TennieDesk {
+  const quotePort = useMemo(() => ports.quote ?? createTennieQuotePort(), [ports.quote]);
+  const evidencePort = useMemo(() => ports.evidence ?? createTennieEvidencePort(), [ports.evidence]);
   const storageOf = useMemo(() => ports.storage ?? (() => (typeof window === 'undefined' ? null : window.localStorage)), [ports.storage]);
   const now = ports.now ?? Date.now;
 
-  const [state, setState] = useState<IsabelDeskState>(emptyState);
-  const [records, setRecords] = useState<IsabelPaperRecord[]>([]);
+  const [state, setState] = useState<TennieDeskState>(emptyState);
+  const [records, setRecords] = useState<TenniePaperRecord[]>([]);
   const [historyReady, setHistoryReady] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [viewedRecordId, setViewedRecordId] = useState<string | null>(null);
@@ -145,7 +145,7 @@ export function useIsabelDesk(
     const storage = storageOf();
     if (!storage) { setHistoryReady(true); return; }
     try {
-      setRecords(loadIsabelPaperRecords(storage));
+      setRecords(loadTenniePaperRecords(storage));
       setStorageError(null);
     } catch {
       setStorageError('Paper records could not be read on this browser.');
@@ -159,7 +159,7 @@ export function useIsabelDesk(
   useEffect(() => {
     const storage = storageOf();
     if (!storage) return;
-    const draft = loadIsabelDraft(storage);
+    const draft = loadTennieDraft(storage);
     if (draft.instrumentId || draft.side || draft.amount) {
       setState(current => current.stage === 'draft' && !current.draft.instrumentId
         ? { ...current, draft }
@@ -167,15 +167,15 @@ export function useIsabelDesk(
     }
   }, [storageOf]);
 
-  const persistDraft = useCallback((draft: IsabelDraft) => {
+  const persistDraft = useCallback((draft: TennieDraft) => {
     const storage = storageOf();
     if (!storage) return;
     try {
-      saveIsabelDraft(storage, draft);
+      saveTennieDraft(storage, draft);
     } catch { /* draft resume is optional — never block the desk */ }
   }, [storageOf]);
 
-  const edit = useCallback((partial: Partial<IsabelDraft>) => {
+  const edit = useCallback((partial: Partial<TennieDraft>) => {
     genRef.current += 1;
     setState(current => {
       const draft = { ...current.draft, ...partial };
@@ -192,7 +192,7 @@ export function useIsabelDesk(
   const cancel = useCallback(() => {
     genRef.current += 1;
     const storage = storageOf();
-    if (storage) { try { clearIsabelDraft(storage); } catch { /* optional */ } }
+    if (storage) { try { clearTennieDraft(storage); } catch { /* optional */ } }
     setState(emptyState());
   }, [storageOf]);
 
@@ -238,7 +238,7 @@ export function useIsabelDesk(
       return false;
     }
     try {
-      const record = saveIsabelPaperRecord(storage, {
+      const record = saveTenniePaperRecord(storage, {
         quote: current.quote,
         instrument,
         evidence: current.evidence,
@@ -264,7 +264,7 @@ export function useIsabelDesk(
     const storage = storageOf();
     if (!storage) { setStorageError('Browser storage is unavailable.'); return; }
     try {
-      deleteIsabelPaperRecord(storage, id);
+      deleteTenniePaperRecord(storage, id);
       setRecords(existing => existing.filter(r => r.id !== id));
       if (viewedRecordId === id) setViewedRecordId(null);
     } catch {
@@ -273,7 +273,7 @@ export function useIsabelDesk(
   }, [storageOf, viewedRecordId]);
 
   const foreground = useMemo(
-    () => isabelForeground(state, viewedRecordId, historyReady ? records : undefined),
+    () => tennieForeground(state, viewedRecordId, historyReady ? records : undefined),
     [state, viewedRecordId, records, historyReady],
   );
 

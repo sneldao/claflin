@@ -1,9 +1,9 @@
 /**
- * Pure decision layer behind Isabel's ConvAI client tools — same role as
+ * Pure decision layer behind Tennie's ConvAI client tools — same role as
  * lib/jesse/voice-tools.ts. Policy lives here so the call surface cannot
  * forget archive/missing guards or invent catalog aliases.
  *
- * Isabel's desk is paper-only on Robinhood Chain: USDG spends for buys,
+ * Tennie's desk is paper-only on Robinhood Chain: USDG spends for buys,
  * whole-token units for sells, Lighter-book estimates, three-way evidence
  * (issuer quote, onchain mark, venue book) — labelled, never blended.
  */
@@ -11,11 +11,11 @@ import { ROBINHOOD_INSTRUMENTS } from './catalog';
 import { brokerBio } from '../desk/broker-voice';
 import { formatRecordedTime } from '../trading/desk-documents';
 import type { DeskForegroundDocument } from '../desk/contracts';
-import type { IsabelDeskState } from './useIsabelDesk';
-import type { IsabelPaperRecord } from './paper';
-import type { IsabelDraft, RobinhoodInstrument, RobinhoodInstrumentId, RobinhoodPaperEstimate } from './contracts';
+import type { TennieDeskState } from './useTennieDesk';
+import type { TenniePaperRecord } from './paper';
+import type { TennieDraft, RobinhoodInstrument, RobinhoodInstrumentId, RobinhoodPaperEstimate } from './contracts';
 
-export type IsabelExplainTopic = 'reference-difference' | 'market-hours' | 'paper-mode' | 'stock-token' | 'namesake';
+export type TennieExplainTopic = 'reference-difference' | 'market-hours' | 'paper-mode' | 'stock-token' | 'namesake';
 
 const ARCHIVE_READONLY =
   'That filed record is for reading. Return to the instruction to quote or file.';
@@ -31,7 +31,7 @@ export function spokenAmount(raw: string): string {
   return rounded.includes('.') ? rounded.replace(/0+$/, '').replace(/\.$/, '') : rounded;
 }
 
-export function isabelForegroundGuard(foreground: DeskForegroundDocument): string | null {
+export function tennieForegroundGuard(foreground: DeskForegroundDocument): string | null {
   if (foreground.kind === 'missing') return RECORD_MISSING;
   if (foreground.kind === 'archive') return ARCHIVE_READONLY;
   return null;
@@ -91,30 +91,30 @@ export function chooseRobinhoodInstrumentResult(query: string): string {
   return `${instrument.symbol} (${shortCompany(instrument.name)}) is on the ticket.`;
 }
 
-export function isabelSymbol(instrumentId: RobinhoodInstrumentId | null | undefined): string {
+export function tennieSymbol(instrumentId: RobinhoodInstrumentId | null | undefined): string {
   if (!instrumentId) return 'this mark';
   return ROBINHOOD_INSTRUMENTS.find(i => i.id === instrumentId)?.symbol ?? 'this mark';
 }
 
-function isabelInstrument(instrumentId: RobinhoodInstrumentId | null | undefined): RobinhoodInstrument | undefined {
+function tennieInstrument(instrumentId: RobinhoodInstrumentId | null | undefined): RobinhoodInstrument | undefined {
   if (!instrumentId) return undefined;
   return ROBINHOOD_INSTRUMENTS.find(i => i.id === instrumentId);
 }
 
-const ISABEL_EXPLANATIONS: Record<IsabelExplainTopic, string> = {
+const TENNIE_EXPLANATIONS: Record<TennieExplainTopic, string> = {
   'reference-difference':
     'This desk reads three tapes for the same token: the issuer’s quote, the onchain Chainlink mark, and the venue book on Lighter. They are shown side by side, labelled, never blended into one number. When they cannot be aligned on timing or units, the desk says so instead of showing a difference.',
   'market-hours':
     'The underlying equities trade during US market hours, but the venue and the chain read around the clock. Outside equity hours the issuer quote may be stale or absent — the desk labels what it is actually reading rather than presenting a live mark it does not have.',
   'paper-mode':
-    'Isabel is a paper desk. An estimate is a read of the visible Lighter book, and filing a paper record only saves a local record in this browser. No wallet is touched, no order is routed, and nothing settles on any network.',
+    'Tennie is a paper desk. An estimate is a read of the visible Lighter book, and filing a paper record only saves a local record in this browser. No wallet is touched, no order is routed, and nothing settles on any network.',
   'stock-token':
     'These are stock tokens issued by Robinhood Assets Jersey — tokens that track listed US equities and funds on Robinhood Chain. They are not exchange orders, and they carry the issuer’s own eligibility terms. On this desk they are for paper records only.',
   /* The namesake story — the same reviewed text the nameplate shows. */
-  'namesake': brokerBio('isabel') ?? '',
+  'namesake': brokerBio('tennie') ?? '',
 };
 
-export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | null {
+export function resolveTennieExplainTopic(query: string): TennieExplainTopic | null {
   const q = query.trim().toLowerCase();
   if (!q) return null;
   if (/reference|difference|spread|basis\s*points?|three[\s-]?way|duplex|triplex|evidence/.test(q)) {
@@ -126,7 +126,7 @@ export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | n
   if (/paper|simulation|local\s*record|no\s*wallet|real|live|funds|settle|execut/.test(q)) {
     return 'paper-mode';
   }
-  if (/namesake|name(d)?\s+(for|after)|who\s+(are|r)\s+you|who is isabel|benham|railroad\s*lady/.test(q)) {
+  if (/namesake|name(d)?\s+(for|after)|who\s+(are|r)\s+you|who is tennie|tennessee|claflin|lady\s*broker/.test(q)) {
     return 'namesake';
   }
   if (/stock\s*token|robinhood|issu\w+|jersey|eligib|usdg|token/.test(q)) {
@@ -135,19 +135,19 @@ export function resolveIsabelExplainTopic(query: string): IsabelExplainTopic | n
   return null;
 }
 
-export function isabelExplainTopicChoices(): string {
+export function tennieExplainTopicChoices(): string {
   return 'reference-difference, market-hours, paper-mode, stock-token, namesake';
 }
 
-export function explainIsabelTopic(topic: IsabelExplainTopic): string {
-  return ISABEL_EXPLANATIONS[topic];
+export function explainTennieTopic(topic: TennieExplainTopic): string {
+  return TENNIE_EXPLANATIONS[topic];
 }
 
 /** Side flip clears amount — 100 USDG is never 100 tokens. */
-export function nextIsabelInstructionDraft(
-  draft: IsabelDraft,
+export function nextTennieInstructionDraft(
+  draft: TennieDraft,
   side: 'buy' | 'sell',
-): { draft: IsabelDraft; amountCleared: boolean } {
+): { draft: TennieDraft; amountCleared: boolean } {
   if (draft.side === side) {
     return { draft: { ...draft, side }, amountCleared: false };
   }
@@ -158,7 +158,7 @@ export function nextIsabelInstructionDraft(
   };
 }
 
-export function setIsabelInstructionResult(side: string, amountCleared = false): string {
+export function setTennieInstructionResult(side: string, amountCleared = false): string {
   if (side === 'buy') {
     return amountCleared
       ? 'Buy set — the old token quantity was cleared. Ask for a USDG spend before quoting.'
@@ -172,7 +172,7 @@ export function setIsabelInstructionResult(side: string, amountCleared = false):
   return 'The instruction must be buy or sell.';
 }
 
-export function setIsabelAmountResult(side: 'buy' | 'sell' | null, amount: string): string {
+export function setTennieAmountResult(side: 'buy' | 'sell' | null, amount: string): string {
   if (side === 'sell') return `${amount} token units is on the ticket.`;
   if (side === 'buy') return `${amount} USDG is on the ticket.`;
   return `${amount} is on the ticket — say buy or sell so the units are clear.`;
@@ -186,37 +186,37 @@ export function describeEstimateTerms(quote: RobinhoodPaperEstimate): string {
  * Context-aware opening: recognition before interrogation — same rule as
  * the other lines.
  */
-export function isabelOpeningLine(state: IsabelDeskState, foreground: DeskForegroundDocument): string {
+export function tennieOpeningLine(state: TennieDeskState, foreground: DeskForegroundDocument): string {
   if (foreground.kind === 'missing') {
-    return 'Claflin, Isabel speaking. That record is no longer here. Shall we return to the instruction?';
+    return 'Claflin, Tennie speaking. That record is no longer here. Shall we return to the instruction?';
   }
   if (foreground.kind === 'archive' || foreground.kind === 'receipt') {
-    return 'Claflin, Isabel speaking. You are looking at a filed paper record. Shall we go through it?';
+    return 'Claflin, Tennie speaking. You are looking at a filed paper record. Shall we go through it?';
   }
   if (foreground.kind === 'pending') {
-    return 'Claflin, Isabel speaking. An estimate is on its way. Shall we wait for it together?';
+    return 'Claflin, Tennie speaking. An estimate is on its way. Shall we wait for it together?';
   }
   if (foreground.kind === 'quotation') {
-    return 'Claflin, Isabel speaking. Your quotation is on the slip — the Lighter book, paper only. What would you like to clarify?';
+    return 'Claflin, Tennie speaking. Your quotation is on the slip — the Lighter book, paper only. What would you like to clarify?';
   }
   const draft = state.draft;
-  const instrument = isabelInstrument(draft.instrumentId);
+  const instrument = tennieInstrument(draft.instrumentId);
   const company = instrument ? shortCompany(instrument.name) : null;
   if (company && draft.side && draft.amount) {
     const unit = draft.side === 'buy' ? 'USDG' : 'token units';
-    return `Claflin, Isabel speaking. You have a ${company} ${draft.side} for ${draft.amount} ${unit}. Shall we check the estimate?`;
+    return `Claflin, Tennie speaking. You have a ${company} ${draft.side} for ${draft.amount} ${unit}. Shall we check the estimate?`;
   }
   if (company && draft.side) {
-    return `Claflin, Isabel speaking. You have a ${company} ${draft.side} started — add the amount when ready.`;
+    return `Claflin, Tennie speaking. You have a ${company} ${draft.side} started — add the amount when ready.`;
   }
   if (company) {
-    return `Claflin, Isabel speaking. ${company} is on the ticket. Buy with USDG, or sell token units?`;
+    return `Claflin, Tennie speaking. ${company} is on the ticket. Buy with USDG, or sell token units?`;
   }
-  return 'Claflin, Isabel speaking. Robinhood Chain desk — paper only. What shall we put on the ticket?';
+  return 'Claflin, Tennie speaking. Robinhood Chain desk — paper only. What shall we put on the ticket?';
 }
 
-export function isabelClosingLine(
-  state: IsabelDeskState,
+export function tennieClosingLine(
+  state: TennieDeskState,
   foreground: DeskForegroundDocument,
   reason: 'ended' | 'dropped',
 ): string {
@@ -240,7 +240,7 @@ export function isabelClosingLine(
     : 'Nothing was filed.';
 }
 
-function describeIsabelRecord(record: IsabelPaperRecord): string {
+function describeTennieRecord(record: TenniePaperRecord): string {
   const q = record.quote;
   const sym = record.instrumentSnapshot.symbol;
   return q.intent.side === 'buy'
@@ -251,11 +251,11 @@ function describeIsabelRecord(record: IsabelPaperRecord): string {
 /** Match a spoken description to a filed record — newest first, narrowed by
  *  company and buy/sell. No description means the record on screen, else the
  *  latest. Nothing matching is null, never a guess. */
-export function findIsabelRecord(
-  records: IsabelPaperRecord[],
+export function findTennieRecord(
+  records: TenniePaperRecord[],
   onScreenId: string | null,
   query: string,
-): IsabelPaperRecord | null {
+): TenniePaperRecord | null {
   const sorted = [...records].sort((a, b) => b.createdAt - a.createdAt);
   if (sorted.length === 0) return null;
   const words = query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
@@ -271,14 +271,14 @@ export function findIsabelRecord(
     && (!side || r.quote.intent.side === side)) ?? null;
 }
 
-export function describeIsabelRecordFor(record: IsabelPaperRecord): string {
-  return describeIsabelRecord(record);
+export function describeTennieRecordFor(record: TenniePaperRecord): string {
+  return describeTennieRecord(record);
 }
 
-export function describeIsabelDesk(
-  state: IsabelDeskState,
+export function describeTennieDesk(
+  state: TennieDeskState,
   foreground: DeskForegroundDocument,
-  records: IsabelPaperRecord[],
+  records: TenniePaperRecord[],
 ): string {
   const parts: string[] = [];
   if (foreground.kind === 'missing') {
@@ -286,13 +286,13 @@ export function describeIsabelDesk(
   } else if (foreground.kind === 'archive') {
     const record = records.find(r => r.id === foreground.recordId);
     parts.push(record
-      ? `The ticket is showing a filed paper record, read-only: ${describeIsabelRecord(record)}. Return to the instruction to quote or file.`
+      ? `The ticket is showing a filed paper record, read-only: ${describeTennieRecord(record)}. Return to the instruction to quote or file.`
       : RECORD_MISSING);
   } else if (foreground.kind === 'receipt' && state.quote) {
     parts.push(`The current instruction is filed: ${describeEstimateTerms(state.quote)}`);
   } else {
     const draft = state.draft;
-    parts.push(draft.instrumentId ? `Instrument: ${isabelSymbol(draft.instrumentId)}.` : 'No instrument chosen.');
+    parts.push(draft.instrumentId ? `Instrument: ${tennieSymbol(draft.instrumentId)}.` : 'No instrument chosen.');
     if (draft.side && draft.amount) {
       parts.push(`${draft.side} ${draft.amount} ${draft.side === 'buy' ? 'USDG' : 'token units'}.`);
     } else if (draft.side) {
@@ -309,20 +309,20 @@ export function describeIsabelDesk(
   return parts.join(' ');
 }
 
-export function appliedIsabelTicketLine(state: IsabelDeskState, foreground: DeskForegroundDocument): string | null {
+export function appliedTennieTicketLine(state: TennieDeskState, foreground: DeskForegroundDocument): string | null {
   if (foreground.kind === 'quotation' && state.quote) {
     return `On the ticket: ${describeEstimateTerms(state.quote)}`;
   }
   const d = state.draft;
   if (!d.instrumentId && !d.side && !d.amount) return null;
-  const symbol = isabelSymbol(d.instrumentId);
+  const symbol = tennieSymbol(d.instrumentId);
   if (d.side && d.amount) return `On the ticket: ${d.side} ${d.amount} ${d.side === 'buy' ? 'USDG' : 'token units'} of ${symbol}.`;
   if (d.instrumentId) return `On the ticket: ${symbol}${d.side ? ` · ${d.side}` : ''}.`;
   return null;
 }
 
 /** One line describing the evidence tape's posture for the line to say. */
-export function describeIsabelEvidence(state: IsabelDeskState): string {
+export function describeTennieEvidence(state: TennieDeskState): string {
   const evidence = state.evidence;
   if (!evidence) {
     return 'The evidence tape arrives beside the estimate — issuer quote, onchain mark, and venue book, side by side. Ask for the estimate first.';

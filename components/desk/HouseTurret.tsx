@@ -357,7 +357,7 @@ export function HouseTurret({ instruction, onInstruction, lineDesks, planned, on
             (matched && sole !== null) ||
             (reading.kind === 'launch' && launch);
           /* A line is the channel the desk actually takes — voice desks
-             answer a call, typed-only desks like Isabel take the
+             answer a call, typed-only desks like Tennie take the
              instruction field. Never a fake "Talk" affordance. */
           const voice = DESK_CAPABILITIES[desk.id].voice !== null;
           const matchCount = matchesForDesk(desk.id);

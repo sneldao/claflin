@@ -4,7 +4,7 @@
  *
  * Why this exists: the board's most-differentiated cell is the gap
  * between the tokenized stock (B20c on Base) and its underlying equity
- * (NVDA, AAPL, etc). Jesse has this via the venue-duplex reads; Isabel
+ * (NVDA, AAPL, etc). Jesse has this via the venue-duplex reads; Tennie
  * has this via the rhj `/prices` endpoint; Hetty doesn't.
  *
  * The plan's candidates for the Base stock reference are:

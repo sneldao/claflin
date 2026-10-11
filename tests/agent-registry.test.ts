@@ -49,7 +49,7 @@ describe('Broker Registry', () => {
     const { agentCanUseSkill } = await import('../lib/agent-registry');
     assert.ok(agentCanUseSkill('general_helper', 'research'), 'Hetty should be able to research');
     assert.ok(!agentCanUseSkill('general_helper', 'book'), 'Hetty should not be able to book');
-    assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'Benham should not be able to book');
+    assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'Tennie should not be able to book');
     assert.ok(agentCanUseSkill('code_reviewer', 'research'), 'Woodhull should be able to research');
     assert.ok(!agentCanUseSkill('tour_master', 'order'), 'Concierge should not be able to order');
     assert.ok(agentCanUseSkill('web_researcher', 'research'), 'Baruch should be able to research');

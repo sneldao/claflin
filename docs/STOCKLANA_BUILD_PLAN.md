@@ -174,7 +174,7 @@ export interface DeskCapabilities {
 ```
 
 - Retain the current Base `TradeIntent` schema as the legacy branch; add `JesseIntent` to the shared intent union. Desk/mint validation, not shape alone, enforces which branch is valid. Reject `scaled-token` for Base and raw `token` sells for Jesse.
-- Change `isOpenDesk` to consult explicit capabilities; preserve `OPEN_DESK_ID = 'hetty'` as the legacy/default storage owner. Planned Isabel/Arbitrum remain closed.
+- Change `isOpenDesk` to consult explicit capabilities; preserve `OPEN_DESK_ID = 'hetty'` as the legacy/default storage owner. Planned Tennie/Arbitrum remain closed.
 - `instrumentsForDesk(deskId)` returns only that desk's instruments. `getDeskInstrument(id)` recognizes exact canonical ids; EVM normalization is protocol-specific. Alias resolution requires `deskId`, defaulting to Hetty only at retained Hetty call sites.
 - Type `DeskInstrument` as the legacy Base shape or `SolanaInstrument`; expose helpers for display name, address, and network. Narrow before accessing EVM-only fields. Do not append fake `venuePairs` to a Solana instrument.
 - Remove the numeric-chain requirement from the general `QuoteAdapter` interface; Base implementation keeps its own chain property. `quote(input: unknown)` returns the shared paper-estimate union. `canQuote` enforces the desk catalog.

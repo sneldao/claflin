@@ -15,7 +15,7 @@ https://claflin.trustfall.xyz/
 The foyer is the entry — it is the three-track story in one screen. One typed or spoken instruction lights every line that can carry it.
 
 - `/` → the house turret: hold Space to dictate or type; "buy Apple" lights all three desks as separate offerings
-- `/?desk=isabel` → Isabel's Robinhood Chain desk (paper-only, voice line live)
+- `/?desk=tennie` → Tennie's Robinhood Chain desk (paper-only, voice line live)
 - `/?desk=jesse&view=room` → Jesse's Solana desk, Room view (prefer for judging Jesse)
 - `/?desk=halley` → Halley's Meteora DBC launch desk (tracker-token launches; live path dual-flagged off, devnet-verified)
 - `/?desk=hetty` → Hetty's Base desk
@@ -34,16 +34,16 @@ Claflin is an existing Deco-futurist brokerage house product. Before the window 
 
 - **Jesse Livermore / Solana desk** — entire `lib/solana/` module first committed 2026-09-17: verified Backed xStock catalog (Token-2022, live scaled-UI multiplier), Jupiter Metis estimates, v2 paper records, Jesse's ConvAI line, Room/Compact views, free venue duplex (issuer vs venue USD) and PreStocks secondary duplex, honest-unavailable Pyth comparison, dual-env-gated live Jupiter settle
 - **Rail-neutral house seams** — mandate/offering/coverage contracts (`lib/desk/*`), desk-aware quote/marks routes, foyer turret with instruction→offering lamps, house book
-- **Isabel Benham / Robinhood Chain desk (all of it)** — 24-symbol verified catalog (rhj `ASSET_STATUS_ACTIVE` ∩ onchain Chainlink feed ∩ Lighter book), marks adapter (rhj issuer reference + multiplier-adjusted onchain feed), Lighter orderbook USDG estimates with depth/partial-fill labels and share-equivalent multiplier display, three-way evidence tape filed into every paper record, desk surface, turret LINE 3, and her ElevenLabs ConvAI line (`/api/desk/isabel/session`)
+- **Tennie Claflin / Robinhood Chain desk (all of it)** — 24-symbol verified catalog (rhj `ASSET_STATUS_ACTIVE` ∩ onchain Chainlink feed ∩ Lighter book), marks adapter (rhj issuer reference + multiplier-adjusted onchain feed), Lighter orderbook USDG estimates with depth/partial-fill labels and share-equivalent multiplier display, three-way evidence tape filed into every paper record, desk surface, turret LINE 3, and her ElevenLabs ConvAI line (`/api/desk/tennie/session`)
 - **Edmond Halley / Meteora DBC launch desk (all of it)** — entire `lib/meteora/` module: launch intent grammar (name, quote, anchor, curve, supply, graduation), USDC + badged-xStock quote catalog, projected-curve estimates, equity-anchored opening bands that fall back to the live onchain xStock mark when the equity tape rests (weekends/nights stay anchored — venue and resting-equity gap both disclosed), paper launch records, ConvAI line, and a **live two-transaction launch ceremony** (curve config → pool+mint, both wallet-signed, sequential broadcast, `confirmed`/`failed`/`partial`/`unknown` outcomes, dual-signature reconciliation) behind dual env flags — devnet-verified with the production builder (`scripts/halley-devnet-launch.ts`)
 - **Eligibility gate** — Hetty's live path now refuses fail-closed unless the wallet carries Coinbase Verifications (Verified Account + non-restricted Verified Country) and a Coinbase-scoped self-declaration; enforced in the ticket and re-checked inside the execution hook. Halley's live ticket gates on a Meteora-scoped self-declaration (honestly labelled, browser-local)
 
-**Not claimed:** that live settle or live launch is enabled in production (all live flags default off; the Halley live path is devnet-verified, not yet mainnet-enabled); that paper records are fills; that any fixture (`/night-desk?study=1`) is a live market; that Isabel's desk can execute — she is paper-only by design with no live flag; that a Halley tracker token is stock ownership — it is a new exposure token the launcher's own wallet creates.
+**Not claimed:** that live settle or live launch is enabled in production (all live flags default off; the Halley live path is devnet-verified, not yet mainnet-enabled); that paper records are fills; that any fixture (`/night-desk?study=1`) is a live market; that Tennie's desk can execute — she is paper-only by design with no live flag; that a Halley tracker token is stock ownership — it is a new exposure token the launcher's own wallet creates.
 
 ## Submission form fields
 
 - **Product name:** Claflin
-- **Brief description:** A voice-first brokerage house for tokenized US equities. A client speaks or types an instruction at the foyer turret; the house resolves it to a concrete offering — issuer, rail, venue — and lights the desk lines that can carry it. Four seated desks today: Coinbase Tokenized Stocks on Base (Hetty), Backed xStocks on Solana (Jesse), Robinhood Stock Tokens on Robinhood Chain (Isabel), and Meteora DBC tracker-token launches on Solana (Halley). Every desk quotes a real venue, labels its evidence honestly, files paper records by default, and never lets voice touch a signature.
+- **Brief description:** A voice-first brokerage house for tokenized US equities. A client speaks or types an instruction at the foyer turret; the house resolves it to a concrete offering — issuer, rail, venue — and lights the desk lines that can carry it. Four seated desks today: Coinbase Tokenized Stocks on Base (Hetty), Backed xStocks on Solana (Jesse), Robinhood Stock Tokens on Robinhood Chain (Tennie), and Meteora DBC tracker-token launches on Solana (Halley). Every desk quotes a real venue, labels its evidence honestly, files paper records by default, and never lets voice touch a signature.
 - **Blockchains/tools:** Solana (Jupiter Metis, Backed xStocks, Pyth, Meteora DBC → DAMM v2), Base (Aerodrome, Chainlink, Coinbase Verifications/EAS), Robinhood Chain — chain ID 4663 (Lighter orderbook venue, Chainlink stock feeds, rhj issuer REST), ElevenLabs ConvAI, AssemblyAI, Privy, Next.js.
 - **Repo:** https://github.com/sneldao/claflin — **grant hackathon@colosseum.com access**.
 - **Videos:** two required — a 2–3 min presentation video (the why: market, thesis, who it's for, business plan) and a separate ≤3 min technical demo video (the how; do not pitch in it).
@@ -52,9 +52,9 @@ Claflin is an existing Deco-futurist brokerage house product. Before the window 
 
 ## Demo script (~3 minutes, technical demo video)
 
-1. **Open the house (15s).** Fresh profile on `/`. NYSE clock shows closed; "The floor is dark. The line is open." Three lit lines — Hetty (Base), Jesse (Solana), Isabel (Robinhood Chain) — and the wire below carrying live marks from all three rails.
+1. **Open the house (15s).** Fresh profile on `/`. NYSE clock shows closed; "The floor is dark. The line is open." Three lit lines — Hetty (Base), Jesse (Solana), Tennie (Robinhood Chain) — and the wire below carrying live marks from all three rails.
 2. **One instruction, three rails (30s).** Type or hold Space and say "buy Apple". All three lamps light; the house names each offering — `AAPLc` on Base, `AAPLx` on Solana, `AAPL` on Robinhood Chain — and does not pick a rail for you. This is the multi-track moment: one house, three ecosystems, no silent substitution.
-3. **Isabel's desk (60s).** Open LINE 3 — "Talk with Isabel" rings her ConvAI line. Ask for 100 USDG of Apple: she resolves the instrument, sets the side and amount, and walks the Lighter book for a real estimate. Show the three-way tape filed with it: issuer rhj reference, onchain Chainlink mark, Lighter venue book — labelled, never blended. File the paper record; it lands in her browser-local ledger (`claflin.paper.v2.isabel.*`). State plainly: paper-only, no live flag exists.
+3. **Tennie's desk (60s).** Open LINE 3 — "Talk with Tennie" rings her ConvAI line. Ask for 100 USDG of Apple: she resolves the instrument, sets the side and amount, and walks the Lighter book for a real estimate. Show the three-way tape filed with it: issuer rhj reference, onchain Chainlink mark, Lighter venue book — labelled, never blended. File the paper record; it lands in her browser-local ledger (`claflin.paper.v2.tennie.*`). State plainly: paper-only, no live flag exists.
 4. **Jesse's desk (45s).** `/?desk=jesse&view=room`. Ring Jesse or tap; correct an instruction mid-slip — superseded values stay struck through. Show the venue duplex (issuer reference vs Jupiter venue USD, honest labels). Mention the dual-flagged live path exists; demo only if both flags are on at recording time.
 5. **Hetty + eligibility (30s).** `/?desk=hetty`. If live flags are on, show the readiness checklist: the wallet must carry Coinbase Verifications and confirm issuer terms before Approve/Execute unlock — fail-closed, re-checked inside the execution hook.
 6. **Halley's launch desk (30s — swap into the cut for the Meteora Earn submission).** `/?desk=halley`. Name a launch, choose the quote (USDC or a badged xStock), watch the projected curve draw on the slip — an estimate, not an order. File the paper launch. Then the honest line: the live ceremony is built — two wallet-signed transactions, curve config then pool+mint — devnet-verified with the production builder; state whether mainnet flags are on at record time. If flags are on, show the self-declaration gate and let the wallet sign.
@@ -67,7 +67,7 @@ If the mic fails on camera, every spoken step has a typed path — same controll
 - [ ] `hackathon@colosseum.com` granted repo access; verified by a non-team member
 - [ ] Every team member individually registered before Oct 12 11:59pm PT
 - [ ] `/` verified in a fresh profile: tape lines lit, RH marks on the wire, "buy Apple" lights all three tape desks; launch desk present
-- [ ] Isabel ring tested live: session opens, tool calls drive the ticket, paper filing lands
+- [ ] Tennie ring tested live: session opens, tool calls drive the ticket, paper filing lands
 - [ ] Prior-work disclosure pasted into the form — Hetty + platform disclosed; in-window list matches this doc
 - [ ] Presentation video (≤3 min) + technical demo video (≤3 min) recorded and uploaded
 - [ ] All content in English (rules §12)
@@ -81,6 +81,6 @@ If the mic fails on camera, every spoken step has a typed path — same controll
 |---|---|---|---|
 | Hetty Green | Coinbase Tokenized Stocks | Base / Aerodrome | Base paper (+ gated live behind Coinbase Verifications) |
 | Jesse Livermore | Backed xStocks | Solana / Jupiter | Solana paper (+ dual-flagged live) |
-| Isabel Benham | Robinhood Stock Tokens | Robinhood Chain / Lighter | Paper-only — estimates, evidence, filing; no live flag |
+| Tennie Claflin | Robinhood Stock Tokens | Robinhood Chain / Lighter | Paper-only — estimates, evidence, filing; no live flag |
 | Edmond Halley | Meteora DBC tracker-token launches | Solana / Meteora DBC → DAMM v2 | Launch-desk paper (+ dual-flagged live, devnet-verified; tracker tokens, never stock ownership) |
 | Jay Cooke | — | Arbitrum | Planned; a closed room |

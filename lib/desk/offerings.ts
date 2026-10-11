@@ -70,7 +70,7 @@ const ROBINHOOD_OFFERINGS: readonly InstrumentOffering[] = ROBINHOOD_INSTRUMENTS
   venue: 'lighter',
   quoteAsset: 'USDG' as const,
   unitPolicy: { buy: 'USDG', sell: 'token' },
-  deskIds: ['isabel' satisfies DeskId],
+  deskIds: ['tennie' satisfies DeskId],
   quoteSupported: stock.quoteSupported,
   status: 'active' as const,
 }));

@@ -206,7 +206,7 @@
 @media (max-width: 374px) { .plaques { grid-template-columns: minmax(0, 1fr); } }
 .fields { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 16px; }
 
-/* ————— Isabel's type-ahead instrument field ————— */
+/* ————— Tennie's type-ahead instrument field ————— */
 
 .instrumentPick { position: relative; }
 .instrumentPick input { width: 100%; padding: 14px 12px; border: 1px solid var(--desk-line); border-radius: 2px; background: transparent; color: var(--desk-paper-ink); font-size: 14px; min-height: 44px; }

@@ -1,11 +1,11 @@
 /**
- * Provisions the Isabel ConvAI agent on ElevenLabs.
+ * Provisions the Tennie ConvAI agent on ElevenLabs.
  *
- * Run:  node --env-file=.env.local scripts/create-isabel-agent.mjs
- * Then: set ELEVENLABS_AGENT_ISABEL=<printed id> and ELEVENLABS_VOICE_ISABEL
+ * Run:  node --env-file=.env.local scripts/create-tennie-agent.mjs
+ * Then: set ELEVENLABS_AGENT_TENNIE=<printed id> and ELEVENLABS_VOICE_TENNIE
  * in .env.local and your deployment environment.
  *
- * Isabel drives the Robinhood Chain desk through CLIENT tools — same
+ * Tennie drives the Robinhood Chain desk through CLIENT tools — same
  * pattern as Hetty and Jesse. She cannot place orders, move funds, or
  * check wallet balances; the desk is paper-only by design.
  */
@@ -16,7 +16,7 @@ if (!apiKey) {
   process.exit(1);
 }
 
-import { body, ISABEL_VOICE_ID } from './isabel-agent-config.mjs';
+import { body, TENNIE_VOICE_ID } from './tennie-agent-config.mjs';
 
 const res = await fetch('https://api.elevenlabs.io/v1/convai/agents/create', {
   method: 'POST',
@@ -29,8 +29,8 @@ if (!res.ok) {
   process.exit(1);
 }
 const data = await res.json();
-console.log('Created Isabel agent:', data.agent_id);
-console.log('Voice:', ISABEL_VOICE_ID);
+console.log('Created Tennie agent:', data.agent_id);
+console.log('Voice:', TENNIE_VOICE_ID);
 console.log('\nSet in .env.local and deployment env:');
-console.log('  ELEVENLABS_AGENT_ISABEL=' + data.agent_id);
-console.log('  ELEVENLABS_VOICE_ISABEL=' + ISABEL_VOICE_ID);
+console.log('  ELEVENLABS_AGENT_TENNIE=' + data.agent_id);
+console.log('  ELEVENLABS_VOICE_TENNIE=' + TENNIE_VOICE_ID);

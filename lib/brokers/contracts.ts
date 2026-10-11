@@ -73,8 +73,9 @@ const JESSE_FACT_CHECK: readonly { label: string; url: string }[] = Object.freez
   { label: 'Reminiscences of a Stock Operator (Lefèvre, 1923)', url: 'https://en.wikipedia.org/wiki/Reminiscences_of_a_Stock_Operator' },
 ]);
 
-const ISABEL_FACT_CHECK: readonly { label: string; url: string }[] = Object.freeze([
-  { label: 'Isabel Benham — Wikipedia', url: 'https://en.wikipedia.org/wiki/Isabel_Benham' },
+const TENNIE_FACT_CHECK: readonly { label: string; url: string }[] = Object.freeze([
+  { label: 'Tennessee Claflin — Wikipedia', url: 'https://en.wikipedia.org/wiki/Tennessee_Claflin' },
+  { label: 'Woodhull, Claflin & Co. — Wikipedia', url: 'https://en.wikipedia.org/wiki/Woodhull,_Claflin_%26_Co.' },
 ]);
 
 const HALLEY_FACT_CHECK: readonly { label: string; url: string }[] = Object.freeze([
@@ -111,18 +112,18 @@ export const BROKER_CONTRACTS: Readonly<Record<HouseDeskId, BrokerContract>> = O
     ]),
     voiceSample: { line: 'The tape first. Story second. What is the price telling you right now?', attribution: 'Jesse Livermore, at Jesse’s desk on Solana' },
   },
-  isabel: {
-    deskId: 'isabel',
-    name: 'Isabel Benham',
-    namedFor: 'Isabel Benham (1909–2013)',
-    signatureLine: 'Read the roadbed before the timetable.',
-    attribution: 'After biographical accounts of Isabel Benham’s bond-analyst method',
-    factCheckRefs: ISABEL_FACT_CHECK,
+  tennie: {
+    deskId: 'tennie',
+    name: 'Tennie C. Claflin',
+    namedFor: 'Tennie C. Claflin (1844–1923)',
+    signatureLine: 'Take the orders the Street will not.',
+    attribution: 'After accounts of Woodhull, Claflin & Co. — the first woman-run brokerage on Wall Street, 1870',
+    factCheckRefs: TENNIE_FACT_CHECK,
     lens: 'Three tapes — issuer, chain, venue — read side by side, never blended.',
     forbiddenPhrases: Object.freeze([
       ...COMMON_FORBIDDEN,
     ]),
-    voiceSample: { line: 'Three tapes for one token. Read them side by side.', attribution: 'Isabel Benham, at Isabel’s desk on Robinhood Chain' },
+    voiceSample: { line: 'Three tapes for one token. Read them side by side.', attribution: 'Tennie C. Claflin, at Tennie’s desk on Robinhood Chain' },
   },
   halley: {
     deskId: 'halley',

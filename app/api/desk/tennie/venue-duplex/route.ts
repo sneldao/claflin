@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 const budget = requestBudget(40);
 
 /**
- * GET /api/desk/isabel/venue-duplex?instrumentId=rh:<contract>
+ * GET /api/desk/tennie/venue-duplex?instrumentId=rh:<contract>
  *
  * Three-way evidence: Robinhood issuer quote (rhj), onchain Chainlink mark,
  * and the Lighter domain venue book — labelled, never blended. Evidence

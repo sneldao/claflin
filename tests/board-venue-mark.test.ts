@@ -5,21 +5,21 @@ import { INSTRUMENT_OFFERINGS } from '../lib/desk/offerings';
 import type { DeskMark } from '../lib/trading/marks-shared';
 
 /**
- * Phase 1.2: Isabel's marks now carry a third leg — the Lighter venue
+ * Phase 1.2: Tennie's marks now carry a third leg — the Lighter venue
  * mark — and the board renders it. The test asserts the shape flows
  * end-to-end: a mark with venueMark surfaces as a row with venueMark.
  */
 
-const isabelOffering = INSTRUMENT_OFFERINGS.find(o => o.mandateId === 'robinhood-stock-tokens' && o.quoteSupported);
-if (!isabelOffering) {
+const tennieOffering = INSTRUMENT_OFFERINGS.find(o => o.mandateId === 'robinhood-stock-tokens' && o.quoteSupported);
+if (!tennieOffering) {
   throw new Error('Expected at least one quote-supported Robinhood offering in INSTRUMENT_OFFERINGS');
 }
 
 function baseMark(): DeskMark {
   return {
-    instrumentId: isabelOffering!.instrumentId,
-    symbol: isabelOffering!.symbol,
-    name: isabelOffering!.name,
+    instrumentId: tennieOffering!.instrumentId,
+    symbol: tennieOffering!.symbol,
+    name: tennieOffering!.name,
     reference: {
       source: 'chainlink',
       status: 'observed',
@@ -31,7 +31,7 @@ function baseMark(): DeskMark {
   };
 }
 
-describe('board — venue mark (Isabel / Lighter)', () => {
+describe('board — venue mark (Tennie / Lighter)', () => {
   it('the board row carries a venueMark when the mark has one', () => {
     const mark: DeskMark = {
       ...baseMark(),
@@ -41,14 +41,14 @@ describe('board — venue mark (Isabel / Lighter)', () => {
         volume24hUsd: '380',
       },
     };
-    const row = boardRow(isabelOffering!, mark, true);
+    const row = boardRow(tennieOffering!, mark, true);
     assert.equal(row.venueMark, '330.29');
     assert.equal(row.venueMarkSource, 'Lighter');
     assert.equal(row.venueMarkVolume24hUsd, '380');
   });
 
   it('the board row venueMark is null when the mark has no venueMark', () => {
-    const row = boardRow(isabelOffering!, baseMark(), true);
+    const row = boardRow(tennieOffering!, baseMark(), true);
     assert.equal(row.venueMark, null);
     assert.equal(row.venueMarkSource, null);
     assert.equal(row.venueMarkVolume24hUsd, null);
@@ -65,7 +65,7 @@ describe('board — venue mark (Isabel / Lighter)', () => {
         differenceBps: '0.5',
       },
     };
-    const row = boardRow(isabelOffering!, mark, true);
+    const row = boardRow(tennieOffering!, mark, true);
     assert.equal(row.venueMark, null);
     // But the stock ref is present.
     assert.equal(row.stockRef, '330.37');

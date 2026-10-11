@@ -28,7 +28,7 @@ describe('desk film', () => {
     assert.match(DESK_FILMS.hetty!.transcript, /whaling fortune/);
     assert.match(DESK_FILMS.hetty!.namesake, /Hetty Green/);
     assert.ok(DESK_FILMS.hetty!.hook);
-    assert.ok(!DESK_FILMS.isabel && !DESK_FILMS.halley);
+    assert.ok(!DESK_FILMS.tennie && !DESK_FILMS.halley);
   });
 
   it('turns the foyer card over only where a film exists', () => {

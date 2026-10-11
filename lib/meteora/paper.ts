@@ -1,6 +1,6 @@
 /**
  * Halley paper records and draft checkpoints — the launch desk's filing
- * layer, same namespace discipline as Jesse's and Isabel's.
+ * layer, same namespace discipline as Jesse's and Tennie's.
  *
  * Filings live under `claflin.paper.v2.halley.<id>` as `version: 2` records
  * carrying the launch estimate and the anchor evidence exactly as presented

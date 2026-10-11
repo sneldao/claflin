@@ -1,5 +1,5 @@
 /**
- * Robinhood Chain contracts — Isabel's desk implementation for the
+ * Robinhood Chain contracts — Tennie's desk implementation for the
  * 'robinhood-stock-tokens' mandate on eip155:4663. Shared desk vocabulary
  * lives in lib/desk/contracts.ts and is re-exported here for compatibility.
  * Client-safe: no server imports, no env access, no dependencies.
@@ -24,18 +24,18 @@ export type RobinhoodNetwork = 'eip155:4663';
 export const ROBINHOOD_CHAIN_ID = 4663;
 export type RobinhoodInstrumentId = `rh:${string}`;
 
-/** USDG is Isabel's quote asset — Robinhood Chain's settlement stablecoin. */
+/** USDG is Tennie's quote asset — Robinhood Chain's settlement stablecoin. */
 export const ROBINHOOD_USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 export const USDG_DECIMALS = 6;
 
-export type IsabelIntent =
+export type TennieIntent =
   | { instrumentId: RobinhoodInstrumentId; side: 'buy'; unit: 'USDG'; amount: string }
   | { instrumentId: RobinhoodInstrumentId; side: 'sell'; unit: 'token'; amount: string };
 
 /** An incomplete instruction in progress — every field independently
  *  nullable. The unit is implied by the side (USDG spend for buys, token
  *  quantity for sells), so the draft never stores one. */
-export interface IsabelDraft {
+export interface TennieDraft {
   instrumentId: RobinhoodInstrumentId | null;
   side: 'buy' | 'sell' | null;
   amount: string | null;
@@ -50,7 +50,7 @@ export interface IsabelDraft {
 export interface RobinhoodInstrument {
   id: RobinhoodInstrumentId;
   network: RobinhoodNetwork;
-  deskId: 'isabel';
+  deskId: 'tennie';
   contractAddress: string;
   symbol: string;
   name: string;
@@ -80,21 +80,21 @@ export interface LighterBookEvidence {
   unfilledInputRaw: string;
 }
 
-/** Paper estimate for Isabel — Lighter orderbook walk, paper only. */
+/** Paper estimate for Tennie — Lighter orderbook walk, paper only. */
 export interface RobinhoodPaperEstimate {
   version: 1;
   id: string;
   kind: 'estimate';
   mode: 'paper';
   liveExecutionEnabled: false;
-  deskId: 'isabel';
+  deskId: 'tennie';
   mandateId?: 'robinhood-stock-tokens';
   offeringId?: string;
   instrumentId?: RobinhoodInstrumentId;
   network: RobinhoodNetwork;
   chainId: 4663;
   venue: 'lighter';
-  intent: IsabelIntent;
+  intent: TennieIntent;
   instrumentAddress: string;
   instrumentName: string;
   inputSymbol: string;
@@ -132,7 +132,7 @@ export interface RobinhoodPaperEstimate {
   assumptions: string;
 }
 
-export type DeskRevision = SharedDeskRevision<'isabel'>;
+export type DeskRevision = SharedDeskRevision<'tennie'>;
 
 const POSITIVE_DECIMAL = /^(0|[1-9]\d*)(\.\d+)?$/;
 
@@ -141,7 +141,7 @@ export function isRobinhoodInstrumentId(id: unknown): id is RobinhoodInstrumentI
   return typeof id === 'string' && /^rh:0x[0-9a-f]{40}$/.test(id);
 }
 
-export function isIsabelIntent(input: unknown): input is IsabelIntent {
+export function isTennieIntent(input: unknown): input is TennieIntent {
   if (typeof input !== 'object' || input === null) return false;
   const candidate = input as Record<string, unknown>;
   if (!isRobinhoodInstrumentId(candidate.instrumentId)) return false;
@@ -153,7 +153,7 @@ export function isIsabelIntent(input: unknown): input is IsabelIntent {
 
 declare module '../desk/contracts' {
   interface DeskIntentRegistry {
-    robinhood: IsabelIntent;
+    robinhood: TennieIntent;
   }
   interface QuoteEstimateRegistry {
     robinhood: RobinhoodPaperEstimate;

@@ -18,7 +18,7 @@
 
 import type { EntryIntent } from '../house-entry';
 
-export type ExampleCallSource = 'hetty' | 'jesse' | 'isabel' | 'halley';
+export type ExampleCallSource = 'hetty' | 'jesse' | 'tennie' | 'halley';
 
 export interface ExampleCallTurn {
   /** Who spoke. "caller" is the human; "broker" is the desk. */
@@ -112,7 +112,7 @@ export function isValidExampleCall(call: unknown): call is ExampleCall {
   if (typeof call !== 'object' || call === null) return false;
   const c = call as Record<string, unknown>;
   if (typeof c.id !== 'string' || c.id.length === 0) return false;
-  if (!['hetty', 'jesse', 'isabel', 'halley'].includes(c.source as string)) return false;
+  if (!['hetty', 'jesse', 'tennie', 'halley'].includes(c.source as string)) return false;
   if (typeof c.recordedAt !== 'number' || c.recordedAt <= 0) return false;
   if (typeof c.reviewedBy !== 'string' || c.reviewedBy.length === 0) return false;
   if (!Array.isArray(c.transcript) || c.transcript.length === 0) return false;

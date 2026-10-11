@@ -64,7 +64,7 @@ export interface BoardRow {
   stockRefSource: string | null;
   /**
    * Optional third leg — the venue mark (e.g. Lighter midpoint for
-   * Isabel). When present the board renders it with its source and
+   * Tennie). When present the board renders it with its source and
    * any volume context. Honest `null` when the venue leg is not
    * observed; never computed from the token mark.
    */

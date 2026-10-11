@@ -17,7 +17,7 @@ describe('turret — lamp count', () => {
   it('an empty reading has no matches for any desk', () => {
     const reading = readInstruction('');
     assert.equal(reading.kind, 'empty');
-    for (const deskId of ['hetty', 'jesse', 'isabel', 'halley'] as const) {
+    for (const deskId of ['hetty', 'jesse', 'tennie', 'halley'] as const) {
       assert.equal(lampFor(reading, deskId), 'idle');
     }
   });
@@ -33,22 +33,22 @@ describe('turret — lamp count', () => {
 
   it('the lamp reflects a match on the desk, not on the rail', () => {
     // AAPL appears on multiple desks (Hetty Base, Jesse Solana,
-    // Isabel Robinhood). Hetty's lamp should be lit (match) when
+    // Tennie Robinhood). Hetty's lamp should be lit (match) when
     // the offer is for the Base offering.
     const reading = readInstruction('AAPL');
     if (reading.kind !== 'matched') return;
     assert.equal(lampFor(reading, 'hetty'), 'match');
     assert.equal(lampFor(reading, 'jesse'), 'match');
-    assert.equal(lampFor(reading, 'isabel'), 'match');
+    assert.equal(lampFor(reading, 'tennie'), 'match');
   });
 
   it('litDesks returns the desks whose lamp is match', () => {
     const reading = readInstruction('AAPL');
     if (reading.kind !== 'matched') return;
-    const lit = litDesks(reading, ['hetty', 'jesse', 'isabel', 'halley']);
+    const lit = litDesks(reading, ['hetty', 'jesse', 'tennie', 'halley']);
     assert.ok(lit.includes('hetty'));
     assert.ok(lit.includes('jesse'));
-    assert.ok(lit.includes('isabel'));
+    assert.ok(lit.includes('tennie'));
   });
 
   it('a launch instruction lights only the launch desk', () => {

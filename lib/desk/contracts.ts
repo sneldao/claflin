@@ -136,7 +136,7 @@ export interface DeskRuntime {
   storage: DeskStoragePolicy;
   presentationDefault: DeskPresentation;
   /** Presentation implementation, not a settlement rail. */
-  surface: 'hetty' | 'jesse' | 'isabel' | 'halley' | null;
+  surface: 'hetty' | 'jesse' | 'tennie' | 'halley' | null;
 }
 
 export type DeskPresentation = 'room' | 'compact';

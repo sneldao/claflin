@@ -5,11 +5,11 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/desk/isabel/session
+ * POST /api/desk/tennie/session
  *
  * Mints a signed ElevenLabs ConvAI URL for a live voice session with
- * Isabel. The API key and agent id stay server-side; the browser only
- * ever sees a short-lived signed URL. Isabel's desk tools are client
+ * Tennie. The API key and agent id stay server-side; the browser only
+ * ever sees a short-lived signed URL. Tennie's desk tools are client
  * tools — she can draft, quote, and file paper records, never execute.
  */
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   try {
     userId = await accountFromRequest(req);
   } catch {
-    return Response.json({ error: 'unauthorized', message: 'Sign in again to ring Isabel.' }, { status: 401, headers });
+    return Response.json({ error: 'unauthorized', message: 'Sign in again to ring Tennie.' }, { status: 401, headers });
   }
 
   if (!instanceBudget()) {
@@ -39,9 +39,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const agentId = process.env.ELEVENLABS_AGENT_ISABEL;
+  /* The desk was Isabel's before the founder took her name back — the
+     legacy env name still works so existing deployments keep the line. */
+  const agentId = process.env.ELEVENLABS_AGENT_TENNIE ?? process.env.ELEVENLABS_AGENT_ISABEL;
   if (!apiKey || !agentId) {
-    return Response.json({ error: 'not_connected', message: 'Isabel’s line is not connected on this deployment.' }, { status: 503, headers });
+    return Response.json({ error: 'not_connected', message: 'Tennie’s line is not connected on this deployment.' }, { status: 503, headers });
   }
 
   try {
@@ -53,6 +55,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!body.signed_url) throw new Error('no_signed_url');
     return Response.json({ signedUrl: body.signed_url, account: userId ? 'bound' : 'anonymous' }, { headers });
   } catch {
-    return Response.json({ error: 'line_unavailable', message: 'Isabel’s line is unavailable right now. Please try again shortly.' }, { status: 502, headers });
+    return Response.json({ error: 'line_unavailable', message: 'Tennie’s line is unavailable right now. Please try again shortly.' }, { status: 502, headers });
   }
 }

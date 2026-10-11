@@ -53,7 +53,7 @@ const RULES = [
   { pattern: /\bMarieSol\b/i, reason: 'replaced by Halley — the launch desk identity' },
   { pattern: /\bthe\s+Solana\s+desk\b/i, reason: 'call it "Jesse" or "the Solana tape desk"; "Solana desk" makes the rail the brand' },
   { pattern: /\bthe\s+Base\s+desk\b/i, reason: 'call it "Hetty" or "the Base tape desk"' },
-  { pattern: /\bthe\s+Robinhood(?:\s+Chain)?\s+desk\b/i, reason: 'call it "Isabel" or "the Robinhood Chain tape desk"' },
+  { pattern: /\bthe\s+Robinhood(?:\s+Chain)?\s+desk\b/i, reason: 'call it "Tennie" or "the Robinhood Chain tape desk"' },
   { pattern: /\bMeteora\s+DBC\s+desk\b/i, reason: 'the venue is a property of Halley, not the desk\'s identity' },
 ];
 

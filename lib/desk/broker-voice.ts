@@ -41,13 +41,13 @@ export const BROKER_VOICE: Partial<Record<HouseDeskId, {
     bio:
       'Jesse Livermore (1877–1940) learned the tape in bucket shops before he learned the market, and kept his own line in a pocket notebook long before he trusted it to memory. Jesse’s desk borrows his discipline: price action and timing first, story second.',
   },
-  isabel: {
-    namedFor: 'Isabel Benham (1909–2013)',
-    epithet: 'The Railroad Lady',
+  tennie: {
+    namedFor: 'Tennie C. Claflin (1844–1923)',
+    epithet: 'The Lady Broker',
     rail: 'Stock Tokens · Robinhood Chain',
     lens: 'Three tapes — issuer, chain, venue — read side by side, never blended.',
     bio:
-      'Isabel Benham (1909–2013) fought for the economics degree Bryn Mawr did not want to grant a woman, and won it — then spent fifty years in railroad finance, reading the roadbed before the timetable, until the Street’s preeminent railroad bond analyst became the first woman partner at a Wall Street bond firm. This desk borrows her method: three tapes for one token, read side by side, never blended.',
+      'Tennie C. Claflin (1844–1923) opened Woodhull, Claflin & Co. on Broad Street in 1870 — the first brokerage women ran on Wall Street, backed by Cornelius Vanderbilt, and took the accounts the men’s houses refused. This house carries her name; this desk borrows her manner: three tapes for one token, read side by side, never blended.',
   },
   halley: {
     namedFor: 'Edmond Halley (1656–1742)',

@@ -1,5 +1,5 @@
 /**
- * Isabel's Robinhood Chain instrument catalog — a sourced allowlist, never a
+ * Tennie's Robinhood Chain instrument catalog — a sourced allowlist, never a
  * dynamic arbitrary-token catalog. Every entry was verified 2026-10-01
  * against three independent authorities:
  *
@@ -57,7 +57,7 @@ function entry(
   return Object.freeze({
     id: `rh:${contractAddress.toLowerCase()}` as RobinhoodInstrumentId,
     network: 'eip155:4663' as const,
-    deskId: 'isabel' as const,
+    deskId: 'tennie' as const,
     contractAddress,
     symbol,
     name,
@@ -99,22 +99,22 @@ export const ROBINHOOD_INSTRUMENTS: readonly RobinhoodInstrument[] = Object.free
   entry('USO', 'United States Oil Fund • Robinhood Token', '0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344', '0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c', 2061),
 ]);
 
-/** Every instrument Isabel's desk may quote — today, the triple-covered 24. */
+/** Every instrument Tennie's desk may quote — today, the triple-covered 24. */
 export function instrumentsForRobinhoodDesk(): readonly RobinhoodInstrument[] {
   return ROBINHOOD_INSTRUMENTS;
 }
 
 /**
- * Exact-id lookup in Isabel's allowlist — `rh:` + lowercase contract, no
+ * Exact-id lookup in Tennie's allowlist — `rh:` + lowercase contract, no
  * aliasing. A symbol-shaped or checksummed-but-uncatalogued id is unknown,
  * 404.
  */
 export function getRobinhoodInstrument(id: string): RobinhoodInstrument {
   const canonical = id.toLowerCase();
   if (!isRobinhoodInstrumentId(canonical)) {
-    throw new TradingError('unknown_instrument', 'This product is outside Isabel’s Robinhood Chain catalog.', 404);
+    throw new TradingError('unknown_instrument', 'This product is outside Tennie’s Robinhood Chain catalog.', 404);
   }
   const instrument = ROBINHOOD_INSTRUMENTS.find(candidate => candidate.id === canonical);
-  if (!instrument) throw new TradingError('unknown_instrument', 'This product is outside Isabel’s Robinhood Chain catalog.', 404);
+  if (!instrument) throw new TradingError('unknown_instrument', 'This product is outside Tennie’s Robinhood Chain catalog.', 404);
   return instrument;
 }

@@ -85,7 +85,7 @@ describe('broker contracts — forbidden phrases', () => {
   });
 
   it('matches portfolio-construction language', () => {
-    const matches = findForbiddenMatches('isabel', 'Put all your money in this, you can\'t lose.');
+    const matches = findForbiddenMatches('tennie', 'Put all your money in this, you can\'t lose.');
     assert.ok(matches.length > 0);
     const categories = new Set(matches.map(m => m.category));
     assert.ok(categories.has('portfolio advice'));

@@ -64,7 +64,7 @@ The five tasks are derived from `PRODUCT_DIRECTION.md` §"The complete client jo
 **Pass criteria:**
 - Identifies browser-local storage as the default scope.
 - Identifies that the optional Sign in (Privy) backs up Base paper records to an account; deleting locally does not remove the account copy.
-- Identifies that Jesse/Isabel/Halley records are browser-local only — there is no account backup.
+- Identifies that Jesse/Tennie/Halley records are browser-local only — there is no account backup.
 
 **Test invariant (CI):** the canon says which desks have account-bound sync; the access line in each canon entry states the storage scope. See `tests/comprehension.test.ts` "task 4".
 

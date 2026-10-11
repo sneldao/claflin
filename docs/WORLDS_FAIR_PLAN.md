@@ -1,4 +1,4 @@
-# World's Fair Entry Plan — track picks and the Isabel slice
+# World's Fair Entry Plan — track picks and the Tennie slice
 
 **Prepared:** 2026-10-01. **Status:** PLAN — directed work, not yet built. This document supersedes the Meteora-first framing of the World's Fair consideration recorded in [ROADMAP.md](../ROADMAP.md) and re-scopes [METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) as an optional sidetrack add-on rather than the entry vehicle. It changes no code until slices land on their own evidence.
 
@@ -39,24 +39,24 @@ One submission — the house — tagged to three ecosystems it genuinely integra
 |---|---|---|---|
 | **Solana** | Jesse: verified xStock catalog, Jupiter Metis quotes, venue-duplex marks, dual-env-gated live settle, ConvAI voice, Room/Compact | The whole Jesse integration was built for Stocklana **inside** the 14 Sept – 12 Oct window, plus rail-neutral desk seams and the foyer rebuild | None material — package it |
 | **Base** | Hetty: Aerodrome estimates, Chainlink marks, Privy-gated live path | Hetty's core predates the window → **disclose**; polish, foyer integration, and any in-window hardening count | Submission must foreground what changed in-window |
-| **Robinhood Chain** | Isabel is planned; baseline reviewed in [Architecture](AGENTIC_ARCHITECTURE.md#robinhood-chain-integration-baseline) | Everything Isabel ships is in-window by definition | §3 — the slice below |
+| **Robinhood Chain** | Tennie is planned; baseline reviewed in [Architecture](AGENTIC_ARCHITECTURE.md#robinhood-chain-integration-baseline) | Everything Tennie ships is in-window by definition | §3 — the slice below |
 
 Rejected picks: **Tempo** and **Zcash** are the wrong product shape for a brokerage desk; **Hyperliquid** is a whole new rail (HIP-3 equity perps are thematically adjacent but a fresh venue in 11 days); **Ethereum L1** would be a third new rail with no existing code; **Arbitrum** is the Jay Cooke slot and weaker than Robinhood Chain as the third pick — Robinhood Chain is Orbit-family but the track judges will read "Arbitrum" as Arbitrum One.
 
 Robinhood Chain is the strategic pick for a fourth reason: it is a chain *built for tokenized equities* judging a product that *is* a tokenized-equities brokerage, and it will likely be the least-contested track — few teams can integrate a weeks-old chain.
 
-## 3. Isabel scope — verified inputs
+## 3. Tennie scope — verified inputs
 
 Read from `docs.robinhood.com/chain` on 2026-10-01; recheck live parameters before release.
 
 - **Network:** mainnet live, chain ID `4663` (testnet `46630`), ETH gas, Arbitrum Dedicated Blockchains, first-come-first-served sequencing.
-- **Keyless REST:** `GET https://api.robinhood.com/rhj/assets` — per-asset `deployments[]` (checksummed contract + `chainId`), `currentMultiplier` (18-dp shares-per-token) + `pendingMultiplier`/`EffectiveTime`, `status`, `tradingCapabilities`. `GET /rhj/prices/{symbol}` — raw underlying-equity bid/ask, 15s cache, **not** multiplier-adjusted. `GET /rhj/corporate-actions`. All ~60 req/s, respect cache windows. **No API key required — Isabel's catalog and reference marks need no RPC dependency at all.**
+- **Keyless REST:** `GET https://api.robinhood.com/rhj/assets` — per-asset `deployments[]` (checksummed contract + `chainId`), `currentMultiplier` (18-dp shares-per-token) + `pendingMultiplier`/`EffectiveTime`, `status`, `tradingCapabilities`. `GET /rhj/prices/{symbol}` — raw underlying-equity bid/ask, 15s cache, **not** multiplier-adjusted. `GET /rhj/corporate-actions`. All ~60 req/s, respect cache windows. **No API key required — Tennie's catalog and reference marks need no RPC dependency at all.**
 - **Onchain Chainlink:** per-token `AggregatorV3Interface` feeds, multiplier-adjusted (token price = share price × multiplier), 24/5. Feed addresses are maintained on Chainlink's [Robinhood feeds page](https://docs.chain.link/data-feeds/price-feeds/addresses?network=robinhood) — read from there, never hardcode. `oraclePaused()` is advisory during corporate actions (keep staleness as the primary guard); L2 sequencer-uptime check recommended. `uiMultiplier()` (ERC-8056) on the token for share-equivalent display.
 - **Venues (verified 2026-10-01, see §4b):** **Lighter domain** is the quotable venue — `api.rh.lighter.xyz`, keyless REST, 25 rhj stock/USDG spot books with real quotes. **Rialto** has a real developer Quote API but requires a wallet-signed integrator key. **Uniswap is deployed but not functional** — canonical addresses hold 2109-byte stubs, no working factory, zero stock pools. RFQ (0x/1inch Fusion/LiFi) is the docs' primary-at-launch venue and is key-gated aggregator infrastructure. Direct mint/burn is KYB-only.
 - **RPC:** Alchemy recommended (`robinhood-mainnet.g.alchemy.com/v2/{key}`); Chainstack/QuickNode/Blockdaemon/dRPC also listed. Public endpoints are rate-limited — env-gate `ROBINHOOD_RPC_URL` behind the same provider-key posture as `BASE_RPC_URL`.
 - **Eligibility:** Stock Tokens are ERC-20 debt securities issued by Robinhood Assets (Jersey); US-person restrictions apply. As with Hetty, eligibility is our product's policy surface, never the chain's.
 
-**The duplex maps directly.** rhj `/prices` (issuer-side underlying bid/ask) vs the onchain Chainlink feed (multiplier-adjusted token valuation) is the same honesty pattern Jesse runs as venue-duplex — two truthful sources that diverge, labelled, never blended. Isabel's tape can carry "underlying reference" and "onchain token mark" from day one.
+**The duplex maps directly.** rhj `/prices` (issuer-side underlying bid/ask) vs the onchain Chainlink feed (multiplier-adjusted token valuation) is the same honesty pattern Jesse runs as venue-duplex — two truthful sources that diverge, labelled, never blended. Tennie's tape can carry "underlying reference" and "onchain token mark" from day one.
 
 ## 4. Build slices
 
@@ -64,9 +64,9 @@ Read from `docs.robinhood.com/chain` on 2026-10-01; recheck live parameters befo
 |---|---|---|
 | **A — marks + catalog** | Catalog derived from `/assets` (chainId 4663, `ASSET_STATUS_ACTIVE`), marks adapter reading rhj `/prices` + onchain Chainlink, honest stale/unavailable labels. Feeds desk tape and foyer wire. | **Landed 2026-10-01** — 24 triple-covered symbols; see §4a. |
 | **B — estimate** | **Venue = Lighter domain orderbook** (`api.rh.lighter.xyz`, keyless): best bid/ask + depth vs USDG per stock market, read-only. Not Uniswap — see §4b. | **Landed 2026-10-01** — book-walking USDG estimate with depth/partial-fill labels, multiplier, and the three-way tape embedded. |
-| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | **Landed 2026-10-01.** Reached via offering chips, `?desk=isabel`, and LINE 3 on the turret. ElevenLabs ConvAI line added 2026-10-02 (`scripts/isabel-agent-config.mjs`, `components/desk/IsabelCall.tsx`, `/api/desk/isabel/session`); still paper-only by design. |
+| **C — desk surface** | `lib/robinhood/` module (catalog/marks/flags), mandate + offering rows, registry entry, controller reuse, dual-env flags (paper default on, no live flag at all). | **Landed 2026-10-01.** Reached via offering chips, `?desk=tennie`, and LINE 3 on the turret. ElevenLabs ConvAI line added 2026-10-02 (`scripts/tennie-agent-config.mjs`, `components/desk/TennieCall.tsx`, `/api/desk/tennie/session`); still paper-only by design. |
 
-Out of scope for the window: live execution, wallet ceremony, account sync, eligibility enforcement surface. Isabel stays paper and marks-first — consistent with every desk gate the house has held.
+Out of scope for the window: live execution, wallet ceremony, account sync, eligibility enforcement surface. Tennie stays paper and marks-first — consistent with every desk gate the house has held.
 
 ## 4a. Spike evidence (2026-10-01)
 
@@ -97,7 +97,7 @@ Goal: is there a quotable venue for stock tokens on 4663? Exercised live against
 - **Direct mint/burn:** Authorized-Participant KYB only — never a client surface.
 
 **Consequences for slices:**
-- Isabel's estimate slice is **unblocked keyless**: venue = Lighter orderbook reads, quote asset USDG. Adapter shape mirrors Aerodrome (read-only quote → honest estimate), no key ceremony.
+- Tennie's estimate slice is **unblocked keyless**: venue = Lighter orderbook reads, quote asset USDG. Adapter shape mirrors Aerodrome (read-only quote → honest estimate), no key ceremony.
 - **Catalog recommendation: restrict the desk to the 24 triple-covered symbols** — `rhj catalog ∩ Chainlink feed ∩ Lighter spot` = AAPL, AMD, AMZN, BABA, COIN, CRCL, CRWV, GOOGL, INTC, META, MSFT, MU, NVDA, ORCL, PLTR, QQQ, SGOV, SLV, SNDK, SPCX, SPY, TSLA, USAR, USO (BE has a book but no feed; 12 fed names have no book). Every offering then carries issuer reference + onchain mark + venue quote — three labelable sources, the fullest duplex the house has run.
 - Lighter reads are public; **order placement** is a Lighter account/API-key matter — out of scope for the window, per the desk gate (paper-only).
 - Optional later: Rialto integrator onboarding (wallet-signed) adds a second equity venue with firm quotes — the only remaining RFQ-class path for stock tokens. Not needed for Slice B.
@@ -126,22 +126,22 @@ All sidetracks are separate **Superteam Earn** submissions due **13 Oct, 06:59 U
 
 ### Meteora repositioned
 
-[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) is **built paper-first as of 2026-10-03** — both conditions landed: Isabel's slice is seated (**done 2026-10-01**) and the DBC devnet spike is green (**done 2026-10-02**, full Token-2022 pair lifecycle through DAMM v2 migration). Scope 1 as built: LINE 4 launch desk drafting tracker/exposure tokens (DBC mints a fresh base — an existing xStock can only be the *quote*, never the base) in USDC or badged AAPLx/NVDAx/TSLAx, Pyth-anchored opening, DAMM v2 graduation, paper records, ConvAI line. The Earn submission still needs a live mainnet launch for the strongest entry — **the live path landed 2026-10-10** (two wallet-signed transactions: curve config → pool+mint, `lib/meteora/live-*`, devnet-verified end-to-end with the production builder) and stays dual-flagged off until a deliberate release decision. The venue-not-issuer hard line is unchanged.
+[METEORA_LAUNCH_DESK.md](METEORA_LAUNCH_DESK.md) is **built paper-first as of 2026-10-03** — both conditions landed: Tennie's slice is seated (**done 2026-10-01**) and the DBC devnet spike is green (**done 2026-10-02**, full Token-2022 pair lifecycle through DAMM v2 migration). Scope 1 as built: LINE 4 launch desk drafting tracker/exposure tokens (DBC mints a fresh base — an existing xStock can only be the *quote*, never the base) in USDC or badged AAPLx/NVDAx/TSLAx, Pyth-anchored opening, DAMM v2 graduation, paper records, ConvAI line. The Earn submission still needs a live mainnet launch for the strongest entry — **the live path landed 2026-10-10** (two wallet-signed transactions: curve config → pool+mint, `lib/meteora/live-*`, devnet-verified end-to-end with the production builder) and stays dual-flagged off until a deliberate release decision. The venue-not-issuer hard line is unchanged.
 
 ## 6. Sequence to the deadline
 
 | Days | Work |
 |---|---|
-| Oct 1–2 | Register (Solana + Base + Robinhood Chain). Isabel catalog + marks spike: exercise `/rhj/assets` + `/prices` live, pull Chainlink feed addresses, confirm a marks read end-to-end. Check Earn for a UK regional sidetrack. Meteora workshop only if the sidetrack is still in play. |
-| Oct 3–5 | ~~Isabel slice A + slice B spike~~ — **done early**: slices A, B, C all landed Oct 1. Use the slack for desk polish, e2e smoke on the deployed site, and submission copy. |
-| Oct 6–8 | ~~Meteora decision point~~ **Resolved early 2026-10-03** — Isabel clean + spike green → Halley Scope 1 approved and landed paper-first. Remaining Meteora call: whether a live mainnet launch is attempted before the Earn deadline. Submission copy begins — foreground in-window work, disclose pre-existing code. |
+| Oct 1–2 | Register (Solana + Base + Robinhood Chain). Tennie catalog + marks spike: exercise `/rhj/assets` + `/prices` live, pull Chainlink feed addresses, confirm a marks read end-to-end. Check Earn for a UK regional sidetrack. Meteora workshop only if the sidetrack is still in play. |
+| Oct 3–5 | ~~Tennie slice A + slice B spike~~ — **done early**: slices A, B, C all landed Oct 1. Use the slack for desk polish, e2e smoke on the deployed site, and submission copy. |
+| Oct 6–8 | ~~Meteora decision point~~ **Resolved early 2026-10-03** — Tennie clean + spike green → Halley Scope 1 approved and landed paper-first. Remaining Meteora call: whether a live mainnet launch is attempted before the Earn deadline. Submission copy begins — foreground in-window work, disclose pre-existing code. |
 | Oct 9–11 | Demo video + submission polish (UX and business plan are judging criteria — the voice-broker metaphor and paper-first honesty are the pitch). Confirm closed-repo judge-access requirements. |
 | Oct 12 | Submit before 11:59pm PT. Earn sidetrack submissions by 13 Oct 06:59 UTC. |
 
 ## 7. Honest risks
 
-1. **Disclosure.** Hetty predates the judging window and must be disclosed as pre-existing work; the in-window story is Jesse + rail-neutral seams + foyer + Isabel. Do not let the submission imply otherwise — misrepresentation is disqualifying.
-2. **Isabel venue risk — retired 2026-10-01.** The Lighter domain quote path is verified (§4b), so Isabel ships estimates, not just marks. Residual risk is depth honesty: 24h volume concentrates in ~6 books — thin names must label it.
+1. **Disclosure.** Hetty predates the judging window and must be disclosed as pre-existing work; the in-window story is Jesse + rail-neutral seams + foyer + Tennie. Do not let the submission imply otherwise — misrepresentation is disqualifying.
+2. **Tennie venue risk — retired 2026-10-01.** The Lighter domain quote path is verified (§4b), so Tennie ships estimates, not just marks. Residual risk is depth honesty: 24h volume concentrates in ~6 books — thin names must label it.
 3. **One submission.** This plan bets the single entry on the house; there is no second product slot to hedge with.
 4. **Closed repo — resolved 2026-10-02.** The official rules allow private repos if judges get access: invite `hackathon@colosseum.com` and verify every submitted link opens for a non-team member. The Meteora sidetrack separately documents `dannxbt`. Failure here is the most common disqualifying mistake per the track guides — do it early, not on submission day.
 5. **Regional sidetracks — resolved 2026-10-02.** Enumerated the Earn listings: ~25 regional tracks, all geography-gated, and **no UK track exists** (nearest: IE/NL/DE). Regional EV is binary on team location — see §5.

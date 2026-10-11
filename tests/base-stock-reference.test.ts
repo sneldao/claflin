@@ -13,7 +13,7 @@ function ticker(price: string, observedAt = NOW) {
  * The Base stock reference is the underlying-equity spot price (NVDA on
  * Coinbase Exchange, not the B20c token on Base). It fills the board's
  * "stock ref" cell for Hetty the same way Jesse's venue-duplex and
- * Isabel's rhj/prices fill theirs.
+ * Tennie's rhj/prices fill theirs.
  */
 
 describe('base stock reference — Coinbase Exchange read', () => {
@@ -133,7 +133,7 @@ describe('base stock reference — gap math', () => {
     assert.equal(referenceDifferenceBps('100', '0'), null);
   });
 
-  it('returns one decimal place, like Jesse and Isabel', () => {
+  it('returns one decimal place, like Jesse and Tennie', () => {
     // 100.123 / 100 = 1.00023 → 12.3 bps → one decimal
     assert.equal(referenceDifferenceBps('100.123', '100', ONE_SHARE), '12.3');
   });

@@ -13,13 +13,13 @@ import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
 import { ROBINHOOD_INSTRUMENTS, getRobinhoodInstrument } from '@/lib/robinhood/catalog';
 import type { RobinhoodEvidence } from '@/lib/robinhood/duplex';
 import type { RobinhoodInstrument, RobinhoodInstrumentId } from '@/lib/robinhood/contracts';
-import type { IsabelPaperRecord } from '@/lib/robinhood/paper';
+import type { TenniePaperRecord } from '@/lib/robinhood/paper';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
 
-const IsabelCall = dynamic(() => import('./IsabelCall').then(m => m.IsabelCall), { ssr: false });
+const TennieCall = dynamic(() => import('./TennieCall').then(m => m.TennieCall), { ssr: false });
 
 function money(value: string | null | undefined): string {
   if (!value) return '—';
@@ -39,7 +39,7 @@ function mid(a: string | null, b: string | null): string | null {
 function TriplexEvidence({ evidence }: { evidence: RobinhoodEvidence }) {
   return (
     <EvidencePanel
-      titleId="isabel-evidence"
+      titleId="tennie-evidence"
       eyebrow="THREE-WAY TAPE"
       title="Issuer, onchain, venue"
       status={evidence.status === 'comparable' ? 'ready' : 'unavailable'}
@@ -73,7 +73,7 @@ function TriplexEvidence({ evidence }: { evidence: RobinhoodEvidence }) {
   );
 }
 
-function recordLine(record: IsabelPaperRecord): string {
+function recordLine(record: TenniePaperRecord): string {
   const { quote, instrumentSnapshot } = record;
   const sym = instrumentSnapshot.symbol;
   return quote.intent.side === 'buy'
@@ -81,19 +81,19 @@ function recordLine(record: IsabelPaperRecord): string {
     : `Sold ${money(quote.inputAmount)} ${sym} for ${money(quote.outputAmount)} USDG`;
 }
 
-function IsabelRecordView({ record, onClose, onRemove }: {
-  record: IsabelPaperRecord;
+function TennieRecordView({ record, onClose, onRemove }: {
+  record: TenniePaperRecord;
   onClose: () => void;
   onRemove: (id: string) => void;
 }) {
   const { quote } = record;
   return (
-    <section className={styles.ticket} aria-labelledby="isabel-record-title" data-ticket-view="record">
+    <section className={styles.ticket} aria-labelledby="tennie-record-title" data-ticket-view="record">
       <div className={styles.paperTop}>
-        <span>FILED PAPER · ISABEL</span>
+        <span>FILED PAPER · TENNIE</span>
         <span className={styles.paperNumber}>{record.id.slice(0, 8)}</span>
       </div>
-      <h1 id="isabel-record-title">{recordLine(record)}</h1>
+      <h1 id="tennie-record-title">{recordLine(record)}</h1>
       <div className={styles.ticketSurface}>
         <p>Filed {new Date(record.createdAt).toLocaleString()} — a paper record, never a live order.</p>
         <p>Venue: Lighter book {quote.book.marketId} on Robinhood Chain · filled {quote.book.filledFully ? 'in full' : 'partly'} across {quote.book.levelsConsumed} {quote.book.levelsConsumed === 1 ? 'level' : 'levels'}.</p>
@@ -115,7 +115,7 @@ const PICK_SUGGESTIONS = 6;
  * Type a ticker or a company — the book narrows to a short list. One field
  * replaces a 24-row dropdown: the tape below stays for browsing.
  */
-function IsabelInstrumentField({ instrumentId, onPick }: {
+function TennieInstrumentField({ instrumentId, onPick }: {
   instrumentId: RobinhoodInstrumentId | null;
   onPick: (id: RobinhoodInstrumentId | null) => void;
 }) {
@@ -125,7 +125,7 @@ function IsabelInstrumentField({ instrumentId, onPick }: {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [openList, setOpenList] = useState(false);
-  const listId = 'isabel-instrument-list';
+  const listId = 'tennie-instrument-list';
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -146,8 +146,8 @@ function IsabelInstrumentField({ instrumentId, onPick }: {
   if (selected) {
     return (
       <>
-        <span id="isabel-instrument-label">Instrument</span>
-        <div className={styles.pickedInstrument} role="group" aria-labelledby="isabel-instrument-label">
+        <span id="tennie-instrument-label">Instrument</span>
+        <div className={styles.pickedInstrument} role="group" aria-labelledby="tennie-instrument-label">
           <span className={styles.pickedSymbol}>{selected.symbol}</span>
           <span className={styles.pickedName}>{selected.name.replace(/ • Robinhood Token$/, '')}</span>
           <button type="button" className={styles.secondary} onClick={() => onPick(null)}>
@@ -160,10 +160,10 @@ function IsabelInstrumentField({ instrumentId, onPick }: {
 
   return (
     <>
-      <label htmlFor="isabel-instrument">Instrument</label>
+      <label htmlFor="tennie-instrument">Instrument</label>
       <div className={styles.instrumentPick}>
         <input
-          id="isabel-instrument"
+          id="tennie-instrument"
           role="combobox"
           aria-expanded={openList && matches.length > 0}
           aria-controls={listId}
@@ -206,31 +206,31 @@ function IsabelInstrumentField({ instrumentId, onPick }: {
 }
 
 /**
- * Isabel's desk — Robinhood Chain stock tokens, paper only. Pick a token,
+ * Tennie's desk — Robinhood Chain stock tokens, paper only. Pick a token,
  * size it in USDG (or tokens to sell), get a Lighter orderbook estimate,
  * review the three-way tape, file a paper record. No voice line, no live
  * path — by design (docs/ELIGIBILITY.md §5).
  */
-export function IsabelDeskSurface({ desk }: { desk: Desk }) {
-  const isabel = desk.isabel;
-  const marks = useReferenceMarks('isabel');
-  const reviewNow = useReviewClock(isabel.state.stage === 'review');
+export function TennieDeskSurface({ desk }: { desk: Desk }) {
+  const tennie = desk.tennie;
+  const marks = useReferenceMarks('tennie');
+  const reviewNow = useReviewClock(tennie.state.stage === 'review');
 
-  const viewed = isabel.viewedRecordId
-    ? isabel.records.find(record => record.id === isabel.viewedRecordId) ?? null
+  const viewed = tennie.viewedRecordId
+    ? tennie.records.find(record => record.id === tennie.viewedRecordId) ?? null
     : null;
 
   /* Entry context applies once per entry: an offering names the instrument;
      a carried instruction names side and amount. */
   const entryOffering = desk.entryOfferingId ? offeringForId(desk.entryOfferingId) : null;
   const entryInstrumentId = entryOffering
-    && offeringCoversDesk(entryOffering, 'isabel')
+    && offeringCoversDesk(entryOffering, 'tennie')
     && ROBINHOOD_INSTRUMENTS.some(instrument => instrument.id === entryOffering.instrumentId)
     ? entryOffering.instrumentId as RobinhoodInstrumentId
     : null;
   const entryIntent = desk.entryIntent;
   const entryGen = desk.entryGen;
-  const edit = isabel.edit;
+  const edit = tennie.edit;
   useEffect(() => {
     if (!entryInstrumentId && !entryIntent?.side && !entryIntent?.amount) return;
     edit({
@@ -240,20 +240,20 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
     });
   }, [entryGen, entryInstrumentId, entryIntent, edit]);
 
-  const instrument: RobinhoodInstrument | null = isabel.state.draft.instrumentId
-    ? (() => { try { return getRobinhoodInstrument(isabel.state.draft.instrumentId); } catch { return null; } })()
+  const instrument: RobinhoodInstrument | null = tennie.state.draft.instrumentId
+    ? (() => { try { return getRobinhoodInstrument(tennie.state.draft.instrumentId); } catch { return null; } })()
     : null;
 
-  const quote = isabel.state.stage === 'review' || isabel.state.stage === 'saved' ? isabel.state.quote : null;
-  const expired = isabel.state.stage === 'review' && quote !== null && reviewNow >= quote.expiresAt;
+  const quote = tennie.state.stage === 'review' || tennie.state.stage === 'saved' ? tennie.state.quote : null;
+  const expired = tennie.state.stage === 'review' && quote !== null && reviewNow >= quote.expiresAt;
   const secondsLeft = quote ? Math.max(0, Math.ceil((quote.expiresAt - reviewNow) / 1000)) : 0;
 
-  const buy = isabel.state.draft.side !== 'sell';
-  const complete = Boolean(isabel.state.draft.instrumentId && isabel.state.draft.side && isabel.state.draft.amount);
+  const buy = tennie.state.draft.side !== 'sell';
+  const complete = Boolean(tennie.state.draft.instrumentId && tennie.state.draft.side && tennie.state.draft.amount);
 
   return (
     <DeskRoom
-      deskId="isabel"
+      deskId="tennie"
       activeDesk={desk.activeDesk}
       open={desk.open}
       onSwitchDesk={desk.switchDesk}
@@ -264,23 +264,23 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
       <ModeStamp
         live={false}
         hint="Lighter estimates · no funds move · kept in this browser. Stock tokens carry issuer eligibility terms."
-        market="ROBINHOOD CHAIN · ISABEL"
+        market="ROBINHOOD CHAIN · TENNIE"
       />
       <div className={styles.grid}>
         <div className={styles.deskSurface} aria-hidden="true"><span>CLAFLIN &amp; CO.</span></div>
         <DeskObjects />
-        <aside className={styles.support} aria-label="Isabel’s direct line">
-          <IsabelCall isabel={isabel} />
+        <aside className={styles.support} aria-label="Tennie’s direct line">
+          <TennieCall tennie={tennie} />
         </aside>
         {viewed ? (
-          <IsabelRecordView record={viewed} onClose={isabel.dismissRecord} onRemove={isabel.removeRecord} />
+          <TennieRecordView record={viewed} onClose={tennie.dismissRecord} onRemove={tennie.removeRecord} />
         ) : (
-        <section id="instruction" className={styles.ticket} aria-labelledby="isabel-ticket-title" data-ticket-view="open" data-desk-open="true">
+        <section id="instruction" className={styles.ticket} aria-labelledby="tennie-ticket-title" data-ticket-view="open" data-desk-open="true">
           <div className={styles.paperTop}>
             <span>ROBINHOOD STOCK TOKENS<small>CHAIN 4663</small></span>
             <span className={styles.paperNumber}>—</span>
           </div>
-          <h1 id="isabel-ticket-title">Isabel’s desk.</h1>
+          <h1 id="tennie-ticket-title">Tennie’s desk.</h1>
           <p className={styles.product}>
             Stock tokens issued by Robinhood Assets (Jersey) Limited. Paper estimates and
             records only — an estimate is never an order.
@@ -299,12 +299,12 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
             failed={marks.failed}
             stale={marks.stale}
             asOf={marks.result?.asOf}
-            disabled={isabel.state.stage === 'quoting'}
-            onSelect={id => isabel.edit({ instrumentId: id as RobinhoodInstrumentId })}
+            disabled={tennie.state.stage === 'quoting'}
+            onSelect={id => tennie.edit({ instrumentId: id as RobinhoodInstrumentId })}
           />
 
           <div className={styles.ticketSurface}>
-            {isabel.state.stage === 'review' && quote ? (
+            {tennie.state.stage === 'review' && quote ? (
               <div aria-live="polite">
                 <h2>
                   {quote.intent.side === 'buy'
@@ -312,7 +312,7 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
                     : `${money(quote.inputAmount)} ${instrument?.symbol ?? ''} → ${money(quote.outputAmount)} USDG`}
                 </h2>
                 <EvidencePanel
-                  titleId="isabel-book"
+                  titleId="tennie-book"
                   eyebrow="VENUE"
                   title="Lighter order book"
                   status="ready"
@@ -325,45 +325,45 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
                   )}
                   about={<p>{quote.assumptions}</p>}
                 />
-                {isabel.state.evidence && <TriplexEvidence evidence={isabel.state.evidence} />}
+                {tennie.state.evidence && <TriplexEvidence evidence={tennie.state.evidence} />}
                 <div className={styles.slipActions}>
                   {!expired ? (
-                    <button type="button" className={styles.primary} onClick={() => { isabel.file(); }}>
+                    <button type="button" className={styles.primary} onClick={() => { tennie.file(); }}>
                       File a paper record<span aria-hidden="true"> · {secondsLeft}s</span>
                     </button>
                   ) : (
-                    <button type="button" className={styles.primary} onClick={isabel.quote}>
+                    <button type="button" className={styles.primary} onClick={tennie.quote}>
                       Fresh estimate<span aria-hidden="true"> ↻</span>
                     </button>
                   )}
-                  <button type="button" className={styles.secondary} onClick={isabel.revise}>Adjust the slip</button>
-                  <button type="button" className={styles.secondary} onClick={isabel.cancel}>Discard</button>
+                  <button type="button" className={styles.secondary} onClick={tennie.revise}>Adjust the slip</button>
+                  <button type="button" className={styles.secondary} onClick={tennie.cancel}>Discard</button>
                 </div>
                 {expired && <p className={styles.notice} role="status">This estimate has lapsed — the figures above are its last reading.</p>}
               </div>
-            ) : isabel.state.stage === 'saved' && isabel.state.quote ? (
+            ) : tennie.state.stage === 'saved' && tennie.state.quote ? (
               <div aria-live="polite">
                 <h2>Filed.</h2>
                 <p className={styles.notice}>A paper record of the estimate — nothing moved onchain.</p>
-                {isabel.state.evidence && <TriplexEvidence evidence={isabel.state.evidence} />}
+                {tennie.state.evidence && <TriplexEvidence evidence={tennie.state.evidence} />}
                 <div className={styles.slipActions}>
-                  <button type="button" className={styles.primary} onClick={isabel.cancel}>New instruction</button>
+                  <button type="button" className={styles.primary} onClick={tennie.cancel}>New instruction</button>
                 </div>
               </div>
             ) : (
               <>
                 <div className={styles.fields}>
-                  <IsabelInstrumentField
-                    instrumentId={isabel.state.draft.instrumentId}
-                    onPick={id => isabel.edit({ instrumentId: id })}
+                  <TennieInstrumentField
+                    instrumentId={tennie.state.draft.instrumentId}
+                    onPick={id => tennie.edit({ instrumentId: id })}
                   />
 
-                  <span id="isabel-side-label">Side</span>
-                  <div role="group" aria-labelledby="isabel-side-label">
-                    <button type="button" aria-pressed={isabel.state.draft.side === 'buy'} className={isabel.state.draft.side === 'buy' ? styles.primary : styles.secondary}
-                      onClick={() => isabel.edit({ side: 'buy' })}>Buy</button>
-                    <button type="button" aria-pressed={isabel.state.draft.side === 'sell'} className={isabel.state.draft.side === 'sell' ? styles.primary : styles.secondary}
-                      onClick={() => isabel.edit({ side: 'sell' })}>Sell</button>
+                  <span id="tennie-side-label">Side</span>
+                  <div role="group" aria-labelledby="tennie-side-label">
+                    <button type="button" aria-pressed={tennie.state.draft.side === 'buy'} className={tennie.state.draft.side === 'buy' ? styles.primary : styles.secondary}
+                      onClick={() => tennie.edit({ side: 'buy' })}>Buy</button>
+                    <button type="button" aria-pressed={tennie.state.draft.side === 'sell'} className={tennie.state.draft.side === 'sell' ? styles.primary : styles.secondary}
+                      onClick={() => tennie.edit({ side: 'sell' })}>Sell</button>
                   </div>
 
                   <label htmlFor="amount">{buy ? 'USDG to spend' : `${instrument?.symbol ?? 'Token'} quantity`}</label>
@@ -371,35 +371,35 @@ export function IsabelDeskSurface({ desk }: { desk: Desk }) {
                     id="amount"
                     inputMode="decimal"
                     autoComplete="off"
-                    value={isabel.state.draft.amount ?? ''}
+                    value={tennie.state.draft.amount ?? ''}
                     placeholder={buy ? '25' : '0.5'}
-                    onChange={event => isabel.edit({ amount: event.target.value || null })}
+                    onChange={event => tennie.edit({ amount: event.target.value || null })}
                   />
                 </div>
-                {isabel.state.notice && <p className={styles.notice} role="alert">{isabel.state.notice}</p>}
-                {isabel.storageError && <p className={styles.notice} role="alert">{isabel.storageError}</p>}
+                {tennie.state.notice && <p className={styles.notice} role="alert">{tennie.state.notice}</p>}
+                {tennie.storageError && <p className={styles.notice} role="alert">{tennie.storageError}</p>}
                 <div className={styles.slipActions}>
                   <button
                     type="button"
                     className={styles.primary}
-                    disabled={isabel.state.stage === 'quoting' || !complete}
-                    onClick={isabel.quote}
+                    disabled={tennie.state.stage === 'quoting' || !complete}
+                    onClick={tennie.quote}
                   >
-                    {isabel.state.stage === 'quoting' ? 'Reading the book…' : 'Get an estimate'}
+                    {tennie.state.stage === 'quoting' ? 'Reading the book…' : 'Get an estimate'}
                   </button>
                 </div>
               </>
             )}
           </div>
 
-          {isabel.records.length > 0 && (
+          {tennie.records.length > 0 && (
             <details className={styles.aboutHetty}>
-              <summary>Filed paper ({isabel.records.length})</summary>
+              <summary>Filed paper ({tennie.records.length})</summary>
               <div className={styles.popoverPanel}>
                 <ul className={styles.ledgerLines}>
-                  {isabel.records.map(record => (
+                  {tennie.records.map(record => (
                     <li key={record.id}>
-                      <button type="button" onClick={() => isabel.openRecord(record.id)}>
+                      <button type="button" onClick={() => tennie.openRecord(record.id)}>
                         <strong>{recordLine(record)}</strong>
                         <span>{new Date(record.createdAt).toLocaleDateString()}</span>
                       </button>

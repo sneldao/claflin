@@ -4,7 +4,7 @@
  * has no execution path, so the line can draft, estimate, and file
  * launch records, never sign or submit a real DBC launch.
  *
- * Same reliability model as IsabelCall/JesseCall: every terminal event
+ * Same reliability model as TennieCall/JesseCall: every terminal event
  * remounts the ConversationProvider so a stale SDK lock cannot refuse
  * the next ring.
  */

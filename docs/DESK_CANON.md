@@ -16,9 +16,9 @@ The desk is layer 3. Its identity is the broker (the relationship), not the rail
 
 ## Naming rules
 
-- **Desk = broker.** Hetty, Jesse, Isabel, Halley, Jay are brokers. They are not "the Solana desk" or "the Base desk". The market (Base / Solana / Robinhood Chain / Arbitrum) is a property of the desk, not its identity.
+- **Desk = broker.** Hetty, Jesse, Tennie, Halley, Jay are brokers. They are not "the Solana desk" or "the Base desk". The market (Base / Solana / Robinhood Chain / Arbitrum) is a property of the desk, not its identity.
 - **Venue ≠ desk.** When a desk settles on a specific venue family (Jupiter, Aerodrome, Lighter, Meteora DBC), the venue is a property, not the identity. **Halley is not "the Meteora desk"** — he is the launch desk whose venue on Solana is Meteora DBC.
-- **Role distinguishes tape from launch.** Tape desks (Hetty, Jesse, Isabel) price, size, and file instruments that already trade. Launch desks (Halley) create the instrument. The distinction is structural: `kind: 'tape' | 'launch'` in `lib/desktop.canon.ts` drives the foyer split, the turret routing, and the board grouping.
+- **Role distinguishes tape from launch.** Tape desks (Hetty, Jesse, Tennie) price, size, and file instruments that already trade. Launch desks (Halley) create the instrument. The distinction is structural: `kind: 'tape' | 'launch'` in `lib/desktop.canon.ts` drives the foyer split, the turret routing, and the board grouping.
 
 ## The desks
 
@@ -38,11 +38,11 @@ The desk is layer 3. Its identity is the broker (the relationship), not the rail
 - **Capability:** Talk or type a buy. Get a Jupiter estimate. Paper or settle live.
 - **Status:** Paper desk open; live settlement env-gated behind `NEXT_PUBLIC_JESSE_LIVE_ENABLED + JESSE_LIVE_ENABLED`.
 
-### Isabel Benham — Robinhood Chain tape desk
+### Tennie Claflin — Robinhood Chain tape desk
 
 - **Market:** Robinhood Chain · **Venue:** Lighter
 - **Role:** Quotes and files Robinhood Stock Tokens via Lighter.
-- **Approach:** Fundamental analysis and patient investigation.
+- **Approach:** Access first — the accounts the Street refused, read tape by tape.
 - **Capability:** Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.
 - **Status:** Paper desk open by design. No live flag exists.
 

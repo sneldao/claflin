@@ -55,8 +55,8 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     presentationDefault: 'room' as const,
     surface: 'jesse' as const,
   }),
-  isabel: Object.freeze({
-    deskId: 'isabel',
+  tennie: Object.freeze({
+    deskId: 'tennie',
     coverages: Object.freeze([
       Object.freeze({
         mandate: MARKET_MANDATES['robinhood-stock-tokens'],
@@ -65,7 +65,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
     ]),
     storage: Object.freeze({ scope: 'browser-local' as const, engine: 'controller' as const, historyLimit: 100 }),
     presentationDefault: 'room' as const,
-    surface: 'isabel' as const,
+    surface: 'tennie' as const,
   }),
   halley: Object.freeze({
     deskId: 'halley',
@@ -96,7 +96,7 @@ const RUNTIME_BASE: Readonly<Record<HouseDeskId, RuntimeBase>> = Object.freeze({
 const EXTENDED_CAPABILITIES: Readonly<Record<HouseDeskId, { marks: boolean; accountSync: boolean; evidence: readonly string[] }>> = Object.freeze({
   hetty: Object.freeze({ marks: true, accountSync: true, evidence: [] }),
   jesse: Object.freeze({ marks: true, accountSync: false, evidence: ['comparison', 'venue-duplex', 'prestocks'] }),
-  isabel: Object.freeze({ marks: true, accountSync: false, evidence: ['venue-duplex'] }),
+  tennie: Object.freeze({ marks: true, accountSync: false, evidence: ['venue-duplex'] }),
   /* A launch desk owns no static marks tape — its evidence is the launch
      curve and the anchor duplex on each launch. Marks stay off until a real
      damm-v2 marks adapter exists. */

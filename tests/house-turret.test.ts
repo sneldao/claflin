@@ -8,7 +8,7 @@ import { lampFor, litDesks, readInstruction, turretReply } from '../lib/desk/tur
 import { HouseFoyer } from '../components/desk/HouseFoyer';
 import { resetContainer, getRootElement } from './jsdom-setup';
 
-const OPEN = ['hetty', 'jesse', 'isabel'] as const;
+const OPEN = ['hetty', 'jesse', 'tennie'] as const;
 
 describe('turret reading (pure)', () => {
   it('stays idle until the sentence names something', () => {
@@ -22,18 +22,18 @@ describe('turret reading (pure)', () => {
 
   it('lights every open line for Apple and names each product — never picks a rail', () => {
     const reading = readInstruction('buy Apple for 100 USDC');
-    assert.deepEqual(litDesks(reading, OPEN), ['hetty', 'jesse', 'isabel']);
+    assert.deepEqual(litDesks(reading, OPEN), ['hetty', 'jesse', 'tennie']);
     const reply = turretReply(reading, OPEN)!;
     assert.match(reply, /3 lines carry this/);
     assert.match(reply, /AAPLc on Base \(Hetty\)/);
     assert.match(reply, /AAPLx on Solana \(Jesse\)/);
-    assert.match(reply, /AAPL on Robinhood Chain \(Isabel\)/);
+    assert.match(reply, /AAPL on Robinhood Chain \(Tennie\)/);
     assert.match(reply, /Choose a product below\./);
   });
 
-  it('lights the typed-only line too — Tesla sits on Jesse and Isabel', () => {
+  it('lights the typed-only line too — Tesla sits on Jesse and Tennie', () => {
     const reading = readInstruction('buy Tesla');
-    assert.deepEqual(litDesks(reading, OPEN), ['jesse', 'isabel']);
+    assert.deepEqual(litDesks(reading, OPEN), ['jesse', 'tennie']);
     assert.equal(lampFor(reading, 'hetty'), 'quiet');
     assert.match(turretReply(reading, OPEN)!, /Two lines carry this/);
   });
@@ -127,21 +127,21 @@ describe('house turret (component)', () => {
     assert.match(html, /Arbitrum · coming soon/);
   });
 
-  it('lamps follow the words: Apple lights all three, Tesla lights Jesse and Isabel', async () => {
+  it('lamps follow the words: Apple lights all three, Tesla lights Jesse and Tennie', async () => {
     await mount();
-    /* Isabel's LINE 3 is a real line now — it lamps, it takes an
+    /* Tennie's LINE 3 is a real line now — it lamps, it takes an
        instruction, and her "Talk" affordance rings the ElevenLabs agent. */
-    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Isabel: 'idle', Halley: 'idle', Jay: 'planned' });
-    const isabelLine = Array.from(getRootElement().querySelectorAll('[data-lamp]')).find(el => el.textContent?.includes('Isabel'));
-    assert.ok(isabelLine, 'Isabel has a line');
-    assert.doesNotMatch(isabelLine!.textContent ?? '', /typed only/);
-    assert.match(isabelLine!.textContent ?? '', /Talk with Isabel/);
-    assert.match(isabelLine!.textContent ?? '', /Type instead/);
+    assert.deepEqual(lamps(), { Hetty: 'idle', Jesse: 'idle', Tennie: 'idle', Halley: 'idle', Jay: 'planned' });
+    const tennieLine = Array.from(getRootElement().querySelectorAll('[data-lamp]')).find(el => el.textContent?.includes('Tennie'));
+    assert.ok(tennieLine, 'Tennie has a line');
+    assert.doesNotMatch(tennieLine!.textContent ?? '', /typed only/);
+    assert.match(tennieLine!.textContent ?? '', /Talk with Tennie/);
+    assert.match(tennieLine!.textContent ?? '', /Type instead/);
 
     await type('buy Apple for 100 USDC');
     assert.equal(lamps().Hetty, 'match');
     assert.equal(lamps().Jesse, 'match');
-    assert.equal(lamps().Isabel, 'match');
+    assert.equal(lamps().Tennie, 'match');
     /* Halley launches curves, he does not fill trades — a buy instruction
        folds his slip away entirely rather than dimming his lamp. */
     assert.equal(lamps().Halley, undefined);
@@ -150,7 +150,7 @@ describe('house turret (component)', () => {
     await type('buy Tesla');
     assert.equal(lamps().Hetty, 'quiet');
     assert.equal(lamps().Jesse, 'match');
-    assert.equal(lamps().Isabel, 'match');
+    assert.equal(lamps().Tennie, 'match');
   });
 
   it('the launch desk hangs below the roll as its own slip, with its own verbs', () => {
@@ -312,14 +312,14 @@ describe('house turret (component)', () => {
     })));
     const form = () => getRootElement().querySelector('form.talkBar') as HTMLFormElement;
 
-    /* SPY sits on Isabel's book alone — every Jesse name is cross-listed. */
+    /* SPY sits on Tennie's book alone — every Jesse name is cross-listed. */
     await type('buy SPY');
     assert.equal(getRootElement().querySelectorAll('[aria-label="Matching products"] button').length >= 1, true);
     await act(async () => {
       form().dispatchEvent(new (window as any).Event('submit', { bubbles: true, cancelable: true }));
     });
     assert.equal(entered.length, 1, 'one product on one desk continues on Enter');
-    assert.equal(entered[0]?.desk, 'isabel');
+    assert.equal(entered[0]?.desk, 'tennie');
     assert.ok(entered[0]?.offering);
 
     entered.length = 0;

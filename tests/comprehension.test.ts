@@ -94,7 +94,7 @@ describe('comprehension: task 3 — did money move?', () => {
 describe('comprehension: task 4 — where does my record live?', () => {
   it('the canon says exactly one desk has account-bound sync', () => {
     // The product surface has to make the storage scope legible. Today
-    // only Hetty syncs to an account; Jesse/Isabel/Halley records stay
+    // only Hetty syncs to an account; Jesse/Tennie/Halley records stay
     // browser-local. The canon is the source of truth for which desks
     // are which.
     //

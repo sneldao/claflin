@@ -1,17 +1,17 @@
 /**
- * Shared Isabel agent config — prompt, client tools, conversation body.
- * Used by create-isabel-agent.mjs and update-isabel-agent.mjs.
+ * Shared Tennie agent config — prompt, client tools, conversation body.
+ * Used by create-tennie-agent.mjs and update-tennie-agent.mjs.
  *
- * Isabel is a first-class Claflin desk on Robinhood Chain (stock tokens from
+ * Tennie is a first-class Claflin desk on Robinhood Chain (stock tokens from
  * Robinhood Assets Jersey, quoted against the Lighter book). Same
  * client-tool pattern as Hetty and Jesse: tools execute in the caller's
- * browser against useIsabelDesk. No wallet, no execution — her desk is
+ * browser against useTennieDesk. No wallet, no execution — her desk is
  * paper-only by design.
  */
 
 import { AGENT_TTS_MODEL, SPOKEN_STYLE } from './agent-voice.mjs';
 
-export const SYSTEM_PROMPT = `You are Isabel Benham, the broker on duty at Claflin's Robinhood Chain desk — stock tokens issued by Robinhood Assets Jersey, quoted against the Lighter book on Robinhood Chain.
+export const SYSTEM_PROMPT = `You are Tennie Claflin, the broker on duty at Claflin's Robinhood Chain desk — stock tokens issued by Robinhood Assets Jersey, quoted against the Lighter book on Robinhood Chain.
 
 WHO YOU ARE
 - Calm, exacting, evidence-led. You read three tapes — the issuer's quote, the onchain mark, and the venue book — and you say which one you are reading. You never blend them into one number.
@@ -45,7 +45,7 @@ TOOLS ARE THE DESK
 - Filed records live on the desk. open_record shows one, read-only (by company, buy or sell, or "the last one"). back_to_instruction returns to the ticket. After a filing, simply take the next instruction — it starts a fresh ticket.
 - delete_record removes ONE paper record from this browser, only when the caller explicitly asks. On this line voice deletion may be unavailable — if the tool says so, point the caller to the on-screen Delete and do not push.
 - compare_markets reads the three-way evidence tape — issuer, onchain, venue. It follows an estimate; if none has landed yet, say the tape arrives beside the estimate and offer to request one.
-- explain_concept covers: reference-difference, market-hours, paper-mode, stock-token, namesake — namesake is the reviewed story of who Isabel Benham was; use it when asked who you are or what the name means. Speak returned text nearly verbatim. Never invent a lesson or urge a trade.
+- explain_concept covers: reference-difference, market-hours, paper-mode, stock-token, namesake — namesake is the reviewed story of who Tennie Claflin was; use it when asked who you are or what the name means. Speak returned text nearly verbatim. Never invent a lesson or urge a trade.
 - You cannot read wallets, balances, news, or anything off this desk — the tools are the whole world.
 
 THE REVIEW IS QUIET
@@ -197,11 +197,11 @@ export const tools = [
   },
 ];
 
-export const ISABEL_VOICE_ID = process.env.ELEVENLABS_VOICE_ISABEL || 'EXAVITQu4vr4xnSDxMaL';
+export const TENNIE_VOICE_ID = process.env.ELEVENLABS_VOICE_TENNIE || 'EXAVITQu4vr4xnSDxMaL';
 
 export const body = {
-  name: 'Isabel — Claflin Robinhood Chain Desk',
-  /* Browser overrides first_message per call (isabelOpeningLine). Without
+  name: 'Tennie — Claflin Robinhood Chain Desk',
+  /* Browser overrides first_message per call (tennieOpeningLine). Without
      this permission the socket accepts then closes with 1008. */
   platform_settings: {
     overrides: {
@@ -212,7 +212,7 @@ export const body = {
   },
   conversation_config: {
     agent: {
-      first_message: "Claflin, Isabel speaking. Robinhood Chain desk — paper only. What shall we put on the ticket?",
+      first_message: "Claflin, Tennie speaking. Robinhood Chain desk — paper only. What shall we put on the ticket?",
       language: 'en',
       prompt: {
         prompt: SYSTEM_PROMPT,
@@ -221,7 +221,7 @@ export const body = {
     },
     asr: { provider: 'scribe_realtime' },
     tts: {
-      voice_id: ISABEL_VOICE_ID,
+      voice_id: TENNIE_VOICE_ID,
       model_id: AGENT_TTS_MODEL,
       optimize_streaming_latency: 3,
     },

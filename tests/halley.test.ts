@@ -250,7 +250,7 @@ describe('halley paper records', () => {
 
   it('never accepts a foreign record into the halley namespace', () => {
     const storage = memoryStorage();
-    storage.setItem('claflin.paper.v2.isabel.abc', JSON.stringify({ whatever: true }));
+    storage.setItem('claflin.paper.v2.tennie.abc', JSON.stringify({ whatever: true }));
     assert.equal(loadHalleyPaperRecords(storage).length, 0);
     assert.equal(HALLEY_MAX_HISTORY, 100);
   });

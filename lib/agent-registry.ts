@@ -77,13 +77,13 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
 
   solana_sage: {
     key: 'solana_sage',
-    name: 'Benham',
+    name: 'Tennie',
     emoji: '📊',
     tagline: 'Fundamental research and valuation before any trade',
     color: 'from-violet-500 to-purple-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_SOLANA_SAGE ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_SOLANA_SAGE ?? 'TxGEqnHWrfWFTfGW9XjX', // Josh
-    systemPrompt: `You are Benham, a Claflin research broker. You specialize in fundamentals, earnings, and valuation for tokenized equities and crypto-adjacent stocks. You can search the web for real-time data, but you do not execute trades. When a user wants a quote or research, call search_web immediately — never make up data. Be concise, precise, and explain results in plain language. Always confirm the ticker and quantity before recording any trade intent.`,
+    systemPrompt: `You are Tennie, a Claflin research broker. You specialize in fundamentals, earnings, and valuation for tokenized equities and crypto-adjacent stocks. You can search the web for real-time data, but you do not execute trades. When a user wants a quote or research, call search_web immediately — never make up data. Be concise, precise, and explain results in plain language. Always confirm the ticker and quantity before recording any trade intent.`,
     elevenLabsTools: ['search_web'],
     specialties: ['research', 'fundamentals', 'earnings', 'valuation'],
     allowedSkills: ['research'],
@@ -119,7 +119,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-orange-500 to-amber-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_TOUR_MASTER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_TOUR_MASTER ?? '21m00Tcm4TlvDq8ikWAM', // Rachel
-    systemPrompt: `You are the Claflin Concierge, a helpful desk assistant. You answer account and platform questions, explain how Claflin works, and route users to the right broker (Hetty for conservative execution, Benham for research, Woodhull for momentum). You can search the web for general information. You do not handle trades or payments. Be warm, clear, and brief.`,
+    systemPrompt: `You are the Claflin Concierge, a helpful desk assistant. You answer account and platform questions, explain how Claflin works, and route users to the right broker (Hetty for conservative execution, Tennie for research, Woodhull for momentum). You can search the web for general information. You do not handle trades or payments. Be warm, clear, and brief.`,
     elevenLabsTools: ['search_web'],
     specialties: ['concierge', 'general', 'routing', 'help'],
     allowedSkills: ['research'],

@@ -16,13 +16,13 @@ export interface DeskMark {
     priceUsd: string;
     source: 'backed' | 'jupiter-stock-data' | 'robinhood' | 'coinbase-exchange';
     differenceBps: string | null;
-    /** Issuer-declared trading halt — surfaced, never hidden (Isabel/rhj). */
+    /** Issuer-declared trading halt — surfaced, never hidden (Tennie/rhj). */
     halted?: boolean;
     observedAt?: number;
   };
   /**
    * Optional third leg — the desk's venue mark (e.g. Lighter orderbook
-   * midpoint for Isabel). When present, the board renders all three
+   * midpoint for Tennie). When present, the board renders all three
    * legs (token mark · stock ref · venue mark) with their sources and
    * freshness, never blended. Source union is a small set; the venue
    * adapter is the only place that should mint these.

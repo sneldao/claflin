@@ -44,7 +44,7 @@ export type HalleyToolName =
 export interface HalleyToolContext {
   /** The desk as it is right now — read fresh on every call. */
   desk: () => HalleyDesk;
-  /** Count of finished caller utterances so far — see Isabel's note. */
+  /** Count of finished caller utterances so far — see Tennie's note. */
   userTurn?: () => number;
 }
 

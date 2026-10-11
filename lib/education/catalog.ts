@@ -168,7 +168,7 @@ const TOPICS: readonly EducationTopic[] = [
       {
         label: 'Harvard Baker Library — Muriel Siebert NYSE seat, 1967',
         url: 'https://www.library.hbs.edu/special-collections-and-archives/exhibits/muriel-siebert/',
-        note: 'Exhibit on Siebert’s 1967 seat purchase — distinct from Isabel Benham’s career as a railroad analyst.',
+        note: 'Exhibit on Siebert’s 1967 seat purchase — distinct from Tennie Claflin’s Broad Street brokerage (1870).',
       },
     ],
   },

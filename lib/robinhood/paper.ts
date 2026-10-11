@@ -1,39 +1,39 @@
 /**
- * Isabel v2 paper records and draft checkpoints — the Robinhood Chain desk's
+ * Tennie v2 paper records and draft checkpoints — the Robinhood Chain desk's
  * filing layer, same namespace discipline as Jesse's (lib/solana/paper.ts).
  *
- * Isabel filings live under `claflin.paper.v2.isabel.<id>` as `version: 2`
+ * Tennie filings live under `claflin.paper.v2.tennie.<id>` as `version: 2`
  * records carrying the estimate, the instrument the desk presented, and the
  * three-way evidence tape (issuer / onchain / venue) exactly as shown at
  * filing time. Reads never rewrite or revalidate old rows against the live
  * catalog: a record keeps its provenance even if the instrument delists.
  *
  * Everything here fails closed: a malformed, oversized, or self-contradicting
- * row throws on parse and can never be imported or attributed as Isabel work.
+ * row throws on parse and can never be imported or attributed as Tennie work.
  */
 import { z } from 'zod';
 import { PAPER_OWNER_ANONYMOUS, paperOwnerOf, type PaperStorage } from '../trading/paper-records';
 import {
   isRobinhoodInstrumentId,
-  type IsabelDraft,
+  type TennieDraft,
   type RobinhoodInstrument,
   type RobinhoodInstrumentId,
   type RobinhoodPaperEstimate,
 } from './contracts';
 import type { RobinhoodEvidence } from './duplex';
 
-export const ISABEL_PAPER_PREFIX = 'claflin.paper.v2.isabel.';
-export const ISABEL_DRAFT_KEY = 'claflin.draft.v2.isabel';
-/** Isabel paper history is bounded, same cap as the other desks. */
-export const ISABEL_MAX_HISTORY = 100;
+export const TENNIE_PAPER_PREFIX = 'claflin.paper.v2.tennie.';
+export const TENNIE_DRAFT_KEY = 'claflin.draft.v2.tennie';
+/** Tennie paper history is bounded, same cap as the other desks. */
+export const TENNIE_MAX_HISTORY = 100;
 /** Quotes are usable for at most the 30s review window; expiry may only shorten it. */
 const MAX_REVIEW_WINDOW_MS = 30_000;
 
-export interface IsabelPaperRecord {
+export interface TenniePaperRecord {
   version: 2;
   id: string;
   mode: 'paper';
-  deskId: 'isabel';
+  deskId: 'tennie';
   owner: string;
   createdAt: number;
   quote: RobinhoodPaperEstimate;
@@ -53,7 +53,7 @@ const instrumentId = z.string().max(60).refine(isRobinhoodInstrumentId, 'Invalid
 const instrumentSchema = z.object({
   id: instrumentId,
   network: z.literal('eip155:4663'),
-  deskId: z.literal('isabel'),
+  deskId: z.literal('tennie'),
   contractAddress: evmAddress,
   symbol: z.string().min(1).max(20),
   name: z.string().min(1).max(120),
@@ -67,7 +67,7 @@ const instrumentSchema = z.object({
   quoteSupported: z.boolean(),
 }).strict();
 
-const isabelIntentSchema = z.discriminatedUnion('side', [
+const tennieIntentSchema = z.discriminatedUnion('side', [
   z.object({ instrumentId, side: z.literal('buy'), unit: z.literal('USDG'), amount: decimal }).strict(),
   z.object({ instrumentId, side: z.literal('sell'), unit: z.literal('token'), amount: decimal }).strict(),
 ]);
@@ -78,14 +78,14 @@ const estimateSchema = z.object({
   kind: z.literal('estimate'),
   mode: z.literal('paper'),
   liveExecutionEnabled: z.literal(false),
-  deskId: z.literal('isabel'),
+  deskId: z.literal('tennie'),
   mandateId: z.literal('robinhood-stock-tokens').optional(),
   offeringId: z.string().min(1).max(180).optional(),
   instrumentId: instrumentId.optional(),
   network: z.literal('eip155:4663'),
   chainId: z.literal(4663),
   venue: z.literal('lighter'),
-  intent: isabelIntentSchema,
+  intent: tennieIntentSchema,
   instrumentAddress: evmAddress,
   instrumentName: z.string().max(120),
   inputSymbol: z.string().max(20),
@@ -178,7 +178,7 @@ const recordSchema = z.object({
   version: z.literal(2),
   id: z.string().min(1).max(100).regex(/^[\w-]+$/),
   mode: z.literal('paper'),
-  deskId: z.literal('isabel'),
+  deskId: z.literal('tennie'),
   owner: z.union([z.literal(PAPER_OWNER_ANONYMOUS), z.string().min(1).max(128)]),
   createdAt: z.number().int().positive(),
   quote: z.unknown(),
@@ -187,7 +187,7 @@ const recordSchema = z.object({
 }).strict();
 
 /**
- * Validate a persisted Isabel estimate. Internal consistency only — records
+ * Validate a persisted Tennie estimate. Internal consistency only — records
  * are never rebound to the live catalog, so a filed quote from a since-
  * delisted instrument still reads back with its original provenance.
  */
@@ -220,7 +220,7 @@ export function parseRobinhoodEstimate(input: unknown): RobinhoodPaperEstimate {
  * Accepts an unknown payload (storage read) and applies full validation.
  * Oversized or non-serializable input throws.
  */
-export function parseIsabelPaperRecord(raw: unknown): IsabelPaperRecord {
+export function parseTenniePaperRecord(raw: unknown): TenniePaperRecord {
   const text = typeof raw === 'string' ? raw : JSON.stringify(raw);
   if (text.length > 24_000) throw new Error('Invalid paper record.');
   const parsed = recordSchema.parse(JSON.parse(text));
@@ -248,35 +248,35 @@ export function parseIsabelPaperRecord(raw: unknown): IsabelPaperRecord {
   };
 }
 
-export function loadIsabelPaperRecords(storage: PaperStorage): IsabelPaperRecord[] {
-  const result: IsabelPaperRecord[] = [];
+export function loadTenniePaperRecords(storage: PaperStorage): TenniePaperRecord[] {
+  const result: TenniePaperRecord[] = [];
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
-    if (!key?.startsWith(ISABEL_PAPER_PREFIX)) continue;
+    if (!key?.startsWith(TENNIE_PAPER_PREFIX)) continue;
     const raw = storage.getItem(key);
     if (!raw) throw new Error('Paper record unavailable.');
-    const record = parseIsabelPaperRecord(raw);
-    if (key !== ISABEL_PAPER_PREFIX + record.id) throw new Error('Paper record identity mismatch.');
+    const record = parseTenniePaperRecord(raw);
+    if (key !== TENNIE_PAPER_PREFIX + record.id) throw new Error('Paper record identity mismatch.');
     result.push(record);
-    if (result.length > ISABEL_MAX_HISTORY) throw new Error('Paper history exceeds the supported limit.');
+    if (result.length > TENNIE_MAX_HISTORY) throw new Error('Paper history exceeds the supported limit.');
   }
   return result.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export function deleteIsabelPaperRecord(storage: PaperStorage & { removeItem(key: string): void }, id: string): void {
+export function deleteTenniePaperRecord(storage: PaperStorage & { removeItem(key: string): void }, id: string): void {
   if (!/^[\w-]{1,100}$/.test(id)) throw new Error('Invalid record ID.');
-  storage.removeItem(ISABEL_PAPER_PREFIX + id);
-  if (storage.getItem(ISABEL_PAPER_PREFIX + id) !== null) throw new Error('Could not delete the paper record.');
+  storage.removeItem(TENNIE_PAPER_PREFIX + id);
+  if (storage.getItem(TENNIE_PAPER_PREFIX + id) !== null) throw new Error('Could not delete the paper record.');
 }
 
 /**
- * File a paper record for an Isabel estimate the desk presented. The quote
+ * File a paper record for an Tennie estimate the desk presented. The quote
  * must still be usable at filing time; the instrument snapshot and the
  * evidence tape are frozen exactly as presented — nothing is refetched or
  * recomputed. Filing is idempotent: re-saving the same quote returns the
  * existing record.
  */
-export function saveIsabelPaperRecord(
+export function saveTenniePaperRecord(
   storage: PaperStorage,
   filing: {
     quote: RobinhoodPaperEstimate;
@@ -285,7 +285,7 @@ export function saveIsabelPaperRecord(
   },
   now: number,
   owner: string = PAPER_OWNER_ANONYMOUS,
-): IsabelPaperRecord {
+): TenniePaperRecord {
   const quote = parseRobinhoodEstimate(filing.quote);
   const instrument = instrumentSchema.parse(filing.instrument);
   const evidence = filing.evidence === null ? null : evidenceSchema.parse(filing.evidence);
@@ -298,20 +298,20 @@ export function saveIsabelPaperRecord(
   if (evidence !== null && evidence.instrumentId !== quote.intent.instrumentId) {
     throw new Error('Paper record identity conflict.');
   }
-  const key = ISABEL_PAPER_PREFIX + quote.id;
+  const key = TENNIE_PAPER_PREFIX + quote.id;
   const existing = storage.getItem(key);
   if (existing) {
-    const record = parseIsabelPaperRecord(existing);
+    const record = parseTenniePaperRecord(existing);
     if (JSON.stringify(record.quote) !== JSON.stringify(quote)) throw new Error('Paper record identity conflict.');
     return record;
   }
-  if (loadIsabelPaperRecords(storage).length >= ISABEL_MAX_HISTORY) {
+  if (loadTenniePaperRecords(storage).length >= TENNIE_MAX_HISTORY) {
     throw new Error('Paper history is full. Export or clear records before adding more.');
   }
-  const record: IsabelPaperRecord = {
+  const record: TenniePaperRecord = {
     version: 2,
     mode: 'paper',
-    deskId: 'isabel',
+    deskId: 'tennie',
     owner: owner || PAPER_OWNER_ANONYMOUS,
     id: quote.id,
     createdAt: now,
@@ -325,9 +325,9 @@ export function saveIsabelPaperRecord(
   return record;
 }
 
-/* Isabel draft checkpoints */
+/* Tennie draft checkpoints */
 
-const EMPTY_DRAFT: IsabelDraft = { instrumentId: null, side: null, amount: null };
+const EMPTY_DRAFT: TennieDraft = { instrumentId: null, side: null, amount: null };
 
 const draftSchema = z.object({
   instrumentId: instrumentId.nullable(),
@@ -336,27 +336,27 @@ const draftSchema = z.object({
 }).strict();
 
 /**
- * Persist an in-progress Isabel draft. Every field is nullable — a draft is
- * a checkpoint of user work, distinct from a complete IsabelIntent. An
+ * Persist an in-progress Tennie draft. Every field is nullable — a draft is
+ * a checkpoint of user work, distinct from a complete TennieIntent. An
  * all-null draft clears the checkpoint. The unit is implied by the side
  * (USDG spend for buys, token quantity for sells) so it is never stored.
  */
-export function saveIsabelDraft(storage: PaperStorage & { removeItem(key: string): void }, draft: IsabelDraft): void {
+export function saveTennieDraft(storage: PaperStorage & { removeItem(key: string): void }, draft: TennieDraft): void {
   const d = draftSchema.parse(draft);
   if (d.instrumentId === null && d.side === null && d.amount === null) {
-    storage.removeItem(ISABEL_DRAFT_KEY);
-    if (storage.getItem(ISABEL_DRAFT_KEY) !== null) throw new Error('Could not clear the draft.');
+    storage.removeItem(TENNIE_DRAFT_KEY);
+    if (storage.getItem(TENNIE_DRAFT_KEY) !== null) throw new Error('Could not clear the draft.');
     return;
   }
   const serialized = JSON.stringify(d);
-  storage.setItem(ISABEL_DRAFT_KEY, serialized);
-  if (storage.getItem(ISABEL_DRAFT_KEY) !== serialized) throw new Error('Draft could not be verified after saving.');
+  storage.setItem(TENNIE_DRAFT_KEY, serialized);
+  if (storage.getItem(TENNIE_DRAFT_KEY) !== serialized) throw new Error('Draft could not be verified after saving.');
 }
 
 /** Read the checkpoint. A missing or malformed checkpoint yields an empty
  *  draft — it is a convenience, never evidence. */
-export function loadIsabelDraft(storage: PaperStorage): IsabelDraft {
-  const raw = storage.getItem(ISABEL_DRAFT_KEY);
+export function loadTennieDraft(storage: PaperStorage): TennieDraft {
+  const raw = storage.getItem(TENNIE_DRAFT_KEY);
   if (!raw) return { ...EMPTY_DRAFT };
   try {
     return draftSchema.parse(JSON.parse(raw));
@@ -365,7 +365,7 @@ export function loadIsabelDraft(storage: PaperStorage): IsabelDraft {
   }
 }
 
-export function clearIsabelDraft(storage: PaperStorage & { removeItem(key: string): void }): void {
-  storage.removeItem(ISABEL_DRAFT_KEY);
-  if (storage.getItem(ISABEL_DRAFT_KEY) !== null) throw new Error('Could not clear the draft.');
+export function clearTennieDraft(storage: PaperStorage & { removeItem(key: string): void }): void {
+  storage.removeItem(TENNIE_DRAFT_KEY);
+  if (storage.getItem(TENNIE_DRAFT_KEY) !== null) throw new Error('Could not clear the draft.');
 }

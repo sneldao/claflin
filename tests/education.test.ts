@@ -98,7 +98,7 @@ describe('explain_concept voice tool', () => {
 
   it('speaks broker examination lenses when asked how a desk thinks', () => {
     assert.match(explainConceptResult('how would Jesse examine this'), /Timing and uncertainty/);
-    assert.match(explainConceptResult('Isabel’s lens'), /Enterprise and infrastructure/);
+    assert.match(explainConceptResult('Tennie’s lens'), /Access and the open book/);
     assert.match(explainConceptResult('how would Halley look at this'), /Pricing what has no history/);
     assert.equal(resolveBrokerMethod('liquidity and downside')?.deskId, 'hetty');
     assert.equal(resolveBrokerMethod('the comet caller')?.deskId, 'halley');
@@ -108,8 +108,8 @@ describe('explain_concept voice tool', () => {
     /* The same text the nameplate renders — bio and voice never drift. */
     assert.match(explainConceptResult('who are you'), /Hetty Green \(1834–1916\)/);
     assert.match(explainConceptResult('who are you'), /An AI character/);
-    assert.match(explainConceptResult('who is Isabel'), /Isabel Benham \(1909–2013\)/);
-    assert.match(explainConceptResult('who is Isabel'), /Bryn Mawr/);
+    assert.match(explainConceptResult('who is Tennie'), /Tennie C\. Claflin \(1844–1923\)/);
+    assert.match(explainConceptResult('who is Tennie'), /Broad Street/);
     assert.match(explainConceptResult('what is Halley named for'), /Edmond Halley \(1656–1742\)/);
     assert.match(explainConceptResult('who is the broker'), /Hetty Green/);
     /* A bare name with no name-ask stays a method/education question. */
@@ -142,19 +142,19 @@ describe('broker examination methods', () => {
     }
   });
 
-  it('corrects the Benham / Siebert conflation on Isabel’s method', () => {
-    const isabel = getBrokerMethod('isabel');
-    assert.match(isabel.boundary, /Muriel Siebert/);
-    assert.match(isabel.boundary, /not as the first woman with an NYSE seat/i);
+  it('corrects the Claflin / Siebert conflation on Tennie’s method', () => {
+    const tennie = getBrokerMethod('tennie');
+    assert.match(tennie.boundary, /Muriel Siebert/);
+    assert.match(tennie.boundary, /first woman-led brokerage/i);
   });
 });
 
 describe('desk note historical accuracy', () => {
-  it('does not claim Isabel Benham held the first NYSE seat', () => {
+  it('does not claim Tennie Claflin held the first NYSE seat', () => {
     const base = new Date('2026-09-09T12:00:00');
     for (let offset = 0; offset < 60; offset++) {
-      const note = deskNoteOfTheDay('isabel', new Date(base.getTime() + offset * 86_400_000));
-      assert.doesNotMatch(note.text, /Isabel Benham was the first woman to hold one/i);
+      const note = deskNoteOfTheDay('tennie', new Date(base.getTime() + offset * 86_400_000));
+      assert.doesNotMatch(note.text, /Tennie Claflin was the first woman to hold one/i);
       if (note.term === 'seat') assert.match(note.text, /Muriel Siebert/);
     }
   });

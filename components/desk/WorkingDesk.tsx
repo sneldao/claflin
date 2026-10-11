@@ -11,7 +11,7 @@ import { HouseSceneProvider } from './HouseScene';
 import styles from './WorkingDesk.module.css';
 
 const HettyDeskSurface = dynamic(() => import('./HettyDeskSurface').then(module => module.HettyDeskSurface));
-const IsabelDeskSurface = dynamic(() => import('./IsabelDeskSurface').then(module => module.IsabelDeskSurface));
+const TennieDeskSurface = dynamic(() => import('./TennieDeskSurface').then(module => module.TennieDeskSurface));
 const HalleyDeskSurface = dynamic(() => import('./HalleyDeskSurface').then(module => module.HalleyDeskSurface));
 const JesseDeskSurface = dynamic(() => import('./JesseDeskSurface').then(module => module.JesseDeskSurface));
 
@@ -44,8 +44,8 @@ function WorkingDeskContent() {
     return <JesseDeskSurface desk={desk} />;
   }
 
-  if (desk.deskId === 'isabel' && desk.open) {
-    return <IsabelDeskSurface desk={desk} />;
+  if (desk.deskId === 'tennie' && desk.open) {
+    return <TennieDeskSurface desk={desk} />;
   }
 
   if (desk.deskId === 'halley' && desk.open) {

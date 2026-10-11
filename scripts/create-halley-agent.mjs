@@ -6,7 +6,7 @@
  * in .env.local and your deployment environment.
  *
  * Halley drives the Meteora launch desk through CLIENT tools — same
- * pattern as Hetty, Jesse, and Isabel. He cannot place orders, sign a
+ * pattern as Hetty, Jesse, and Tennie. He cannot place orders, sign a
  * launch, or move funds; the desk is paper-only by design.
  */
 

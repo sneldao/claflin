@@ -150,7 +150,7 @@ describe('funnel store', () => {
     assert.equal(parseBatch({ ...batch, userId: 'did:privy:1' }), null, 'no identifiers');
     assert.equal(parseBatch({ ...batch, visit: 'x' }), null);
     assert.equal(parseBatch({ ...batch, events: [] }), null);
-    assert.equal(parseBatch({ ...batch, events: [{ event: 'record_filed', desk: 'isabel' }] }), null);
+    assert.equal(parseBatch({ ...batch, events: [{ event: 'record_filed', desk: 'tennie' }] }), null);
   });
 
   it('writes day-scoped counters and unique-visit sketches', () => {

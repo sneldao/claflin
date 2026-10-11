@@ -85,13 +85,13 @@ ELEVENLABS_AGENT_JESSE=
 ELEVENLABS_VOICE_JESSE=nPczCjzI2devNBz1zQrb
 ```
 
-Isabel’s Robinhood Chain desk has its own ConvAI agent (Sarah voice). Without
+Tennie’s Robinhood Chain desk has its own ConvAI agent (Sarah voice). Without
 the agent id the desk still quotes and files paper; the call card reports the
 line as not connected:
 
 ```
-ELEVENLABS_AGENT_ISABEL=
-ELEVENLABS_VOICE_ISABEL=EXAVITQu4vr4xnSDxMaL
+ELEVENLABS_AGENT_TENNIE=
+ELEVENLABS_VOICE_TENNIE=EXAVITQu4vr4xnSDxMaL
 ```
 
 Halley’s Meteora launch desk (Solana) has its own ConvAI agent —
@@ -125,7 +125,7 @@ The AssemblyAI line is paper-only and does not sign or submit transactions.
 
 ### Broker voice (Eleven v4 Turbo)
 
-Hetty, Jesse and Isabel's ElevenLabs ConvAI agents run **`eleven_v4_turbo`** —
+Hetty, Jesse and Tennie's ElevenLabs ConvAI agents run **`eleven_v4_turbo`** —
 the v4 real-time variant for agents — replacing the deprecated
 `eleven_turbo_v2`. This is agent-side config on ElevenLabs, not a deployment
 env var; changing it is an API call, not a VPS/Vercel deploy.
@@ -137,14 +137,14 @@ env var; changing it is an API call, not a VPS/Vercel deploy.
   ```
   node --env-file=.env.local scripts/update-hetty-agent.mjs
   node --env-file=.env.local scripts/update-jesse-agent.mjs
-  node --env-file=.env.local scripts/update-isabel-agent.mjs
+  node --env-file=.env.local scripts/update-tennie-agent.mjs
   node --env-file=.env.local scripts/update-halley-agent.mjs
   ```
   Each script reads the agent back and fails if the model the server kept
   isn't the one requested. Roll back by re-running with
   `ELEVENLABS_TTS_MODEL=fallback`.
-- Rolled out 2026-09-28 on Hetty and Jesse; Isabel's agent was provisioned on
-  `eleven_v4_turbo` at creation (2026-10-02, `scripts/create-isabel-agent.mjs`).
+- Rolled out 2026-09-28 on Hetty and Jesse; Tennie's agent was provisioned on
+  `eleven_v4_turbo` at creation (2026-10-02, `scripts/create-tennie-agent.mjs`).
 
 Optional Jupiter key (paper quotes work keyless; set for higher rate limits):
 

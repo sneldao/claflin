@@ -72,7 +72,7 @@ describe('feature rendering, not just prop contracts', () => {
     assert.match(html, /data-desk="jesse"/);
     assert.match(html, /data-mode="paper"/);
   });
-  it('reads Isabel’s real adapter shape through to the visible board', async () => {
+  it('reads Tennie’s real adapter shape through to the visible board', async () => {
     const adapter = createRobinhoodMarkAdapter(
       async feeds => feeds.map(() => ({ answer: 33047000000n, decimals: 8, updatedAt: Math.floor(Date.now() / 1000) })),
       async () => ({ bids: [{ price: '330.28', remainingBase: '1' }], asks: [{ price: '330.30', remainingBase: '1' }] }),
@@ -87,7 +87,7 @@ describe('feature rendering, not just prop contracts', () => {
     assert.ok(result.marks[0].venueMark?.observedAt);
     const html = renderToStaticMarkup(createElement(HouseOfferings, {
       onEnter: () => {}, instruction: result.marks[0].symbol,
-      marks: { isabel: { result, failed: false } },
+      marks: { tennie: { result, failed: false } },
     }));
     assert.match(html, /data-label="Venue mark"/);
     assert.match(html, /\$330\.29/);

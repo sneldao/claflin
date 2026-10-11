@@ -21,7 +21,7 @@ describe('broker take', () => {
   it('is silent without a clock and for desks without a voice', () => {
     assert.equal(brokerTake('hetty', [], null), null);
     assert.equal(brokerTake('jesse', [mark('AAPLx', '40')], null), null);
-    assert.equal(brokerTake('isabel', [], OPEN), null);
+    assert.equal(brokerTake('tennie', [], OPEN), null);
   });
 
   it('gives Hetty a downside-first line for each exchange state', () => {

@@ -52,24 +52,24 @@ const METHODS: Readonly<Record<HouseDeskId, BrokerExaminationMethod>> = {
     ],
     revisedAt: '2026-09-10',
   },
-  isabel: {
-    deskId: 'isabel',
-    name: 'Isabel',
-    lens: 'Enterprise and infrastructure',
+  tennie: {
+    deskId: 'tennie',
+    name: 'Tennie',
+    lens: 'Access and the open book',
     questions: [
-      'What does the enterprise own that would still be there after a bad quarter?',
-      'Which claims are timetable, and which are roadbed?',
-      'Who must keep the rails working for this product to mean what it says?',
+      'Who does this market let in, and who is still waiting at the door?',
+      'Whose orders are being refused, and what does that leave unpriced?',
+      'Can the client see the book, or only the broker’s word for it?',
     ],
     boundary:
-      'Educational perspective only. Isabel Benham is remembered as a railroad and credit analyst — not as the first woman with an NYSE seat (that was Muriel Siebert, 1967). Isabel’s desk is paper-only; this lens never loads a ticket.',
+      'Educational perspective only. Tennie C. Claflin is remembered for running Wall Street’s first woman-led brokerage — not for holding a seat (Muriel Siebert bought the first, in 1967). Tennie’s desk is paper-only; this lens never loads a ticket.',
     sources: [
       {
         label: 'Harvard Baker Library — Muriel Siebert NYSE seat, 1967',
-        note: 'Corrects a common conflation: Benham’s craft was analysis; Siebert bought the seat.',
+        note: 'Corrects a common conflation: Claflin’s house ran the counter; Siebert bought the seat.',
       },
     ],
-    revisedAt: '2026-09-10',
+    revisedAt: '2026-10-11',
   },
   halley: {
     deskId: 'halley',
@@ -119,7 +119,7 @@ export function resolveBrokerMethod(query: string): BrokerExaminationMethod | un
   if (!q) return undefined;
   if (/\b(hetty|green|liquidity|downside|cash)\b/.test(q)) return METHODS.hetty;
   if (/\b(jesse|livermore|timing|uncertainty|tape reading)\b/.test(q)) return METHODS.jesse;
-  if (/\b(isabel|benham|infrastructure|enterprise|annual letter|roadbed)\b/.test(q)) return METHODS.isabel;
+  if (/\b(tennie|claflin|access|open book|counter|woodhull)\b/.test(q)) return METHODS.tennie;
   if (/\b(halley|edmond|comet|launch|issuance|unpriced)\b/.test(q)) return METHODS.halley;
   if (/\b(jay|cooke|arbitrum|rails|clearing|distribution)\b/.test(q)) return METHODS.arbitrum;
   if (/\b(how .+ (think|examine|look)|examination|method|lens)\b/.test(q)) return METHODS.hetty;

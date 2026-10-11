@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DESK_CAPABILITIES, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
 import { documentEngineFor, usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
-import { ISABEL_PAPER_ENABLED } from '../lib/robinhood/flags';
+import { TENNIE_PAPER_ENABLED } from '../lib/robinhood/flags';
 import { PAPER_ASSUMPTIONS, type BaseQuoteEstimate } from '../lib/trading/domain';
 import { DESK_INSTRUMENTS, getDeskInstrument, resolveDeskAlias } from '../lib/trading/catalog';
 import { quoteAdapterFor } from '../lib/trading/adapters';
@@ -46,22 +46,22 @@ describe('desk capabilities drive openness', () => {
     /* Jesse paper tracks NEXT_PUBLIC_JESSE_PAPER_ENABLED — quote-only is not
        an open desk until the seated surface can file. */
     assert.deepEqual(DESK_CAPABILITIES.jesse, { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
-    /* Isabel paper tracks NEXT_PUBLIC_ISABEL_PAPER_ENABLED — her line is
+    /* Tennie paper tracks NEXT_PUBLIC_TENNIE_PAPER_ENABLED — her line is
        ElevenLabs ConvAI like the others while her desk stays paper-only. */
-    assert.deepEqual(DESK_CAPABILITIES.isabel, { quote: true, paper: ISABEL_PAPER_ENABLED, voice: ISABEL_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
+    assert.deepEqual(DESK_CAPABILITIES.tennie, { quote: true, paper: TENNIE_PAPER_ENABLED, voice: TENNIE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false });
     assert.deepEqual(DESK_CAPABILITIES.arbitrum, { quote: false, paper: false, voice: null, live: false });
     assert.equal(OPEN_DESK_ID, 'hetty');
     assert.equal(isOpenDesk('hetty'), true);
     assert.equal(isOpenDesk('jesse'), JESSE_PAPER_ENABLED);
-    assert.equal(isOpenDesk('isabel'), ISABEL_PAPER_ENABLED);
+    assert.equal(isOpenDesk('tennie'), TENNIE_PAPER_ENABLED);
     for (const deskId of ['arbitrum', 'nope']) assert.equal(isOpenDesk(deskId), false);
     /* Document engines are declared per desk; the legacy predicate reads them. */
     assert.equal(documentEngineFor('hetty'), 'legacy-reducer');
     assert.equal(documentEngineFor('jesse'), 'controller');
-    assert.equal(documentEngineFor('isabel'), 'controller');
+    assert.equal(documentEngineFor('tennie'), 'controller');
     assert.equal(usesLegacyDeskDocuments('hetty'), true);
     assert.equal(usesLegacyDeskDocuments('jesse'), false);
-    assert.equal(usesLegacyDeskDocuments('isabel'), false);
+    assert.equal(usesLegacyDeskDocuments('tennie'), false);
   });
 });
 
@@ -188,7 +188,7 @@ describe('base seams stay byte-identical', () => {
   it('resolves each open rail through its own venue while unfinished desks still refuse', () => {
     assert.equal(quoteAdapterFor('hetty').venue, 'aerodrome');
     assert.equal(quoteAdapterFor('jesse').venue, 'jupiter');
-    assert.equal(quoteAdapterFor('isabel').venue, 'lighter');
+    assert.equal(quoteAdapterFor('tennie').venue, 'lighter');
     const failure = codeOf(() => quoteAdapterFor('arbitrum'));
     assert.equal(failure.code, 'desk_unavailable');
     assert.equal(failure.status, 422);

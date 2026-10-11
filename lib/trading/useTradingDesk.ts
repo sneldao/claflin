@@ -12,7 +12,7 @@ import { readDraftCheckpoint, readRestorableDraft, writePersistedDraft } from '.
 import { emptyDraft, switchDeskSession, type ParkedDesk } from './desk-mandate';
 import { initialDesk } from './workflow';
 import { useJesseDesk } from '@/lib/solana/useJesseDesk';
-import { useIsabelDesk } from '@/lib/robinhood/useIsabelDesk';
+import { useTennieDesk } from '@/lib/robinhood/useTennieDesk';
 import { useHalleyDesk } from '@/lib/meteora/useHalleyDesk';
 import { useDeskEntry } from './useDeskEntry';
 import { useDeskSession } from './useDeskSession';
@@ -66,12 +66,12 @@ export function useTradingDesk() {
     hydrate: hydrateDocuments, restore: restoreDocuments, markHistoryReady, loadHistory,
     applyInstruction, edit, requestQuote, save, cancel, watch, unwatch,
   } = documents;
-  /* The controller sessions — Jesse's serialized command engine and Isabel's
+  /* The controller sessions — Jesse's serialized command engine and Tennie's
      single-actor session. Each mounts once and outlives surface mounts, so a
      desk switch parks its work by keeping the session, the same contract
      parked reducer state gives Hetty. */
   const jesse = useJesseDesk();
-  const isabel = useIsabelDesk();
+  const tennie = useTennieDesk();
   const halley = useHalleyDesk();
 
   /* The active desk's document session under the shared contract — shared
@@ -79,7 +79,7 @@ export function useTradingDesk() {
      engine-specific shape underneath. */
   const engine = documentEngineFor(deskId);
   const documentSession: DeskDocumentSession =
-    engine === 'controller' ? (deskId === 'isabel' ? isabel : deskId === 'halley' ? halley : jesse)
+    engine === 'controller' ? (deskId === 'tennie' ? tennie : deskId === 'halley' ? halley : jesse)
     : engine === 'legacy-reducer' ? documents
     : EMPTY_DOCUMENT_SESSION;
   const sessionHistoryReady = documentSession.historyReady;
@@ -243,7 +243,7 @@ export function useTradingDesk() {
       entryPhase, enterDesk, leaveDesk, entryOfferingId, entryIntent, entryRecordId, entryGen,
       deskId, activeDesk, open, switchDesk,
       /* The active engine's session, whole and narrowed to the contract. */
-      documentSession, jesse, isabel, halley,
+      documentSession, jesse, tennie, halley,
       /* Shared document fields resolve through the session — on any desk,
          desk.foreground is the document actually under attention. */
       foreground: documentSession.foreground,
@@ -261,7 +261,7 @@ export function useTradingDesk() {
     }),
     [entryPhase, enterDesk, leaveDesk, entryOfferingId, entryIntent, entryRecordId, entryGen,
      deskId, activeDesk, open, switchDesk,
-     documentSession, jesse, isabel, halley, sessionViewedRecordId, sessionHistoryReady, sessionOpenRecord, sessionDismissRecord,
+     documentSession, jesse, tennie, halley, sessionViewedRecordId, sessionHistoryReady, sessionOpenRecord, sessionDismissRecord,
      state, records, error, sideRequired,
      applyInstruction, edit, requestQuote, save, cancel,
      loadHistory, watched, watch, unwatch,

@@ -57,7 +57,7 @@ describe('house desk view preference', () => {
   it('defaults every desk to room; compact is the constrained-device fallback', () => {
     assert.equal(defaultPresentationForDesk('jesse'), 'room');
     assert.equal(defaultPresentationForDesk('hetty'), 'room');
-    assert.equal(defaultPresentationForDesk('isabel'), 'room');
+    assert.equal(defaultPresentationForDesk('tennie'), 'room');
     assert.equal(defaultPresentationForDesk('arbitrum'), 'room');
     assert.equal(loadDeskPresentation(memoryStorage(), 'hetty', { preferCompactWhenUnset: true }), 'compact');
     assert.equal(loadDeskPresentation(memoryStorage(), 'hetty'), 'room');

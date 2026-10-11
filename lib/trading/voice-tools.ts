@@ -160,13 +160,13 @@ export function deskNoteSpokenLine(deskId: HouseDeskId, date = new Date()): stri
 const BROKER_NAME_HINTS: readonly [RegExp, HouseDeskId][] = [
   [/\b(hetty|green)\b/, 'hetty'],
   [/\b(jesse|livermore)\b/, 'jesse'],
-  [/\b(isabel|benham)\b/, 'isabel'],
+  [/\b(tennie|claflin)\b/, 'tennie'],
   [/\b(halley|edmond|comet)\b/, 'halley'],
   [/\b(jay|cooke|arbitrum)\b/, 'arbitrum'],
 ];
 
 /**
- * A namesake ask — "who are you", "who is Isabel", "what are you named
+ * A namesake ask — "who are you", "who is Tennie", "what are you named
  * for" — answers with the desk's reviewed bio (the same text the nameplate
  * shows), never an improvised biography. A bare "who are you" resolves to
  * this desk's own namesake; naming another broker answers with theirs.
@@ -192,13 +192,13 @@ export function explainConceptResult(query: string): string {
   /* Prefer an explicit catalog topic when the ask is about a term, not a person. */
   const topic = resolveEducationTopic(query);
   const asksForMethod = /\b(how|lens|method|examine|thinks?|perspective)\b/i.test(query)
-    || /\b(hetty|jesse|isabel|jay|halley|livermore|benham|cooke|edmond)\b/i.test(query);
+    || /\b(hetty|jesse|tennie|jay|halley|livermore|claflin|cooke|edmond)\b/i.test(query);
   if (method && (asksForMethod || !topic)) return brokerMethodSpokenLine(method);
   if (!topic) {
     const topics = listEducationTopics({ includeOptionalHouse: true })
       .map(item => item.term)
       .join(', ');
-    return `I do not have a reviewed explanation for "${query || 'that'}". I can explain: ${topics}. Or how Hetty, Jesse, Isabel, or Jay examine a question. Or ask about the ticket with describe_desk.`;
+    return `I do not have a reviewed explanation for "${query || 'that'}". I can explain: ${topics}. Or how Hetty, Jesse, Tennie, or Jay examine a question. Or ask about the ticket with describe_desk.`;
   }
   return educationTopicSpokenLine(topic);
 }

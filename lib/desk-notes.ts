@@ -48,11 +48,11 @@ const DESK_NOTES: Readonly<Record<HouseDeskId, readonly (DeskNote | string)[]>> 
     'Livermore kept notebooks of his own trades before trusting his opinions about anyone else’s.',
     'The man who is out of the market sees it most clearly. Decide where you will re-enter before you leave.',
   ],
-  isabel: [
+  tennie: [
     ...GENERAL_NOTES,
-    'Benham read the roadbed before the timetable: infrastructure first, schedules second.',
-    'What a company owns outright survives a bad quarter better than what it merely promises.',
-    'A careful reader of annual letters was once considered a dangerous competitor.',
+    'Claflin opened the counter to clients the men’s houses refused — access was the product before it was a slogan.',
+    'A house that takes the orders others turn away hears the market sooner.',
+    'The papers called her the Lady Broker and meant the mockery; the book kept anyway.',
   ],
   halley: [
     ...GENERAL_NOTES,
@@ -89,10 +89,10 @@ const DESK_WORDS: Readonly<Record<HouseDeskId, readonly DeskNote[]>> = {
     { text: 'A bucket shop: a parlor that took your wager on prices without ever buying the stock. Livermore learned the tape there before he learned the market.', attribution: null, term: 'bucket shop' },
     { text: 'A line: the list of what you hold at any moment. Livermore kept his in a pocket notebook before he trusted it to memory.', attribution: null, term: 'line' },
   ],
-  isabel: [
+  tennie: [
     ...GENERAL_WORDS,
-    { text: 'A seat: membership on an exchange — the right to trade on its floor. Muriel Siebert bought the first seat held by a woman on the New York Stock Exchange in 1967; Isabel Benham’s craft was reading the rails, not owning the floor.', attribution: null, term: 'seat' },
-    { text: 'The annual letter: a company’s own account of itself, once a year. Benham read them more closely than most competitors read anything.', attribution: null, term: 'annual letter' },
+    { text: 'A seat: membership on an exchange — the right to trade on its floor. Muriel Siebert bought the first held by a woman in 1967; a century earlier Claflin opened her own house instead.', attribution: null, term: 'seat' },
+    { text: 'The counter: where orders were placed and settled. Woodhull, Claflin & Co. kept a ladies’ room so women could watch their own book — access was the firm’s whole argument.', attribution: null, term: 'counter' },
   ],
   halley: [
     ...GENERAL_WORDS,

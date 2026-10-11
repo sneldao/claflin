@@ -43,7 +43,7 @@ describe('desk notes of the day', () => {
   });
   it('varies by desk on the same day', () => {
     const day = new Date('2026-09-09T12:00:00');
-    const desks = ['hetty', 'jesse', 'isabel', 'arbitrum'] as const;
+    const desks = ['hetty', 'jesse', 'tennie', 'arbitrum'] as const;
     const notes = desks.map(id => deskNoteOfTheDay(id, day).text);
     assert.equal(new Set(notes).size, notes.length);
   });
@@ -81,7 +81,7 @@ describe('desk notes of the day', () => {
   it('varies the word by desk on a word day', () => {
     const base = new Date('2026-09-09T12:00:00');
     const wordDay = [0, 1, 2].map(i => new Date(base.getTime() + i * 86_400_000)).find(d => deskNoteOfTheDay('hetty', d).term)!;
-    const desks = ['hetty', 'jesse', 'isabel', 'arbitrum'] as const;
+    const desks = ['hetty', 'jesse', 'tennie', 'arbitrum'] as const;
     const words = desks.map(id => deskNoteOfTheDay(id, wordDay).text);
     assert.equal(new Set(words).size, words.length);
     for (const desk of desks) assert.ok(deskNoteOfTheDay(desk, wordDay).term, `${desk} teaches a word on a word day`);

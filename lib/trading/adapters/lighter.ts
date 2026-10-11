@@ -14,9 +14,9 @@ import {
   type RobinhoodFeedReading,
 } from '../../robinhood/chain';
 import {
-  isIsabelIntent,
+  isTennieIntent,
   USDG_DECIMALS,
-  type IsabelIntent,
+  type TennieIntent,
   type RobinhoodPaperEstimate,
 } from '../../robinhood/contracts';
 import { deskQuoteLimits, type DeskQuoteLimits } from '../desk-mandate';
@@ -24,7 +24,7 @@ import { formatAmount, parseAmount, TradingError, type QuoteEstimate } from '../
 import type { QuoteAdapter } from '../adapters';
 
 /**
- * Lighter orderbook quote adapter — Isabel's Robinhood Chain desk. The
+ * Lighter orderbook quote adapter — Tennie's Robinhood Chain desk. The
  * estimate walks the visible `<SYM>/USDG` book level-by-level in fixed
  * point: what fills is the output; what the book cannot cover is labelled
  * unfilled, never silently extended. Paper only — order placement is a
@@ -54,7 +54,7 @@ export function createLighterQuoteAdapter({
   readMultiplier = readUiMultiplier,
   now = Date.now,
   id = () => crypto.randomUUID(),
-  limits = deskQuoteLimits('isabel'),
+  limits = deskQuoteLimits('tennie'),
 }: {
   fetchBook?: typeof fetchLighterBook;
   fetchMarkets?: typeof fetchLighterMarkets;
@@ -68,7 +68,7 @@ export function createLighterQuoteAdapter({
   return {
     venue: 'lighter',
     async quote(input: unknown): Promise<QuoteEstimate> {
-      if (!isIsabelIntent(input)) {
+      if (!isTennieIntent(input)) {
         throw new TradingError('invalid_intent', 'Use a supported Robinhood instrument, buy with a USDG spend, or sell a token quantity. Enter a positive decimal amount.');
       }
       const instrument = getRobinhoodInstrument(input.instrumentId);
@@ -140,13 +140,13 @@ export function createLighterQuoteAdapter({
         kind: 'estimate',
         mode: 'paper',
         liveExecutionEnabled: false,
-        deskId: 'isabel',
+        deskId: 'tennie',
         mandateId: 'robinhood-stock-tokens',
         instrumentId: instrument.id,
         network: 'eip155:4663',
         chainId: 4663,
         venue: 'lighter',
-        intent: { ...input, instrumentId: instrument.id } as IsabelIntent,
+        intent: { ...input, instrumentId: instrument.id } as TennieIntent,
         instrumentAddress: instrument.contractAddress,
         instrumentName: instrument.name,
         inputSymbol: buy ? 'USDG' : instrument.symbol,

@@ -234,7 +234,7 @@ describe('share_desk_note', () => {
     assert.doesNotMatch(DESK_NOTE_ALREADY_SHARED, /advice/);
   });
   it('never improvises: the spoken line is bounded and quote-safe', () => {
-    for (const desk of ['hetty', 'jesse', 'isabel', 'arbitrum'] as const) {
+    for (const desk of ['hetty', 'jesse', 'tennie', 'arbitrum'] as const) {
       for (let offset = 0; offset < 14; offset++) {
         const spoken = deskNoteSpokenLine(desk, new Date(1788600000000 + offset * 86_400_000));
         assert.ok(spoken.length < 400);

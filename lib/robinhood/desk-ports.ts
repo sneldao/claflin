@@ -1,14 +1,14 @@
 /**
- * HTTP ports for Isabel's session — quote and evidence over the desk APIs.
+ * HTTP ports for Tennie's session — quote and evidence over the desk APIs.
  * Client-safe: fetch only, no env, no React. Unavailable evidence returns as
  * data (honest legs); transport failure yields null.
  */
 import { fetchJson } from '../api-client';
-import type { IsabelIntent, RobinhoodInstrumentId, RobinhoodPaperEstimate } from './contracts';
+import type { TennieIntent, RobinhoodInstrumentId, RobinhoodPaperEstimate } from './contracts';
 import { parseRobinhoodEstimate, parseRobinhoodEvidence } from './paper';
 import type { RobinhoodEvidence } from './duplex';
 
-export function createIsabelQuotePort(fetch = fetchJson): (intent: IsabelIntent) => Promise<RobinhoodPaperEstimate> {
+export function createTennieQuotePort(fetch = fetchJson): (intent: TennieIntent) => Promise<RobinhoodPaperEstimate> {
   return async (intent) => {
     const params = new URLSearchParams({
       instrumentId: intent.instrumentId,
@@ -19,7 +19,7 @@ export function createIsabelQuotePort(fetch = fetchJson): (intent: IsabelIntent)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
     try {
-      const response = await fetch<unknown>(`/api/desk/isabel/quote?${params}`, {
+      const response = await fetch<unknown>(`/api/desk/tennie/quote?${params}`, {
         signal: controller.signal,
         cache: 'no-store',
       });
@@ -36,13 +36,13 @@ export function createIsabelQuotePort(fetch = fetchJson): (intent: IsabelIntent)
  * data, not failure. Returns null only when the request fails or the payload
  * cannot be parsed.
  */
-export function createIsabelEvidencePort(fetch = fetchJson): (instrumentId: RobinhoodInstrumentId) => Promise<RobinhoodEvidence | null> {
+export function createTennieEvidencePort(fetch = fetchJson): (instrumentId: RobinhoodInstrumentId) => Promise<RobinhoodEvidence | null> {
   return async (instrumentId) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
     try {
       const response = await fetch<unknown>(
-        `/api/desk/isabel/venue-duplex?${new URLSearchParams({ instrumentId })}`,
+        `/api/desk/tennie/venue-duplex?${new URLSearchParams({ instrumentId })}`,
         { signal: controller.signal, cache: 'no-store' },
       );
       if (!response.ok) return null;

@@ -305,7 +305,7 @@ describe('ElevenLabs Webhook', () => {
       // Test that we can look up brokers
       const agent = AGENT_REGISTRY.solana_sage;
       assert.ok(agent, 'solana_sage should exist in registry');
-      assert.equal(agent.name, 'Benham');
+      assert.equal(agent.name, 'Tennie');
     });
 
     it('should check broker can use skill', async () => {

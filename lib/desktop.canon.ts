@@ -28,7 +28,7 @@ export type DeskKind = 'tape' | 'launch';
 export type DeskStatus = 'paper' | 'planned';
 
 export interface DeskCanon {
-  readonly id: 'hetty' | 'jesse' | 'isabel' | 'halley' | 'arbitrum';
+  readonly id: 'hetty' | 'jesse' | 'tennie' | 'halley' | 'arbitrum';
   readonly name: string;
   readonly shortName: string;
   readonly market: string;
@@ -74,12 +74,12 @@ export const DESK_CANON: ReadonlyArray<DeskCanon> = Object.freeze([
     status: 'paper',
   }),
   Object.freeze({
-    id: 'isabel',
-    name: 'Isabel Benham',
-    shortName: 'Isabel',
+    id: 'tennie',
+    name: 'Tennie C. Claflin',
+    shortName: 'Tennie',
     market: 'Robinhood Chain',
     venue: 'Lighter',
-    approach: 'Fundamental analysis and patient investigation.',
+    approach: 'Access first — the accounts the Street refused, read tape by tape.',
     access: 'Robinhood Stock Tokens on Robinhood Chain · paper',
     capability: 'Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.',
     role: 'Robinhood Chain tape desk — quotes and files Robinhood Stock Tokens via Lighter.',

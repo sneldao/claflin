@@ -2,7 +2,7 @@
  * House-wide desk view preference — orthogonal to desk/market.
  * Canonical tokens: room | compact.
  * Legacy aliases night | direct still accepted on read/URL for one release.
- * Keyed per desk so Hetty / Jesse / Isabel each remember Room vs Compact
+ * Keyed per desk so Hetty / Jesse / Tennie each remember Room vs Compact
  * without remounting finance (§4.7).
  */
 import { z } from 'zod';

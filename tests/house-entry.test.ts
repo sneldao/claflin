@@ -59,7 +59,7 @@ describe('house entry', () => {
   });
 
   it('does not restore a planned desk from preference alone', () => {
-    const storage = memoryStorage({ [HOUSE_DESK_PREFERENCE_KEY]: 'isabel' });
+    const storage = memoryStorage({ [HOUSE_DESK_PREFERENCE_KEY]: 'tennie' });
     assert.deepEqual(resolveHouseEntry(null, storage), { kind: 'foyer' });
   });
 

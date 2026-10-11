@@ -12,7 +12,7 @@ type BookReader = (marketId: number) => Promise<LighterBook>;
 type BookStatsReader = () => Promise<Map<number, LighterBookStats>>;
 
 /**
- * Robinhood marks — Isabel's desk. The onchain Chainlink feed is the mark
+ * Robinhood marks — Tennie's desk. The onchain Chainlink feed is the mark
  * (multiplier-adjusted token price, 24/5); the issuer's rhj `tokenBid`/
  * `tokenAsk` mid rides along as `stockReference` when both legs answered, so
  * the tape can show the onchain-versus-issuer gap without a second read.

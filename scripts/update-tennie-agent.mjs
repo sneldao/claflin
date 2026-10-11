@@ -1,20 +1,20 @@
 /**
- * Patches the live Isabel agent with the shared config (prompt + tools).
+ * Patches the live Tennie agent with the shared config (prompt + tools).
  *
- * Run:  node --env-file=.env.local scripts/update-isabel-agent.mjs
- * Requires ELEVENLABS_API_KEY + ELEVENLABS_AGENT_ISABEL in .env.local.
+ * Run:  node --env-file=.env.local scripts/update-tennie-agent.mjs
+ * Requires ELEVENLABS_API_KEY + ELEVENLABS_AGENT_TENNIE in .env.local.
  *
  * Merges platform_settings.overrides so first_message override stays allowed
  * (same pitfall as update-hetty-agent.mjs / update-jesse-agent.mjs).
  */
 
-import { body } from './isabel-agent-config.mjs';
+import { body } from './tennie-agent-config.mjs';
 import { confirmAgentTtsModel } from './agent-voice.mjs';
 
 const apiKey = process.env.ELEVENLABS_API_KEY;
-const agentId = process.env.ELEVENLABS_AGENT_ISABEL;
+const agentId = process.env.ELEVENLABS_AGENT_TENNIE;
 if (!apiKey || !agentId) {
-  console.error('ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ISABEL are required (load .env.local).');
+  console.error('ELEVENLABS_API_KEY and ELEVENLABS_AGENT_TENNIE are required (load .env.local).');
   process.exit(1);
 }
 
@@ -57,9 +57,9 @@ if (!res.ok) {
   console.error('Agent update failed:', res.status, await res.text());
   process.exit(1);
 }
-console.log('Updated Isabel agent:', agentId);
+console.log('Updated Tennie agent:', agentId);
 console.log('first_message override:', mergedPlatformSettings.overrides.conversation_config_override.agent.first_message);
 console.log('Tools now:', body.conversation_config.agent.prompt.tools.map((t) => t.name).join(', '));
 console.log('Voice:', body.conversation_config.tts.voice_id);
-await confirmAgentTtsModel(url, headers, body.conversation_config.tts.model_id, 'Isabel');
+await confirmAgentTtsModel(url, headers, body.conversation_config.tts.model_id, 'Tennie');
 console.log('TTS model was:', previousModel);
