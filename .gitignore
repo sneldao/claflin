@@ -72,6 +72,8 @@ scripts/generate-promo-video.sh
 *.mp4
 *.mov
 *.webm
+# Shipped product media (desk films) IS part of the app — keep it.
+!public/media/*.mp4
 *.mkv
 *.avi
 public/audio/*.mp3

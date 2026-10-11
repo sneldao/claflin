@@ -11,6 +11,7 @@ import { useHouseGraphics, useHouseScene } from './HouseScene';
 import { GraphicsControl } from './GraphicsControl';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import { DeskAuthChip } from './DeskAuthChip';
+import { DeskFilm } from './DeskFilm';
 import { useMarketClock } from '@/lib/use-market-clock';
 import type { DeskPresentation } from '@/lib/desk-presentation';
 import styles from './WorkingDesk.module.css';
@@ -119,6 +120,7 @@ export function RoomPresentation({
                 </button>
               </div>
             </details>
+            <DeskFilm deskId={desk.id} />
             <DeskAuthChip
               showPaperImport={showPaperImport}
               anonymousCount={anonymousCount}
