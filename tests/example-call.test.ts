@@ -1,5 +1,9 @@
+import './jsdom-setup';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { AnnotatedExampleCall } from '../components/foyer/AnnotatedExampleCall';
 import {
   CURRENT_EXAMPLE_CALL,
   EXAMPLE_CALL_CRITERIA,
@@ -33,6 +37,36 @@ describe('example call — empty state', () => {
 
   it('the label is constant and matches the foyer spec', () => {
     assert.equal(EXAMPLE_CALL_LABEL, 'EXAMPLE CALL');
+  });
+
+  it('the empty page carries the house sheet beside the criteria, stamp clear above it', () => {
+    const html = renderToStaticMarkup(createElement(AnnotatedExampleCall));
+    assert.match(html, /data-state="pending"/);
+    assert.match(html, /Awaiting the wire/);
+    assert.match(html, /class="exampleCallFields"/);
+    assert.match(html, /The House Sheet/, 'the sheet hangs where a call would be posted');
+    assert.match(html, /aria-label="The house sheet"/);
+    /* First paint is masthead alone — the date is never fabricated server-side. */
+    assert.doesNotMatch(html, /houseSheetDate/);
+    assert.doesNotMatch(html, /no call today|no recording today/i, 'the sheet must not imply a real call’s state');
+  });
+
+  it('an accepted call leaves no sheet in the field — the slip owns it', () => {
+    const call = {
+      kind: 'accepted' as const,
+      call: {
+        id: 'test-call-1',
+        source: 'jesse' as const,
+        recordedAt: Date.parse('2026-09-21T14:00:00Z'),
+        reviewedBy: 'editorial@example.com',
+        transcript: [{ speaker: 'caller' as const, text: 'Buy 100 USDC of Apple on Jesse.' }],
+        slip: { symbol: 'AAPLx', quoteAsset: 'USDC', amount: '100', fill: '0.30', venue: 'Jupiter', quotedAt: 1, expiresAt: 2, mode: 'paper' as const },
+      },
+    };
+    const html = renderToStaticMarkup(createElement(AnnotatedExampleCall, { state: call }));
+    assert.match(html, /data-state="accepted"/);
+    assert.doesNotMatch(html, /The House Sheet/);
+    assert.doesNotMatch(html, /Awaiting the wire/);
   });
 });
 

@@ -1,4 +1,4 @@
-import { HOUSE_DESKS, type HouseDeskId } from './house';
+import { HOUSE_DESKS, isOpenDesk, type HouseDeskId } from './house';
 
 /**
  * Quiet desk notes — one-line indications from the era the house is drawn
@@ -130,4 +130,16 @@ export function deskNoteOfTheDay(deskId: HouseDeskId, date = new Date()): DeskNo
   const pool = DESK_NOTES[deskId] ?? DESK_NOTES.hetty;
   const note = pool[index % pool.length] as DeskNote | string;
   return typeof note === 'string' ? { text: note, attribution: null } : note;
+}
+
+/** The desks whose notes the house sheet prints — the open ones, in house order. */
+export function houseSheetDesks(): HouseDeskId[] {
+  return HOUSE_DESKS.filter(desk => isOpenDesk(desk.id)).map(desk => desk.id);
+}
+
+/** Which desk prints a given day's sheet — rotates on the same UTC day
+   index the notes themselves use, so sheet and desk note agree. */
+export function houseSheetDesk(desks: readonly HouseDeskId[], date: Date): HouseDeskId | null {
+  if (desks.length === 0) return null;
+  return desks[Math.floor(date.getTime() / 86_400_000) % desks.length];
 }

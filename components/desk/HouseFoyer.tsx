@@ -24,10 +24,9 @@ import { HouseTurret } from './HouseTurret';
 import { HouseDesks } from './HouseDesks';
 import { HouseAnswers } from './HouseAnswers';
 import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
+import { type WireMark } from '../foyer/QuoteColumn';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import foyerStyles from './HouseFoyer.module.css';
-
-type WireMark = { key: string; rail: 'BASE' | 'SOL' | 'RH'; mark: DeskMark };
 
 /* The brass register — one stop per room, in document order. The measure
    loop keys both rail and lamp pool off main.children, so keep aligned. */
@@ -217,6 +216,9 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
   }, []);
 
   const liveAvailable = openDesks.some(desk => DESK_CAPABILITIES[desk.id].live);
+  /* The merged wire marks are computed once — the tape and the quotation
+     column in the answers room read the same list, no second derivation. */
+  const wireMarks = wireMarksOf(hettyMarks, jesseMarks, tennieMarks);
 
   const carried = (id: HouseDeskId) => {
     const offeringId = soleOfferingForDesk(wireInstruction, id);
@@ -316,7 +318,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} market={market} onPick={pickFromWire} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} marks={wireMarks} market={market} onPick={pickFromWire} />
 
         <AnnotatedExampleCall />
 
@@ -332,7 +334,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
 
         <section className={foyerStyles.method} id="house-method" aria-labelledby="house-method-title">
           <h2 id="house-method-title">How the line works.</h2>
-          <div className={foyerStyles.methodRows}>
+          <div className={foyerStyles.methodBody}>
+            <div className={foyerStyles.methodRows}>
             <div className={foyerStyles.methodRow}>
               <span className={foyerStyles.methodIndex}>01 / The call</span>
               <div>
@@ -356,6 +359,19 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
                   : 'File a paper record only when you choose. No real funds move.'}</p>
               </div>
             </div>
+            </div>
+            {/* The posted notice — the office's pinned rules, restating the
+                house's actual boundaries in plain type. Real rules, period
+                framing; never fabricated notices. */}
+            <aside className={foyerStyles.postedNotice} aria-label="Posted house rules">
+              <p className={foyerStyles.postedKicker}>Posted</p>
+              <ul className={foyerStyles.postedRules}>
+                <li>Only you can sign.</li>
+                <li>Voice never moves funds.</li>
+                <li>Paper by default.</li>
+                <li>Estimates expire. Records are paper.</li>
+              </ul>
+            </aside>
           </div>
         </section>
 
@@ -365,7 +381,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           onOpen={enter}
         />
 
-        <HouseAnswers />
+        <HouseAnswers marks={wireMarks} />
       </main>
 
       {/* The brass register — which room you're in, and a way to jump. */}
@@ -379,11 +395,12 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
       </nav>
 
       <footer className={foyerStyles.footer}>
+        <p className={foyerStyles.colophonRule} aria-hidden="true"><span>❦</span></p>
         <HouseMark small className={foyerStyles.footerMark} />
         <span>THE TAPE RUNS ALL NIGHT. EVERY SLIP ON THE RECORD.</span>
         {planned.length > 0 && (
           <span className={foyerStyles.footerPlanned}>
-            Coming soon — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
+            Not yet seated — {planned.map(d => `${d.shortName} (${d.market})`).join(' · ')}
           </span>
         )}
         <nav className={foyerStyles.footerLinks} aria-label="House">
@@ -391,6 +408,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           <a href="#house-offerings">Product terms</a>
           <a href="https://github.com/sneldao/claflin" target="_blank" rel="noreferrer">Source ↗</a>
         </nav>
+        <p className={foyerStyles.colophon}>SET IN FRAUNCES &amp; IBM PLEX · CLAFLIN · EST. MMXXVI</p>
         <p className={foyerStyles.footerRisk}>
           Tokenized stocks carry issuer, custody, liquidity and smart-contract risk, and their prices can
           differ from the listed share. Claflin is not a broker-dealer and gives no investment advice.
@@ -410,14 +428,13 @@ type MarksRead = { result: MarksResult | null; failed: boolean };
 
 function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null, tennie: MarksRead | null): WireMark[] {
   return [
-    ...(hetty.result?.marks ?? []).map(mark => ({ key: `base:${mark.instrumentId}`, rail: 'BASE' as const, mark })),
-    ...(jesse?.result?.marks ?? []).map(mark => ({ key: `sol:${mark.instrumentId}`, rail: 'SOL' as const, mark })),
-    ...(tennie?.result?.marks ?? []).map(mark => ({ key: `rh:${mark.instrumentId}`, rail: 'RH' as const, mark })),
+    ...(hetty.result?.marks ?? []).map(mark => ({ key: `base:${mark.instrumentId}`, rail: 'BASE' as const, mark, asOf: hetty.result?.asOf })),
+    ...(jesse?.result?.marks ?? []).map(mark => ({ key: `sol:${mark.instrumentId}`, rail: 'SOL' as const, mark, asOf: jesse?.result?.asOf })),
+    ...(tennie?.result?.marks ?? []).map(mark => ({ key: `rh:${mark.instrumentId}`, rail: 'RH' as const, mark, asOf: tennie?.result?.asOf })),
   ];
 }
 
-function LiveWire({ hetty, jesse, tennie, market, onPick }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void }) {
-  const wireMarks = wireMarksOf(hetty, jesse, tennie);
+function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; marks: WireMark[]; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void }) {
   const failed = hetty.failed && (jesse?.failed ?? true) && (tennie?.failed ?? true);
 
   const [ticks, setTicks] = useState<Record<string, 'up' | 'down'>>({});

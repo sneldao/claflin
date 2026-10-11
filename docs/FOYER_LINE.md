@@ -48,7 +48,7 @@ Paper by default · Only you can sign                          ← FOYER_BOUNDAR
 
 ◉ LINE 1  HETTY · Base · AI broker      ◉ LINE 2  JESSE · Solana · AI broker
 ◉ LINE 3  TENNIE · RH Chain · AI broker ◉ LINE 4  HALLEY · Solana · AI broker
-○ LINE 5  JAY · coming soon
+○ LINE 5  JAY · not yet seated
 ```
 
 - **One primary action: the house line.** Hold Space (desktop, when focus is not in a field or button) or press and hold (touch). Release to send. This uses the existing dictation path (`/api/dictation` → `dictation-parser`). The words fill the same foyer instruction the input already drives, and there is no second parser.
@@ -61,7 +61,7 @@ Paper by default · Only you can sign                          ← FOYER_BOUNDAR
   - none → no line lights, and the house says so plainly with the supported names.
 - **A resolved tape ask folds the launch slip.** When the book matches, trade intent is declared and origination leaves the room — Halley's slip hides until the line returns home. The clear key (× in the field, or Escape) is always the way back: lamps idle, the book shut, the slip restored.
 - **Ringing** still hands off to the desk's own ConvAI session via `requestRingOnArrival`. A single house-level voice agent is **out of scope** until per-desk calls are accepted, so we are not adding a third agent with its own honesty surface.
-- **Planned desks** stay unlit lamps with "coming soon". That is a restrained directory detail, not a grid and not a clickable room.
+- **Planned desks** stay unlit lamps with "not yet seated". That is a restrained directory detail, not a grid and not a clickable room.
 - **"AI broker"** appears on every lit line. Human names plus "Ring" must never read as a human on the phone.
 
 ### 4.2 The market-aware headline (weather that carries the argument)
@@ -127,7 +127,7 @@ Written in the house voice as "Questions callers ask": Is this a real share? Can
 
 ### 4.9 Footer
 
-"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Coming soon: Jay (Arbitrum)" (retires "Later —"). Tennie left this line when she was seated; the copy is generated from the planned-desks list, so it stays correct as desks open.
+"Every slip on the record." (retires "The house keeps the record". In trading, "the house" is the side that always wins.) Legal and risk links, who built this, and "Not yet seated — Jay (Arbitrum)" (retires "Later —"). Tennie left this line when she was seated; the copy is generated from the planned-desks list, so it stays correct as desks open.
 
 ## 5. Design language (foyer-specific additions)
 
@@ -138,6 +138,7 @@ Material and type follow Product Direction → Art direction (deep green/ink, br
 - **Motion:** slow and physical. Slips slide, stamps land, lamps warm. Nothing floats. Reduced motion shows the end states.
 - **The journey layer:** the foyer is walked, not stacked. On desktop with motion allowed, the hero **pins** — the house holds its frame while the tape, the book, and the desks slide past, and the hero's copy lifts and fades (`--hero-exit`) until it steps out of the reading order entirely (`data-away`). Descending the page rides the scene camera along a curve through the room's poses (desk → evidence → review → ledger) and the room itself stages each stop: the lamp's light follows the walk from blotter to evidence board to the open book, the house warms the deeper you go, a slip lands on the desk once you're inside and files itself beside the ledger at the end. Scroll glides with inertia and settles at room boundaries (proximity snap only — it never claims a gesture mid-room); the room under the reading plane gets a pool of warm lamplight while the rest stay untouched; a brass **register** rides the right edge — one labelled stop per room, the current one lit, each a jump anchor; and the broker cards are dealt, not rendered — each settles onto the table in turn and warms under the lamp as it passes the reading plane. The wire reads the room's pace too: scroll velocity feeds the tape's drift and skew, and a scroll up can pull it backwards a touch. Because the pinned hero's talk bar never leaves the viewport, the line docks as a pill at the foot of the page once the hero yields (the same handset phones already use). Every piece degrades the same way: reduced motion and the lightweight graphics path show composed end states — no pinning, instant poses, no glow, native scroll, a still tape — and the register stays, since it's a marker, not motion.
 - **Mobile:** the phone *is* the handset. A full-width hold-to-talk bar sits in thumb reach, and the slip rises from the bottom like a receipt. Type stays one tap away.
+- **Page furniture:** the ledger ground, quotation column, house sheet, marginalia, colophon and posted notice that fill the rooms' right fields are specced as-built in [HOUSE_ARTEFACTS.md](HOUSE_ARTEFACTS.md) — responsive (ghost ground and quote column are desktop-only; the rest reflow or simplify on mobile), real data or plainly ornamental.
 
 ## 6. Non-negotiables carried from Product Direction
 
@@ -152,7 +153,7 @@ Material and type follow Product Direction → Art direction (deep green/ink, br
 
 | Phase | Scope | Touches | Gate |
 |---|---|---|---|
-| **0: Copy truth** | Market-aware kicker + countdown; plain subhead (`FOYER_LEDE`, already defined but unused); "AI broker" on lines; gap label "vs stock ref"; step-02 "estimate" wording; footer "Every slip on the record." + "Coming soon" | `lib/market-clock.ts`, `lib/desk/ui-copy.ts`, `HouseFoyer.tsx`, `tests/house-foyer.test.ts`, market-clock tests | Unit + typecheck. Safe before Stocklana; does not touch `/?desk=jesse` |
+| **0: Copy truth** | Market-aware kicker + countdown; plain subhead (`FOYER_LEDE`, already defined but unused); "AI broker" on lines; gap label "vs stock ref"; step-02 "estimate" wording; footer "Every slip on the record." + "Not yet seated" | `lib/market-clock.ts`, `lib/desk/ui-copy.ts`, `HouseFoyer.tsx`, `tests/house-foyer.test.ts`, market-clock tests | Unit + typecheck. Safe before Stocklana; does not touch `/?desk=jesse` |
 | **1: The turret** | Push-to-talk house line over existing dictation; line lamps lit by offering match; the named choice when several offerings match; mic-denied fallback | `HouseFoyer.tsx` (extract `HouseTurret.tsx`), `useDictation` reuse, CSS module | Keyboard/touch/reduced-motion QA; mic-denied path; no mic on load (existing test) |
 | **2: The board** | Table + expandable rows; per-number provenance; honest gap column | `HouseOfferings.tsx` → board, offering metadata for rights/eligibility | Offering tests; no gap from mismatched sources |
 | **3: The slip, annotated + example call** | Annotated slip; labelled example call from an accepted real recording | New foyer section; reuse `WrittenSlip` | Recording accepted and labelled; captions |

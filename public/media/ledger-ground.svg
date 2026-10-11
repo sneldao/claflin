@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900">
+  <defs>
+    <pattern id="rules" width="1440" height="46" patternUnits="userSpaceOnUse">
+      <path d="M0 45h1440" stroke="#e3cf9e" stroke-width="0.7"/>
+      <path d="M0 42.6h1440" stroke="#e3cf9e" stroke-width="0.35"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="900" fill="url(#rules)"/>
+  <g stroke="#e3cf9e" fill="none">
+    <path d="M196 64v700 M218 64v700" stroke-width="0.6"/>
+    <path d="M972 44v680 M996 44v680" stroke-width="0.6"/>
+    <path d="M1230 140v620" stroke-width="0.5"/>
+    <path d="M640 120v560" stroke-width="0.45"/>
+    <path d="M64 332h620 M64 336.4h620" stroke-width="0.9"/>
+    <path d="M700 706h640 M700 710.4h640" stroke-width="0.9"/>
+    <path d="M90 92h540 M90 95.2h540" stroke-width="0.7"/>
+  </g>
+  <g stroke="#e3cf9e" fill="none" stroke-linecap="round">
+    <path d="M338 182c58-52 160-32 172 18 10 46-58 74-96 44-32-26 8-72 54-54" stroke-width="1.4"/>
+    <path d="M1148 558c38-72 148-84 176-32 24 46-38 94-90 76-46-16-22-82 30-82" stroke-width="1.4"/>
+    <path d="M618 622c88 20 168-12 212-62" stroke-width="1"/>
+    <path d="M148 700c70-18 152-6 212 26" stroke-width="1"/>
+    <path d="M430 470c44 30 96 34 140 10" stroke-width="0.9"/>
+    <path d="M1040 300c-30 40-84 52-126 34" stroke-width="0.9"/>
+  </g>
+  <g fill="#e3cf9e">
+    <ellipse cx="880" cy="232" rx="9" ry="6" transform="rotate(-18 880 232)"/>
+    <circle cx="885" cy="224" r="1.6"/>
+    <circle cx="896" cy="238" r="1.1"/>
+    <circle cx="872" cy="244" r="0.9"/>
+    <ellipse cx="256" cy="520" rx="5" ry="3.4" transform="rotate(12 256 520)"/>
+  </g>
+</svg>

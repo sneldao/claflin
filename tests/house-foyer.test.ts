@@ -6,6 +6,11 @@ import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { HouseFoyer } from '../components/desk/HouseFoyer';
+import { HouseAnswers } from '../components/desk/HouseAnswers';
+import { QuoteColumn, type WireMark } from '../components/foyer/QuoteColumn';
+import { HouseSheet } from '../components/foyer/HouseSheet';
+import { deskNoteOfTheDay, houseSheetDesk } from '../lib/desk-notes';
+import type { HouseDeskId } from '../lib/house';
 import { WorkingDesk } from '../components/desk/WorkingDesk';
 import { offeringForInstrument } from '../lib/desk/offerings';
 import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
@@ -166,7 +171,7 @@ describe('house foyer', () => {
     assert.match(html, /“The Lady Broker”/);
     assert.match(html, /A live estimate when you ask\./);
     assert.doesNotMatch(html, /A real price when you ask/);
-    assert.match(html, /Coming soon — /);
+    assert.match(html, /Not yet seated — /);
     assert.doesNotMatch(html, /Later — /);
     assert.doesNotMatch(html, /ILLUSTRATIVE EXAMPLE/);
     assert.doesNotMatch(html, /0\.490 Apple units/);
@@ -193,6 +198,25 @@ describe('house foyer', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
     assert.match(html, /File a paper record only when you choose\. No real funds move\./);
     assert.doesNotMatch(html, /live settlement|Live settle/);
+  });
+
+  it('hangs the house furniture: posted rules, the clerk’s stamp, a colophon', () => {
+    const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
+    /* the posted notice restates real boundaries in plain type */
+    assert.match(html, /aria-label="Posted house rules"/);
+    assert.match(html, /Only you can sign\./);
+    assert.match(html, /Voice never moves funds\./);
+    /* the empty call page wears the clerk's stamp — decorative duplicate */
+    assert.match(html, /Awaiting the wire/);
+    /* the house sheet hangs in the example room's field — masthead only on
+       first paint (the date fills in client-side, never fabricated) */
+    assert.match(html, /The House Sheet/);
+    /* the quotation column stays empty until real marks land — SSR carries none */
+    assert.doesNotMatch(html, /Reference marks/);
+    /* the colophon closes the page; planned desks are not yet seated */
+    assert.match(html, /SET IN FRAUNCES/);
+    assert.match(html, /Not yet seated —/);
+    assert.doesNotMatch(html, /Coming soon/);
   });
 
   it('filters the house book from the visitor instruction without choosing a chain first', async () => {
@@ -437,5 +461,213 @@ describe('house foyer', () => {
     assert.equal(enterLink!.getAttribute('href'), '/?desk=halley');
     await act(async () => click(enterLink!));
     assert.equal(entered, 'halley');
+  });
+});
+
+function quoteRow(over: Partial<{ symbol: string; status: string; price: string | null; updatedAt: number }> = {}, index = 0): WireMark {
+  const updatedAt = over.updatedAt ?? Date.parse('2026-10-11T15:30:00Z');
+  return {
+    key: `base:inst-${index}`,
+    rail: 'BASE',
+    asOf: updatedAt - 1000,
+    mark: {
+      instrumentId: `inst-${index}`,
+      symbol: over.symbol ?? `TST${index}`,
+      name: 'Test instrument',
+      reference: {
+        status: (over.status ?? 'observed') as 'observed' | 'stale' | 'unavailable',
+        source: 'chainlink',
+        priceUsdPerToken: over.price === null ? undefined : (over.price ?? '227.10'),
+        updatedAt,
+        session: 'unknown',
+        pauseStatus: 'unchecked',
+      },
+    },
+  };
+}
+
+describe('the quotation column', () => {
+  it('prints real priced rows only, with rail, stale label, and a UTC observation', () => {
+    const marks = [
+      quoteRow({ symbol: 'AAPLc', price: '227.10' }, 0),
+      quoteRow({ symbol: 'TSLAc', status: 'stale' }, 1),
+      quoteRow({ symbol: 'MSFTc', price: null }, 2),
+    ];
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks }));
+    assert.match(html, /Reference marks/);
+    assert.match(html, /aria-hidden="true"/);
+    assert.match(html, /AAPLc/);
+    assert.match(html, /\$227\.10/);
+    assert.match(html, /BASE/);
+    assert.match(html, /STALE/, 'stale marks carry the wire’s stale label');
+    assert.match(html, /Observed Oct 11, 2026 · 15:30 UTC/, 'explicit UTC observation from reference.updatedAt');
+    assert.doesNotMatch(html, /MSFTc/, 'unpriced marks never print a row');
+  });
+
+  it('stamps each row with its own UTC time, not one aggregate reading', () => {
+    const marks = [
+      quoteRow({ symbol: 'AAAc', updatedAt: Date.parse('2026-10-11T15:30:00Z') }, 0),
+      quoteRow({ symbol: 'BBBc', updatedAt: Date.parse('2026-10-10T09:05:00Z') }, 1),
+    ];
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks }));
+    assert.match(html, /AAAc[\s\S]*?Observed Oct 11, 2026 · 15:30 UTC/);
+    assert.match(html, /BBBc[\s\S]*?Observed Oct 10, 2026 · 09:05 UTC/);
+    assert.equal(html.match(/Observed /g)?.length, 2, 'each row carries its own observation');
+  });
+
+  it('labels a fetch snapshot as Snapshot, never as an observation', () => {
+    const row = quoteRow({ symbol: 'AAPLc' }, 0);
+    (row.mark.reference as { updatedAt?: number }).updatedAt = undefined;
+    row.asOf = Date.parse('2026-10-11T18:05:00Z');
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks: [row] }));
+    assert.match(html, /Snapshot Oct 11, 2026 · 18:05 UTC/);
+    assert.doesNotMatch(html, /Observed/);
+  });
+
+  it('renders seconds-scale upstream timestamps at their real instant', () => {
+    const row = quoteRow({ symbol: 'NVDAc', updatedAt: Math.floor(Date.parse('2026-10-09T14:37:53Z') / 1000) }, 0);
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks: [row] }));
+    assert.match(html, /Observed Oct 9, 2026 · 14:37 UTC/);
+    assert.doesNotMatch(html, /1970/);
+  });
+
+  it('falls back to the snapshot when updatedAt is out of Date’s range', () => {
+    const row = quoteRow({ symbol: 'AAPLc' }, 0);
+    (row.mark.reference as { updatedAt?: number }).updatedAt = 9e20;
+    row.asOf = Date.parse('2026-10-11T18:05:00Z');
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks: [row] }));
+    assert.match(html, /Snapshot Oct 11, 2026 · 18:05 UTC/);
+    assert.doesNotMatch(html, /Observed/);
+  });
+
+  it('says Time unavailable when even the snapshot is out of range', () => {
+    const row = quoteRow({ symbol: 'AAPLc' }, 0);
+    (row.mark.reference as { updatedAt?: number }).updatedAt = 9e20;
+    row.asOf = -9e20;
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks: [row] }));
+    assert.match(html, /Time unavailable/);
+    assert.doesNotMatch(html, /Observed|Snapshot/);
+  });
+
+  it('says Time unavailable when a row has no valid timestamp at all', () => {
+    const row = quoteRow({ symbol: 'AAPLc' }, 0);
+    (row.mark.reference as { updatedAt?: number }).updatedAt = undefined;
+    row.asOf = undefined;
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks: [row] }));
+    assert.match(html, /Time unavailable/);
+    assert.doesNotMatch(html, /Observed|Snapshot/);
+  });
+
+  it('excludes unavailable marks even when a residual price exists', () => {
+    const marks = [quoteRow({ symbol: 'GONEc', status: 'unavailable' })];
+    assert.equal(renderToStaticMarkup(createElement(QuoteColumn, { marks })), '');
+  });
+
+  it('prints nothing at all when no real priced marks exist', () => {
+    assert.equal(renderToStaticMarkup(createElement(QuoteColumn, { marks: [] })), '');
+    assert.equal(
+      renderToStaticMarkup(createElement(QuoteColumn, { marks: [quoteRow({ price: null })] })),
+      '',
+      'a rail with only unpriced marks leaves no column',
+    );
+  });
+
+  it('caps the column deterministically at seven rows', () => {
+    const marks = Array.from({ length: 12 }, (_, i) => quoteRow({}, i));
+    const html = renderToStaticMarkup(createElement(QuoteColumn, { marks }));
+    assert.equal(html.match(/class="quoteRow"/g)?.length, 7);
+    assert.match(html, /TST6/);
+    assert.doesNotMatch(html, /TST7/, 'rows past the cap never print');
+  });
+
+  it('hangs in the answers room only when real marks feed it — no new fetches', () => {
+    assert.doesNotMatch(
+      renderToStaticMarkup(createElement(HouseAnswers)),
+      /Reference marks/,
+      'no marks, no column',
+    );
+    const html = renderToStaticMarkup(createElement(HouseAnswers, { marks: [quoteRow({ symbol: 'AAPLc' })] }));
+    assert.match(html, /id="house-answers"/);
+    assert.match(html, /Reference marks/);
+    assert.match(html, /class="answersBody"/);
+    assert.match(html, /class="quoteColumn"/);
+  });
+});
+
+describe('the house sheet', () => {
+  const sheetDesks: HouseDeskId[] = ['hetty', 'jesse', 'tennie'];
+
+  it('first paint is masthead alone — no fake date, no note, no clock on the server', () => {
+    const html = renderToStaticMarkup(createElement(HouseSheet));
+    assert.match(html, /The House Sheet/);
+    assert.match(html, /aria-label="The house sheet"/);
+    assert.doesNotMatch(html, /houseSheetDate/);
+    assert.doesNotMatch(html, /desk note|UTC/);
+  });
+
+  it('rotates desks on the same UTC day index the notes use', () => {
+    const day = new Date('2026-10-11T12:00:00Z');
+    const dayIndex = Math.floor(day.getTime() / 86_400_000);
+    assert.equal(houseSheetDesk(sheetDesks, day), sheetDesks[dayIndex % sheetDesks.length]);
+    const next = new Date(day.getTime() + 86_400_000);
+    assert.notEqual(houseSheetDesk(sheetDesks, next), houseSheetDesk(sheetDesks, day));
+    assert.equal(houseSheetDesk([], day), null, 'no open desks, no sheet');
+  });
+
+  it('prints the chosen desk’s note verbatim with the real date', () => {
+    const day = new Date('2026-10-11T12:00:00Z');
+    const deskId = houseSheetDesk(sheetDesks, day)!;
+    const note = deskNoteOfTheDay(deskId, day);
+    const html = renderToStaticMarkup(createElement(HouseSheet, { date: day, desks: sheetDesks }));
+    assert.match(html, /October 11, 2026 · UTC/, 'the date line is real and names its zone');
+    assert.ok(html.includes(note.text), 'the note prints verbatim');
+    assert.match(html, /firm whose Weekly printed what the Street would not/, 'true provenance, no invented issue');
+    assert.doesNotMatch(html, /Claflin’s Weekly|No\. \d/i, 'never claims to be the historical paper or an issue number');
+  });
+
+  it('sets word days as the boxed word of the trade', () => {
+    const base = new Date('2026-10-11T12:00:00Z');
+    const wordDay = [0, 1, 2, 3, 4].map(i => new Date(base.getTime() + i * 86_400_000))
+      .find(d => deskNoteOfTheDay(houseSheetDesk(sheetDesks, d)!, d).term);
+    assert.ok(wordDay, 'a word day exists in range');
+    const html = renderToStaticMarkup(createElement(HouseSheet, { date: wordDay, desks: sheetDesks }));
+    assert.match(html, /A word of the trade/);
+    assert.match(html, /class="houseSheetWordTerm"/);
+  });
+
+  it('carries a speaker’s attribution verbatim when the note has one', () => {
+    const base = new Date('2026-10-11T12:00:00Z');
+    const attributed = Array.from({ length: 40 }, (_, i) => new Date(base.getTime() + i * 86_400_000))
+      .map(d => ({ date: d, note: deskNoteOfTheDay(houseSheetDesk(sheetDesks, d)!, d) }))
+      .find(({ note }) => note.attribution);
+    assert.ok(attributed, 'an attributed note exists in range');
+    const html = renderToStaticMarkup(createElement(HouseSheet, { date: attributed!.date, desks: sheetDesks }));
+    assert.ok(html.includes(attributed!.note.attribution!), 'the byline is the attribution verbatim');
+    assert.doesNotMatch(html, /not a quotation/, 'a real quotation is not disclaimed as a desk note');
+  });
+
+  it('labels an unattributed note as a desk note, not a quotation', () => {
+    const base = new Date('2026-10-11T12:00:00Z');
+    const generic = Array.from({ length: 40 }, (_, i) => new Date(base.getTime() + i * 86_400_000))
+      .map(d => ({ date: d, note: deskNoteOfTheDay(houseSheetDesk(sheetDesks, d)!, d) }))
+      .find(({ note }) => !note.attribution && !note.term);
+    assert.ok(generic, 'a generic note exists in range');
+    const html = renderToStaticMarkup(createElement(HouseSheet, { date: generic!.date, desks: sheetDesks }));
+    assert.match(html, /a desk note, not a quotation/);
+  });
+
+  it('rolls the sheet to the new day at UTC midnight while the page stays open', async () => {
+    mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.parse('2026-10-11T23:59:58Z') });
+    try {
+      root = createRoot(getRootElement());
+      await act(async () => root!.render(createElement(HouseSheet, { desks: sheetDesks })));
+      await act(async () => { mock.timers.tick(1); });
+      assert.match(text(getRootElement()), /October 11, 2026 · UTC/);
+      await act(async () => { mock.timers.tick(3_000); });
+      assert.match(text(getRootElement()), /October 12, 2026 · UTC/);
+      assert.doesNotMatch(text(getRootElement()), /October 11, 2026/, 'yesterday does not linger past midnight');
+    } finally {
+      mock.timers.reset();
+    }
   });
 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { HOUSE_DESKS, getHouseDesk, isOpenDesk, OPEN_DESK_ID } from '../lib/house';
 import { usesLegacyDeskDocuments } from '../lib/desk/registry';
 import { JESSE_PAPER_ENABLED } from '../lib/solana/flags';
-import { deskNoteOfTheDay } from '../lib/desk-notes';
+import { deskNoteOfTheDay, houseSheetDesk, houseSheetDesks } from '../lib/desk-notes';
 import { fetchJson } from '../lib/api-client';
 
 describe('the house roster', () => {
@@ -97,6 +97,25 @@ describe('desk notes of the day', () => {
         assert.doesNotMatch(note.text, /\b(you should|you must|buy now|sell now|guaranteed|risk-free)\b/i);
       }
     }
+  });
+});
+
+describe('the house sheet rotation', () => {
+  it('prints only open desks and rotates on the note’s own day index', () => {
+    const desks = houseSheetDesks();
+    assert.ok(desks.length > 0, 'the sheet needs at least one open desk');
+    for (const id of desks) assert.ok(isOpenDesk(id), `${id} must be an open desk`);
+    const day = new Date('2026-09-09T12:00:00');
+    const dayIndex = Math.floor(day.getTime() / 86_400_000);
+    const printed = houseSheetDesk(desks, day);
+    assert.equal(printed, desks[dayIndex % desks.length]);
+    /* The note the sheet carries is the desk's own note for that day —
+       same index, same stability guarantee. */
+    assert.deepEqual(deskNoteOfTheDay(printed!, day), deskNoteOfTheDay(printed!, new Date(day.getTime() + 6 * 3_600_000)));
+    /* Consecutive days walk the roster rather than repeating one desk. */
+    const walked = new Set([0, 1, 2, 3].map(i => houseSheetDesk(desks, new Date(day.getTime() + i * 86_400_000))));
+    assert.ok(walked.size > 1 || desks.length === 1, 'the sheet rotates desks');
+    assert.equal(houseSheetDesk([], day), null);
   });
 });
 

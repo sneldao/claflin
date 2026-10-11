@@ -1530,13 +1530,43 @@
   border-bottom: 1px solid rgba(179, 144, 90, 0.15);
 }
 
+/* the clerk's manicule — the pointing hand of marginalia */
 .exampleCallCriteria li::before {
-  content: "·";
+  content: "☞";
   position: absolute;
-  left: 8px;
+  left: 4px;
   top: 12px;
   color: var(--brass);
   font-weight: 700;
+}
+
+/* The stamp on the empty page — same ink and make as the filing stamp;
+   it sits in the section's open field and duplicates what the kicker
+   already says, so it is decorative only. */
+.awaitingStamp {
+  position: absolute;
+  top: clamp(60px, 10vh, 110px);
+  right: clamp(24px, 8vw, 130px);
+  transform: rotate(-6deg);
+  padding: 10px 20px;
+  border: 2.5px solid rgba(168, 70, 30, 0.7);
+  border-radius: 4px;
+  color: rgba(168, 70, 30, 0.8);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 0 0 3px transparent,
+    inset 0 0 0 4px rgba(168, 70, 30, 0.35);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .awaitingStamp {
+    display: none;
+  }
 }
 
 /* The accepted call — two columns: transcript + slip. */
@@ -1725,8 +1755,100 @@
   color: #f2e8d0;
 }
 
+/* Rows on the left; the posted notice fills the right field on wide
+   tables — a single column when the room narrows. */
+.methodBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 72px);
+}
+
+@media (min-width: 1024px) {
+  .methodBody {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  }
+}
+
+@media (min-width: 901px) {
+  .postedNotice {
+    margin-right: clamp(88px, 7vw, 128px);
+  }
+}
+
 .methodRows {
   display: grid;
+}
+
+/* ————— The posted notice — the office's rules, pinned ————— */
+
+.postedNotice {
+  position: relative;
+  align-self: start;
+  margin-top: clamp(10px, 2vh, 24px);
+  padding: 34px 26px 26px;
+  background: linear-gradient(180deg, #f0e6cb, #e6d7b0);
+  color: #33271a;
+  border: 1px solid #8f7143;
+  /* letterpress frame: pale ground, inked hairline inside the edge */
+  box-shadow:
+    inset 0 0 0 4px #f0e6cb,
+    inset 0 0 0 5px rgba(143, 113, 67, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.42);
+}
+
+/* the pin head that holds it */
+.postedNotice::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ecdcb2, #8f7143 75%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.postedKicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #7a5c30;
+}
+
+.postedKicker::before,
+.postedKicker::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(122, 92, 48, 0.4);
+}
+
+.postedRules {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+
+.postedRules li {
+  padding: 10px 0;
+  border-top: 1px solid rgba(122, 92, 48, 0.3);
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.postedRules li:last-child {
+  border-bottom: 1px solid rgba(122, 92, 48, 0.3);
+  font-size: 0.82rem;
+  font-style: italic;
 }
 
 .methodRow {
@@ -2467,7 +2589,7 @@
   font-size: 0.7rem;
   line-height: 1.6;
   letter-spacing: 0;
-  color: #7d7359;
+  color: #ad9f80;
 }
 
 /* ————— The brass register — a page-edge marker for the room you're in ————— */
@@ -2541,6 +2663,34 @@
   font-size: 0.58rem;
   letter-spacing: 0.24em;
   color: #6b5f45;
+}
+
+/* ————— The colophon — the printer's block at the foot ————— */
+
+.colophonRule {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 2px 0 8px;
+  color: var(--brass-dim);
+  font-size: 0.7rem;
+}
+
+.colophonRule::before,
+.colophonRule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(179, 144, 90, 0.18);
+}
+
+.colophon {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.54rem;
+  letter-spacing: 0.28em;
+  color: #5d5340;
 }
 
 .footerMark {
@@ -2805,6 +2955,246 @@
     margin-left: 0;
     width: 100%;
   }
+}
+
+/* ————— Ghost ledger ground — the reels' ink ground, behind the dark rooms ————— */
+
+/* Faint ruled ledger behind the dark sections — texture, not entries.
+   Lives under each room's content (negative z inside the room's stacking
+   context) and under the lamp pool; wide tables only, where the black
+   field is largest. No motion — the room is quiet. */
+@media (min-width: 1100px) {
+  .wire::before,
+  .exampleCall::before,
+  .method::before,
+  .desks::before,
+  .answers::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url('/media/ledger-ground.svg') center / cover no-repeat;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+}
+
+/* ————— The quotation column — the newspaper's marks table, at rest ————— */
+
+/* Answers on the left; the column fills the right field on wide tables. */
+@media (min-width: 1100px) {
+  .answersBody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: clamp(36px, 5vw, 88px);
+    align-items: start;
+  }
+}
+
+.quoteColumn {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .quoteColumn {
+    display: block;
+    position: sticky;
+    top: 20vh;
+    /* Stay clear of the fixed room register on the right edge. */
+    margin-right: clamp(88px, 7vw, 128px);
+    pointer-events: none;
+  }
+}
+
+.quoteColumnTitle {
+  margin: 0 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.3);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.quoteList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quoteRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(179, 144, 90, 0.14);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  color: #c9bda0;
+}
+
+.quoteSymbol {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #e8ddc2;
+}
+
+.quoteNums {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.quotePrice {
+  font-variant-numeric: tabular-nums;
+}
+
+.quoteRail {
+  font-size: 0.54rem;
+  letter-spacing: 0.16em;
+  color: #7d7359;
+}
+
+.quoteStale {
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  color: rgba(196, 110, 70, 0.9);
+}
+
+.quoteTime {
+  flex-basis: 100%;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: #7d7359;
+}
+
+/* ————— The house sheet — the day's desk note, printed small ————— */
+
+/* Criteria on the left; the sheet hangs in the right field on wide
+   tables — where a call would be posted — and drops to a strip below
+   when the room narrows. */
+.exampleCallFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1100px) {
+  .exampleCallFields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+    gap: clamp(40px, 5vw, 90px);
+    align-items: start;
+  }
+
+  /* The clerk's stamp rides the field's top edge — keep the sheet
+     below it, never overlapped. */
+  .exampleSheetSlot {
+    padding-top: clamp(40px, 6vh, 72px);
+    margin-right: clamp(88px, 7vw, 128px);
+  }
+}
+
+@media (max-width: 1099px) {
+  .exampleSheetSlot {
+    margin-top: 40px;
+  }
+}
+
+.houseSheet {
+  position: relative;
+  max-width: 340px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(180deg, #efe4c8, #e2d2ab);
+  color: #33271a;
+  border: 1px solid #8f7143;
+  /* same letterpress frame as the posted notice */
+  box-shadow:
+    inset 0 0 0 4px #efe4c8,
+    inset 0 0 0 5px rgba(143, 113, 67, 0.5),
+    0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.houseSheetMasthead {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 3px double rgba(122, 92, 48, 0.6);
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.02rem;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.houseSheetDate {
+  margin: 8px 0 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  text-align: center;
+  text-transform: uppercase;
+  color: #7a5c30;
+}
+
+.houseSheetNote {
+  margin: 14px 0 0;
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.houseSheetNote::first-letter {
+  float: left;
+  padding-right: 7px;
+  font-size: 2.5em;
+  line-height: 0.82;
+}
+
+.houseSheetWordBox {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(122, 92, 48, 0.55);
+}
+
+.houseSheetWordKicker {
+  margin: 0 0 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #7a5c30;
+}
+
+.houseSheetWordTerm {
+  margin: 0 0 6px;
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 1.05rem;
+  font-variant: small-caps;
+}
+
+.houseSheetWordText {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.houseSheetByline {
+  margin: 12px 0 0;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: #4d3a22;
+}
+
+.houseSheetFoot {
+  margin: 12px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(122, 92, 48, 0.4);
+  font-size: 0.6rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: #7a5c30;
 }
 
 @media (max-width: 374px) {

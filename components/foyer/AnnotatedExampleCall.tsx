@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { CURRENT_EXAMPLE_CALL, EXAMPLE_CALL_CRITERIA, EXAMPLE_CALL_LABEL, type ExampleCall, type ExampleCallState } from '@/lib/foyer/example-call';
+import { HouseSheet } from './HouseSheet';
 import foyerStyles from '@/components/desk/HouseFoyer.module.css';
 
 /**
@@ -162,14 +163,29 @@ function ExampleCallEmpty({ state }: { state: { kind: 'pending' | 'rejected'; re
         A real call will land here.
       </h2>
       <p className={foyerStyles.exampleCallReason}>{state.reason}</p>
-      <p className={foyerStyles.exampleCallCriteriaLabel}>
-        What an accepted recording will need:
-      </p>
-      <ul className={foyerStyles.exampleCallCriteria}>
-        {EXAMPLE_CALL_CRITERIA.map((line, i) => (
-          <li key={i}>{line}</li>
-        ))}
-      </ul>
+      {/* The clerk's stamp on an empty page — true while no accepted
+          recording exists; decorative (the kicker already says it). */}
+      <span className={foyerStyles.awaitingStamp} aria-hidden="true">
+        Awaiting the wire
+      </span>
+      {/* The criteria on the left; the day's house sheet hangs in the
+          right field where a call would be posted. On narrow tables the
+          sheet drops to a strip beneath. */}
+      <div className={foyerStyles.exampleCallFields}>
+        <div>
+          <p className={foyerStyles.exampleCallCriteriaLabel}>
+            What an accepted recording will need:
+          </p>
+          <ul className={foyerStyles.exampleCallCriteria}>
+            {EXAMPLE_CALL_CRITERIA.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+        <div className={foyerStyles.exampleSheetSlot}>
+          <HouseSheet />
+        </div>
+      </div>
     </section>
   );
 }
