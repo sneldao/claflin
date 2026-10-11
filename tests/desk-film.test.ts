@@ -38,9 +38,10 @@ describe('desk film', () => {
 
   it('turns the foyer card over only where a film exists', () => {
     const html = renderDesks();
-    /* the tab and the verso's title each appear once per film card */
-    assert.equal((html.match(/The film/g) ?? []).length, 6);
-    assert.equal((html.match(/Watch the film/g) ?? []).length, 3);
+    /* the reel tab and the portrait kicker each appear once per card */
+    assert.equal((html.match(/The reel ·/g) ?? []).length, 3);
+    assert.equal((html.match(/A portrait ·/g) ?? []).length, 3);
+    assert.equal((html.match(/Run the reel/g) ?? []).length, 3);
     /* the verso is inert until the card turns */
     assert.match(html, /aria-hidden="true"/);
     /* nothing autoplays: the overlay mounts only on the watch action */

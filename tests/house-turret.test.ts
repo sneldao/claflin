@@ -121,10 +121,10 @@ describe('house turret (component)', () => {
     assert.equal((html.match(/data-talk/g) ?? []).length, 2, 'the talk bar and its handset copy');
     assert.match(html, /class="handset" data-shown="false" aria-hidden="true"/, 'the handset stays hidden until the bar scrolls away');
     assert.match(html, /Hold to dictate/);
-    assert.match(html, /Hold to dictate an instruction, or type\. Then choose a product\./);
+    assert.match(html, /Hold to dictate an instruction, or type\. Then name your line\./);
     assert.match(html, /LINE 1/);
     assert.match(html, /data-lamp="planned"/);
-    assert.match(html, /Arbitrum · coming soon/);
+    assert.match(html, /Arbitrum · not yet seated/);
   });
 
   it('lamps follow the words: Apple lights all three, Tesla lights Jesse and Tennie', async () => {

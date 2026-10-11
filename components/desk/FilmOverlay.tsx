@@ -32,7 +32,7 @@ export function FilmOverlay({ film, onClose }: { film: DeskFilm; onClose: () => 
       className={scene.filmOverlay}
       role="dialog"
       aria-modal="true"
-      aria-label="The desk's card"
+      aria-label={`The reel — ${film.namesake}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) close();
       }}
@@ -51,7 +51,7 @@ export function FilmOverlay({ film, onClose }: { film: DeskFilm; onClose: () => 
         <div className={scene.filmFoot}>
           <p className={scene.filmNote}>An AI character of the house — not the historical {film.namesake}.</p>
           <details className={scene.filmTranscript}>
-            <summary>Narration</summary>
+            <summary>Transcript</summary>
             <p>{film.transcript}</p>
           </details>
           <button ref={closeRef} type="button" className={scene.filmClose} onClick={close}>

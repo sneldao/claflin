@@ -27,7 +27,7 @@ The desk is layer 3. Its identity is the broker (the relationship), not the rail
 - **Market:** Base · **Venue:** Aerodrome
 - **Role:** Quotes and files Coinbase tokenized stocks via Aerodrome.
 - **Approach:** Independent judgment. Capital preservation. Deliberate decisions.
-- **Capability:** Talk or type a buy. Get a Base estimate. File a paper record.
+- **Capability:** Name a buy — or ask her. Get a Base estimate. File the record.
 - **Status:** Paper desk open; live execution is env-gated behind `NEXT_PUBLIC_LIVE_EXECUTION_ENABLED`.
 
 ### Jesse Livermore — Solana tape desk
@@ -35,7 +35,7 @@ The desk is layer 3. Its identity is the broker (the relationship), not the rail
 - **Market:** Solana · **Venue:** Jupiter
 - **Role:** Quotes and files Backed xStocks via Jupiter.
 - **Approach:** Price action, timing, and disciplined speculation.
-- **Capability:** Talk or type a buy. Get a Jupiter estimate. Paper or settle live.
+- **Capability:** Call a buy — or say it. Get a Jupiter estimate. Paper or settle live.
 - **Status:** Paper desk open; live settlement env-gated behind `NEXT_PUBLIC_JESSE_LIVE_ENABLED + JESSE_LIVE_ENABLED`.
 
 ### Tennie Claflin — Robinhood Chain tape desk
@@ -43,7 +43,7 @@ The desk is layer 3. Its identity is the broker (the relationship), not the rail
 - **Market:** Robinhood Chain · **Venue:** Lighter
 - **Role:** Quotes and files Robinhood Stock Tokens via Lighter.
 - **Approach:** Access first — the accounts the Street refused, read tape by tape.
-- **Capability:** Pick a stock token, size it in USDG. Get a Lighter estimate with issuer, onchain, and venue marks side by side. File a paper record.
+- **Capability:** Ask for a stock token, sized in USDG. Get a Lighter estimate — issuer, onchain, and venue marks side by side. File the record.
 - **Status:** Paper desk open by design. No live flag exists.
 
 ### Edmond Halley — Solana launch desk

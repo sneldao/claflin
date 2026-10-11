@@ -123,12 +123,12 @@ export const TURRET_COPY = {
   hold: 'Hold to dictate',
   listening: 'Listening — release to send',
   transcribing: 'Writing it down…',
-  hint: 'Hold to dictate an instruction, or type. Then choose a product.',
+  hint: 'Hold to dictate an instruction, or type. Then name your line.',
   micNote: 'The browser asks for the microphone only while you hold. Typing works the same.',
   heard: 'Heard:',
   lampMatch: 'Carries this',
   lampQuiet: 'Not on this line',
-  planned: 'coming soon',
+  planned: 'not yet seated',
   handset: 'The house line, wherever you are on the page.',
   /** First-visit affordance: a small inline link to the example call
    *  below. Renders alongside the hint when no recording is in the

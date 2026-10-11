@@ -38,7 +38,7 @@ function DeskCard({ desk, index, deskHref, onOpen }: {
               aria-expanded={flipped}
               onClick={() => setFlipped(true)}
             >
-              The film · {film.length}
+              The reel · {film.length}
             </button>
           )}
           <p className={foyerStyles.deskMeta}>{LINE_IDENTITY} · {voice?.rail ?? desk.market}</p>
@@ -63,12 +63,12 @@ function DeskCard({ desk, index, deskHref, onOpen }: {
         {film && (
           <div className={`${foyerStyles.cardFace} ${foyerStyles.cardBack}`} inert={!flipped} aria-hidden={!flipped}>
             <img className={foyerStyles.filmPoster} src={film.poster} alt="" loading="lazy" />
-            <p className={foyerStyles.deskMeta}>The desk’s card · {film.length}</p>
-            <h3 className={foyerStyles.filmTitle}>The film</h3>
+            <p className={foyerStyles.deskMeta}>A portrait · {film.length}</p>
+            <h3 className={foyerStyles.filmTitle}>{film.namesake}</h3>
             <p className={foyerStyles.filmHook}>{film.hook}</p>
             <div className={foyerStyles.filmActions}>
               <button type="button" className={foyerStyles.filmWatch} onClick={() => setWatching(true)}>
-                Watch the film
+                Run the reel
               </button>
               <button type="button" className={foyerStyles.filmBack} onClick={() => setFlipped(false)}>
                 Turn back
