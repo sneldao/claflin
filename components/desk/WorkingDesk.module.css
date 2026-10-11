@@ -236,17 +236,17 @@
 .secondary:active:not(:disabled) { transform: translateY(1px); }
 .notice { border-left: 2px solid currentColor; padding: 10px 12px; margin: 18px 0 !important; font-size: 13px; line-height: 1.6; }
 /* Halley's projected launch curve — a sketch of the estimate, not a chart of a trade. */
-.launchCurve { display: block; width: 100%; height: 56px; margin: 10px 0 18px; color: var(--desk-brass); }
-.launchCurve path { vector-effect: non-scaling-stroke; }
+.launchCurve { display: block; width: 100%; height: 56px; margin: 10px 0 18px; color: var(--desk-paper-ink); }
+.launchCurve path { vector-effect: non-scaling-stroke; stroke-width: 2px; }
 /* The resting equity mark as a rule on the curve — the onchain
    divergence drawn, dimmer than the live path. */
-.launchCurveResting { stroke: var(--desk-brass); opacity: .45; }
+.launchCurveResting { stroke: var(--desk-paper-muted); opacity: .6; }
 @media (prefers-reduced-motion: no-preference) {
   /* The curve traces itself like a comet path, then the comet settles at
-     graduation. pathLength=1 normalizes the dash math for any shape. */
+     graduation. The long dash clears the full projected path. */
   .launchCurve path {
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
     animation: launchCurveTrace 900ms cubic-bezier(.3,.6,.2,1) forwards;
   }
   .launchCurveComet {

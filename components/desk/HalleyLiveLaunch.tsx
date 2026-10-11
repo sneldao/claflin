@@ -322,7 +322,10 @@ export function HalleyLiveLaunch({
       </p>
       {!intent && !stale && (
         <p className={styles.liveMeta}>
-          Draw and review an estimate above, then continue here — the ceremony prepares only what you reviewed.
+          Connect your wallet and confirm you may launch below. Then return to the slip and request a fresh
+          60-second estimate; the ceremony prepares only the terms you reviewed.
+          {' '}
+          <a href="#instruction">Back to the launch slip</a>
         </p>
       )}
       {closed && (

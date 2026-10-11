@@ -123,6 +123,8 @@ describe('Halley first-use guidance', () => {
     const plate = readFileSync(new URL('../components/desk/HalleyPlate.tsx', import.meta.url), 'utf8');
     /* Live step three is the wallet ceremony, plainly named. */
     assert.match(plate, /Review and sign with your wallet/);
+    /* Paper step three is the projection review, plainly named. */
+    assert.match(plate, /number === 3 \? 'Review the paper projection'/);
     /* On the live path, a paper-saved stage still reads as step three
        open — nothing counts as live-done. */
     assert.match(plate, /mode === 'live' && stage === 'saved' \? 3 : launchStep\(stage, draft\)/);
@@ -130,6 +132,30 @@ describe('Halley first-use guidance', () => {
     assert.equal(launchStep('saved', HALLEY_EXAMPLE), 'done');
     /* The live stamp names the signer; it never claims the mint happened. */
     assert.match(plate, /Live path · your wallet signs the mint/);
+  });
+  it('shows a wallet preflight on the live draft only, with a link to the ceremony', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(source, /mode === 'live' && halley\.state\.stage === 'draft' && \(/);
+    assert.match(source, /Before you draw the 60-second estimate: connect your Solana wallet and confirm you may launch/);
+    assert.match(source, /You will review fresh figures before any signature/);
+    assert.match(source, /href="#halley-live">Set up wallet first/);
+    assert.match(source, /plate\.preflight/);
+    const css = readFileSync(new URL('../components/desk/HalleyPlate.module.css', import.meta.url), 'utf8');
+    assert.match(css, /\.preflight \{[^}]*border-left: 2px solid var\(--desk-brass\)[^}]*background: var\(--desk-paper-light\)/s);
+  });
+  it('carries the mode-specific foot and a legible projected curve', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(source, /TRACKER TOKENS ARE NOT STOCK OWNERSHIP · \{mode === 'live' \? 'ONLY YOUR WALLET CAN CREATE A TOKEN' : 'PAPER BY DEFAULT'\}/);
+    /* The lead's flat-path layout — a zero-span path sits at mid-height. */
+    assert.match(source, /span === 0 \? 15 : 28 - \(\(price - min\) \/ span\) \* 24/);
+    const css = readFileSync(new URL('../components/desk/WorkingDesk.module.css', import.meta.url), 'utf8');
+    /* The projected path is opaque paper ink, traced once to a solid line. */
+    assert.match(css, /\.launchCurve \{[^}]*color: var\(--desk-paper-ink\)/s);
+    assert.match(css, /\.launchCurve path \{[^}]*stroke-width: 2px/s);
+    assert.match(css, /stroke-dasharray: 200;\s*\n?\s*stroke-dashoffset: 200/);
+    assert.match(css, /\.launchCurveResting \{[^}]*stroke: var\(--desk-paper-muted\)/s);
+    const plateCss = readFileSync(new URL('../components/desk/HalleyPlate.module.css', import.meta.url), 'utf8');
+    assert.match(plateCss, /\.stageHeading \{[^}]*grid-column: 1 \/ -1;[^}]*color: #6b5a35/s);
   });
   it('draws every chip glyph from the same weights the launch config sends', () => {
     for (const preset of LAUNCH_CURVE_PRESETS) {

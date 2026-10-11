@@ -58,7 +58,9 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
           const number = index + 1;
           const state = current === 'done' || number < current ? 'done' : number === current ? 'current' : 'todo';
           const live3 = mode === 'live' && number === 3;
-          const title = live3 ? 'Review and sign with your wallet' : step.title;
+          const title = live3 ? 'Review and sign with your wallet'
+            : number === 3 ? 'Review the paper projection'
+            : step.title;
           const detail = live3
             ? 'Review the projected curve, then continue to the wallet ceremony — your wallet signs the mint.'
             : step.detail;

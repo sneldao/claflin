@@ -118,6 +118,14 @@ describe('halley live launch seam', () => {
     assert.match(s, /finally \{\s*\n?\s*prepareLock\.current = false/);
   });
 
+  it('offers a way back to the slip when nothing is under review', () => {
+    const s = source('components/desk/HalleyLiveLaunch.tsx');
+    assert.match(s, /!intent && !stale && \(/);
+    assert.match(s, /request a fresh\s+60-second estimate/);
+    assert.doesNotMatch(s, /figures refresh after readiness/);
+    assert.match(s, /href="#instruction">Back to the launch slip/);
+  });
+
   it('keeps the wallet ceremony closed to voice edits while it runs', () => {
     const s = source('components/desk/HalleyCall.tsx');
     assert.match(s, /busy: \(\) => busyRef\.current/);

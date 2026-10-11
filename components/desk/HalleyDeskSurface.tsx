@@ -89,15 +89,16 @@ function LaunchCurve({ path, restingQuote }: {
         min = Math.min(min, resting); max = Math.max(max, resting);
       }
     }
-    const span = max - min || 1;
+    const span = max - min;
+    const y = (price: number) => Number((span === 0 ? 15 : 28 - ((price - min) / span) * 24).toFixed(1));
     const pts = path.map(p => ({
       x: Number((Number(p.progress) * 100).toFixed(1)),
-      y: Number((28 - ((Number(p.priceQuote) - min) / span) * 24).toFixed(1)),
+      y: y(Number(p.priceQuote)),
     }));
     return {
       d: pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' '),
       end: pts[pts.length - 1],
-      restY: resting !== null ? Number((28 - ((resting - min) / span) * 24).toFixed(1)) : null,
+      restY: resting !== null ? y(resting) : null,
     };
   }, [path, restingQuote]);
   if (!drawn) return null;
@@ -110,7 +111,7 @@ function LaunchCurve({ path, restingQuote }: {
           <title>Resting equity mark — the tape sleeps, the curve reads the onchain price</title>
         </line>
       )}
-      <path d={drawn.d} fill="none" stroke="currentColor" strokeWidth="1.2" pathLength={1} />
+      <path d={drawn.d} fill="none" stroke="currentColor" strokeWidth="1.2" />
       <circle className={styles.launchCurveComet} cx={drawn.end.x} cy={drawn.end.y} r="1.6" fill="currentColor" />
     </svg>
   );
@@ -445,6 +446,15 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 )}
               </p>
             )}
+            {mode === 'live' && halley.state.stage === 'draft' && (
+              <div className={plate.preflight}>
+                <p>
+                  Before you draw the 60-second estimate: connect your Solana wallet and confirm you may launch.
+                  You will review fresh figures before any signature.
+                </p>
+                <a href="#halley-live">Set up wallet first</a>
+              </div>
+            )}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
                 <h2>
@@ -712,7 +722,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               </div>
             </details>
           )}
-          <p className={styles.paperFoot}>LAUNCH SLIP · TRACKER TOKENS ARE NOT STOCK OWNERSHIP · PAPER BY DEFAULT</p>
+          <p className={styles.paperFoot}>LAUNCH SLIP · TRACKER TOKENS ARE NOT STOCK OWNERSHIP · {mode === 'live' ? 'ONLY YOUR WALLET CAN CREATE A TOKEN' : 'PAPER BY DEFAULT'}</p>
         </section>
         )}
       </div>
