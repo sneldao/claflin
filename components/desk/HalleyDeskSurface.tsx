@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
@@ -362,6 +362,15 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       }
     }
   };
+
+  /* Enter in a launch field walks the slip like the chips do: jump to the
+     first missing field, or send the estimate when the draft is complete. */
+  const onFieldEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || liveBusy) return;
+    event.preventDefault();
+    if (complete && halley.state.stage === 'draft') halley.estimate();
+    else if (missing[0]) jumpToId(fieldIdForMissing(missing[0]), true);
+  };
   /* Auto-advance once: finishing step 1 opens step 2 and lands on the
      first missing field. Manual toggles always win afterwards. */
   const prevProgress = useRef(progress);
@@ -674,6 +683,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       placeholder="NVDA tracker"
                       aria-describedby="halley-name-hint"
                       onChange={event => halley.edit({ name: event.target.value || null })}
+                      onKeyDown={onFieldEnter}
                     />
                     <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-name-hint" className={plate.hint}>The token’s display name, 2–40 characters.</p></details>
                   </div>
@@ -687,6 +697,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       placeholder="NVDAT"
                       aria-describedby="halley-symbol-hint"
                       onChange={event => halley.edit({ symbol: event.target.value.toUpperCase() || null })}
+                      onKeyDown={onFieldEnter}
                     />
                     <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p></details>
                   </div>
@@ -760,6 +771,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     value={draft.supply ?? ''}
                     placeholder="1000000"
                     onChange={event => halley.edit({ supply: event.target.value || null })}
+                    onKeyDown={onFieldEnter}
                   />
 
                     <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number.</p></details>
@@ -775,6 +787,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     value={draft.graduationQuote ?? ''}
                     placeholder="150"
                     onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
+                    onKeyDown={onFieldEnter}
                   />
                     <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool.</p></details>
                   </div>
