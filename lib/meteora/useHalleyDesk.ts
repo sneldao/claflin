@@ -13,6 +13,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { DeskDocumentSession, DeskForegroundDocument } from '../desk/contracts';
 import { ApiError } from '../api-client';
 import {
@@ -53,6 +54,13 @@ export interface HalleyDeskState {
 
 export interface HalleyDesk extends DeskDocumentSession {
   state: HalleyDeskState;
+  /** A one-shot "bring this to the caller's eyes" nudge — the id of a slip
+      element the surface should open and scroll to. Written by tools that
+      explain rather than edit (`explain_concept`), so the slip follows the
+      conversation even when nothing on it changed. `at` lets a repeat of
+      the same target re-fire. */
+  uiReveal: { target: string; at: number } | null;
+  reveal: (target: string) => void;
   inFlight: boolean;
   records: HalleyPaperRecord[];
   historyReady: boolean;
@@ -225,7 +233,20 @@ export function useHalleyDesk(
         return;
       }
       if (genRef.current !== gen) return;
-      setState({ stage: 'review', draft, pencil, lastWritten: null, estimate: result, notice: null, noticeCode: null });
+      const next: HalleyDeskState = { stage: 'review', draft, pencil, lastWritten: null, estimate: result, notice: null, noticeCode: null };
+      /* The slip's one-line summary becomes the review's headline — morph it
+         instead of swapping, where the platform can. Reduced-motion callers
+         get the plain commit; flushSync lands the DOM inside the snapshot. */
+      const startMorph = typeof document !== 'undefined'
+        ? (document as Document & { startViewTransition?: (cb: () => void) => void }).startViewTransition
+        : undefined;
+      const reduced = typeof window !== 'undefined'
+        && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+      if (startMorph && !reduced) {
+        startMorph.call(document, () => flushSync(() => setState(next)));
+      } else {
+        setState(next);
+      }
     })();
   }, [estimatePort]);
 
@@ -269,6 +290,9 @@ export function useHalleyDesk(
     }
   }, [now, storageOf, persistDraft]);
 
+  const [uiReveal, setUiReveal] = useState<{ target: string; at: number } | null>(null);
+  const reveal = useCallback((target: string) => setUiReveal({ target, at: Date.now() }), []);
+
   const openRecord = useCallback((id: string) => setViewedRecordId(id), []);
   const dismissRecord = useCallback(() => setViewedRecordId(null), []);
   const removeRecord = useCallback((id: string) => {
@@ -290,6 +314,8 @@ export function useHalleyDesk(
 
   return {
     state,
+    uiReveal,
+    reveal,
     inFlight: state.stage === 'estimating',
     records,
     historyReady,

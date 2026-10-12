@@ -188,3 +188,24 @@ this error and must not be treated as executable validation.
 - Certify provider freshness/units, voice lifecycle and any explicitly approved
   live execution independently. Paper filing and local checks never authorize
   funds movement or establish live readiness.
+
+---
+
+## Integration validation: 2026-10-13 — Halley slip UX, Phases 1–5
+
+**Scope:** Local integration of the Halley slip UX work through `main`, before this documentation commit. The changes are described once in [Meteora Launch Desk §12](METEORA_LAUNCH_DESK.md) and governed by the rules in [Desk Canon](DESK_CANON.md); this record covers evidence only. Checks do not establish deployment, hosted CI, live voice, live transaction execution, or real-device acceptance.
+
+Touched: `HalleyDeskSurface.tsx`, `HalleyPlate.module.css`, `WorkingDesk.module.css`, `lib/meteora/{plate,useHalleyDesk,desk-tools,voice-tools}.ts`, `lib/sounds.ts`. New: `lib/desk/detail-density.ts`, `tests/halley-presets.test.ts`, `tests/halley-zoom.test.ts`, `e2e/halley-folds.spec.ts`; extended `tests/halley-plate.test.ts`, `tests/halley-voice-tools.test.ts`. Commits `f0cf6e4` (pencil and ink) and `3cd6d28` (slip follows the conversation) precede this pass.
+
+### Checks and results
+
+| Check | Recorded result |
+|---|---|
+| `pnpm test` | 1,479 passed across 341 suites; no failures |
+| `pnpm typecheck` | Passed — 0 errors |
+| `pnpm check:canon` + `pnpm check:broker-voice` | Passed |
+| Halley suites | 57 passing (`halley-presets`, `halley-zoom`, `halley-plate`, `halley-voice-tools`) |
+
+E2E fold spec (`halley-folds.spec.ts`) is added but not yet run against a production build in this record. Run with `CI=true pnpm test:e2e` after a production build.
+
+Production build, browser journeys, lint, Room budget, and live provider certification were not re-run as part of this slip UX pass. The 2026-10-03 production build evidence remains the most recent build record. Real-device checks, hosted CI, live voice/wallet, and user comprehension remain outstanding per the 2026-10-03 entry.

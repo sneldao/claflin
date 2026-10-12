@@ -140,6 +140,8 @@ describe('halley desk tools', () => {
   function fakeDesk(overrides: Partial<HalleyDesk> = {}): HalleyDesk {
     return {
       state: emptyState(),
+      uiReveal: null,
+      reveal: () => {},
       inFlight: false,
       records: [],
       historyReady: true,

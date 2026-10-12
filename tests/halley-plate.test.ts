@@ -182,16 +182,36 @@ describe('Halley first-use guidance', () => {
     assert.match(source, /starting reference — never a peg/);
     assert.match(source, /an economic term of the token/);
   });
-  it('keeps the slip one-thing-per-screen: three folds, no self-pinning', () => {
+  it('keeps the slip one-thing-per-screen: three folds, browser-exclusive', () => {
     const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
     /* Each stage heading lives in its own step summary — no section is
        left loose inside another step's fold. */
     for (const [n, heading] of [[1, 'Name the tracker'], [2, 'Anchor the opening'], [3, 'Set the economics']] as const) {
-      assert.match(source, new RegExp(`id="halley-step-${n}" open=\\{isOpen\\('halley-step-${n}'\\)\\} onToggle=\\{onStepToggle\\('halley-step-${n}'\\)\\}>\\s*<summary className=\\{plate\\.stepSummary\\}><h3 className=\\{plate\\.stageHeading\\}>${heading}</h3>`));
+      assert.match(source, new RegExp(`id="halley-step-${n}" name="halley-slip">\\s*<summary className=\\{plate\\.stepSummary\\}><h3 className=\\{plate\\.stageHeading\\}>${heading}</h3>`));
     }
-    /* Programmatic open changes also fire toggle; the handler must release
-       the pin when the state agrees with the step function. */
-    assert.match(source, /open === autoOpen\[id\]/);
+    /* Exclusivity is the platform's: a shared `name`, no controlled `open`
+       and no toggle handler to read a pooled event with. This is the fix
+       for the accordion crash — React can no longer fight the browser over
+       which section is open, so it cannot pin one open forever either. */
+    assert.doesNotMatch(source, /onToggle=\{onStepToggle/);
+    assert.doesNotMatch(source, /setManualOpen/);
+    /* The desk still nudges: it opens the section the conversation touched,
+       and rests the completed slip closed on its chips. */
+    assert.match(source, /const desiredSection: string \| null = spokenSection/);
+    assert.match(source, /complete \? null : 'halley-step-3'/);
+    assert.match(source, /if \(el instanceof HTMLDetailsElement\) el\.open = id === desiredSection/);
+  });
+
+  it('gives the folds a fluid height only where the platform can', () => {
+    const css = readFileSync(new URL('../components/desk/WorkingDesk.module.css', import.meta.url), 'utf8');
+    /* Progressive enhancement — elsewhere the fold opens instantly, which is
+       the behaviour that already existed. */
+    assert.match(css, /@supports \(interpolate-size: allow-keywords\) \{/);
+    assert.match(css, /\.handForm\[open\]::details-content \{ block-size: auto; opacity: 1; \}/);
+    /* Leaving is lighter than arriving. */
+    assert.match(css, /\.handForm:not\(\[open\]\)::details-content \{[^}]*160ms/s);
+    /* Reduced motion keeps the ink change and drops the movement. */
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^}]*transition: none/s);
   });
   it('never shows a live path done from a paper filing alone', () => {
     const plate = readFileSync(new URL('../components/desk/HalleyPlate.tsx', import.meta.url), 'utf8');

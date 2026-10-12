@@ -78,6 +78,51 @@ export function houseGraduation(quoteSymbol: string | null): string | null {
   return quoteSymbol === 'USDC' ? '150' : '1';
 }
 
+/** Launch size presets at the working depth — turns bonding curve figures
+    into clear human choices (Small / Standard / Large). */
+export type LaunchSizePreset = 'small' | 'standard' | 'large';
+export const LAUNCH_SIZE_PRESETS: readonly LaunchSizePreset[] = Object.freeze(['small', 'standard', 'large']);
+
+export interface LaunchSizeSpec {
+  label: string;
+  supply: string;
+  graduationQuote: (quoteSymbol: string | null) => string;
+  summary: string;
+}
+
+export const LAUNCH_SIZE_SPECS: Record<LaunchSizePreset, LaunchSizeSpec> = {
+  small: {
+    label: 'Small',
+    supply: '100000',
+    graduationQuote: (quote: string | null) => (quote === 'USDC' ? '50' : '0.5'),
+    summary: '100k supply · 50 USDC ($50 collected)',
+  },
+  standard: {
+    label: 'Standard',
+    supply: HOUSE_SUPPLY,
+    graduationQuote: (quote: string | null) => houseGraduation(quote) ?? '150',
+    summary: '1M supply · 150 USDC ($150–250 collected)',
+  },
+  large: {
+    label: 'Large',
+    supply: '1000000000',
+    graduationQuote: (quote: string | null) => (quote === 'USDC' ? '5000' : '25'),
+    summary: '1B supply · 5,000 USDC ($5k collected)',
+  },
+};
+
+/** Match the draft against the launch size presets. */
+export function matchingLaunchSizePreset(draft: HalleyDraft): LaunchSizePreset | null {
+  if (!draft.supply) return null;
+  for (const preset of LAUNCH_SIZE_PRESETS) {
+    const spec = LAUNCH_SIZE_SPECS[preset];
+    if (draft.supply === spec.supply && draft.graduationQuote === spec.graduationQuote(draft.quoteSymbol)) {
+      return preset;
+    }
+  }
+  return null;
+}
+
 /** Underlying equity of an xStock quote ('NVDAx' → 'NVDA'), else null. */
 function xStockUnderlying(quoteSymbol: string | null): string | null {
   return HALLEY_QUOTE_MINTS.find(q => q.symbol === quoteSymbol)?.underlyingSymbol ?? null;

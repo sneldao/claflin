@@ -123,6 +123,21 @@ export function explainHalleyTopic(topic: HalleyExplainTopic): string {
   return HALLEY_EXPLANATIONS[topic];
 }
 
+/** Where an explanation lives on the slip — the element the surface should
+    open and bring into view while Halley explains. The voice is also the
+    zoom: "tell me about the curve" lands you on the curve. */
+export function halleyRevealTargetForTopic(topic: HalleyExplainTopic): string | null {
+  switch (topic) {
+    case 'anchor': return 'halley-step-2';
+    case 'graduation': return 'halley-grad';
+    case 'tracker-token': return 'halley-what-launch';
+    case 'curve-shape': return 'halley-step-3';
+    case 'paper-mode': return 'halley-path';
+    case 'namesake': return 'halley-plate-title';
+    default: return null;
+  }
+}
+
 export function describeLaunchTerms(estimate: HalleyLaunchEstimate, mode: 'paper' | 'live' = 'paper'): string {
   const i = estimate.intent;
   const anchor = estimate.anchor?.status === 'observed'

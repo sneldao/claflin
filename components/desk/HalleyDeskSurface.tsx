@@ -19,9 +19,12 @@ import {
   CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
   HOUSE_SUPPLY,
+  LAUNCH_SIZE_PRESETS,
+  LAUNCH_SIZE_SPECS,
   SECTION_FOR_FIELD,
   houseGraduation,
   isBlankDraft,
+  matchingLaunchSizePreset,
   usesHouseEconomics,
   missingLaunchFields,
   stageLabel,
@@ -32,6 +35,7 @@ import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { countRetrieval } from '@/lib/funnel/client';
 import plate from './HalleyPlate.module.css';
+import { useDetailDensity } from '@/lib/desk/detail-density';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
 import { LAUNCH_CURVE_PRESETS, type HalleyDraft, type LaunchCurvePreset } from '@/lib/meteora/contracts';
@@ -47,6 +51,10 @@ const RoomPresentation = dynamic(
 );
 
 const HalleyCall = dynamic(() => import('./HalleyCall').then(m => m.HalleyCall), { ssr: false });
+
+/** The three slip sections, in order. They share a `name`, which is what makes
+    them mutually exclusive — see the fold ownership note in the surface. */
+const STEP_FOLDS = ['halley-step-1', 'halley-step-2', 'halley-step-3'] as const;
 
 const HalleyLiveLaunch = dynamic(
   () => import('./HalleyLiveLaunch').then(m => m.HalleyLiveLaunch),
@@ -147,10 +155,13 @@ function jumpToId(id: string, focus = false) {
   const el = document.getElementById(id);
   if (!el) return;
   /* A field inside a collapsed step can't take focus — open its fold first.
-     `closest` includes the target itself, so jumping to a step's own id
-     opens it too. */
-  const fold = el.closest('details');
-  if (fold && !fold.open) fold.open = true;
+     Also open all ancestor details elements so nested targets (like fields
+     inside Fine-tune) are revealed too. */
+  let curr: HTMLElement | null = el;
+  while (curr) {
+    if (curr instanceof HTMLDetailsElement && !curr.open) curr.open = true;
+    curr = curr.parentElement;
+  }
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (focus && (el instanceof HTMLInputElement || el instanceof HTMLButtonElement)) {
     el.focus({ preventScroll: true });
@@ -354,40 +365,105 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   /* Delight: hearables that do work, an accordion that respects the hand,
      a living one-line summary, and a small arrival on review/file. */
   const [chipNote, setChipNote] = useState<string | null>(null);
-  const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({});
   const edit = halley.edit;
   /* The slip follows the conversation: whichever field was written last owns
      the open section. The desk records that on every edit path, so a spoken
      change and a tapped one both answer the same way. */
   const spokenSection = halley.state.lastWritten ? SECTION_FOR_FIELD[halley.state.lastWritten] : null;
-  /* Exactly one fold stands open by default: the first undecided step, or
-     the section the conversation just touched. */
   const current = slipStep(draft);
-  const autoOpen: Record<string, boolean> = {
-    'halley-step-1': spokenSection === 'halley-step-1' || (!spokenSection && (current === 1 || blank)),
-    'halley-step-2': spokenSection === 'halley-step-2' || (!spokenSection && current === 2 && !blank),
-    /* House defaults usually complete the economics — then the fold rests
-       on its summary and the review button is the next thing to do. A spoken
-       change to one of its fields still opens it, or the caller could never
-       hear back the number they just gave. */
-    'halley-step-3': spokenSection === 'halley-step-3' || (!spokenSection && current === 3 && !blank && !complete),
-  };
-  const isOpen = (id: string) => manualOpen[id] ?? autoOpen[id];
-  /* `toggle` also fires when React sets `open`, so only a state that
-     disagrees with the step function counts as the caller's hand; agreeing
-     with it releases the pin. Without this every auto-opened step pinned
-     itself open and the accordion degraded into the whole form. */
-  const onStepToggle = (id: string) => (event: SyntheticEvent<HTMLDetailsElement>) => {
-    const open = event.currentTarget.open;
-    setManualOpen(prev => {
-      if (open === autoOpen[id]) {
-        if (!(id in prev)) return prev;
-        const { [id]: _released, ...rest } = prev;
-        return rest;
+  /* One section open. The browser owns it: the three folds share a `name`, so
+     exclusivity — and keyboard, screen-reader and find-in-page support —
+     come from the platform, and React never reasserts `open` against the
+     caller's hand. That is the whole reason this is not a controlled
+     accordion: the old one took the desk into its error boundary when a
+     toggle handler read a pooled event.
+
+     The desk only nudges. When the section that should be open changes, that
+     one opens; a caller who opened or closed something else is left alone.
+     A null section means the slip is complete and rests on its chips. */
+  const desiredSection: string | null = spokenSection
+    ?? (current === 1 ? 'halley-step-1'
+      : current === 2 ? 'halley-step-2'
+        : complete ? null : 'halley-step-3');
+  /* The desk's subtree can remount after the first effect pass — the foyer
+     settles its deep link, the records finish loading — and a remounted
+     fold comes back closed. A stable ref callback is what reapplies the
+     section on every mount; the effect below only handles changes. This is
+     still nudge, not control: nothing re-asserts `open` on later renders. */
+  const desiredSectionRef = useRef<string | null>(desiredSection);
+  const foldRef = useCallback((el: HTMLDetailsElement | null) => {
+    if (el) el.open = el.id === desiredSectionRef.current;
+  }, []);
+  useEffect(() => {
+    desiredSectionRef.current = desiredSection;
+    for (const id of STEP_FOLDS) {
+      const el = document.getElementById(id);
+      if (el instanceof HTMLDetailsElement) el.open = id === desiredSection;
+    }
+  }, [desiredSection]);
+  /* Voice is the zoom: a tool that explains rather than edits asks the slip
+     to open on the thing being explained (`explain_concept` → uiReveal). */
+  const uiReveal = halley.uiReveal;
+  useEffect(() => {
+    if (uiReveal) jumpToId(uiReveal.target);
+  }, [uiReveal]);
+  /* Semantic zoom: 'full' opens the folded fine detail — the per-field help
+     folds, the orientation fold, and the call's whole-tape fold — once, on
+     the change; afterwards the hand rules again. */
+  const [density, setDensity] = useDetailDensity();
+  useEffect(() => {
+    const open = density === 'full';
+    document
+      .querySelectorAll<HTMLDetailsElement>('details[class*="assumptionsFold"], details[class*="productDetails"], details[class*="captionHistory"]')
+      .forEach(el => { el.open = open; });
+  }, [density]);
+  /* Working depth presets & Fine-tune session persistence.
+     Fine-tune remembers being open for the rest of the session. */
+  const [fineTuneOpen, setFineTuneOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('claflin.halley.fine-tune') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const onFineTuneToggle = useCallback((open: boolean) => {
+    setFineTuneOpen(open);
+    try {
+      sessionStorage.setItem('claflin.halley.fine-tune', String(open));
+    } catch {}
+  }, []);
+  const activePreset = matchingLaunchSizePreset(draft);
+
+  /* Scroll compensation: when a fold closes above the section being opened,
+     measure the clicked summary's position and restore it in the same frame
+     so the tapped section stays under the caller's finger. */
+  const onFieldsClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    const summary = (event.target as HTMLElement).closest('summary');
+    if (!summary) return;
+    const topBefore = summary.getBoundingClientRect().top;
+    requestAnimationFrame(() => {
+      const topAfter = summary.getBoundingClientRect().top;
+      const delta = topAfter - topBefore;
+      if (Math.abs(delta) > 1) {
+        window.scrollBy({ top: delta, behavior: 'instant' });
       }
-      return prev[id] === open ? prev : { ...prev, [id]: open };
     });
-  };
+  }, []);
+
+  /* Section completion feedback: a subtle tick lands with the house stamp
+     thud at a tenth of the filing's weight. */
+  const prevCompleted = useRef({ s1: false, s2: false, s3: false });
+  useEffect(() => {
+    const s1 = Boolean(draft.name?.trim() && draft.symbol);
+    const s2 = Boolean(s1 && draft.quoteSymbol);
+    const s3 = Boolean(s2 && draft.supply && draft.graduationQuote);
+    const prev = prevCompleted.current;
+    if ((!prev.s1 && s1) || (!prev.s2 && s2) || (!prev.s3 && s3)) {
+      void import('@/lib/sounds').then(({ playStampTick }) => playStampTick()).catch(() => {});
+    }
+    prevCompleted.current = { s1, s2, s3 };
+  }, [draft.name, draft.symbol, draft.quoteSymbol, draft.supply, draft.graduationQuote]);
   /* Pencil and ink: a value the house pencilled reads lighter and slightly
      italic with a house mark until the caller touches it; touching flips the
      origin, which remounts the span and inks it in. No labels to read. */
@@ -428,7 +504,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   );
   const pathChooser = (
     <>
-      <div role="group" aria-label="Launch path" className={styles.amountChips} data-halley-mode={mode}>
+      <div id="halley-path" role="group" aria-label="Launch path" className={styles.amountChips} data-halley-mode={mode}>
         <button type="button" className={styles.amountChip} aria-pressed={mode === 'live'} data-active={mode === 'live'} onClick={() => chooseMode('live')}>
           Create a real token
         </button>
@@ -488,16 +564,16 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     else if (missing[0]) jumpToId(fieldIdForMissing(missing[0]), true);
   };
   /* Auto-advance: finishing a step opens the next and lands on the first
-     missing field. A step the caller has pinned shut is left alone. */
+     missing field. The nudge effect above owns which fold opens; this only
+     moves the caller to the field that still needs an answer. */
   const prevStep = useRef(current);
   useEffect(() => {
     const before = prevStep.current;
     prevStep.current = current;
-    const next = `halley-step-${current}`;
-    if (current > before && manualOpen[next] !== false && !blank && missing[0]) {
+    if (current > before && !blank && missing[0]) {
       jumpToId(fieldIdForMissing(missing[0]), true);
     }
-  }, [current, blank, missing, manualOpen]);
+  }, [current, blank, missing]);
   /* Arrival: review scrolls + focuses its heading; filing lands the stamp's
      thud and returns to the ticket head. Reduced-motion callers still get
      the focus move without the smooth travel. */
@@ -607,13 +683,24 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         <section id="instruction" className={styles.ticket} aria-labelledby="halley-ticket-title" data-ticket-view="open" data-desk-open="true">
           <div className={styles.paperTop}>
             <span>METEORA LAUNCHES<small>DBC → DAMM V2</small></span>
-            <span className={styles.paperNumber}>{stageLabel(halley.state.stage)}</span>
+            <span className={styles.paperNumber}>
+              {stageLabel(halley.state.stage)}
+              <button
+                type="button"
+                className={styles.densityToggle}
+                onClick={() => setDensity(density === 'full' ? 'brief' : 'full')}
+                aria-pressed={density === 'full'}
+                title="How much folded detail the desk opens by default"
+              >
+                {density === 'full' ? 'Full' : 'Brief'}
+              </button>
+            </span>
           </div>
           <h1 id="halley-ticket-title">The launch desk.</h1>
           {/* Learning furniture is a pre-start surface: once the draft has
               intent, the orientation recedes into its fold (canon rule 6). */}
           {!started && productLine}
-          <details className={styles.productDetails}>
+          <details id="halley-what-launch" className={styles.productDetails}>
             <summary>What a launch is, and what it is not</summary>
             {started && productLine}
             <p>
@@ -661,7 +748,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             {!started && preflight}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
-                <h2 id="halley-review-heading" tabIndex={-1}>
+                <h2 id="halley-review-heading" className={plate.reviewTitle} tabIndex={-1}>
                   {estimate.intent.symbol} opens at {money(estimate.openingPriceQuote)} {estimate.intent.quoteSymbol}
                 </h2>
                 <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
@@ -766,13 +853,13 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 {/* Hearable confirmations must outlive the blank state — a
                     chip that fills the draft also unmounts this block's home. */}
                 {chipNote && <p className={plate.hint} role="status">{chipNote}</p>}
-                <div className={styles.fields}>
+                <div className={styles.fields} onClick={onFieldsClick}>
                   {!blank && (
                     <p className={plate.slipLine} title="Your launch in one line">
                       {slipLine}
                     </p>
                   )}
-                  <details className={styles.handForm} id="halley-step-1" open={isOpen('halley-step-1')} onToggle={onStepToggle('halley-step-1')}>
+                  <details className={styles.handForm} ref={foldRef} id="halley-step-1" name="halley-slip">
                     <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Name the tracker</h3>{nameSummary ? <span>{nameSummary}</span> : <span>Start here</span>}</summary>
                   <label htmlFor="halley-name">Tracker name</label>
                   <div className={plate.control}>
@@ -803,7 +890,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
 
                   </details>
-                  <details className={styles.handForm} id="halley-step-2" open={isOpen('halley-step-2')} onToggle={onStepToggle('halley-step-2')}>
+                  <details className={styles.handForm} ref={foldRef} id="halley-step-2" name="halley-slip">
                     <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Anchor the opening</h3>{anchorSummary ? <span>{anchorSummary}</span> : <span>Pick a mark</span>}</summary>
                   <span id="halley-anchor-label">Anchor equity</span>
                   <div className={plate.control}>
@@ -842,56 +929,98 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     ))}
                   </div>
                   </details>
-                  <details className={styles.handForm} id="halley-step-3" open={isOpen('halley-step-3')} onToggle={onStepToggle('halley-step-3')}>
+                  <details className={styles.handForm} ref={foldRef} id="halley-step-3" name="halley-slip">
                     <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Set the economics</h3><span>{draft.curve || draft.supply || draft.graduationQuote ? econSummary : 'Curve, supply, graduation'}</span></summary>
-                  <span id="halley-curve-label">Curve</span>
+                  <span id="halley-size-label">Launch size</span>
                   <div className={plate.control}>
-                  <div role="group" aria-labelledby="halley-curve-label" aria-describedby="halley-curve-hint" className={styles.amountChips}>
-                    {LAUNCH_CURVE_PRESETS.map(c => (
-                      <button key={c} type="button"
-                        aria-pressed={(draft.curve ?? 'equity-pair') === c}
-                        className={styles.amountChip} data-active={(draft.curve ?? 'equity-pair') === c}
-                        title={CURVE_HINTS[c]}
-                        onClick={() => edit({ curve: c })}>
-                        <CurveGlyph preset={c} />
-                        {c === 'equity-pair' ? 'equity pair' : c}
-                      </button>
-                    ))}
+                    <div role="group" aria-labelledby="halley-size-label" className={styles.amountChips}>
+                      {LAUNCH_SIZE_PRESETS.map(p => {
+                        const spec = LAUNCH_SIZE_SPECS[p];
+                        const isActive = activePreset === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            aria-pressed={isActive}
+                            className={styles.amountChip}
+                            data-active={isActive}
+                            title={spec.summary}
+                            onClick={() => {
+                              edit({
+                                supply: spec.supply,
+                                graduationQuote: spec.graduationQuote(draft.quoteSymbol),
+                              });
+                            }}
+                          >
+                            {spec.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className={plate.hint}>
+                      {activePreset === 'small' && 'Small: 100k supply, graduating at 50 USDC (~$50 collected).'}
+                      {activePreset === 'standard' && `Standard: 1M supply, graduating at ${draft.quoteSymbol === 'USDC' ? '150 USDC' : '1 share'} (~$150–250 collected).`}
+                      {activePreset === 'large' && 'Large: 1B supply, graduating at 5,000 USDC (~$5k collected).'}
+                      {!activePreset && (draft.supply || draft.graduationQuote ? 'Custom figures active — adjust below.' : 'Choose a launch size or fine-tune below.')}
+                    </p>
                   </div>
 
-                    <details className={styles.assumptionsFold}><summary>About this curve</summary><p id="halley-curve-hint" className={plate.hint}>{curveHint}</p></details>
-                  </div>
+                  <details
+                    id="halley-fine-tune"
+                    className={`${styles.assumptionsFold} ${plate.fineTuneFold}`}
+                    open={fineTuneOpen || density === 'full'}
+                    onToggle={event => onFineTuneToggle(event.currentTarget.open)}
+                  >
+                    <summary className={plate.fineTuneSummary}>Fine-tune (curve, supply, graduation)</summary>
+                    <span id="halley-curve-label">Curve</span>
+                    <div className={plate.control}>
+                    <div role="group" aria-labelledby="halley-curve-label" aria-describedby="halley-curve-hint" className={styles.amountChips}>
+                      {LAUNCH_CURVE_PRESETS.map(c => (
+                        <button key={c} type="button"
+                          aria-pressed={(draft.curve ?? 'equity-pair') === c}
+                          className={styles.amountChip} data-active={(draft.curve ?? 'equity-pair') === c}
+                          title={CURVE_HINTS[c]}
+                          onClick={() => edit({ curve: c })}>
+                          <CurveGlyph preset={c} />
+                          {c === 'equity-pair' ? 'equity pair' : c}
+                        </button>
+                      ))}
+                    </div>
 
-                  <label htmlFor="halley-supply">Supply</label>
-                  <div className={plate.control}>
-                  <input
-                    id="halley-supply"
-                    aria-describedby="halley-supply-hint"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={draft.supply ?? ''}
-                    placeholder={`e.g. ${HOUSE_SUPPLY}`}
-                    onChange={event => edit({ supply: event.target.value || null })}
-                    onKeyDown={onFieldEnter}
-                  />
+                      <details className={styles.assumptionsFold}><summary>About this curve</summary><p id="halley-curve-hint" className={plate.hint}>{curveHint}</p></details>
+                    </div>
 
-                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number. House default: a million.</p></details>
-                  </div>
+                    <label htmlFor="halley-supply">Supply</label>
+                    <div className={plate.control}>
+                    <input
+                      id="halley-supply"
+                      aria-describedby="halley-supply-hint"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={draft.supply ?? ''}
+                      placeholder={`e.g. ${HOUSE_SUPPLY}`}
+                      onChange={event => edit({ supply: event.target.value || null })}
+                      onKeyDown={onFieldEnter}
+                    />
 
-                  <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
-                  <div className={plate.control}>
-                  <input
-                    id="halley-grad"
-                    aria-describedby="halley-grad-hint"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    value={draft.graduationQuote ?? ''}
-                    placeholder={`e.g. ${houseGraduation(draft.quoteSymbol) ?? '150'}`}
-                    onChange={event => edit({ graduationQuote: event.target.value || null })}
-                    onKeyDown={onFieldEnter}
-                  />
-                    <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool. House default: 150 USDC, or one share of an xStock — roughly $150–250 collected.</p></details>
-                  </div>
+                      <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number. House default: a million.</p></details>
+                    </div>
+
+                    <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
+                    <div className={plate.control}>
+                    <input
+                      id="halley-grad"
+                      aria-describedby="halley-grad-hint"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={draft.graduationQuote ?? ''}
+                      placeholder={`e.g. ${houseGraduation(draft.quoteSymbol) ?? '150'}`}
+                      onChange={event => edit({ graduationQuote: event.target.value || null })}
+                      onKeyDown={onFieldEnter}
+                    />
+                      <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool. House default: 150 USDC, or one share of an xStock — roughly $150–250 collected.</p></details>
+                    </div>
+                  </details>
                   </details>
                 </div>
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}

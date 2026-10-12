@@ -231,8 +231,38 @@
 }
 [data-active="true"] .curveGlyph { opacity: .95; }
 
+/* The slip's one-liner and the review's headline are the same sentence at
+   two depths — a shared view-transition name lets the browser morph one
+   into the other instead of swapping surfaces. */
+.slipLine, .reviewTitle { view-transition-name: halley-slip-line; }
+@media (prefers-reduced-motion: reduce) {
+  .slipLine, .reviewTitle { view-transition-name: none; }
+}
+
 @media (max-width: 760px) {
   /* Stacked above the slip, the plate keeps the steps and drops the picture. */
   .plate { margin-top: 18px; padding-top: 16px; }
   .portrait, .lede { display: none; }
+  /* The sticky pair: the one-line summary rides the top of the slip while
+     its folds scroll underneath; the primary button is sticky at the foot. */
+  .slipLine { position: sticky; top: 0; z-index: 3; background: var(--desk-paper); }
+}
+
+/* Fine-tune summary at the raw controls depth */
+.fineTuneSummary {
+  cursor: pointer;
+  font: 11px/1.4 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6b5a35;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.fineTuneFold {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--desk-paper-rule, #d8cdb4);
 }

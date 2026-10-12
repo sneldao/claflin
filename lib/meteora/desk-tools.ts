@@ -14,6 +14,7 @@ import {
   findHalleyRecord,
   halleyExplainTopicChoices,
   halleyForegroundGuard,
+  halleyRevealTargetForTopic,
   resolveHalleyAnchor,
   resolveHalleyCurve,
   resolveHalleyExplainTopic,
@@ -300,6 +301,9 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       }
       const topic = resolveHalleyExplainTopic(String(p.topic ?? ''));
       if (!topic) return `I do not have a reviewed explanation for that. I can explain: ${halleyExplainTopicChoices()}.`;
+      /* Voice is the zoom — the slip opens on the thing being explained. */
+      const revealTarget = halleyRevealTargetForTopic(topic);
+      if (revealTarget) d.reveal(revealTarget);
       return explainHalleyTopic(topic);
     },
   };

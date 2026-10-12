@@ -145,12 +145,13 @@ export function playPop() {
  * from the file/record click once the paper record is written, so the sound
  * lands with the stamp slam, never on a failed filing.
  */
-export function playStampThud() {
+export function playStampThud(weight = 1) {
   const ctx = getAudioContext();
   if (!ctx) return;
 
   try {
     const now = ctx.currentTime;
+    const w = Math.max(0.01, Math.min(2, weight));
     // Felt impact: low sine dropping fast, gone in a quarter second.
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -159,7 +160,7 @@ export function playStampThud() {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(150, now);
     osc.frequency.exponentialRampToValueAtTime(48, now + 0.16);
-    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.setValueAtTime(0.22 * w, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
     osc.start(now);
     osc.stop(now + 0.26);
@@ -177,7 +178,7 @@ export function playStampThud() {
     band.frequency.setValueAtTime(2600, now);
     band.Q.value = 0.8;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.05, now + 0.02);
+    noiseGain.gain.setValueAtTime(0.05 * w, now + 0.02);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
     noise.connect(band);
     band.connect(noiseGain);
@@ -186,6 +187,11 @@ export function playStampThud() {
   } catch {
     /* A missed thud never blocks a filing. */
   }
+}
+
+/** Small tick lands with the house stamp thud, at a tenth of the filing's weight. */
+export function playStampTick() {
+  playStampThud(0.1);
 }
  
 /**
