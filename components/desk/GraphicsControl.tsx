@@ -5,12 +5,12 @@ import { useHouseGraphics } from './HouseScene';
 import type { GraphicsPreference } from '@/lib/desk/graphics';
 import styles from './GraphicsControl.module.css';
 
-export function GraphicsControl({ className }: { className?: string }) {
+export function GraphicsControl({ className, panelUp = false }: { className?: string; /** Footer placement — open the panel upward instead of clipping past the page edge. */ panelUp?: boolean }) {
   const graphics = useHouseGraphics();
   const selectId = useId();
   if (!graphics.inside) return null;
   return (
-    <details className={`${styles.control}${className ? ` ${className}` : ''}`}>
+    <details className={`${styles.control}${panelUp ? ` ${styles.up}` : ''}${className ? ` ${className}` : ''}`}>
       <summary className={styles.summary}>Graphics</summary>
       <div className={styles.panel}>
         <label className={styles.label} htmlFor={selectId}>Scene graphics</label>

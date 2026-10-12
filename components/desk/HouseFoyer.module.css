@@ -61,8 +61,36 @@
   color: #d4c4a2;
 }
 
-.graphicsControl {
+/* The account affordance — the conventional top-right slot. Sign-in stays
+   optional; the house asks for a wallet at the trade, not the door. */
+.authChip {
   margin-left: auto;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid rgba(179, 144, 90, 0.4);
+  border-radius: 2px;
+  background: rgba(13, 18, 24, 0.5);
+  color: #d4c4a2;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.authChip:hover {
+  border-color: rgba(179, 144, 90, 0.75);
+  color: var(--brass);
+}
+
+.authChip[data-signed='true'] {
+  cursor: default;
+  color: var(--muted);
+  letter-spacing: 0.12em;
 }
 
 .headerNav {
@@ -2603,6 +2631,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* The docked pill floats over the page edge — give the footer room so
+     the risk line and colophon stay fully readable beneath it. */
+  .foyer:has(.handset[data-shown='true']) .footer {
+    padding-bottom: 120px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2621,6 +2655,11 @@
 .footerLinks a {
   color: #9a8a68;
   text-underline-offset: 3px;
+}
+
+/* The graphics preference lives with the colophon — a setting, not a door. */
+.footerGraphics {
+  margin-left: auto;
 }
 
 .footerRisk {

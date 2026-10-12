@@ -26,7 +26,33 @@ import { HouseAnswers } from './HouseAnswers';
 import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
 import { type WireMark } from '../foyer/QuoteColumn';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
+import { useDeskAuth } from '@/components/auth/AuthProvider';
 import foyerStyles from './HouseFoyer.module.css';
+
+/** The house's account affordance in the conventional top-right spot.
+   Sign-in stays optional — a trade asks for the wallet, not the header —
+   but the affordance exists so the product reads as what it is. */
+function FoyerAuthChip() {
+  const auth = useDeskAuth();
+  if (!auth.enabled) return null;
+  if (!auth.authenticated) {
+    return (
+      <button
+        type="button"
+        className={foyerStyles.authChip}
+        onClick={auth.login}
+        title="Optional — you sign only when a trade asks for your wallet."
+      >
+        Sign in
+      </button>
+    );
+  }
+  return (
+    <span className={foyerStyles.authChip} data-signed="true" title={auth.label ?? 'Signed in'}>
+      {auth.label ?? 'Signed in'}
+    </span>
+  );
+}
 
 /* The brass register — one stop per room, in document order. The measure
    loop keys both rail and lamp pool off main.children, so keep aligned. */
@@ -266,7 +292,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
             <small>THE OFFICE ABOVE THE PIT</small>
           </span>
         </Link>
-        <GraphicsControl className={foyerStyles.graphicsControl} />
+        <FoyerAuthChip />
       </header>
 
       <main id="main-content" tabIndex={-1} ref={mainRef} className={foyerStyles.main}>
@@ -405,6 +431,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           <a href="#house-answers">Straight answers</a>
           <a href="#house-offerings">Product terms</a>
           <a href="https://github.com/sneldao/claflin" target="_blank" rel="noreferrer">Source ↗</a>
+          <GraphicsControl className={foyerStyles.footerGraphics} panelUp />
         </nav>
         <p className={foyerStyles.colophon}>SET IN FRAUNCES &amp; IBM PLEX · CLAFLIN · EST. MMXXVI</p>
         <p className={foyerStyles.footerRisk}>

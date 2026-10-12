@@ -48,6 +48,12 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
+/* Footer placement — the panel opens upward so it never clips the page edge. */
+.up .panel {
+  top: auto;
+  bottom: calc(100% + 0.5rem);
+}
+
 .label {
   display: block;
   font-size: 0.75rem;
