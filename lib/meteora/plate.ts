@@ -4,6 +4,7 @@
  * Pure functions, so the plate and its tests share one definition.
  */
 import type { HalleyDraft, LaunchCurvePreset } from './contracts';
+import { HALLEY_QUOTE_MINTS } from './catalog';
 
 export type PlateStage = 'draft' | 'estimating' | 'review' | 'saved';
 
@@ -64,6 +65,93 @@ export const HALLEY_EXAMPLE: HalleyDraft = Object.freeze({
   supply: '1000000',
   graduationQuote: '150',
 });
+
+/** The house's suggested economics — pencilled in the moment a quote is
+    chosen, so a caller only has to decide what they understand (name,
+    quote) and can draw the curve straight away. Every value stays editable
+    and the estimate discloses all of them before anything is filed or signed.
+    Graduation is in quote units, so it is quote-aware: about $150–250 of
+    collection either way (150 USDC, or one xStock share). */
+export const HOUSE_SUPPLY = '1000000';
+export function houseGraduation(quoteSymbol: string | null): string | null {
+  if (!quoteSymbol) return null;
+  return quoteSymbol === 'USDC' ? '150' : '1';
+}
+
+/** Underlying equity of an xStock quote ('NVDAx' → 'NVDA'), else null. */
+function xStockUnderlying(quoteSymbol: string | null): string | null {
+  return HALLEY_QUOTE_MINTS.find(q => q.symbol === quoteSymbol)?.underlyingSymbol ?? null;
+}
+
+/** Which hand wrote a value onto the slip. `house` is a pencilled suggestion
+    the caller has not adopted; `caller` is theirs — typed, said, or chosen by
+    tapping. The distinction is the only reason the desk can propose numbers
+    without ever overwriting one. */
+export type DraftOrigin = 'house' | 'caller';
+
+/** Per-field ownership. A field absent from the map has never been written,
+    which is how "no anchor yet" stays distinct from a declined anchor. */
+export type DraftPencil = Partial<Record<keyof HalleyDraft, DraftOrigin>>;
+
+/** Did the caller settle this field themselves? Absent means the house's. */
+export function isCallerOwned(pencil: DraftPencil, field: keyof HalleyDraft): boolean {
+  return pencil[field] === 'caller';
+}
+
+/**
+ * Fold a caller edit into the draft, then let the house pencil what is still
+ * unanswered. The house only ever touches fields the caller does not own:
+ *
+ *  - supply: filled when empty;
+ *  - graduation: filled when empty, or re-scaled when the value on the slip is
+ *    still the *house's* figure for the old quote (150 USDC must never silently
+ *    become 150 NVDAx — but a caller's own 150 is theirs and stays);
+ *  - anchor: an xStock quote anchors to its own equity when no anchor was ever
+ *    written. A caller who declined one — `anchorSymbol: null` with the field
+ *    marked theirs — keeps that decision, which is what stops "no anchor"
+ *    quietly turning back into an anchor.
+ *
+ * Values are only re-pencilled when the quote itself changes, so a field the
+ * caller clears stays cleared until they choose a different quote.
+ */
+export function applyDraftEdit(
+  before: HalleyDraft,
+  pencil: DraftPencil,
+  partial: Partial<HalleyDraft>,
+): { draft: HalleyDraft; pencil: DraftPencil } {
+  const draft: HalleyDraft = { ...before, ...partial };
+  const next: DraftPencil = { ...pencil };
+  /* Whatever the caller wrote — including a deliberate null — is theirs. */
+  for (const field of Object.keys(partial) as (keyof HalleyDraft)[]) {
+    next[field] = 'caller';
+  }
+
+  const quoteChanged = !!draft.quoteSymbol && draft.quoteSymbol !== before.quoteSymbol;
+  if (!quoteChanged) return { draft, pencil: next };
+
+  if (!draft.supply) {
+    draft.supply = HOUSE_SUPPLY;
+    next.supply = 'house';
+  }
+  /* Re-scale only the house's own figure, and only off the old quote. */
+  const carriedHouseFigure = pencil.graduationQuote === 'house'
+    && draft.graduationQuote === houseGraduation(before.quoteSymbol);
+  if (!draft.graduationQuote || carriedHouseFigure) {
+    draft.graduationQuote = houseGraduation(draft.quoteSymbol);
+    next.graduationQuote = 'house';
+  }
+  const underlying = xStockUnderlying(draft.quoteSymbol);
+  if (underlying && draft.anchorSymbol === null && !isCallerOwned(pencil, 'anchorSymbol')) {
+    draft.anchorSymbol = underlying;
+    next.anchorSymbol = 'house';
+  }
+  return { draft, pencil: next };
+}
+
+/** True when both economics figures are still the house's suggestions. */
+export function usesHouseEconomics(draft: HalleyDraft, pencil: DraftPencil): boolean {
+  return pencil.supply === 'house' && pencil.graduationQuote === 'house';
+}
 
 /** Short label for the ticket header, replacing an empty placeholder. */
 export function stageLabel(stage: PlateStage): string {

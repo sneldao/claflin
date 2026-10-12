@@ -189,6 +189,7 @@
 }
 /* Rail steps double as jump links — quiet buttons under the copy. */
 .stepGo {
+  display: block;
   margin-top: 6px; padding: 0; border: 0; background: none; cursor: pointer;
   font: 11px/1.4 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase;
   color: #6b5a35; text-decoration: underline; text-underline-offset: 3px; min-height: 32px;

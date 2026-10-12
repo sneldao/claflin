@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { HalleyDraft } from '@/lib/meteora/contracts';
-import { LAUNCH_STEPS, launchStep, type PlateStage } from '@/lib/meteora/plate';
+import { LAUNCH_STEPS, isBlankDraft, launchStep, type PlateStage } from '@/lib/meteora/plate';
 import styles from './HalleyPlate.module.css';
 
 /**
@@ -43,6 +43,9 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
   /* Paper 'done' means a filing — on the live path nothing is done until a
      wallet-signed mint is verified, so 'saved' reads as step 3 still open. */
   const current = mode === 'live' && stage === 'saved' ? 3 : launchStep(stage, draft);
+  /* Orientation is for the caller who hasn't begun; once they have, the rail
+     is wayfinding — titles for the road, detail only where they stand. */
+  const started = !(stage === 'draft' && isBlankDraft(draft));
   return (
     <section className={styles.plate} aria-labelledby="halley-plate-title">
       <figure className={styles.portrait}>
@@ -50,9 +53,11 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
         <figcaption className={styles.caption}>The launch desk</figcaption>
       </figure>
       <h2 id="halley-plate-title" className={styles.title}>What this desk does</h2>
-      <p className={styles.lede}>
-        The tape desks price existing tokens. Here, you plan a new tracker and review its projected launch curve.
-      </p>
+      {!started && (
+        <p className={styles.lede}>
+          The tape desks price existing tokens. Here, you plan a new tracker and review its projected launch curve.
+        </p>
+      )}
       <ol className={styles.steps} aria-label={mode === 'live' ? 'Steps to a launch' : 'Steps to a paper launch'}>
         {LAUNCH_STEPS.map((step, index) => {
           const number = index + 1;
@@ -66,22 +71,27 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
             : step.detail;
           /* Rail doubles as wayfinding: steps 1–2 jump to the matching
              slip section, step 3 to the review action. Copy stays verbatim. */
-          const target = number === 3 ? 'instruction' : number === 2 ? 'halley-step-2' : 'halley-step-1';
+          const target = number === 3 ? 'instruction' : number === 2 ? (draft.quoteSymbol ? 'halley-step-3' : 'halley-step-2') : 'halley-step-1';
           const go = () => {
-            document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const focusId = number === 1 ? 'halley-name' : number === 2 ? 'halley-supply' : undefined;
+            const el = document.getElementById(target);
+            if (el instanceof HTMLDetailsElement && !el.open) el.open = true;
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const focusId = number === 1 ? 'halley-name' : number === 2 && draft.quoteSymbol ? 'halley-supply' : undefined;
             if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
           };
+          const showDetail = !started || state === 'current';
           return (
             <li key={title} className={styles.step} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
               <strong>
                 {title}
                 {state === 'done' && <span className={styles.srOnly}> (done)</span>}
               </strong>
-              {detail}
-              <button type="button" className={styles.stepGo} onClick={go} aria-label={`Go to ${title}`}>
-                {state === 'done' ? 'Review' : state === 'current' ? 'Continue' : 'Go'} →
-              </button>
+              {showDetail && detail}
+              {state !== 'todo' && (
+                <button type="button" className={styles.stepGo} onClick={go} aria-label={`Go to ${title}`}>
+                  {state === 'done' ? 'Review' : 'Continue'} →
+                </button>
+              )}
             </li>
           );
         })}

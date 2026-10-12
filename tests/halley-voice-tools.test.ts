@@ -185,6 +185,19 @@ describe('halley desk tools', () => {
     assert.match(answer, /no estimate under review/i);
   });
 
+  it('proposes the house defaults instead of asking the caller to invent numbers', async () => {
+    const named = fakeDesk({ state: { ...emptyState(), draft: { ...emptyState().draft, name: 'Basilisk', symbol: 'BASILISK' } } });
+    const usdc = await handlers(named).choose_quote({ quote: 'USDC' });
+    assert.match(usdc, /house defaults: a million tokens, graduating at 150 USDC/);
+    assert.match(usdc, /do not ask the caller to pick numbers/);
+    assert.match(usdc, /draw the curve now/);
+    const pair = await handlers(named).choose_quote({ quote: 'NVDAx' });
+    assert.match(pair, /anchored to NVDA/);
+    assert.match(pair, /graduating at 1 NVDAx/);
+    const unnamed = await handlers(fakeDesk()).name_launch({ name: 'Basilisk', symbol: 'BASILISK' });
+    assert.match(unnamed, /suggest USDC as the plain choice/);
+  });
+
   it('refuses unknown quotes, anchors, and curves rather than guessing', async () => {
     const desk = fakeDesk();
     assert.match(await handlers(desk).choose_quote({ quote: 'DOGE' }), /not a launch quote/);

@@ -299,7 +299,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       : estimating ? 'Requesting estimate'
         : speaking ? 'Jesse speaking'
           : inReview ? 'For your review'
-            : muted ? 'Microphone muted' : 'Microphone on';
+            : muted ? 'Muted' : 'Listening';
 
   const lastUser = lastCaption(captions, 'user');
   const lastAgent = lastCaption(captions, 'agent');
@@ -355,8 +355,8 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
               <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
               {statusLabel}
             </p>
-            <button type="button" className={styles.callButtonSecondary} onClick={toggleMute} aria-pressed={muted}>
-              {muted ? 'Microphone off' : 'Microphone on'}
+            <button type="button" className={styles.callButtonSecondary} onClick={toggleMute}>
+              {muted ? 'Unmute' : 'Mute'}
             </button>
             <button type="button" className={styles.callButtonSecondary} onClick={endCall}>End call</button>
           </>

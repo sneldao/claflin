@@ -677,8 +677,8 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
           : inReview
             ? 'For your review'
             : conversation.isMuted
-              ? 'Microphone muted'
-              : 'Microphone on';
+              ? 'Muted'
+              : 'Listening';
 
   const lastUser = lastCaption(captions, 'user');
   const lastAgent = lastCaption(captions, 'agent');
@@ -749,8 +749,8 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
               <span className={styles.callDot} data-speaking={speaking ? 'true' : 'false'} aria-hidden="true" />
               {statusLabel}
             </p>
-            <button type="button" className={styles.callButtonSecondary} onClick={() => conversation.setMuted(!conversation.isMuted)} aria-pressed={conversation.isMuted}>
-              {conversation.isMuted ? 'Microphone off' : 'Microphone on'}
+            <button type="button" className={styles.callButtonSecondary} onClick={() => conversation.setMuted(!conversation.isMuted)}>
+              {conversation.isMuted ? 'Unmute' : 'Mute'}
             </button>
             <button type="button" className={styles.callButtonSecondary} onClick={endCall}>
               End call

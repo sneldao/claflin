@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { isHalleyLaunchIntent, type HalleyDraft } from '../lib/meteora/contracts';
-import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, isBlankDraft, launchStep, missingLaunchFields, stageLabel } from '../lib/meteora/plate';
+import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, HOUSE_SUPPLY, isBlankDraft, launchStep, missingLaunchFields, stageLabel, usesHouseEconomics, withHouseDefaults } from '../lib/meteora/plate';
 import { PRESET_WEIGHTS } from '../lib/meteora/dbc';
 import { LAUNCH_CURVE_PRESETS } from '../lib/meteora/contracts';
 
@@ -28,6 +28,29 @@ describe('Halley first-use guidance', () => {
     assert.deepEqual(missingLaunchFields(HALLEY_EXAMPLE), []);
     assert.equal(isBlankDraft(HALLEY_EXAMPLE), false);
   });
+  it('pencils house defaults on a quote change, quote-aware and never over the hand', () => {
+    const named: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK' };
+    const usdc = withHouseDefaults(named, { ...named, quoteSymbol: 'USDC' });
+    assert.equal(usdc.supply, HOUSE_SUPPLY);
+    assert.equal(usdc.graduationQuote, '150');
+    assert.equal(usdc.anchorSymbol, null, 'a USDC quote does not choose an anchor for the caller');
+    assert.deepEqual(missingLaunchFields(usdc), [], 'name + quote is enough to draw the curve');
+    assert.ok(usesHouseEconomics(usdc));
+    /* 150 USDC must never silently become 150 NVDAx. */
+    const pair = withHouseDefaults(usdc, { ...usdc, quoteSymbol: 'NVDAx' });
+    assert.equal(pair.graduationQuote, '1');
+    assert.equal(pair.anchorSymbol, 'NVDA');
+    /* The caller's own numbers survive a quote change. */
+    const hand = { ...usdc, supply: '5000', graduationQuote: '900' };
+    const kept = withHouseDefaults(hand, { ...hand, quoteSymbol: 'AAPLx' });
+    assert.equal(kept.supply, '5000');
+    assert.equal(kept.graduationQuote, '900');
+    assert.ok(!usesHouseEconomics(kept));
+    /* Edits that don't change the quote never refill a cleared field. */
+    const cleared = { ...usdc, supply: null };
+    assert.equal(withHouseDefaults(usdc, cleared).supply, null);
+  });
+
   it('lists missing fields in form order and allows an unanchored draft', () => {
     assert.deepEqual(missingLaunchFields(blank), ['tracker name', 'symbol', 'quote asset', 'supply', 'graduation line']);
     assert.deepEqual(missingLaunchFields({ ...HALLEY_EXAMPLE, anchorSymbol: null, curve: null }), []);

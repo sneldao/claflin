@@ -20,7 +20,19 @@ import {
   resolveHalleyQuote,
 } from './voice-tools';
 import { HALLEY_QUOTE_MINTS } from './catalog';
-import { LAUNCH_CURVE_PRESETS } from './contracts';
+import { LAUNCH_CURVE_PRESETS, type HalleyDraft } from './contracts';
+import { applyDraftEdit, usesHouseEconomics, type DraftPencil } from './plate';
+
+/** Steer the agent to propose the pencilled defaults instead of asking a
+    caller to invent economics they may not understand. */
+function houseDefaultsNote(draft: HalleyDraft, pencil: DraftPencil): string {
+  if (!usesHouseEconomics(draft, pencil)) return '';
+  const grad = `${draft.graduationQuote} ${draft.quoteSymbol}`;
+  const next = !draft.name || !draft.symbol
+    ? 'Ask only for a name and symbol next.'
+    : 'Offer to draw the curve now with these, or change either.';
+  return `The slip now carries the house defaults: a million tokens, graduating at ${grad} collected. Propose them as the suggestion — do not ask the caller to pick numbers. ${next}`;
+}
 
 export type ToolParams = Record<string, unknown>;
 export type HalleyToolHandler = (params: ToolParams) => Promise<string>;
@@ -91,7 +103,11 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
         return `The symbol needs to be two to ten letters or digits — "${symbol || 'that'}" is not usable.`;
       }
       d.edit({ name, symbol });
-      return `${name} (${symbol}) is on the slip.`;
+      const draft = d.state.draft;
+      if (!draft.quoteSymbol) {
+        return `${name} (${symbol}) is on the slip. Next is what buyers pay with — suggest USDC as the plain choice, or an xStock (AAPLx, NVDAx, TSLAx) to make it an equity pair. Once the quote is set the house pencils in the supply and graduation line.`;
+      }
+      return `${name} (${symbol}) is on the slip. ${houseDefaultsNote({ ...draft, name, symbol }, d.state.pencil)}`.trim();
     },
 
     async choose_quote(p) {
@@ -103,10 +119,15 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       if (!quote) {
         return `"${query || 'That'}" is not a launch quote here. The desk carries USDC and the badged xStocks — ${HALLEY_QUOTE_MINTS.filter(q => q.underlyingSymbol).map(q => q.symbol).join(', ')}.`;
       }
+      const before = d.state.draft;
+      /* Preview what the house will pencil, so the spoken line describes the
+         slip the caller is about to see. */
+      const preview = applyDraftEdit(before, d.state.pencil, { quoteSymbol: quote });
       d.edit({ quoteSymbol: quote });
-      return quote === 'USDC'
+      const lead = quote === 'USDC'
         ? 'Quoted in USDC — the opening will anchor to the equity mark directly.'
-        : `Quoted in ${quote} — this becomes an equity pair, anchored to the ratio of the two marks.`;
+        : `Quoted in ${quote} — this becomes an equity pair${preview.draft.anchorSymbol && !before.anchorSymbol ? `, anchored to ${preview.draft.anchorSymbol}` : ''}, priced on the ratio of the two marks.`;
+      return `${lead} ${houseDefaultsNote(preview.draft, preview.pencil)}`.trim();
     },
 
     async choose_anchor(p) {

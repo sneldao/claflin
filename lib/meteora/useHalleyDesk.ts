@@ -31,12 +31,16 @@ import {
   type HalleyPaperRecord,
 } from './paper';
 import { createHalleyEstimatePort } from './desk-ports';
+import { applyDraftEdit, type DraftPencil } from './plate';
 
 export type HalleyStage = 'draft' | 'estimating' | 'review' | 'saved';
 
 export interface HalleyDeskState {
   stage: HalleyStage;
   draft: HalleyDraft;
+  /** Which hand wrote each field — drives pencil vs ink on the slip, and is
+      what stops a house default from overwriting a caller's own value. */
+  pencil: DraftPencil;
   estimate: HalleyLaunchEstimate | null;
   notice: string | null;
   /** Server error code behind the notice (e.g. `anchor_stale`) — drives
@@ -71,7 +75,7 @@ const EMPTY_DRAFT: HalleyDraft = {
 };
 
 function emptyState(): HalleyDeskState {
-  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, estimate: null, notice: null, noticeCode: null };
+  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, pencil: {}, estimate: null, notice: null, noticeCode: null };
 }
 
 export function draftIntent(draft: HalleyDraft): HalleyLaunchIntent | null {
@@ -152,7 +156,17 @@ export function useHalleyDesk(
     if (!storage) return;
     const draft = loadHalleyDraft(storage);
     if (Object.values(draft).some(v => v !== null)) {
-      setState(current => current.stage === 'draft' && !current.draft.name ? { ...current, draft } : current);
+      setState(current => {
+        if (!(current.stage === 'draft' && !current.draft.name)) return current;
+        /* A resumed draft arrives without its pencil. Assume every restored
+           value is the caller's — the house never re-proposes over a number
+           someone may already have reasoned about. */
+        const pencil: DraftPencil = {};
+        for (const [field, value] of Object.entries(draft)) {
+          if (value !== null && value !== '') pencil[field as keyof HalleyDraft] = 'caller';
+        }
+        return { ...current, draft, pencil };
+      });
     }
   }, [storageOf]);
 
@@ -167,11 +181,13 @@ export function useHalleyDesk(
   const edit = useCallback((partial: Partial<HalleyDraft>) => {
     genRef.current += 1;
     setState(current => {
-      const draft = { ...current.draft, ...partial };
+      /* The house pencils only what the caller has not written — hand,
+         hearable and voice all arrive through this one path. */
+      const { draft, pencil } = applyDraftEdit(current.draft, current.pencil, partial);
       persistDraft(draft);
       /* An edit rewrites the launch instruction — an estimate bound to the
          old draft can no longer be filed under it. */
-      return { stage: 'draft', draft, estimate: null, notice: null, noticeCode: null };
+      return { stage: 'draft', draft, pencil, estimate: null, notice: null, noticeCode: null };
     });
     setViewedRecordId(null);
   }, [persistDraft]);
@@ -183,39 +199,42 @@ export function useHalleyDesk(
     setState(emptyState());
   }, [storageOf]);
 
-  const runEstimate = useCallback((draft: HalleyDraft) => {
+  const runEstimate = useCallback((draft: HalleyDraft, pencil: DraftPencil) => {
     const intent = draftIntent(draft);
     if (!intent) return;
     const gen = ++genRef.current;
-    setState({ stage: 'estimating', draft, estimate: null, notice: null, noticeCode: null });
+    setState({ stage: 'estimating', draft, pencil, estimate: null, notice: null, noticeCode: null });
     void (async () => {
       let result: HalleyLaunchEstimate;
       try {
         result = await estimatePort(intent);
       } catch (error) {
         if (genRef.current !== gen) return;
-        setState({ stage: 'draft', draft, estimate: null,
+        setState({ stage: 'draft', draft, pencil, estimate: null,
           notice: error instanceof Error ? error.message : 'The desk could not project this curve. Please retry.',
           noticeCode: error instanceof ApiError ? error.code : null });
         return;
       }
       if (genRef.current !== gen) return;
-      setState({ stage: 'review', draft, estimate: result, notice: null, noticeCode: null });
+      setState({ stage: 'review', draft, pencil, estimate: result, notice: null, noticeCode: null });
     })();
   }, [estimatePort]);
 
   const estimate = useCallback(() => {
     const current = stateRef.current;
     if (current.stage === 'estimating') return;
-    runEstimate(current.draft);
+    runEstimate(current.draft, current.pencil);
   }, [runEstimate]);
 
   const revise = useCallback(() => edit({}), [edit]);
 
   const estimateUnanchored = useCallback(() => {
-    const draft = { ...stateRef.current.draft, anchorSymbol: null };
+    /* Recovery is the caller's decision to drop the anchor — mark it theirs
+       so a later quote change cannot pencil one back in. */
+    const current = stateRef.current;
+    const draft = { ...current.draft, anchorSymbol: null };
     persistDraft(draft);
-    runEstimate(draft);
+    runEstimate(draft, { ...current.pencil, anchorSymbol: 'caller' });
   }, [persistDraft, runEstimate]);
 
   const file = useCallback((): boolean => {
@@ -230,7 +249,7 @@ export function useHalleyDesk(
         : [record, ...existing]);
       const draft = { ...current.draft };
       persistDraft({ ...EMPTY_DRAFT });
-      setState({ stage: 'saved', draft, estimate: record.estimate, notice: null, noticeCode: null });
+      setState({ stage: 'saved', draft, pencil: current.pencil, estimate: record.estimate, notice: null, noticeCode: null });
       setViewedRecordId(record.id);
       return true;
     } catch (error) {

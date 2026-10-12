@@ -18,7 +18,10 @@ import {
   CURVE_HINTS,
   CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
+  HOUSE_SUPPLY,
+  houseGraduation,
   isBlankDraft,
+  usesHouseEconomics,
   missingLaunchFields,
   stageLabel,
 } from '@/lib/meteora/plate';
@@ -356,7 +359,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const autoOpen: Record<string, boolean> = {
     'halley-step-1': current === 1 || blank,
     'halley-step-2': current === 2 && !blank,
-    'halley-step-3': current === 3 && !blank,
+    /* House defaults usually complete the economics — then the fold rests
+       on its summary and the review button is the next thing to do. */
+    'halley-step-3': current === 3 && !blank && !complete,
   };
   const isOpen = (id: string) => manualOpen[id] ?? autoOpen[id];
   /* `toggle` also fires when React sets `open`, so only a state that
@@ -374,7 +379,48 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       return prev[id] === open ? prev : { ...prev, [id]: open };
     });
   };
-  const econSummary = `${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} supply · grad ${draft.graduationQuote || '—'}`;
+  const houseEconomics = usesHouseEconomics(draft);
+  const econSummary = `${draft.curve ?? 'equity-pair'} · ${draft.supply ? Number(draft.supply).toLocaleString('en-US') : '—'} supply · grad ${draft.graduationQuote ? `${draft.graduationQuote} ${draft.quoteSymbol ?? ''}`.trim() : '—'}${houseEconomics ? ' · house defaults — tap to adjust' : ''}`;
+  /* Mode states: before the caller has begun, the slip orients them; once a
+     draft carries intent, settled orientation recedes so the open step and
+     its one primary action are what the eye lands on. */
+  const started = !blank || halley.state.stage !== 'draft';
+  const productLine = (
+    <p className={styles.product}>
+      Project a tracker-token launch curve on Meteora using an equity mark
+      or an unanchored starting price.
+      {mode === 'live'
+        ? ' A live launch deploys from your own wallet — you are the token’s creator.'
+        : ' Paper only: no token is minted.'}
+      {' '}A tracker is not stock ownership.
+    </p>
+  );
+  const pathChooser = (
+    <>
+      <div role="group" aria-label="Launch path" className={styles.amountChips} data-halley-mode={mode}>
+        <button type="button" className={styles.amountChip} aria-pressed={mode === 'live'} data-active={mode === 'live'} onClick={() => chooseMode('live')}>
+          Create a real token
+        </button>
+        <button type="button" className={styles.amountChip} aria-pressed={mode === 'paper'} data-active={mode === 'paper'} onClick={() => chooseMode('paper')}>
+          Explore on paper
+        </button>
+      </div>
+      <p className={plate.hint}>
+        {mode === 'live'
+          ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate.'
+          : 'Paper path — project the curve and file a record in this browser; nothing is minted.'}
+      </p>
+    </>
+  );
+  const preflight = mode === 'live' && halley.state.stage === 'draft' && (
+    <div className={plate.preflight}>
+      <p>
+        Before you draw the 60-second estimate: connect your Solana wallet and confirm you may launch.
+        You will review fresh figures before any signature.
+      </p>
+      <a href="#halley-live">Set up wallet first</a>
+    </div>
+  );
   const slipLine = `${draft.symbol || '—'} · ${draft.anchorSymbol || 'Unanchored'} → ${draft.quoteSymbol || '—'} · ${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} · grad ${draft.graduationQuote || '—'}`;
   const applyHearable = (line: string) => {
     if (liveBusy) return;
@@ -384,7 +430,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       jumpToId('halley-step-2');
     } else if (/nvidia/i.test(line)) {
       halley.edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
-      setChipNote('Drafted the NVDA tracker — set the economics below.');
+      setChipNote('Drafted the NVDA tracker with the house economics — review it, or adjust below.');
       jumpToId('halley-step-3');
     } else if (/draw the curve/i.test(line)) {
       if (complete && halley.state.stage === 'draft') {
@@ -527,16 +573,12 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             <span className={styles.paperNumber}>{stageLabel(halley.state.stage)}</span>
           </div>
           <h1 id="halley-ticket-title">The launch desk.</h1>
-          <p className={styles.product}>
-            Project a tracker-token launch curve on Meteora using an equity mark
-            or an unanchored starting price.
-            {mode === 'live'
-              ? ' A live launch deploys from your own wallet — you are the token’s creator.'
-              : ' Paper only: no token is minted.'}
-            {' '}A tracker is not stock ownership.
-          </p>
+          {/* Learning furniture is a pre-start surface: once the draft has
+              intent, the orientation recedes into its fold (canon rule 6). */}
+          {!started && productLine}
           <details className={styles.productDetails}>
             <summary>What a launch is, and what it is not</summary>
+            {started && productLine}
             <p>
               A launch creates a new tracker token on a Meteora DBC curve anchored
               to an equity’s Pyth mark, quoted in USDC or an xStock. When the
@@ -547,19 +589,14 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           </details>
 
           <div className={styles.ticketSurface}>
-            <div role="group" aria-label="Launch path" className={styles.amountChips} data-halley-mode={mode}>
-              <button type="button" className={styles.amountChip} aria-pressed={mode === 'live'} data-active={mode === 'live'} onClick={() => chooseMode('live')}>
-                Create a real token
-              </button>
-              <button type="button" className={styles.amountChip} aria-pressed={mode === 'paper'} data-active={mode === 'paper'} onClick={() => chooseMode('paper')}>
-                Explore on paper
-              </button>
-            </div>
-            <p className={plate.hint}>
-              {mode === 'live'
-                ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate.'
-                : 'Paper path — project the curve and file a record in this browser; nothing is minted.'}
-            </p>
+            {/* The path is a decision; once made and the draft begun, it
+                rests as one line with a quiet way back. */}
+            {started ? (
+              <details className={styles.assumptionsFold}>
+                <summary>{mode === 'live' ? 'Creating a real token' : 'Exploring on paper'} · change path</summary>
+                {pathChooser}
+              </details>
+            ) : pathChooser}
             {liveStatus !== 'enabled' && (
               <p className={plate.hint} role="status">
                 {liveStatus === 'checking'
@@ -584,15 +621,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 )}
               </p>
             )}
-            {mode === 'live' && halley.state.stage === 'draft' && (
-              <div className={plate.preflight}>
-                <p>
-                  Before you draw the 60-second estimate: connect your Solana wallet and confirm you may launch.
-                  You will review fresh figures before any signature.
-                </p>
-                <a href="#halley-live">Set up wallet first</a>
-              </div>
-            )}
+            {!started && preflight}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
                 <h2 id="halley-review-heading" tabIndex={-1}>
@@ -804,12 +833,12 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     inputMode="numeric"
                     autoComplete="off"
                     value={draft.supply ?? ''}
-                    placeholder="1000000"
+                    placeholder={`e.g. ${HOUSE_SUPPLY}`}
                     onChange={event => halley.edit({ supply: event.target.value || null })}
                     onKeyDown={onFieldEnter}
                   />
 
-                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number.</p></details>
+                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number. House default: a million.</p></details>
                   </div>
 
                   <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
@@ -820,11 +849,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     inputMode="decimal"
                     autoComplete="off"
                     value={draft.graduationQuote ?? ''}
-                    placeholder="150"
+                    placeholder={`e.g. ${houseGraduation(draft.quoteSymbol) ?? '150'}`}
                     onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
                     onKeyDown={onFieldEnter}
                   />
-                    <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool.</p></details>
+                    <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool. House default: 150 USDC, or one share of an xStock — roughly $150–250 collected.</p></details>
                   </div>
                   </details>
                 </div>
@@ -857,6 +886,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.map((field, i) => (
                   <span key={field}>{i > 0 && ', '}<button type="button" className={plate.neededLink} onClick={() => jumpToId(fieldIdForMissing(field), true)}>{field}</button></span>
                 ))}.</p>}
+                {/* The wallet comes after review — so once work has begun its
+                    note sits under the one primary action, not above it. */}
+                {started && preflight}
               </>
             )}
           </div>
