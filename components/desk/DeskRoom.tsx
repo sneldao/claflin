@@ -28,6 +28,7 @@ export function DeskRoom({
   onImportAnonymous,
   tape,
   tapeAt = null,
+  filedAt = null,
   children,
 }: {
   deskId: HouseDeskId;
@@ -45,10 +46,12 @@ export function DeskRoom({
   tape?: 'fresh' | 'stale';
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
   tapeAt?: number | null;
+  /** A record's filing time — the room's printer holds the chit it just wrote. */
+  filedAt?: number | null;
   children: ReactNode;
 }) {
   const tone = useRoomTone(lineLive);
-  const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true, tape, tapeAt });
+  const sharedScene = useHouseScene({ visible: true, layout: 'compact', view: 'desk', stage: 'arrival', still: true, tape, tapeAt, filedAt });
 
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => {

@@ -115,6 +115,10 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
   /* Lamp channel: the shared scene warms while the tape is fresh. */
   const tapeAt = marks.result?.asOf ?? null;
   const tapeState = marks.failed || marks.stale ? 'stale' : tapeAt !== null ? 'fresh' : undefined;
+  /* A receipt means a record just filed — the room's printer holds its chit. */
+  const filedAt = jesse.foreground.kind === 'receipt'
+    ? jesse.records.find(record => record.id === jesse.foreground.recordId)?.createdAt ?? null
+    : null;
   const take = brokerTake('jesse', deskMarks, clock);
   const selectedMark = deskMarks.find(mark => mark.instrumentId === jesse.state.draft.instrumentId) ?? null;
 
@@ -469,6 +473,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
         onLeaveDesk={desk.leaveDesk}
         tape={tapeState}
         tapeAt={tapeAt}
+        filedAt={filedAt}
       >
         {work}
       </RoomPresentation>
@@ -486,6 +491,7 @@ export function JesseDeskSurface({ desk }: { desk: Desk }) {
       onLeaveDesk={desk.leaveDesk}
       tape={tapeState}
       tapeAt={tapeAt}
+      filedAt={filedAt}
     >
       {work}
     </DeskRoom>

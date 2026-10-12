@@ -251,4 +251,16 @@ describe('night desk scene mount', () => {
     const reduced = markup();
     assert.equal(full, reduced, 'tape props must not branch on the client media query');
   });
+
+  it('holds the printer chit when a record just filed, and it is SSR-deterministic', () => {
+    const filed = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', filedAt: 555 }));
+    assert.match(filed, /printLine/);
+    const idle = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival' }));
+    assert.doesNotMatch(idle, /printLine/);
+    mockMatchMedia(false);
+    const full = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', filedAt: 666 }));
+    mockMatchMedia(true);
+    const reduced = renderToStaticMarkup(createElement(NightDeskScene, { view: 'desk', stage: 'arrival', filedAt: 666 }));
+    assert.equal(full, reduced, 'filedAt must not branch on the client media query');
+  });
 });

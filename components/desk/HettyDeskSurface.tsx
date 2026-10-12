@@ -144,6 +144,10 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
   const take = brokerTake('hetty', marks.result?.marks ?? NO_MARKS, clock);
   const hettyMethod = getBrokerMethod('hetty');
   const foreground = desk.foreground;
+  /* A receipt means a record just filed — the room's printer holds its chit. */
+  const filedAt = foreground.kind === 'receipt'
+    ? desk.records.find(record => record.id === foreground.recordId)?.createdAt ?? null
+    : null;
   const [sharedLoaded, setSharedLoaded] = useState(false);
   const roomView = presentation === 'room';
 
@@ -529,6 +533,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
         onImportAnonymous={() => { void importAnonymousRecords(); }}
         tape={tapeState}
         tapeAt={tapeAt}
+        filedAt={filedAt}
       >
         {work}
       </RoomPresentation>
@@ -550,6 +555,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
       onLeaveDesk={desk.leaveDesk}
       tape={tapeState}
       tapeAt={tapeAt}
+      filedAt={filedAt}
     >
       {work}
     </DeskRoom>

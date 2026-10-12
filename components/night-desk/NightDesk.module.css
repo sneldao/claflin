@@ -90,6 +90,42 @@
   .sceneHost[data-tape='fresh'] .fallbackRoom { filter: saturate(1.05) brightness(1.03); }
 }
 
+/* The filed chit: the fallback room's answer to the live scene's 'filed'
+   stage — where WebGL runs, the paper slip glides to the ledger; here a paper
+   chit slides from the blotter onto the ledger and rests while the receipt is
+   on screen. Remounts per filing so each one is seen to travel once.
+   Decorative — paint only; the record itself lives in the desk's ledger. */
+.printLine {
+  position: absolute;
+  left: 79.5%;
+  top: 66%;
+  width: 52px;
+  height: 13px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(180deg, #efe6cd, #d8cdb4);
+  border-radius: 1px;
+  box-shadow: 0 -1px 0 rgba(60, 40, 20, 0.35), 0 6px 12px rgba(0, 0, 0, 0.35);
+  transform: rotate(-4deg);
+  animation: printLineFile 1.2s cubic-bezier(0.2, 0.7, 0.3, 1) 0.2s forwards;
+}
+.printLine::before {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 45%;
+  border-top: 1px solid rgba(60, 40, 20, 0.4);
+}
+@keyframes printLineFile {
+  0% { opacity: 0; left: 48%; top: 66%; }
+  30% { opacity: 1; }
+  100% { opacity: 1; left: 79.5%; top: 66%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .printLine { animation: none; opacity: 1; }
+}
+
 .fallbackWindow {
   position: absolute;
   top: 6%;

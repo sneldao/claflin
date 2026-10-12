@@ -34,6 +34,7 @@ export function RoomPresentation({
   onImportAnonymous,
   tape,
   tapeAt = null,
+  filedAt = null,
   children,
 }: {
   desk: HouseDesk;
@@ -51,9 +52,11 @@ export function RoomPresentation({
   tape?: 'fresh' | 'stale';
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
   tapeAt?: number | null;
+  /** A record's filing time — the room's printer holds the chit it just wrote. */
+  filedAt?: number | null;
   children: ReactNode;
 }) {
-  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false, tape, tapeAt });
+  const sharedScene = useHouseScene({ visible: true, layout: 'room', view, stage, still: false, tape, tapeAt, filedAt });
   const graphics = useHouseGraphics();
   const clock = useMarketClock();
   const mainRef = useRef<HTMLElement>(null);
@@ -74,7 +77,7 @@ export function RoomPresentation({
       data-view={view}
       data-tape={tape}
     >
-      {!sharedScene && <NightDeskScene view={view} stage={stage} tape={tape} tapeAt={tapeAt} still={!graphics.ready || graphics.lightweight} />}
+      {!sharedScene && <NightDeskScene view={view} stage={stage} tape={tape} tapeAt={tapeAt} filedAt={filedAt} still={!graphics.ready || graphics.lightweight} />}
 
       <header className={styles.roomViewHeader}>
         <Link

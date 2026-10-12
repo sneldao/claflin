@@ -18,6 +18,8 @@ export type HouseSceneState = {
   tape?: 'fresh' | 'stale';
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
   tapeAt?: number | null;
+  /** A record's filing time — the room's printer holds the chit it just wrote. */
+  filedAt?: number | null;
 };
 
 type HouseSceneApi = {
@@ -117,7 +119,8 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
     && old.stage === next.stage
     && old.still === next.still
     && old.tape === next.tape
-    && old.tapeAt === next.tapeAt ? old : next), []);
+    && old.tapeAt === next.tapeAt
+    && old.filedAt === next.filedAt ? old : next), []);
   const subscribeAnchors = useCallback((listener: (anchors: NightDeskAnchors) => void) => {
     anchorListeners.current.add(listener);
     return () => anchorListeners.current.delete(listener);
@@ -142,6 +145,7 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
               still={scene.still || !graphics.ready || graphics.lightweight}
               tape={scene.tape}
               tapeAt={scene.tapeAt}
+              filedAt={scene.filedAt}
               onAnchors={emitAnchors}
               onController={controller => {
                 controllerRef.current = controller;
@@ -158,8 +162,8 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
 
 export function useHouseScene(state: HouseSceneState) {
   const api = useContext(HouseSceneContext);
-  const { visible, layout, view, stage, still, tape, tapeAt } = state;
-  useEffect(() => { api?.update({ visible, layout, view, stage, still, tape, tapeAt }); }, [api, visible, layout, view, stage, still, tape, tapeAt]);
+  const { visible, layout, view, stage, still, tape, tapeAt, filedAt } = state;
+  useEffect(() => { api?.update({ visible, layout, view, stage, still, tape, tapeAt, filedAt }); }, [api, visible, layout, view, stage, still, tape, tapeAt, filedAt]);
   return api !== null;
 }
 

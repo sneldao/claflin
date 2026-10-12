@@ -17,6 +17,7 @@ export function NightDeskScene({
   still = false,
   tape,
   tapeAt = null,
+  filedAt = null,
   onAnchors,
   onController,
 }: {
@@ -29,6 +30,8 @@ export function NightDeskScene({
   tape?: 'fresh' | 'stale';
   /** Reading timestamp — a new value re-prints the lamp's fresh glow. */
   tapeAt?: number | null;
+  /** A record's filing time — the printer holds the chit it just wrote. */
+  filedAt?: number | null;
   onAnchors?: (anchors: NightDeskAnchors) => void;
   /** Hands the live controller to the provider so scroll can drive the walk
       without React state churn. `null` on unmount. */
@@ -127,6 +130,13 @@ export function NightDeskScene({
           Decorative — paint only, above canvas and fallback alike. */}
       {tape === 'fresh' && tapeAt !== null && (
         <span key={tapeAt} className={styles.tapeGlow} aria-hidden="true" />
+      )}
+      {/* The filed chit: the fallback room's answer to the live scene's
+          'filed' stage — the slip glides to the ledger and rests there while
+          the receipt is on screen. Only painted when the 3D slip isn't
+          running, so the two never double up. */}
+      {filedAt !== null && (still || reducedMotion !== false) && (
+        <span key={filedAt} className={styles.printLine} aria-hidden="true" />
       )}
       <div className={styles.fallbackRoom} aria-hidden="true">
         {layout === 'foyer' && (

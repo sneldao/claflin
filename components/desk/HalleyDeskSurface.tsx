@@ -317,6 +317,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     : null;
 
   const filing = useLatestFiling();
+  /* A receipt means a record just filed — the room's printer holds its chit. */
+  const filedAt = halley.foreground.kind === 'receipt'
+    ? halley.records.find(record => record.id === halley.foreground.recordId)?.createdAt ?? null
+    : null;
   const estimate = halley.state.stage === 'review' || halley.state.stage === 'saved' ? halley.state.estimate : null;
   const expired = halley.state.stage === 'review' && estimate !== null && reviewNow >= estimate.expiresAt;
   const secondsLeft = estimate ? Math.max(0, Math.ceil((estimate.expiresAt - reviewNow) / 1000)) : 0;
@@ -878,6 +882,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         onPresentation={changeView}
         onSwitchDesk={desk.switchDesk}
         onLeaveDesk={desk.leaveDesk}
+        filedAt={filedAt}
       >
         {work}
       </RoomPresentation>
@@ -892,6 +897,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       deskStage={halley.state.stage}
       onSwitchDesk={desk.switchDesk}
       onLeaveDesk={desk.leaveDesk}
+      filedAt={filedAt}
     >
       {work}
     </DeskRoom>

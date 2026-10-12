@@ -290,6 +290,9 @@ export function TennieDeskSurface({ desk }: { desk: Desk }) {
       onLeaveDesk={desk.leaveDesk}
       tape={marks.result ? (marks.result.marks.some(m => m.reference.status === 'observed') ? 'fresh' : 'stale') : undefined}
       tapeAt={marks.result?.asOf ?? null}
+      filedAt={tennie.foreground.kind === 'receipt'
+        ? tennie.records.find(record => record.id === tennie.foreground.recordId)?.createdAt ?? null
+        : null}
     >
       <ModeStamp
         live={false}
