@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
@@ -379,8 +379,30 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       return prev[id] === open ? prev : { ...prev, [id]: open };
     });
   };
-  const houseEconomics = usesHouseEconomics(draft);
-  const econSummary = `${draft.curve ?? 'equity-pair'} · ${draft.supply ? Number(draft.supply).toLocaleString('en-US') : '—'} supply · grad ${draft.graduationQuote ? `${draft.graduationQuote} ${draft.quoteSymbol ?? ''}`.trim() : '—'}${houseEconomics ? ' · house defaults — tap to adjust' : ''}`;
+  /* Pencil and ink: a value the house pencilled reads lighter and slightly
+     italic with a house mark until the caller touches it; touching flips the
+     origin, which remounts the span and inks it in. No labels to read. */
+  const marked = (field: keyof HalleyDraft, text: ReactNode) => {
+    const origin = halley.state.pencil[field];
+    const house = origin === 'house';
+    return (
+      <span
+        key={`${field}:${origin ?? 'caller'}`}
+        className={house ? plate.pencil : plate.inked}
+        data-pencil={origin ?? 'caller'}
+      >
+        {text}
+        {house && <span className={plate.houseMark} aria-hidden="true">house</span>}
+      </span>
+    );
+  };
+  const supplyText = draft.supply ? Number(draft.supply).toLocaleString('en-US') : '—';
+  const gradText = draft.graduationQuote ? `${draft.graduationQuote} ${draft.quoteSymbol ?? ''}`.trim() : '—';
+  const econSummary = (
+    <>
+      {draft.curve ?? 'equity-pair'} · {marked('supply', supplyText)} supply · grad {marked('graduationQuote', gradText)}
+    </>
+  );
   /* Mode states: before the caller has begun, the slip orients them; once a
      draft carries intent, settled orientation recedes so the open step and
      its one primary action are what the eye lands on. */
@@ -421,7 +443,13 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       <a href="#halley-live">Set up wallet first</a>
     </div>
   );
-  const slipLine = `${draft.symbol || '—'} · ${draft.anchorSymbol || 'Unanchored'} → ${draft.quoteSymbol || '—'} · ${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} · grad ${draft.graduationQuote || '—'}`;
+  /* The one-line reading of the slip: same figures as the fold summaries,
+     same pencil marks, so a glance and a zoom never disagree. */
+  const slipLine = (
+    <>
+      {draft.symbol || '—'} · {draft.anchorSymbol || 'Unanchored'} → {draft.quoteSymbol || '—'} · {draft.curve ?? 'equity-pair'} · {marked('supply', supplyText)} · grad {marked('graduationQuote', gradText)}
+    </>
+  );
   const applyHearable = (line: string) => {
     if (liveBusy) return;
     if (/aaplx/i.test(line)) {

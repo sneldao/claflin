@@ -23,6 +23,7 @@ import type { DeskForegroundDocument } from '../lib/desk/contracts';
 const emptyState = (): HalleyDeskState => ({
   stage: 'draft',
   draft: { name: null, symbol: null, anchorSymbol: null, quoteSymbol: null, curve: null, supply: null, graduationQuote: null },
+  pencil: {},
   estimate: null,
   notice: null,
   noticeCode: null,

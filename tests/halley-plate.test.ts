@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { isHalleyLaunchIntent, type HalleyDraft } from '../lib/meteora/contracts';
-import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, HOUSE_SUPPLY, isBlankDraft, launchStep, missingLaunchFields, stageLabel, usesHouseEconomics, withHouseDefaults } from '../lib/meteora/plate';
+import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, HOUSE_SUPPLY, applyDraftEdit, isBlankDraft, launchStep, missingLaunchFields, stageLabel, usesHouseEconomics } from '../lib/meteora/plate';
 import { PRESET_WEIGHTS } from '../lib/meteora/dbc';
 import { LAUNCH_CURVE_PRESETS } from '../lib/meteora/contracts';
 
@@ -30,25 +30,54 @@ describe('Halley first-use guidance', () => {
   });
   it('pencils house defaults on a quote change, quote-aware and never over the hand', () => {
     const named: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK' };
-    const usdc = withHouseDefaults(named, { ...named, quoteSymbol: 'USDC' });
-    assert.equal(usdc.supply, HOUSE_SUPPLY);
-    assert.equal(usdc.graduationQuote, '150');
-    assert.equal(usdc.anchorSymbol, null, 'a USDC quote does not choose an anchor for the caller');
-    assert.deepEqual(missingLaunchFields(usdc), [], 'name + quote is enough to draw the curve');
-    assert.ok(usesHouseEconomics(usdc));
+    const usdc = applyDraftEdit(named, {}, { quoteSymbol: 'USDC' });
+    assert.equal(usdc.draft.supply, HOUSE_SUPPLY);
+    assert.equal(usdc.draft.graduationQuote, '150');
+    assert.equal(usdc.draft.anchorSymbol, null, 'a USDC quote does not choose an anchor for the caller');
+    assert.equal(usdc.pencil.supply, 'house');
+    assert.deepEqual(missingLaunchFields(usdc.draft), [], 'name + quote is enough to draw the curve');
+    assert.ok(usesHouseEconomics(usdc.draft, usdc.pencil));
     /* 150 USDC must never silently become 150 NVDAx. */
-    const pair = withHouseDefaults(usdc, { ...usdc, quoteSymbol: 'NVDAx' });
-    assert.equal(pair.graduationQuote, '1');
-    assert.equal(pair.anchorSymbol, 'NVDA');
+    const pair = applyDraftEdit(usdc.draft, usdc.pencil, { quoteSymbol: 'NVDAx' });
+    assert.equal(pair.draft.graduationQuote, '1');
+    assert.equal(pair.draft.anchorSymbol, 'NVDA');
     /* The caller's own numbers survive a quote change. */
-    const hand = { ...usdc, supply: '5000', graduationQuote: '900' };
-    const kept = withHouseDefaults(hand, { ...hand, quoteSymbol: 'AAPLx' });
-    assert.equal(kept.supply, '5000');
-    assert.equal(kept.graduationQuote, '900');
-    assert.ok(!usesHouseEconomics(kept));
+    const hand = applyDraftEdit(usdc.draft, usdc.pencil, { supply: '5000', graduationQuote: '900' });
+    const kept = applyDraftEdit(hand.draft, hand.pencil, { quoteSymbol: 'AAPLx' });
+    assert.equal(kept.draft.supply, '5000');
+    assert.equal(kept.draft.graduationQuote, '900');
+    assert.ok(!usesHouseEconomics(kept.draft, kept.pencil));
     /* Edits that don't change the quote never refill a cleared field. */
-    const cleared = { ...usdc, supply: null };
-    assert.equal(withHouseDefaults(usdc, cleared).supply, null);
+    const cleared = applyDraftEdit(usdc.draft, usdc.pencil, { supply: null });
+    assert.equal(cleared.draft.supply, null);
+  });
+
+  it('never rewrites a value the caller wrote, even when it matches the house', () => {
+    const named: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK' };
+    const quoted = applyDraftEdit(named, {}, { quoteSymbol: 'USDC' });
+    /* The caller types their own 150 — the same string the house would have
+       pencilled. It is theirs, so a later quote change must not rescale it. */
+    const typed = applyDraftEdit(quoted.draft, quoted.pencil, { graduationQuote: '150' });
+    assert.equal(typed.pencil.graduationQuote, 'caller');
+    const switched = applyDraftEdit(typed.draft, typed.pencil, { quoteSymbol: 'NVDAx' });
+    assert.equal(switched.draft.graduationQuote, '150', 'a caller 150 stays 150, not 1 NVDAx');
+    assert.ok(!usesHouseEconomics(switched.draft, switched.pencil));
+  });
+
+  it('respects a declined anchor instead of quietly restoring one', () => {
+    const named: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK' };
+    /* "No anchor, unanchored" writes a null — the field is now the caller's. */
+    const declined = applyDraftEdit(named, {}, { anchorSymbol: null });
+    assert.equal(declined.pencil.anchorSymbol, 'caller');
+    const later = applyDraftEdit(declined.draft, declined.pencil, { quoteSymbol: 'NVDAx' });
+    assert.equal(later.draft.anchorSymbol, null, 'an equity-pair quote must not undo a declined anchor');
+    /* An anchor that was never written is still the house's to suggest. */
+    const untouched = applyDraftEdit(named, {}, { quoteSymbol: 'NVDAx' });
+    assert.equal(untouched.draft.anchorSymbol, 'NVDA');
+    assert.equal(untouched.pencil.anchorSymbol, 'house');
+    /* And an anchor the caller chose by hand survives any quote change. */
+    const chosen = applyDraftEdit(named, {}, { anchorSymbol: 'TSLA', quoteSymbol: 'NVDAx' });
+    assert.equal(chosen.draft.anchorSymbol, 'TSLA');
   });
 
   it('lists missing fields in form order and allows an unanchored draft', () => {

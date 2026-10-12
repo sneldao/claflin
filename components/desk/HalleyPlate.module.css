@@ -154,6 +154,32 @@
   color: var(--desk-paper-ink);
   background: #fff5;
 }
+
+/* Pencil and ink. A value the house pencilled in reads lighter and slightly
+   italic, with a house mark — visibly not yet the caller's. Touching it flips
+   the origin, which remounts the span and inks it with a brief fill. No label
+   to read, and nothing added to the line the caller has to scan. */
+.pencil {
+  color: var(--desk-paper-muted, #59614d);
+  font-style: italic;
+}
+.houseMark {
+  margin-left: 5px;
+  font: 9px/1 var(--font-mono), monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .65;
+  vertical-align: 1px;
+}
+.inked { animation: inkFill var(--dur-1, 240ms) var(--ease-swift, ease); }
+@keyframes inkFill {
+  from { background: var(--desk-paper-wash, #27362b14); }
+  to { background: transparent; }
+}
+/* Reduced motion keeps the colour change and drops the fill. */
+@media (prefers-reduced-motion: reduce) {
+  .inked { animation: none; }
+}
 /* Still-needed jump links — each missing field is one tap away. */
 .neededLink {
   padding: 0;
