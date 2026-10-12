@@ -152,6 +152,13 @@ Deliberately unchanged: `TradeIntent` units (`USDC`/`token`), the voice tool nam
 
 Handoffs may carry permitted context, never silent transaction authority or funds. Visiting a planned desk from the house directory is already a closed room: no ticket, no quote, no recording, and no transplanted approval. Further route options require independent product/provider verification and transparent terms. One rejected 0x NVDAc request and an Odos infrastructure error do not establish a universal aggregator prohibition.
 
+## Post-submit threads — deferred past the World's Fair freeze
+
+Carried open from the 2026-10-12 submission build (`977f7f1`). Neither gates the entry; both are scoped and documented so they are picked up deliberately, not rediscovered.
+
+- **`tapeGlow` sibling-ordering (still mode).** `.tapeGlow` renders before `.fallbackRoom` in `components/night-desk/NightDeskScene.tsx` with no `z-index`, so in still/fallback mode the fresh-reading warm wash paints behind the room's opaque background — the same defect fixed on `.printLine` (`z-index: 3`, commit `fc2204b`). Partially mitigated: `data-tape='fresh'` still warms `.fallbackRoom`/`.fallbackLamp` directly, so the fallback room is not silent — only the transient radial wash is lost. The fix is a scoped `z-index` (or DOM reorder) plus dual-mode visual verification; a blanket `z-index` risks washing the live WebGL scene, which is why it was flagged rather than touched under deadline.
+- **`?mark=` cross-desk handoff.** The deep-link vocabulary (`desk`, `offering`, `view`, `intent`, `side`, `amount`, `record`) carries side/amount and a same-desk instrument only. No param carries an observed mark across desks. The concrete case: Jesse or Tennie tape → Halley — "launch a tracker on this mark" prefilling the anchor field (`?desk=halley&mark=AAPL`; consider matching Halley's existing `?anchor=` API vocabulary). Open design points: param shape (`mark` vs extending `intent`), the tape-row emitter affordance, anchor-eligible symbol validation (ineligible marks must degrade to a plain entry, not a dead field), and a carried-note provenance line that retires on draft drift, matching `lib/desk/carried-note.ts`. Entry plumbing is tested and load-bearing for every deep link — build with the same care as `?intent=`, not as a quick add.
+
 ## Not backlog
 
 Do not revive open broker registration, marketplace rankings, personality quizzes, calling streaks, per-minute discovery, the old onboarding wizard or migration work for nonexistent legacy users. Do not put eligibility, wallet-link or “live access” chrome on the paper desk. Preserve useful code selectively, not the old product structure.
