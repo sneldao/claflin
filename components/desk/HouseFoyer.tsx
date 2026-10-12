@@ -27,6 +27,7 @@ import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
 import { type WireMark } from '../foyer/QuoteColumn';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
+import { truncateAddress, walletKind } from '@/lib/auth/identity';
 import foyerStyles from './HouseFoyer.module.css';
 
 /** The house's account affordance in the conventional top-right spot.
@@ -34,6 +35,8 @@ import foyerStyles from './HouseFoyer.module.css';
    but the affordance exists so the product reads as what it is. */
 function FoyerAuthChip() {
   const auth = useDeskAuth();
+  const wrapRef = useRef<HTMLDetailsElement>(null);
+  const [copied, setCopied] = useState(false);
   if (!auth.enabled) return null;
   if (!auth.authenticated) {
     return (
@@ -47,10 +50,65 @@ function FoyerAuthChip() {
       </button>
     );
   }
+
+  const close = () => { if (wrapRef.current) wrapRef.current.open = false; };
+  const kind = auth.walletAddress ? walletKind(auth.walletAddress) : null;
+  const explorer = auth.walletAddress
+    ? kind === 'sol'
+      ? `https://solscan.io/account/${auth.walletAddress}`
+      : `https://${auth.walletChainId === 8453 ? 'basescan.org' : 'etherscan.io'}/address/${auth.walletAddress}`
+    : null;
+  const seed = auth.walletAddress ?? auth.userId ?? auth.label ?? 'account';
+  const hue = [...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  const dot = `hsl(${hue} 55% 58%)`;
+
+  const copyWallet = () => {
+    if (!auth.walletAddress || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(auth.walletAddress).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    }).catch(() => {});
+  };
+
   return (
-    <span className={foyerStyles.authChip} data-signed="true" title={auth.label ?? 'Signed in'}>
-      {auth.label ?? 'Signed in'}
-    </span>
+    <details ref={wrapRef} className={foyerStyles.authWrap}
+      onKeyDown={e => { if (e.key === 'Escape') close(); }}>
+      <summary className={foyerStyles.authChip} data-signed="true" title={auth.label ?? 'Signed in'}>
+        <span className={foyerStyles.authDot} style={{ backgroundColor: dot }} aria-hidden="true" />
+        {auth.label ?? 'Signed in'}
+        <span className={foyerStyles.authCaret} aria-hidden="true">▾</span>
+      </summary>
+      <div className={foyerStyles.authBackdrop} aria-hidden="true" onClick={close} />
+      <div className={foyerStyles.authPanel} role="group" aria-label="Account">
+        <p className={foyerStyles.authPanelLead}>Signed in as</p>
+        <p className={foyerStyles.authPanelId} title={auth.userId ?? undefined}>
+          <span className={foyerStyles.authDot} style={{ backgroundColor: dot }} aria-hidden="true" />
+          {auth.label ?? 'Account'}
+        </p>
+        {auth.walletAddress ? (
+          <div className={foyerStyles.authWalletRow}>
+            <button
+              type="button"
+              className={foyerStyles.authPanelButton}
+              onClick={copyWallet}
+              title={copied ? 'Address copied' : `Copy ${auth.walletAddress}`}
+            >
+              {copied ? 'Copied ✓' : `${truncateAddress(auth.walletAddress)} ⧉`}
+            </button>
+            {explorer && (
+              <a className={foyerStyles.authPanelButton} href={explorer} target="_blank" rel="noreferrer">
+                Explorer ↗
+              </a>
+            )}
+          </div>
+        ) : (
+          <button type="button" className={foyerStyles.authPanelButton} onClick={() => { close(); auth.linkWallet(); }}>
+            Link a wallet
+          </button>
+        )}
+        <button type="button" className={foyerStyles.authPanelButton} onClick={auth.logout}>Sign out</button>
+      </div>
+    </details>
   );
 }
 

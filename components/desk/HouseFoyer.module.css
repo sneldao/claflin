@@ -94,9 +94,119 @@ button.authChip:hover {
 }
 
 .authChip[data-signed='true'] {
-  cursor: default;
   color: var(--muted);
   letter-spacing: 0.12em;
+}
+
+/* Signed-in state opens an account card — who you are, and the way out. */
+.authWrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.authWrap summary.authChip {
+  margin-left: 0;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 56;
+}
+
+.authWrap summary.authChip::-webkit-details-marker {
+  display: none;
+}
+
+.authDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.authCaret {
+  font-size: 0.55rem;
+  transition: transform 160ms ease;
+}
+
+.authWrap[open] .authCaret {
+  transform: rotate(180deg);
+}
+
+.authBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+}
+
+.authPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 190px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--scrim-dense);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(179, 144, 90, 0.35);
+  border-radius: 2px;
+  box-shadow: 0 10px 28px #0006;
+}
+
+.authPanelLead {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.authPanelId {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--brass);
+  word-break: break-all;
+}
+
+.authWalletRow {
+  display: flex;
+  gap: 8px;
+}
+
+.authPanelButton {
+  margin-top: 6px;
+  padding: 8px 10px;
+  align-self: flex-start;
+  border: 1px solid rgba(179, 144, 90, 0.4);
+  border-radius: 2px;
+  background: transparent;
+  color: #d4c4a2;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.authWalletRow .authPanelButton {
+  margin-top: 0;
+}
+
+.authPanelButton:hover {
+  border-color: rgba(179, 144, 90, 0.75);
+  color: var(--brass);
 }
 
 .headerNav {
