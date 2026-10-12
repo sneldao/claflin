@@ -51,7 +51,7 @@ If the lead instead wants a *feature on Jesse* rather than a desk, the honest an
 | Controller | **new `lib/meteora/useHalleyDesk.ts`** | Reuse the `useJesseDesk` state machine; add a `launch` stage + `launchDraft` shape. |
 | Voice | `lib/meteora/desk-tools.ts` | New launch handlers, same progressive-reveal + paper-only pattern as `lib/jesse/desk-tools.ts`. Live is the on-screen wallet ceremony, never voice. |
 | Flags | **new `lib/meteora/flags.ts`** | Dual env gate; paper open, live off by default. |
-| Surface | Room view | A **launch slip**: the bonding curve drawn on the ticket, graduation threshold, and a live price-discovery tape after launch. |
+| Surface | Room view | A **launch slip**: the bonding curve drawn on the ticket, graduation threshold, and a live price-discovery tape after launch. Follows the house progressive-disclosure rules in `DESK_CANON.md` §"Surface consistency" (stepped accordion, voice-first blank, hints on demand, ceremony gated behind review, one legal stamp). |
 
 ### 4.1 Concrete drop-ins (matched to the existing shapes)
 

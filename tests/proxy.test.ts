@@ -33,7 +33,7 @@ describe('proxy routing', () => {
   });
 
   it('still allows known non-retired API routes', async () => {
-    for (const path of ['/api/stocks/quote', '/api/stocks/marks', '/api/paper', '/api/hetty/session', '/api/eligibility']) {
+    for (const path of ['/api/stocks/quote', '/api/stocks/marks', '/api/paper', '/api/hetty/session', '/api/eligibility', '/api/identity/resolve']) {
       const response = proxy(new NextRequest(`http://localhost:3000${path}?instrumentId=foo`));
       assert.equal(response.status, 200, `${path} should be allowed`);
     }

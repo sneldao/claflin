@@ -61,6 +61,7 @@ export function proxy(request: NextRequest) {
     '/api/paper',
     '/api/funnel',
     '/api/eligibility',
+    '/api/identity',
     '/api/webhooks/elevenlabs',
   ].some(path => route === path || route.startsWith(`${path}/`));
   if (!hasRouteHandler) {

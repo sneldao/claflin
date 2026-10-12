@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PrivyProvider, usePrivy, useSendTransaction, useWallets } from '@privy-io/react-auth';
 import { BASE_CHAIN_ID } from '@/lib/base-chain';
+import { truncateAddress } from '@/lib/auth/identity';
 import type { AccountBridgeProps, DeskAuth } from './AuthProvider';
 
 /** Loaded on account activation; publishes identity without remounting the paper app. */
@@ -32,6 +33,24 @@ function Inner({ onChange, request }: AccountBridgeProps) {
   const userId = user?.id ?? null;
   const userEmail = user?.email?.address ?? null;
 
+  /* The wallet's declared name (.eth/.sol) beats a raw address — cosmetic
+     only, resolved server-side, and never a reason to hold the label up. */
+  const [walletName, setWalletName] = useState<string | null>(null);
+  useEffect(() => {
+    setWalletName(null);
+    if (!wallet) return;
+    let cancelled = false;
+    void fetch(`/api/identity/resolve?address=${encodeURIComponent(wallet)}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then((body: { name?: string | null } | null) => {
+        if (!cancelled) setWalletName(body?.name ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet]);
+
   const value = useMemo<DeskAuth>(() => {
     /* The desk trades on Base only. Privy refuses to send when the wallet's
        active chain differs from the request's chainId, so switch first —
@@ -57,7 +76,7 @@ function Inner({ onChange, request }: AccountBridgeProps) {
       ready,
       authenticated,
       userId,
-      label: userEmail ?? wallet ?? userId,
+      label: walletName ?? userEmail ?? (wallet ? truncateAddress(wallet) : null) ?? userId,
       walletAddress: wallet,
       walletChainId,
       ensureBaseChain,
@@ -82,7 +101,7 @@ function Inner({ onChange, request }: AccountBridgeProps) {
         return result.hash;
       },
     };
-  }, [ready, authenticated, userId, userEmail, wallet, walletChainId, address]);
+  }, [ready, authenticated, userId, userEmail, wallet, walletName, walletChainId, address]);
   useEffect(() => { onChange(value); }, [onChange, value]);
   const handled = useRef(0);
   useEffect(() => {

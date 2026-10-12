@@ -64,6 +64,14 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
           const detail = live3
             ? 'Review the projected curve, then continue to the wallet ceremony — your wallet signs the mint.'
             : step.detail;
+          /* Rail doubles as wayfinding: steps 1–2 jump to the matching
+             slip section, step 3 to the review action. Copy stays verbatim. */
+          const target = number === 3 ? 'instruction' : number === 2 ? 'halley-step-2' : 'halley-step-1';
+          const go = () => {
+            document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const focusId = number === 1 ? 'halley-name' : number === 2 ? 'halley-supply' : undefined;
+            if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
+          };
           return (
             <li key={title} className={styles.step} data-state={state} aria-current={state === 'current' ? 'step' : undefined}>
               <strong>
@@ -71,6 +79,9 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
                 {state === 'done' && <span className={styles.srOnly}> (done)</span>}
               </strong>
               {detail}
+              <button type="button" className={styles.stepGo} onClick={go} aria-label={`Go to ${title}`}>
+                {state === 'done' ? 'Review' : state === 'current' ? 'Continue' : 'Go'} →
+              </button>
             </li>
           );
         })}

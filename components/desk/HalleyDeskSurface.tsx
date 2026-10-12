@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -18,9 +18,11 @@ import {
   CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
   isBlankDraft,
+  launchStep,
   missingLaunchFields,
   stageLabel,
 } from '@/lib/meteora/plate';
+import { RING_EXAMPLES } from '@/lib/desk/ui-copy';
 import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
@@ -130,6 +132,27 @@ function CurveGlyph({ preset }: { preset: LaunchCurvePreset }) {
       })}
     </svg>
   );
+}
+
+/** Jump a caller to a draft field: scroll always, focus when focusable. */
+function jumpToId(id: string, focus = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (focus && (el instanceof HTMLInputElement || el instanceof HTMLButtonElement)) {
+    el.focus({ preventScroll: true });
+  }
+}
+
+/** Map a `missingLaunchFields` label to the element that fixes it. */
+function fieldIdForMissing(field: string): string {
+  switch (field) {
+    case 'tracker name': return 'halley-name';
+    case 'symbol': return 'halley-symbol';
+    case 'supply': return 'halley-supply';
+    case 'graduation line': return 'halley-grad';
+    default: return 'halley-step-2';
+  }
 }
 
 /** The estimate's reading as a broker's note — separate clauses when the
@@ -297,6 +320,72 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const complete = missing.length === 0;
   const blank = halley.state.stage === 'draft' && isBlankDraft(draft);
   const curveHint = CURVE_HINTS[draft.curve ?? 'equity-pair'];
+  /* Stepped accordion state — the desk's own step function decides which
+     section stands open (canon: one thing per screen). Completed steps
+     collapse to their summary chips; headings stay verbatim for tests. */
+  const progress = launchStep(halley.state.stage, draft);
+  const nameSummary = [draft.name?.trim() || null, draft.symbol || null].filter(Boolean).join(' · ');
+  const anchorSummary = [draft.anchorSymbol || 'Unanchored', draft.quoteSymbol || null].filter(Boolean).join(' → ');
+  /* Delight: hearables that do work, an accordion that respects the hand,
+     a living one-line summary, and a small arrival on review/file. */
+  const [chipNote, setChipNote] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({});
+  const openStep1 = manualOpen['halley-step-1'] ?? (progress === 1 || blank);
+  const openStep2 = manualOpen['halley-step-2'] ?? progress !== 1;
+  const onStepToggle = (id: string) => (event: SyntheticEvent<HTMLDetailsElement>) => {
+    setManualOpen(prev => ({ ...prev, [id]: event.currentTarget.open }));
+  };
+  const slipLine = `${draft.symbol || '—'} · ${draft.anchorSymbol || 'Unanchored'} → ${draft.quoteSymbol || '—'} · ${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} · grad ${draft.graduationQuote || '—'}`;
+  const applyHearable = (line: string) => {
+    if (liveBusy) return;
+    if (/aaplx/i.test(line)) {
+      halley.edit({ quoteSymbol: 'AAPLx' });
+      setChipNote('Quoted in AAPLx — the opening reads as an equity ratio.');
+      jumpToId('halley-step-2');
+    } else if (/nvidia/i.test(line)) {
+      halley.edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
+      setManualOpen(prev => ({ ...prev, 'halley-step-2': true }));
+      setChipNote('Drafted the NVDA tracker — pick the quote and economics below.');
+      jumpToId('halley-step-2');
+    } else if (/draw the curve/i.test(line)) {
+      if (complete && halley.state.stage === 'draft') {
+        halley.estimate();
+      } else if (missing[0]) {
+        jumpToId(fieldIdForMissing(missing[0]), true);
+        setChipNote(`Almost — ${missing.length} left before Halley can draw the curve.`);
+      }
+    }
+  };
+  /* Auto-advance once: finishing step 1 opens step 2 and lands on the
+     first missing field. Manual toggles always win afterwards. */
+  const prevProgress = useRef(progress);
+  useEffect(() => {
+    const before = prevProgress.current;
+    prevProgress.current = progress;
+    if (before === 1 && progress !== 1 && manualOpen['halley-step-2'] === undefined && !blank && missing[0]) {
+      jumpToId(fieldIdForMissing(missing[0]), true);
+    }
+  }, [progress, blank, missing, manualOpen]);
+  /* Arrival: review scrolls + focuses its heading; filing lands the stamp's
+     thud and returns to the ticket head. Reduced-motion callers still get
+     the focus move without the smooth travel. */
+  const prevStage = useRef(halley.state.stage);
+  useEffect(() => {
+    const before = prevStage.current;
+    prevStage.current = halley.state.stage;
+    /* Stage moves retire the hearable's confirmation — it describes the
+       click that made it, not whatever happens next. */
+    if (before !== halley.state.stage) setChipNote(null);
+    if (before === 'estimating' && halley.state.stage === 'review') {
+      const el = document.getElementById('halley-review-heading');
+      el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      (el as HTMLElement | null)?.focus?.({ preventScroll: true });
+    }
+    if (halley.state.stage === 'saved' && before !== 'saved') {
+      void import('@/lib/sounds').then(({ playStampThud }) => playStampThud()).catch(() => {});
+      document.getElementById('halley-ticket-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [halley.state.stage]);
 
   /* Live anchor posture — which basis would anchor right now, read at
      selection time so the slip itself tells the session story: tape awake
@@ -419,8 +508,8 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             </div>
             <p className={plate.hint}>
               {mode === 'live'
-                ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate. A tracker is a new token, not equity, not pegged to the stock.'
-                : 'Paper path — project the curve and file a record in this browser; nothing is minted. A tracker is a new token, not equity, not pegged to the stock.'}
+                ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate.'
+                : 'Paper path — project the curve and file a record in this browser; nothing is minted.'}
             </p>
             {liveStatus !== 'enabled' && (
               <p className={plate.hint} role="status">
@@ -457,7 +546,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
             )}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
-                <h2>
+                <h2 id="halley-review-heading" tabIndex={-1}>
                   {estimate.intent.symbol} opens at {money(estimate.openingPriceQuote)} {estimate.intent.quoteSymbol}
                 </h2>
                 <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
@@ -530,6 +619,18 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 {blank && (
                   <div className={plate.lead} id="halley-lead">
                     <p className={plate.leadText}>Name a tracker. Anchor it to an equity. See the curve.</p>
+                    <p className={styles.slipGhost}>
+                      <span aria-hidden="true">Launch an NVIDIA tracker quoted in USDC<i className={styles.slipCaret} /></span>
+                      <span className={styles.srOnly}>For example: launch an NVIDIA tracker quoted in USDC.</span>
+                    </p>
+                    <div className={styles.voiceSay} aria-label="Try saying">
+                      <p className={styles.voiceSayLead}>Try saying</p>
+                      {RING_EXAMPLES.halley.map(line => (
+                        <button key={line} type="button" onClick={() => applyHearable(line)}>
+                          {line}
+                        </button>
+                      ))}
+                    </div>
                     <div>
                       <button
                         type="button"
@@ -545,8 +646,17 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     </div>
                   </div>
                 )}
+                {/* Hearable confirmations must outlive the blank state — a
+                    chip that fills the draft also unmounts this block's home. */}
+                {chipNote && <p className={plate.hint} role="status">{chipNote}</p>}
                 <div className={styles.fields}>
-                  <h3 className={plate.stageHeading}>Name the tracker</h3>
+                  {!blank && (
+                    <p className={plate.slipLine} title="Your launch in one line">
+                      {slipLine}
+                    </p>
+                  )}
+                  <details className={styles.handForm} id="halley-step-1" open={openStep1} onToggle={onStepToggle('halley-step-1')}>
+                    <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Name the tracker</h3>{nameSummary ? <span>{nameSummary}</span> : <span>Start here</span>}</summary>
                   <label htmlFor="halley-name">Tracker name</label>
                   <div className={plate.control}>
                     <input
@@ -557,7 +667,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       aria-describedby="halley-name-hint"
                       onChange={event => halley.edit({ name: event.target.value || null })}
                     />
-                    <p id="halley-name-hint" className={plate.hint}>The token’s display name, 2–40 characters.</p>
+                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-name-hint" className={plate.hint}>The token’s display name, 2–40 characters.</p></details>
                   </div>
 
                   <label htmlFor="halley-symbol">Symbol</label>
@@ -570,10 +680,12 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       aria-describedby="halley-symbol-hint"
                       onChange={event => halley.edit({ symbol: event.target.value.toUpperCase() || null })}
                     />
-                    <p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p>
+                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p></details>
                   </div>
 
-                  <h3 className={plate.stageHeading}>Anchor the opening</h3>
+                  </details>
+                  <details className={styles.handForm} id="halley-step-2" open={openStep2} onToggle={onStepToggle('halley-step-2')}>
+                    <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Anchor the opening</h3>{anchorSummary ? <span>{anchorSummary}</span> : <span>Pick a mark</span>}</summary>
                   <span id="halley-anchor-label">Anchor equity</span>
                   <div className={plate.control}>
                   <div role="group" aria-labelledby="halley-anchor-label" aria-describedby="halley-anchor-hint" className={styles.amountChips}>
@@ -589,14 +701,14 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
                   </div>
 
-                    <p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read. The anchor sets the starting reference — never a peg.</p>
+                    <details className={styles.assumptionsFold}><summary>How does anchoring work?</summary><p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read. The anchor sets the starting reference — never a peg.</p></details>
                     {posture && posture.symbol === draft.anchorSymbol && (
-                      <p className={plate.hint} role="status" data-testid="halley-anchor-posture">
+                      <p className={plate.posturePill} role="status" data-testid="halley-anchor-posture" data-basis={posture.basis}>
                         {posture.basis === 'onchain' && posture.markUsd
-                          ? `Right now: onchain ${posture.symbol}x at $${money(posture.markUsd)} — the equity tape rests${posture.restingEquityUsd ? ` at $${money(posture.restingEquityUsd)}` : ''}${posture.differenceBps ? `, a ${posture.differenceBps} bps gap` : ''}; the onchain mark would anchor.`
+                          ? `● Onchain ${posture.symbol}x $${money(posture.markUsd)}${posture.differenceBps ? ` · gap ${posture.differenceBps} bps` : ''}`
                           : posture.basis === 'pyth-pro' && posture.markUsd
-                            ? `Right now: the equity tape is awake — ${posture.symbol} at $${money(posture.markUsd)} would anchor.`
-                            : 'Right now: neither basis is reporting — the estimate will say so plainly.'}
+                            ? `● Pyth live ${posture.symbol} $${money(posture.markUsd)}`
+                            : '○ No mark — the estimate will say so'}
                       </p>
                     )}
                   </div>
@@ -627,7 +739,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     ))}
                   </div>
 
-                    <p id="halley-curve-hint" className={plate.hint}>{curveHint}</p>
+                    <details className={styles.assumptionsFold}><summary>About this curve</summary><p id="halley-curve-hint" className={plate.hint}>{curveHint}</p></details>
                   </div>
 
                   <label htmlFor="halley-supply">Supply</label>
@@ -642,7 +754,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onChange={event => halley.edit({ supply: event.target.value || null })}
                   />
 
-                    <p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number.</p>
+                    <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-supply-hint" className={plate.hint}>Total tracker tokens in the projection — an economic term of the token. Enter a positive whole number.</p></details>
                   </div>
 
                   <label htmlFor="halley-grad">Graduation line ({draft.quoteSymbol ?? 'quote'})</label>
@@ -656,8 +768,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     placeholder="150"
                     onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
                   />
-                    <p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool.</p>
+                    <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool.</p></details>
                   </div>
+                  </details>
                 </div>
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}
                 {(halley.state.noticeCode === 'anchor_stale' || halley.state.noticeCode === 'anchor_unavailable') && (
@@ -671,6 +784,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </button>
                 )}
                 {halley.storageError && <p className={styles.notice} role="alert">{halley.storageError}</p>}
+                <div className={plate.stickyCta}>
                 <div className={styles.slipActions}>
                   <button
                     type="button"
@@ -680,14 +794,18 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onClick={halley.estimate}
                   >
                     {halley.state.stage === 'estimating' ? 'Drawing the curve…' : mode === 'live' ? 'Review projected launch' : 'See paper projection'}
+                    {!complete && halley.state.stage === 'draft' && <span aria-hidden="true"> · {missing.length} left</span>}
                   </button>
                 </div>
-                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.join(', ')}.</p>}
+                </div>
+                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.map((field, i) => (
+                  <span key={field}>{i > 0 && ', '}<button type="button" className={plate.neededLink} onClick={() => jumpToId(fieldIdForMissing(field), true)}>{field}</button></span>
+                ))}.</p>}
               </>
             )}
           </div>
 
-          {liveIntent && liveWasEnabled && !viewed && (
+          {liveIntent && liveWasEnabled && !viewed && reviewIntent && (
             <HalleyLiveLaunch
               intent={reviewIntent}
               revision={reviewIntent ? estimate?.quotedAt ?? 0 : 0}

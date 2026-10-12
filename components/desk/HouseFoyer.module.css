@@ -20,13 +20,19 @@
 }
 
 .header {
-  position: relative;
+  /* Stays pinned — the account affordance is the user's anchor and crypto
+     convention keeps it in view through the whole page. The room still
+     breathes through the dense scrim. */
+  position: sticky;
+  top: 0;
   z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 10px clamp(20px, 4vw, 48px);
+  background: var(--scrim-dense);
+  border-bottom: 1px solid rgba(179, 144, 90, 0.18);
 }
 
 .brand {

@@ -130,6 +130,69 @@
 .preflight p { margin: 0 0 8px; }
 .preflight a { color: #6b5a35; font-family: var(--font-mono), monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
 .needed { margin: 10px 0 0 !important; font-size: 12px; line-height: 1.5; color: var(--desk-paper-muted); }
+/* Stepped accordion summaries — the heading stays verbatim, the chip says
+   what this step already holds so a collapsed step still reads. */
+.stepSummary { cursor: pointer; list-style: none; display: grid; gap: 2px; padding: 8px 0; }
+.stepSummary::-webkit-details-marker { display: none; }
+.stepSummary > span { font: 11px/1.5 var(--font-mono), monospace; letter-spacing: .06em; color: var(--desk-paper-muted); }
+/* Anchor posture as a one-line pill — full basis text lives in title/estimate. */
+.posturePill {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 8px 0 0 !important; padding: 6px 10px;
+  border: 1px solid var(--desk-paper-rule, #d8cdb4); border-radius: 999px;
+  font: 11px/1.4 var(--font-mono), monospace; letter-spacing: .04em;
+  color: var(--desk-paper-ink); background: #fff6;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Living one-line summary — the slip reads the draft back as you work. */
+.slipLine {
+  margin: 0 0 12px !important;
+  padding: 8px 12px;
+  border: 1px dashed var(--desk-paper-rule, #d8cdb4);
+  font: 12px/1.6 var(--font-mono), monospace;
+  letter-spacing: .03em;
+  color: var(--desk-paper-ink);
+  background: #fff5;
+}
+/* Still-needed jump links — each missing field is one tap away. */
+.neededLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: #6b5a35;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 32px;
+}
+/* Sticky review bar — the way forward stays in reach on a long slip. */
+.stickyCta {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  margin-top: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, var(--desk-paper-light), var(--desk-paper));
+  border: 1px solid var(--desk-paper-rule, #d8cdb4);
+  box-shadow: 0 8px 22px #0002;
+}
+/* Posture pill states — the live mark breathes, the quiet one rests. */
+.posturePill[data-basis='pyth-pro'] { animation: posturePulse 2.4s ease-in-out infinite; }
+.posturePill[data-basis='none'] { opacity: .65; }
+@keyframes posturePulse {
+  0%, 100% { box-shadow: 0 0 0 0 #c5ac7800; }
+  50% { box-shadow: 0 0 0 4px #c5ac7833; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .posturePill[data-basis='pyth-pro'] { animation: none; }
+}
+/* Rail steps double as jump links — quiet buttons under the copy. */
+.stepGo {
+  margin-top: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: 11px/1.4 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase;
+  color: #6b5a35; text-decoration: underline; text-underline-offset: 3px; min-height: 32px;
+}
 
 /* The curve chip's liquidity profile — small, quiet, currentColor. */
 .curveGlyph {

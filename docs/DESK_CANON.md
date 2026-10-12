@@ -63,6 +63,22 @@ Halley stands apart from the tape desks. In the foyer, he is rendered on his own
 - **Approach:** Building the rails that let everyone else move money.
 - **Status:** Planned. Visiting Jay is a closed room — no quote, no paper file, no transplanted approval.
 
+## Surface consistency — progressive disclosure (all desks)
+
+**Status:** Ratified 2026-10-12 after the Halley verbosity review. Halley was the outlier; Jesse/Hetty/Tennie are the reference.
+
+Every desk follows the same five rules so a caller learns the house once:
+
+1. **One thing per screen.** Draft work is a stepped accordion driven by the desk's own step function (`launchStep` on Halley; stage/foreground on tape desks). Only the current step is open; completed steps collapse to a one-line summary chip. Stage headings (`Name the tracker / Anchor the opening / Set the economics`) stay verbatim — they move *inside* the step `<details><summary>`, never removed.
+2. **Voice-first blank.** A blank slip shows a ghost sentence + 3 try-saying chips (`RING_EXAMPLES.<desk>`) + one quiet `Fill by hand` path — never the full form. Reference: Jesse `blankSlip` ghost (`Buy 100 USDC of AAPLx` + caret) and `BlotterHearables`; Hetty identical.
+3. **Hints on demand.** Field help lives in `aria-describedby` targets as today (ids stable for tests/AT), but visually behind an info disclosure or `title` tooltip, revealed on focus/error — not as always-visible paragraphs. Live status (anchor posture, curve hint) renders as a one-line pill (`GapStrip` pattern: `● Pyth live NVDA $xxx` / `● Onchain $xxx · gap xx bps`), full text on tap.
+4. **Gate the ceremony behind review.** The wallet/live ceremony mounts only when there is reviewed, unexpired intent to sign (`reviewIntent !== null`). Draft shows a single link (`Set up wallet first →` to `#halley-live`), not the readiness checklist. Reference: Jesse `JesseLiveSettle` inside review behind a checkbox; Halley condition stays `liveIntent && liveWasEnabled && !viewed` *plus* a review guard.
+5. **One legal stamp.** `TRACKER TOKENS ARE NOT STOCK OWNERSHIP` (footer) + `Paper only: no token is minted` (mode stamp) are the only always-visible compliance lines. All other `tracker ≠ stock / venue never issuer` repetitions collapse into the existing `<details>What a launch is, and what it is not</details>` and the sign-time eligibility checkbox.
+
+Shared primitives (use these, don't invent new ones): `ModeStamp` ⓘ disclosure, `<details class="assumptionsFold|productDetails|evidenceDrawer">`, `blankSlip` ghost + `slipCaret`, `quietEvidence`, `GapStrip` pill, hearable chips that fill the draft (Jesse blotter pattern).
+
+Interaction details (delight pass): hearables apply real draft values with a one-line confirmation — never a dead click. Accordions are user-controlled (`onToggle` wins); the desk auto-advances exactly once per completed step, scrolling to and focusing the first missing field. The slip reads itself back as a one-line summary (`NVDAT · NVDA → USDC · …`) and `Still needed` items are jump links. The primary action carries its remainder (`· 2 left`) in a sticky bar. Status pills breathe when live and dim when quiet; arriving on review scrolls + focuses its heading, and filing lands the house stamp thud.
+
 ## Authoritative pointers
 
 | Document | Authority |
