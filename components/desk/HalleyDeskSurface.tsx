@@ -343,7 +343,8 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const openStep1 = manualOpen['halley-step-1'] ?? (progress === 1 || blank);
   const openStep2 = manualOpen['halley-step-2'] ?? progress !== 1;
   const onStepToggle = (id: string) => (event: SyntheticEvent<HTMLDetailsElement>) => {
-    setManualOpen(prev => ({ ...prev, [id]: event.currentTarget.open }));
+    const open = event.currentTarget.open;
+    setManualOpen(prev => ({ ...prev, [id]: open }));
   };
   const slipLine = `${draft.symbol || '—'} · ${draft.anchorSymbol || 'Unanchored'} → ${draft.quoteSymbol || '—'} · ${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} · grad ${draft.graduationQuote || '—'}`;
   const applyHearable = (line: string) => {

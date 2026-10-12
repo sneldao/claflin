@@ -97,8 +97,9 @@
    Decorative — paint only; the record itself lives in the desk's ledger. */
 .printLine {
   position: absolute;
-  left: 79.5%;
-  top: 66%;
+  left: 76%;
+  top: 72%;
+  z-index: 3;
   width: 52px;
   height: 13px;
   pointer-events: none;
@@ -118,9 +119,9 @@
   border-top: 1px solid rgba(60, 40, 20, 0.4);
 }
 @keyframes printLineFile {
-  0% { opacity: 0; left: 48%; top: 66%; }
+  0% { opacity: 0; left: 46%; top: 70%; }
   30% { opacity: 1; }
-  100% { opacity: 1; left: 79.5%; top: 66%; }
+  100% { opacity: 1; left: 76%; top: 72%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .printLine { animation: none; opacity: 1; }
