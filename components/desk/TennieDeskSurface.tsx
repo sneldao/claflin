@@ -1,12 +1,18 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
 import { EvidenceDelta, EvidencePanel, EvidenceRow } from './EvidencePanel';
 import { ModeStamp } from './ModeStamp';
 import { TickerTape } from './TickerTape';
+import { BlotterHearables } from './BlotterHearables';
+import { LastFilingLine } from './LastFilingLine';
+import { useLatestFiling } from '@/lib/trading/useLatestFiling';
+import { RING_EXAMPLES } from '@/lib/desk/ui-copy';
+import { countRetrieval } from '@/lib/funnel/client';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { offeringCoversDesk, offeringForId } from '@/lib/desk/offerings';
@@ -250,6 +256,30 @@ export function TennieDeskSurface({ desk }: { desk: Desk }) {
 
   const buy = tennie.state.draft.side !== 'sell';
   const complete = Boolean(tennie.state.draft.instrumentId && tennie.state.draft.side && tennie.state.draft.amount);
+  const venueGap = Number(tennie.state.evidence?.venueVsOnchainBps ?? NaN);
+  const showCrossDesk = Number.isFinite(venueGap) && Math.abs(venueGap) >= 50;
+  const filing = useLatestFiling();
+  const tennieBlank = tennie.state.stage === 'draft' && !tennie.state.draft.instrumentId && !tennie.state.draft.amount;
+  const [hearNote, setHearNote] = useState<string | null>(null);
+  const tennieSlipLine = `${instrument?.symbol ?? '—'} · ${tennie.state.draft.side ?? '—'} · ${tennie.state.draft.amount ?? '—'} USDG-side`;
+  const applyTennieHearable = (line: string) => {
+    const lower = line.toLowerCase();
+    const byUnderlying = (sym: string) => ROBINHOOD_INSTRUMENTS.find(i => i.underlyingSymbol === sym) ?? null;
+    if (lower.includes('apple')) {
+      const found = byUnderlying('AAPL');
+      if (found) tennie.edit({ instrumentId: found.id });
+      setHearNote('Picked Apple — size it below and read the three-way tape.');
+      document.getElementById('amount')?.focus({ preventScroll: true });
+    } else if (lower.includes('tesla')) {
+      const found = byUnderlying('TSLA');
+      if (found) tennie.edit({ instrumentId: found.id, side: 'buy', amount: '100' });
+      setHearNote('Drafted 100 USDG of Tesla — request the estimate when ready.');
+      document.getElementById('instruction')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      setHearNote('The three-way tape is below — issuer, onchain, venue side by side.');
+      document.getElementById('tennie-ticket-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <DeskRoom
@@ -304,6 +334,21 @@ export function TennieDeskSurface({ desk }: { desk: Desk }) {
           />
 
           <div className={styles.ticketSurface}>
+            {tennieBlank && filing?.deskId === 'tennie' && (
+              <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('tennie', 'last_filing'); tennie.openRecord(filing.recordId); }} />
+            )}
+            {tennieBlank && (
+              <BlotterHearables
+                lines={RING_EXAMPLES.tennie}
+                onSay={applyTennieHearable}
+                note={hearNote ? <p className={styles.callNote} role="status">{hearNote}</p> : null}
+              />
+            )}
+            {!tennieBlank && tennie.state.stage === 'draft' && (
+              <p className={styles.slipLine} aria-live="polite" title="Your instruction in one line">
+                {tennieSlipLine}
+              </p>
+            )}
             {tennie.state.stage === 'review' && quote ? (
               <div aria-live="polite">
                 <h2>
@@ -326,9 +371,14 @@ export function TennieDeskSurface({ desk }: { desk: Desk }) {
                   about={<p>{quote.assumptions}</p>}
                 />
                 {tennie.state.evidence && <TriplexEvidence evidence={tennie.state.evidence} />}
+                {showCrossDesk ? (
+                  <p className={styles.crossDesk}>
+                    <Link href="/?desk=jesse">Compare on Solana</Link>
+                  </p>
+                ) : null}
                 <div className={styles.slipActions}>
                   {!expired ? (
-                    <button type="button" className={styles.primary} onClick={() => { tennie.file(); }}>
+                    <button type="button" className={styles.primary} onClick={() => { void import('@/lib/sounds').then(({ playStampThud }) => playStampThud()).catch(() => {}); tennie.file(); }}>
                       File a paper record<span aria-hidden="true"> · {secondsLeft}s</span>
                     </button>
                   ) : (
@@ -378,7 +428,8 @@ export function TennieDeskSurface({ desk }: { desk: Desk }) {
                 </div>
                 {tennie.state.notice && <p className={styles.notice} role="alert">{tennie.state.notice}</p>}
                 {tennie.storageError && <p className={styles.notice} role="alert">{tennie.storageError}</p>}
-                <div className={styles.slipActions}>
+                <div className={`${styles.slipActions} ${styles.stickyCta}`}>
+
                   <button
                     type="button"
                     className={styles.primary}

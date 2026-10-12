@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { DeskObjects } from './BrokerageRoom';
 import { DeskRoom } from './DeskRoom';
@@ -23,6 +24,10 @@ import {
   stageLabel,
 } from '@/lib/meteora/plate';
 import { RING_EXAMPLES } from '@/lib/desk/ui-copy';
+import { BlotterHearables } from './BlotterHearables';
+import { LastFilingLine } from './LastFilingLine';
+import { useLatestFiling } from '@/lib/trading/useLatestFiling';
+import { countRetrieval } from '@/lib/funnel/client';
 import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
@@ -311,6 +316,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     ? halley.records.find(record => record.id === halley.viewedRecordId) ?? null
     : null;
 
+  const filing = useLatestFiling();
   const estimate = halley.state.stage === 'review' || halley.state.stage === 'saved' ? halley.state.estimate : null;
   const expired = halley.state.stage === 'review' && estimate !== null && reviewNow >= estimate.expiresAt;
   const secondsLeft = estimate ? Math.max(0, Math.ceil((estimate.expiresAt - reviewNow) / 1000)) : 0;
@@ -609,6 +615,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               <div aria-live="polite">
                 <h2>Filed.</h2>
                 <p className={styles.notice}>A paper launch intent — no mint was created, nothing settled.</p>
+                <p className={styles.crossDesk}>
+                  <Link href="/?desk=jesse">Watch the anchor mark discover price on Jesse's tape →</Link>
+                </p>
                 <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
                 <div className={styles.slipActions}>
                   <button type="button" className={styles.primary} disabled={liveBusy} onClick={halley.cancel}>New instruction</button>
@@ -616,6 +625,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               </div>
             ) : (
               <>
+                {blank && filing?.deskId === 'halley' && (
+                  <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('halley', 'last_filing'); halley.openRecord(filing.recordId); }} />
+                )}
                 {blank && (
                   <div className={plate.lead} id="halley-lead">
                     <p className={plate.leadText}>Name a tracker. Anchor it to an equity. See the curve.</p>
@@ -623,14 +635,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <span aria-hidden="true">Launch an NVIDIA tracker quoted in USDC<i className={styles.slipCaret} /></span>
                       <span className={styles.srOnly}>For example: launch an NVIDIA tracker quoted in USDC.</span>
                     </p>
-                    <div className={styles.voiceSay} aria-label="Try saying">
-                      <p className={styles.voiceSayLead}>Try saying</p>
-                      {RING_EXAMPLES.halley.map(line => (
-                        <button key={line} type="button" onClick={() => applyHearable(line)}>
-                          {line}
-                        </button>
-                      ))}
-                    </div>
+                    <BlotterHearables
+                      lines={RING_EXAMPLES.halley}
+                      onSay={applyHearable}
+                    />
                     <div>
                       <button
                         type="button"

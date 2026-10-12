@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { memo, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { formatEther } from 'viem';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
@@ -835,6 +836,9 @@ export const TradeTicket = memo(function TradeTicket({
           {educationHandoff && <p role="status" className={styles.slipNotice}>Back from practice. This instruction was not changed. Refresh an estimate before deciding.</p>}
           {!historyReady && <p role="status" className={styles.slipNotice}>Browser storage is unavailable. Resolve it before recording.</p>}
           {quoteDrawer}
+          <p className={styles.crossDesk}>
+            Want this name as a new instrument? <Link href="/?desk=halley">Bring Halley a launch →</Link>
+          </p>
           <div className={styles.slipDecision}>
             {LIVE_EXECUTION_ENABLED && !expired && (
               <div className={styles.liveBox}>

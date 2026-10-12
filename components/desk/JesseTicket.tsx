@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { memo, useEffect, useRef, useState } from 'react';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { JesseDesk } from '@/lib/solana/useJesseDesk';
@@ -321,6 +322,9 @@ export const JesseTicket = memo(function JesseTicket({
           {liveMode && liveAvailable && (
             <JesseLiveSettle intent={q.intent} revision={state.revision} />
           )}
+          <p className={styles.crossDesk}>
+            Book too thin? <Link href="/?desk=halley">Halley can launch a tracker around this mark →</Link>
+          </p>
         </WrittenSlip>
         </div>
       </section>
