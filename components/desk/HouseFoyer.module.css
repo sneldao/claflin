@@ -2692,6 +2692,47 @@
   }
 }
 
+/* ————— The vistas — landings where the document lifts and the room
+   itself shows. The scrim eases out to clear air, holds, then settles
+   back into the next room's ground; a small ❦ marks the landing. ————— */
+
+.vista {
+  position: relative;
+  z-index: 2;
+  height: clamp(180px, 32vh, 380px);
+}
+
+.vista::after {
+  content: '❦';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--brass-dim);
+  opacity: 0.5;
+  font-size: 0.85rem;
+}
+
+/* Each landing eases between the grounds of the rooms it joins. */
+.vistaRead {
+  background: linear-gradient(180deg, var(--scrim-read) 0%, transparent 42%, transparent 58%, var(--scrim-dense) 100%);
+}
+
+.vistaOpen {
+  background: linear-gradient(180deg, var(--scrim-read) 0%, transparent 42%, transparent 58%, var(--scrim-open) 100%);
+}
+
+/* The closing landing is the tallest — the house left standing as you leave. */
+.vistaClose {
+  height: clamp(240px, 44vh, 520px);
+  background: linear-gradient(180deg, var(--scrim-open) 0%, transparent 38%, transparent 62%, var(--scrim-return) 100%);
+}
+
+@media (max-width: 640px) {
+  .vista { height: clamp(120px, 22vh, 220px); }
+  .vistaClose { height: clamp(160px, 30vh, 320px); }
+}
+
 .footer {
   position: relative;
   z-index: 2;

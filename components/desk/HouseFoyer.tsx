@@ -314,6 +314,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
 
         <AnnotatedExampleCall />
 
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaRead}`} aria-hidden="true" />
+
         <HouseOfferings
           onEnter={(...args: Parameters<typeof onEnter>) => {
             commitInstruction(wireInstruction, instructionSource);
@@ -367,6 +369,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           </div>
         </section>
 
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaOpen}`} aria-hidden="true" />
+
         <HouseDesks
           desks={openDesks}
           deskHref={id => deskHref(id, null, null)}
@@ -374,6 +378,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
         />
 
         <HouseAnswers marks={wireMarks} />
+
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaClose}`} aria-hidden="true" />
       </main>
 
       {/* The brass register — which room you're in, and a way to jump. */}
