@@ -38,6 +38,11 @@ SKIP_PATTERNS=(
   "lib/meteora/dbc.ts"
   # Same class again: public devnet mint/program addresses in the smoke script.
   "scripts/halley-devnet-launch.ts"
+  # The prove-it drawer's receipts — public repository deep-links and the
+  # published devnet tx signature already recorded in METEORA_LAUNCH_DESK.md.
+  # Kept in its own module so HouseFoyer (which carries the auth/wallet chip)
+  # stays secret-scanned; only this public-identifier file is exempt.
+  "components/desk/foyer-receipts.ts"
 )
 
 # ─────────────────────────────────────────────
