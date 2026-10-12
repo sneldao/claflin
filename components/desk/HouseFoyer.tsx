@@ -26,6 +26,7 @@ import { HouseAnswers } from './HouseAnswers';
 import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
 import { type WireMark } from '../foyer/QuoteColumn';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
+import { FOYER_RECEIPTS } from './foyer-receipts';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { truncateAddress, walletKind } from '@/lib/auth/identity';
 import foyerStyles from './HouseFoyer.module.css';
@@ -129,6 +130,14 @@ function instructionForMark(mark: DeskMark): string {
   return offeringForInstrument(mark.instrumentId)?.underlyingSymbol
     ?? mark.symbol.replace(/[a-z]+$/, '');
 }
+
+/* The prove-it drawer — disclosure as proof. Every claim the house makes is a
+   receipt with a link to the thing that proves it: the source, the CI run, an
+   onchain transaction, the env names. Crypto judges read don't-trust-verify as
+   the interface, so the disclosure is the furniture, not a disclaimer. The
+   receipt data (public repository links and a published devnet transaction)
+   lives in ./foyer-receipts so the pre-commit secret scanner can allowlist
+   that public-identifier module without blinding this component's wallet chip. */
 
 /**
  * Claflin foyer — the market and the brokers' lines are the hero: a live
@@ -398,7 +407,9 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
 
         <AnnotatedExampleCall />
 
-        <div className={`${foyerStyles.vista} ${foyerStyles.vistaRead}`} aria-hidden="true" />
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaRead}`} aria-hidden="true">
+          <p className={foyerStyles.vistaCaption}>every instruction starts as a voice</p>
+        </div>
 
         <HouseOfferings
           onEnter={(...args: Parameters<typeof onEnter>) => {
@@ -453,7 +464,9 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           </div>
         </section>
 
-        <div className={`${foyerStyles.vista} ${foyerStyles.vistaOpen}`} aria-hidden="true" />
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaOpen}`} aria-hidden="true">
+          <p className={foyerStyles.vistaCaption}>each desk owes you an estimate</p>
+        </div>
 
         <HouseDesks
           desks={openDesks}
@@ -463,7 +476,9 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
 
         <HouseAnswers marks={wireMarks} />
 
-        <div className={`${foyerStyles.vista} ${foyerStyles.vistaClose}`} aria-hidden="true" />
+        <div className={`${foyerStyles.vista} ${foyerStyles.vistaClose}`} aria-hidden="true">
+          <p className={foyerStyles.vistaCaption}>the last inch is yours</p>
+        </div>
       </main>
 
       {/* The brass register — which room you're in, and a way to jump. */}
@@ -497,6 +512,22 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           differ from the listed share. Claflin is not a broker-dealer and gives no investment advice.
           Paper records are simulations.
         </p>
+        <details className={foyerStyles.receipts}>
+          <summary className={foyerStyles.receiptsSummary}>
+            Every claim on this page has a receipt <span aria-hidden="true">→</span>
+          </summary>
+          <ul className={foyerStyles.receiptsList}>
+            {FOYER_RECEIPTS.map(receipt => (
+              <li key={receipt.claim}>
+                <a href={receipt.href} target="_blank" rel="noreferrer">
+                  <strong>{receipt.claim}</strong>
+                  <span>{receipt.note}</span>
+                  <code>{receipt.label}</code>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
       </footer>
     </div>
   );

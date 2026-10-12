@@ -2868,6 +2868,26 @@ button.authChip:hover {
   font-size: 0.85rem;
 }
 
+/* The quiet line of furniture-text at each landing — one authored sentence
+   that turns a decorative break into a step in the house's narration. It sits
+   over the canonical headings below, so the vista stays aria-hidden: the
+   sentence is read by the eye as judges scroll, never duplicated to AT. */
+.vistaCaption {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, 15px);
+  width: min(90%, 34ch);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display), 'Fraunces', 'Iowan Old Style', serif;
+  font-size: clamp(0.92rem, 1.4vw, 1.15rem);
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: var(--brass-dim);
+  opacity: 0.82;
+}
+
 /* Each landing eases between the grounds of the rooms it joins. */
 .vistaRead {
   background: linear-gradient(180deg, var(--scrim-read) 0%, transparent 42%, transparent 58%, var(--scrim-dense) 100%);
@@ -2946,6 +2966,88 @@ button.authChip:hover {
 .foyer summary:focus-visible {
   outline: 2px solid #e3cf9e;
   outline-offset: 2px;
+}
+
+/* ————— The prove-it drawer — every claim carries its receipt ————— */
+
+.receipts {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-family: var(--font-mono), monospace;
+}
+
+.receiptsSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+  list-style: none;
+}
+.receiptsSummary::-webkit-details-marker { display: none; }
+.receiptsSummary span { transition: transform 220ms ease; }
+.receipts[open] .receiptsSummary span { transform: translateX(3px); }
+
+.receiptsList {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 0;
+  list-style: none;
+  max-width: 640px;
+}
+
+.receiptsList a {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  align-items: baseline;
+  gap: 2px 14px;
+  padding: 7px 10px;
+  border: 1px solid rgba(179, 144, 90, 0.16);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.14);
+  color: var(--muted);
+  text-decoration: none;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+.receiptsList a:hover {
+  border-color: rgba(197, 172, 120, 0.4);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.receiptsList strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--brass);
+}
+
+.receiptsList span {
+  grid-column: 2;
+  font-size: 0.54rem;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: none;
+  color: #6b5f45;
+}
+
+.receiptsList code {
+  grid-column: 2;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--brass-dim);
+  opacity: 0.85;
+}
+
+@media (max-width: 640px) {
+  .receiptsList a { grid-template-columns: 1fr; }
+  .receiptsList span, .receiptsList code { grid-column: 1; }
 }
 
 @keyframes lampPulse {
