@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { isHalleyLaunchIntent, type HalleyDraft } from '../lib/meteora/contracts';
-import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, HOUSE_SUPPLY, applyDraftEdit, isBlankDraft, launchStep, missingLaunchFields, stageLabel, usesHouseEconomics } from '../lib/meteora/plate';
+import { CURVE_HINTS, CURVE_WEIGHT_SHAPES, HALLEY_EXAMPLE, HOUSE_SUPPLY, SECTION_FOR_FIELD, applyDraftEdit, isBlankDraft, launchStep, missingLaunchFields, stageLabel, usesHouseEconomics } from '../lib/meteora/plate';
 import { PRESET_WEIGHTS } from '../lib/meteora/dbc';
 import { LAUNCH_CURVE_PRESETS } from '../lib/meteora/contracts';
 
@@ -80,6 +80,17 @@ describe('Halley first-use guidance', () => {
     assert.equal(chosen.draft.anchorSymbol, 'TSLA');
   });
 
+  it('routes every draft field to a slip section, so the conversation always lands somewhere', () => {
+    /* A field with no section would silently fall back to the step function
+       and break the slip-follows-the-conversation behaviour. */
+    assert.deepEqual(Object.keys(SECTION_FOR_FIELD).sort(), [
+      'anchorSymbol', 'curve', 'graduationQuote', 'name', 'quoteSymbol', 'supply', 'symbol',
+    ]);
+    assert.equal(SECTION_FOR_FIELD.name, 'halley-step-1');
+    assert.equal(SECTION_FOR_FIELD.anchorSymbol, 'halley-step-2');
+    assert.equal(SECTION_FOR_FIELD.graduationQuote, 'halley-step-3');
+  });
+
   it('lists missing fields in form order and allows an unanchored draft', () => {
     assert.deepEqual(missingLaunchFields(blank), ['tracker name', 'symbol', 'quote asset', 'supply', 'graduation line']);
     assert.deepEqual(missingLaunchFields({ ...HALLEY_EXAMPLE, anchorSymbol: null, curve: null }), []);
@@ -107,7 +118,7 @@ describe('Halley first-use guidance', () => {
       assert.ok(source.includes(`id="${id}"`));
       assert.ok(source.includes(`aria-describedby="${id}"`));
     }
-    assert.match(source, /halley\.edit\(\{ \.\.\.HALLEY_EXAMPLE \}\)/);
+    assert.match(source, /\bedit\(\{ \.\.\.HALLEY_EXAMPLE \}\)/);
     assert.match(source, /Paper only: no token is minted/);
     assert.match(source, /Still needed:/);
     assert.match(source, /<HalleyPlate stage=\{viewed \? 'saved'/);

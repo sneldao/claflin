@@ -153,6 +153,19 @@ export function usesHouseEconomics(draft: HalleyDraft, pencil: DraftPencil): boo
   return pencil.supply === 'house' && pencil.graduationQuote === 'house';
 }
 
+/** Which slip section owns each field. The slip follows the conversation by
+    opening the section belonging to whatever was written last, so a spoken
+    change to the graduation line is answered by the economics fold opening. */
+export const SECTION_FOR_FIELD: Record<keyof HalleyDraft, string> = {
+  name: 'halley-step-1',
+  symbol: 'halley-step-1',
+  anchorSymbol: 'halley-step-2',
+  quoteSymbol: 'halley-step-3',
+  curve: 'halley-step-3',
+  supply: 'halley-step-3',
+  graduationQuote: 'halley-step-3',
+};
+
 /** Short label for the ticket header, replacing an empty placeholder. */
 export function stageLabel(stage: PlateStage): string {
   switch (stage) {

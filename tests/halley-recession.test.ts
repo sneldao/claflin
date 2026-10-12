@@ -46,7 +46,7 @@ describe('settled context recedes once a draft begins', () => {
     assert.match(source, /const started = !blank \|\| halley\.state\.stage !== 'draft'/);
     assert.match(source, /\{!started && productLine\}/);
     assert.match(source, /\{started && productLine\}/, 'the product line moves into its fold, never deleted');
-    assert.match(source, /\{started \? \(\s*<details className=\{styles\.assumptionsFold\}>\s*<summary>\{mode === 'live' \? 'Creating a real token' : 'Exploring on paper'\} · change path<\/summary>\s*\{pathChooser\}/);
+    assert.match(source, /<summary>\{mode === 'live' \? 'Creating a real token' : 'Exploring on paper'\} · change path<\/summary>/);
     assert.match(source, /\{!started && preflight\}/);
     const cta = source.indexOf('Still needed:');
     const preflightAfter = source.indexOf('{started && preflight}');

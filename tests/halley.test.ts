@@ -428,6 +428,60 @@ describe('halley desk session', () => {
     assert.equal(desk!.records.length, 0);
   });
 
+  it('records which field the caller last wrote, so the slip can follow the conversation', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    assert.equal(desk!.state.lastWritten, null, 'a blank slip has nothing to follow');
+
+    await act(async () => desk!.edit({ name: 'NVDA Tracker' }));
+    assert.equal(desk!.state.lastWritten, 'name');
+    await act(async () => desk!.edit({ symbol: 'NVDAT' }));
+    assert.equal(desk!.state.lastWritten, 'symbol', 'the section belongs to the field spoken last');
+
+    /* A hearable that fills the whole slip spans sections and claims none —
+       the step function decides where to land. */
+    await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: 'USDC' }));
+    assert.equal(desk!.state.lastWritten, null);
+
+    await act(async () => desk!.edit({ anchorSymbol: 'NVDA' }));
+    assert.equal(desk!.state.lastWritten, 'anchorSymbol');
+
+    await act(async () => desk!.edit({ quoteSymbol: 'USDC' }));
+    assert.equal(desk!.state.lastWritten, 'quoteSymbol');
+    /* The house's own pencils never claim the conversation. */
+    assert.equal(desk!.state.pencil.supply, 'house');
+    assert.equal(desk!.state.lastWritten, 'quoteSymbol');
+
+    /* Drawing the estimate settles the slip, so the fold state returns to
+       the step function rather than staying wherever the last word landed. */
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    assert.equal(desk!.state.stage, 'review');
+    assert.equal(desk!.state.lastWritten, null);
+  });
+
+  it('never lets a house default outlive a caller decision, across the whole session', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+
+    /* "No anchor, unanchored." */
+    await act(async () => desk!.edit({ name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: null }));
+    await act(async () => desk!.edit({ quoteSymbol: 'NVDAx' }));
+    assert.equal(desk!.state.draft.anchorSymbol, null, 'an equity-pair quote must not undo a declined anchor');
+    assert.equal(desk!.state.pencil.supply, 'house');
+
+    /* The caller adopts the pencilled supply by touching it — from then on
+       it is theirs and a quote change leaves it alone. */
+    await act(async () => desk!.edit({ supply: desk!.state.draft.supply }));
+    assert.equal(desk!.state.pencil.supply, 'caller');
+    await act(async () => desk!.edit({ quoteSymbol: 'AAPLx' }));
+    assert.equal(desk!.state.draft.supply, '1000000', 'the caller keeps the number they confirmed');
+    assert.equal(desk!.state.draft.graduationQuote, '1', 'only the house figure rescales, into the new quote');
+
+    /* A resumed draft is treated as the caller's throughout. */
+    assert.equal(loadHalleyDraft(window.localStorage).supply, '1000000');
+  });
+
   it('surfaces a port failure as a notice and stays on the draft', async () => {
     await render(async () => { throw new Error('The NVDA equity mark is stale.'); });
     await act(async () => desk!.edit({ name: 'NVDA Tracker', symbol: 'NVDAT', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' }));

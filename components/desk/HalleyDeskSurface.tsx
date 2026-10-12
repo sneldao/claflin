@@ -19,6 +19,7 @@ import {
   CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
   HOUSE_SUPPLY,
+  SECTION_FOR_FIELD,
   houseGraduation,
   isBlankDraft,
   usesHouseEconomics,
@@ -354,14 +355,22 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
      a living one-line summary, and a small arrival on review/file. */
   const [chipNote, setChipNote] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({});
-  /* Exactly one fold stands open by default: the first undecided step. */
+  const edit = halley.edit;
+  /* The slip follows the conversation: whichever field was written last owns
+     the open section. The desk records that on every edit path, so a spoken
+     change and a tapped one both answer the same way. */
+  const spokenSection = halley.state.lastWritten ? SECTION_FOR_FIELD[halley.state.lastWritten] : null;
+  /* Exactly one fold stands open by default: the first undecided step, or
+     the section the conversation just touched. */
   const current = slipStep(draft);
   const autoOpen: Record<string, boolean> = {
-    'halley-step-1': current === 1 || blank,
-    'halley-step-2': current === 2 && !blank,
+    'halley-step-1': spokenSection === 'halley-step-1' || (!spokenSection && (current === 1 || blank)),
+    'halley-step-2': spokenSection === 'halley-step-2' || (!spokenSection && current === 2 && !blank),
     /* House defaults usually complete the economics — then the fold rests
-       on its summary and the review button is the next thing to do. */
-    'halley-step-3': current === 3 && !blank && !complete,
+       on its summary and the review button is the next thing to do. A spoken
+       change to one of its fields still opens it, or the caller could never
+       hear back the number they just gave. */
+    'halley-step-3': spokenSection === 'halley-step-3' || (!spokenSection && current === 3 && !blank && !complete),
   };
   const isOpen = (id: string) => manualOpen[id] ?? autoOpen[id];
   /* `toggle` also fires when React sets `open`, so only a state that
@@ -453,11 +462,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const applyHearable = (line: string) => {
     if (liveBusy) return;
     if (/aaplx/i.test(line)) {
-      halley.edit({ quoteSymbol: 'AAPLx' });
+      edit({ quoteSymbol: 'AAPLx' });
       setChipNote('Quoted in AAPLx — the opening reads as an equity ratio.');
       jumpToId('halley-step-2');
     } else if (/nvidia/i.test(line)) {
-      halley.edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
+      edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
       setChipNote('Drafted the NVDA tracker with the house economics — review it, or adjust below.');
       jumpToId('halley-step-3');
     } else if (/draw the curve/i.test(line)) {
@@ -745,7 +754,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                         className={styles.secondary}
                         disabled={liveBusy}
                         onClick={() => {
-                          halley.edit({ ...HALLEY_EXAMPLE });
+                          edit({ ...HALLEY_EXAMPLE });
                           document.getElementById('halley-name')?.focus({ preventScroll: true });
                         }}
                       >
@@ -773,7 +782,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       value={draft.name ?? ''}
                       placeholder="NVDA tracker"
                       aria-describedby="halley-name-hint"
-                      onChange={event => halley.edit({ name: event.target.value || null })}
+                      onChange={event => edit({ name: event.target.value || null })}
                       onKeyDown={onFieldEnter}
                     />
                     <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-name-hint" className={plate.hint}>The token’s display name, 2–40 characters.</p></details>
@@ -787,7 +796,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       value={draft.symbol ?? ''}
                       placeholder="NVDAT"
                       aria-describedby="halley-symbol-hint"
-                      onChange={event => halley.edit({ symbol: event.target.value.toUpperCase() || null })}
+                      onChange={event => edit({ symbol: event.target.value.toUpperCase() || null })}
                       onKeyDown={onFieldEnter}
                     />
                     <details className={styles.assumptionsFold}><summary>What fits here?</summary><p id="halley-symbol-hint" className={plate.hint}>The ticker, 2–10 letters or digits.</p></details>
@@ -803,12 +812,12 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <button key={sym} type="button"
                         aria-pressed={draft.anchorSymbol === sym}
                         className={styles.amountChip} data-active={draft.anchorSymbol === sym}
-                        onClick={() => halley.edit({ anchorSymbol: sym })}>{sym}</button>
+                        onClick={() => edit({ anchorSymbol: sym })}>{sym}</button>
                     ))}
                     <button type="button"
                       aria-pressed={draft.anchorSymbol === null}
                       className={styles.amountChip} data-active={draft.anchorSymbol === null}
-                      onClick={() => halley.edit({ anchorSymbol: null })}>None</button>
+                      onClick={() => edit({ anchorSymbol: null })}>None</button>
                   </div>
 
                     <details className={styles.assumptionsFold}><summary>How does anchoring work?</summary><p id="halley-anchor-hint" className={plate.hint}>An observed equity mark sets the opening price — while the tape sleeps, the live onchain mark anchors instead. None uses 1 quote unit; the estimate always discloses which mark it read. The anchor sets the starting reference — never a peg.</p></details>
@@ -829,7 +838,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       <button key={q.symbol} type="button"
                         aria-pressed={draft.quoteSymbol === q.symbol}
                         className={styles.amountChip} data-active={draft.quoteSymbol === q.symbol}
-                        onClick={() => halley.edit({ quoteSymbol: q.symbol })}>{q.symbol}</button>
+                        onClick={() => edit({ quoteSymbol: q.symbol })}>{q.symbol}</button>
                     ))}
                   </div>
                   </details>
@@ -843,7 +852,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                         aria-pressed={(draft.curve ?? 'equity-pair') === c}
                         className={styles.amountChip} data-active={(draft.curve ?? 'equity-pair') === c}
                         title={CURVE_HINTS[c]}
-                        onClick={() => halley.edit({ curve: c })}>
+                        onClick={() => edit({ curve: c })}>
                         <CurveGlyph preset={c} />
                         {c === 'equity-pair' ? 'equity pair' : c}
                       </button>
@@ -862,7 +871,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     autoComplete="off"
                     value={draft.supply ?? ''}
                     placeholder={`e.g. ${HOUSE_SUPPLY}`}
-                    onChange={event => halley.edit({ supply: event.target.value || null })}
+                    onChange={event => edit({ supply: event.target.value || null })}
                     onKeyDown={onFieldEnter}
                   />
 
@@ -878,7 +887,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     autoComplete="off"
                     value={draft.graduationQuote ?? ''}
                     placeholder={`e.g. ${houseGraduation(draft.quoteSymbol) ?? '150'}`}
-                    onChange={event => halley.edit({ graduationQuote: event.target.value || null })}
+                    onChange={event => edit({ graduationQuote: event.target.value || null })}
                     onKeyDown={onFieldEnter}
                   />
                     <details className={styles.assumptionsFold}><summary>What is this?</summary><p id="halley-grad-hint" className={plate.hint}>The quote-asset threshold used to project migration to DAMM v2 — an economic term, not a promise. This does not launch a pool. House default: 150 USDC, or one share of an xStock — roughly $150–250 collected.</p></details>

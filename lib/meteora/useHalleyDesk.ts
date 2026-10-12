@@ -41,6 +41,9 @@ export interface HalleyDeskState {
   /** Which hand wrote each field — drives pencil vs ink on the slip, and is
       what stops a house default from overwriting a caller's own value. */
   pencil: DraftPencil;
+  /** The field written by the last edit, whoever wrote it. The slip follows
+      the conversation by opening that field's section — see `sectionForField`. */
+  lastWritten: keyof HalleyDraft | null;
   estimate: HalleyLaunchEstimate | null;
   notice: string | null;
   /** Server error code behind the notice (e.g. `anchor_stale`) — drives
@@ -75,7 +78,7 @@ const EMPTY_DRAFT: HalleyDraft = {
 };
 
 function emptyState(): HalleyDeskState {
-  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, pencil: {}, estimate: null, notice: null, noticeCode: null };
+  return { stage: 'draft', draft: { ...EMPTY_DRAFT }, pencil: {}, lastWritten: null, estimate: null, notice: null, noticeCode: null };
 }
 
 export function draftIntent(draft: HalleyDraft): HalleyLaunchIntent | null {
@@ -165,7 +168,7 @@ export function useHalleyDesk(
         for (const [field, value] of Object.entries(draft)) {
           if (value !== null && value !== '') pencil[field as keyof HalleyDraft] = 'caller';
         }
-        return { ...current, draft, pencil };
+        return { ...current, draft, pencil, lastWritten: null };
       });
     }
   }, [storageOf]);
@@ -187,7 +190,13 @@ export function useHalleyDesk(
       persistDraft(draft);
       /* An edit rewrites the launch instruction — an estimate bound to the
          old draft can no longer be filed under it. */
-      return { stage: 'draft', draft, pencil, estimate: null, notice: null, noticeCode: null };
+      /* A single-field edit names the section to open. One that spans sections
+         — a hearable filling the whole slip, or a return from review —
+         claims none and hands the choice back to the step function, so a
+         completed slip rests on its chips again. */
+      const fields = Object.keys(partial) as (keyof HalleyDraft)[];
+      const lastWritten = fields.length === 1 ? fields[0] : null;
+      return { stage: 'draft', draft, pencil, lastWritten, estimate: null, notice: null, noticeCode: null };
     });
     setViewedRecordId(null);
   }, [persistDraft]);
@@ -203,20 +212,20 @@ export function useHalleyDesk(
     const intent = draftIntent(draft);
     if (!intent) return;
     const gen = ++genRef.current;
-    setState({ stage: 'estimating', draft, pencil, estimate: null, notice: null, noticeCode: null });
+    setState({ stage: 'estimating', draft, pencil, lastWritten: null, estimate: null, notice: null, noticeCode: null });
     void (async () => {
       let result: HalleyLaunchEstimate;
       try {
         result = await estimatePort(intent);
       } catch (error) {
         if (genRef.current !== gen) return;
-        setState({ stage: 'draft', draft, pencil, estimate: null,
+        setState({ stage: 'draft', draft, pencil, lastWritten: null, estimate: null,
           notice: error instanceof Error ? error.message : 'The desk could not project this curve. Please retry.',
           noticeCode: error instanceof ApiError ? error.code : null });
         return;
       }
       if (genRef.current !== gen) return;
-      setState({ stage: 'review', draft, pencil, estimate: result, notice: null, noticeCode: null });
+      setState({ stage: 'review', draft, pencil, lastWritten: null, estimate: result, notice: null, noticeCode: null });
     })();
   }, [estimatePort]);
 
@@ -249,7 +258,7 @@ export function useHalleyDesk(
         : [record, ...existing]);
       const draft = { ...current.draft };
       persistDraft({ ...EMPTY_DRAFT });
-      setState({ stage: 'saved', draft, pencil: current.pencil, estimate: record.estimate, notice: null, noticeCode: null });
+      setState({ stage: 'saved', draft, pencil: current.pencil, lastWritten: null, estimate: record.estimate, notice: null, noticeCode: null });
       setViewedRecordId(record.id);
       return true;
     } catch (error) {
