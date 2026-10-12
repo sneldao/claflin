@@ -254,7 +254,7 @@
 }
 
 /* ---------- the desk film ---------- */
-.filmOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 32px; background: rgba(10, 14, 11, .82); backdrop-filter: blur(3px); }
+.filmOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 32px; background: var(--scrim-focus); backdrop-filter: blur(3px); }
 .filmFrame { width: min(1040px, 100%); background: var(--desk-paper, #e7dfc9); border: 1px solid var(--desk-brass-dim, #82724f); box-shadow: 0 30px 80px rgba(0, 0, 0, .6); }
 .filmVideo { display: block; width: 100%; aspect-ratio: 16 / 9; background: #16211a; }
 .filmFoot { display: flex; align-items: center; gap: 20px; padding: 10px 16px; font: 11px/1.5 var(--font-mono), monospace; color: var(--desk-paper-ink, #27362b); }

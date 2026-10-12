@@ -480,6 +480,27 @@ describe('house foyer', () => {
     const html = renderToStaticMarkup(createElement(HouseFoyer, { onEnter: () => {} }));
     assert.doesNotMatch(html, /data-snap-stop/);
   });
+
+  it('room grounds stay scrimmed — the house scene is never painted out', () => {
+    /* Grounds are air, objects are paper: sections below the hero carry
+       the shared scrim tokens so the fixed scene stays present, and no
+       room ground goes opaque again. */
+    const css = source('components/desk/HouseFoyer.module.css');
+    const ground = (name: string) =>
+      [...css.matchAll(new RegExp(`\\.${name}\\b[^}]*}`, 'g'))].map((m) => m[0]).join('\n');
+    for (const [room, token] of [
+      ['wire', '--scrim-dense'], ['method', '--scrim-read'], ['exampleCall', '--scrim-read'],
+      ['desks', '--scrim-open'], ['answers', '--scrim-open'], ['footer', '--scrim-return'],
+    ] as const) {
+      assert.match(ground(room), new RegExp(`var\\(${token}\\)`), `${room} ground uses ${token}`);
+      assert.doesNotMatch(ground(room), /background:\s*var\(--night\)|background:\s*#0d1218\b/, `${room} ground is never opaque night`);
+    }
+    /* The tokens are defined once, in the shared craft file. */
+    const tokens = source('styles/desk-craft.css');
+    for (const t of ['--scrim-dense', '--scrim-read', '--scrim-open', '--scrim-return', '--scrim-focus']) {
+      assert.match(tokens, new RegExp(`${t}:`), `${t} defined in desk-craft`);
+    }
+  });
 });
 
 function quoteRow(over: Partial<{ symbol: string; status: string; price: string | null; updatedAt: number }> = {}, index = 0): WireMark {

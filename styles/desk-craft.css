@@ -70,4 +70,15 @@
   --desk-error: #863928;
   --desk-focus: #e5c788;
   --desk-ease: cubic-bezier(.22,.68,0,1);
+
+  /* Scrim grounds — the room's air, never an object. The house scene is
+     fixed beneath every surface, so a scrimmed ground keeps the lamplight
+     present while the reading plane stays dark. Denser surfaces run
+     nearer opaque; focus veils pair with a blur. Opaque grounds are
+     reserved for objects — paper slips, cards, plates. */
+  --scrim-dense: #0d1218eb;
+  --scrim-read: #0d1218e0;
+  --scrim-open: #0d1218d9;
+  --scrim-return: #0d1218cc;
+  --scrim-focus: #0a0e0bd1;
 }

@@ -896,6 +896,10 @@
 
 /* ————— The live wire: one band of real reference marks ————— */
 
+/* Room grounds are translucent night, never opaque — the house scene is
+   fixed beneath the book, so a scrimmed room keeps the lamplight present
+   while the reading surface stays dark. Denser rooms run nearer opaque;
+   the footer opens up so the room returns at the end. */
 .wire {
   position: relative;
   z-index: 2;
@@ -903,7 +907,7 @@
   flex-wrap: wrap;
   align-items: stretch;
   min-height: 54px;
-  background: var(--night);
+  background: var(--scrim-dense);
   border-top: 1px solid rgba(179, 144, 90, 0.3);
   border-bottom: 1px solid rgba(179, 144, 90, 0.3);
 }
@@ -1067,7 +1071,7 @@
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px);
   background:
     radial-gradient(circle at 82% 18%, rgba(179, 144, 90, 0.12), transparent 34%),
-    linear-gradient(180deg, rgba(13, 18, 24, 0.92), var(--night));
+    linear-gradient(180deg, var(--scrim-dense), var(--scrim-open));
   border-top: 1px solid rgba(179, 144, 90, 0.22);
 }
 
@@ -1452,7 +1456,7 @@
 .method {
   position: relative;
   z-index: 2;
-  background: var(--night);
+  background: var(--scrim-read);
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px) clamp(48px, 8vh, 96px);
 }
 
@@ -1461,7 +1465,7 @@
 .exampleCall {
   position: relative;
   z-index: 2;
-  background: var(--night);
+  background: var(--scrim-read);
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px) clamp(48px, 8vh, 96px);
   border-top: 1px solid rgba(179, 144, 90, 0.18);
 }
@@ -1470,7 +1474,7 @@
 .exampleCall[data-state="rejected"] {
   /* Honest empty state — different from the accepted variant so the
      label is unmistakable. */
-  background: linear-gradient(180deg, var(--night) 0%, #0c0a08 100%);
+  background: linear-gradient(180deg, var(--scrim-read) 0%, #0c0a08f0 100%);
 }
 
 .exampleCallKicker {
@@ -1894,7 +1898,7 @@
   position: relative;
   z-index: 2;
   padding: clamp(56px, 10vh, 120px) clamp(20px, 6vw, 96px);
-  background: var(--night);
+  background: var(--scrim-open);
   border-top: 1px solid rgba(179, 144, 90, 0.22);
 }
 
@@ -2696,7 +2700,7 @@
   align-items: center;
   gap: 14px;
   padding: 16px clamp(20px, 4vw, 48px);
-  background: var(--night);
+  background: var(--scrim-return);
   font-family: var(--font-mono), monospace;
   font-size: 0.58rem;
   letter-spacing: 0.24em;

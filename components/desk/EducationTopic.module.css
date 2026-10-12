@@ -41,7 +41,7 @@
   overflow-y: auto;
   font-family: var(--font-body), "Iowan Old Style", "Palatino Linotype", Palatino, serif;
 }
-.panel::backdrop { background: #030b08a6; }
+.panel::backdrop { background: var(--scrim-focus); }
 @media (max-width: 720px) {
   .panel {
     width: 100%;
