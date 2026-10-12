@@ -1,17 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { latestHouseFiling, type HouseFiling } from './house-filing';
+import { listHouseFilings, type HouseFiling } from './house-filing';
+
+/** Every filing in this browser, newest first, read once when the surface mounts. */
+export function useHouseFilings(): HouseFiling[] {
+  const [filings, setFilings] = useState<HouseFiling[]>([]);
+  useEffect(() => {
+    try {
+      setFilings(listHouseFilings(window.localStorage));
+    } catch {
+      setFilings([]);
+    }
+  }, []);
+  return filings;
+}
 
 /** The newest filing in this browser, read once when the surface mounts. */
 export function useLatestFiling(): HouseFiling | null {
-  const [filing, setFiling] = useState<HouseFiling | null>(null);
-  useEffect(() => {
-    try {
-      setFiling(latestHouseFiling(window.localStorage));
-    } catch {
-      setFiling(null);
-    }
-  }, []);
-  return filing;
+  return useHouseFilings()[0] ?? null;
 }

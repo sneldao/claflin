@@ -4,7 +4,7 @@ import { DESK_INSTRUMENTS } from '../lib/trading/catalog';
 import { PAPER_ASSUMPTIONS, type QuoteEstimate, type TradeIntent } from '../lib/trading/domain';
 import { deskReducer, initialDesk } from '../lib/trading/workflow';
 import { savePaperRecord, type PaperStorage } from '../lib/trading/paper-records';
-import { filingWhen, latestHouseFiling } from '../lib/trading/house-filing';
+import { filingWhen, latestHouseFiling, listHouseFilings } from '../lib/trading/house-filing';
 
 const now = 1788600000000;
 const stock = DESK_INSTRUMENTS[0];
@@ -48,5 +48,21 @@ describe('the house remembers the last filing', () => {
   it('names today and yesterday from the calendar, not from a visit count', () => {
     assert.equal(filingWhen(now, now), 'Today');
     assert.equal(filingWhen(now - 24 * 60 * 60 * 1000, now), 'Yesterday');
+  });
+
+  it('lists the whole book newest-first and survives an unreadable desk', () => {
+    const store = storage();
+    const first = deskReducer(deskReducer(initialDesk(intent), { type: 'request', requestId: 'r1' }), { type: 'quoted', requestId: 'r1', quote });
+    const older = savePaperRecord(store, first, now + 1);
+    const second = deskReducer(
+      deskReducer(initialDesk(intent), { type: 'request', requestId: 'r2' }),
+      { type: 'quoted', requestId: 'r2', quote: { ...quote, id: 'quote-filing-2' } },
+    );
+    const newer = savePaperRecord(store, second, now + 2);
+    store.setItem('claflin.paper.v2.jesse.bad', '{');
+    const filings = listHouseFilings(store);
+    assert.equal(filings.length, 2);
+    assert.equal(filings[0].recordId, newer.id);
+    assert.equal(filings[1].recordId, older.id);
   });
 });

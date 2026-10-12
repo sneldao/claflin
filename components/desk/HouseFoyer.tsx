@@ -14,8 +14,9 @@ import { entryIntentFromInstruction, entryIntentWithInstruction, type EntryInten
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { instructionMatch, readInstruction } from '@/lib/desk/turret';
 import { trackFunnel, trackInstruction } from '@/lib/funnel/client';
-import { useLatestFiling } from '@/lib/trading/useLatestFiling';
+import { useHouseFilings } from '@/lib/trading/useLatestFiling';
 import { LastFilingLine } from './LastFilingLine';
+import { SessionEpilogue } from './SessionEpilogue';
 import { HouseMark } from './HouseMark';
 import { useHouseGraphics, useHouseScene, useHouseSceneApi } from './HouseScene';
 import { GraphicsControl } from './GraphicsControl';
@@ -179,7 +180,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
     setWireInstruction(text);
     setInstructionSource(source);
   };
-  const filing = useLatestFiling();
+  const filings = useHouseFilings();
+  const filing = filings[0] ?? null;
 
   /* The funnel counts each distinct instruction once, however it arrived.
      Only the house book's answer (none/one/several) is sent, never the words. */
@@ -374,7 +376,15 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
               {headlineBottom}
             </h1>
             <p className={foyerStyles.lede}>{FOYER_LEDE}</p>
-            {filing && (
+            {filings.length >= 2 ? (
+              <SessionEpilogue
+                filings={filings}
+                onOpen={record => {
+                  window.scrollTo({ top: 0, behavior: 'instant' });
+                  onEnter(record.deskId, undefined, null, record.recordId);
+                }}
+              />
+            ) : filing ? (
               <LastFilingLine
                 filing={filing}
                 className={foyerStyles.returnFiling}
@@ -383,7 +393,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
                   onEnter(filing.deskId, undefined, null, filing.recordId);
                 }}
               />
-            )}
+            ) : null}
           </div>
 
           <p className={foyerStyles.mobilePromise}>Say or type your stock instruction.</p>

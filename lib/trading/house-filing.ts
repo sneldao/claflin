@@ -27,8 +27,8 @@ function pushQuote(
   });
 }
 
-/** The newest paper sentence this browser still holds, across both open desks. */
-export function latestHouseFiling(storage: PaperStorage): HouseFiling | null {
+/** Every paper sentence this browser still holds, newest first, across the desks. */
+export function listHouseFilings(storage: PaperStorage): HouseFiling[] {
   const candidates: HouseFiling[] = [];
   try {
     for (const record of loadPaperRecords(storage, 'hetty')) {
@@ -72,7 +72,12 @@ export function latestHouseFiling(storage: PaperStorage): HouseFiling | null {
     /* An unreadable Halley book stays out of the hero. */
   }
   candidates.sort((a, b) => b.createdAt - a.createdAt);
-  return candidates[0] ?? null;
+  return candidates;
+}
+
+/** The newest paper sentence this browser still holds, across both open desks. */
+export function latestHouseFiling(storage: PaperStorage): HouseFiling | null {
+  return listHouseFilings(storage)[0] ?? null;
 }
 
 /** Calendar label for a filing, relative to the moment the house is read. */

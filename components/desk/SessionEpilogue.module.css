@@ -1,0 +1,93 @@
+.epilogue {
+  margin: 0 0 22px;
+  max-width: 46ch;
+  padding: 13px 18px 11px;
+  border: 1px solid rgba(197, 172, 120, 0.26);
+  border-radius: 4px;
+  background: var(--scrim-dense, rgba(13, 18, 24, 0.55));
+}
+
+.head {
+  margin: 0 0 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass-dim, #82724f);
+}
+
+.lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lines li + li {
+  border-top: 1px solid rgba(197, 172, 120, 0.14);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 4px 10px;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 7px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.when,
+.desk {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass-dim, #82724f);
+  white-space: nowrap;
+}
+
+.sentence {
+  font-family: var(--font-display), Fraunces, serif;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  color: #f2e8d0;
+}
+
+.go {
+  color: var(--brass, #c5ac78);
+}
+
+.line:hover .sentence,
+.line:focus-visible .sentence {
+  color: var(--brass, #c5ac78);
+}
+
+.line:focus-visible {
+  outline: 1px solid var(--brass, #c5ac78);
+  outline-offset: 2px;
+}
+
+.more,
+.foot {
+  margin: 8px 0 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--brass-dim, #82724f);
+}
+
+.copy {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--brass, #c5ac78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
