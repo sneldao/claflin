@@ -119,6 +119,17 @@ describe('Halley first-use guidance', () => {
     assert.match(source, /starting reference — never a peg/);
     assert.match(source, /an economic term of the token/);
   });
+  it('keeps the slip one-thing-per-screen: three folds, no self-pinning', () => {
+    const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    /* Each stage heading lives in its own step summary — no section is
+       left loose inside another step's fold. */
+    for (const [n, heading] of [[1, 'Name the tracker'], [2, 'Anchor the opening'], [3, 'Set the economics']] as const) {
+      assert.match(source, new RegExp(`id="halley-step-${n}" open=\\{isOpen\\('halley-step-${n}'\\)\\} onToggle=\\{onStepToggle\\('halley-step-${n}'\\)\\}>\\s*<summary className=\\{plate\\.stepSummary\\}><h3 className=\\{plate\\.stageHeading\\}>${heading}</h3>`));
+    }
+    /* Programmatic open changes also fire toggle; the handler must release
+       the pin when the state agrees with the step function. */
+    assert.match(source, /open === autoOpen\[id\]/);
+  });
   it('never shows a live path done from a paper filing alone', () => {
     const plate = readFileSync(new URL('../components/desk/HalleyPlate.tsx', import.meta.url), 'utf8');
     /* Live step three is the wallet ceremony, plainly named. */

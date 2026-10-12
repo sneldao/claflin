@@ -761,18 +761,6 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
           <LineCaptions captions={captions} brokerName="Hetty" applied={applied} />
-          {captions.length > 4 && (
-            <details className={styles.captionHistory}>
-              <summary>Conversation ({captions.length})</summary>
-              <ol>
-                {captions.map((c, i) => (
-                  <li key={`${c.at}-${i}`} data-voice={c.role}>
-                    <span>{c.role === 'user' ? 'You' : 'Hetty'}.</span> {c.text}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          )}
         </div>
       )}
       {!live && !ringing && auth.authenticated && <SavedCallsPanel />}

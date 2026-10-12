@@ -1001,7 +1001,7 @@
 .lineTakeEyebrow { margin: 0 0 6px !important; font: 9px/1.4 var(--font-mono), monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--desk-brass); }
 .lineTakeText { margin: 0 !important; font: 400 16px/1.5 var(--font-display), serif; color: var(--desk-paper-light); }
 .lineTakeNote { margin: 8px 0 0 !important; font-size: 10px; color: var(--desk-muted); }
-.call[data-live="true"] .callCaptions { max-width: none; }
+.call[data-live="true"] .callCaptions { max-width: min(100%, 520px); }
 .captionLine[data-voice="broker"] { font: 400 18px/1.5 var(--font-display), serif; color: var(--desk-paper-light); }
 .captionLine[data-voice="caller"] { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .lineTake { animation: none; } }
@@ -1016,6 +1016,14 @@
 .captionLine > span { display: block; font: 8px/1.6 var(--font-mono), monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--desk-brass-dim); }
 .captionLine[data-voice="hetty"] { color: var(--desk-ink); }
 .captionApplied { margin: 0 !important; font: 11px/1.6 var(--font-mono), monospace; color: var(--desk-brass); border-top: 1px dashed var(--desk-line); padding-top: 8px; }
+/* The tape receding: prior turns clamp to a glance (label + two lines) and
+   dim; the newest turn is the only one at full length. Visual only — the
+   full text stays in the DOM and in the Whole call fold. */
+.captionLine[data-tail="true"] {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
+  overflow: hidden; opacity: .62; font-size: 13px; line-height: 1.5;
+}
+.captionLine[data-tail="true"][data-voice="broker"] { font-size: 14px; }
 .captionHistory { font-size: 11px; color: var(--desk-muted); }
 .captionHistory summary { min-height: 32px; padding: 6px 0; cursor: pointer; color: var(--desk-brass); }
 .captionHistory ol { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; max-height: 220px; overflow: auto; }

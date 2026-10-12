@@ -19,7 +19,6 @@ import {
   CURVE_WEIGHT_SHAPES,
   HALLEY_EXAMPLE,
   isBlankDraft,
-  launchStep,
   missingLaunchFields,
   stageLabel,
 } from '@/lib/meteora/plate';
@@ -31,7 +30,7 @@ import { countRetrieval } from '@/lib/funnel/client';
 import plate from './HalleyPlate.module.css';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { HALLEY_QUOTE_MINTS } from '@/lib/meteora/catalog';
-import { LAUNCH_CURVE_PRESETS, type LaunchCurvePreset } from '@/lib/meteora/contracts';
+import { LAUNCH_CURVE_PRESETS, type HalleyDraft, type LaunchCurvePreset } from '@/lib/meteora/contracts';
 import { halleyLiveIntent, liveStatusFromResponse, type HalleyLiveStatus } from '@/lib/meteora/live-status';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
 import type { HalleyPaperRecord } from '@/lib/meteora/paper';
@@ -143,6 +142,11 @@ function CurveGlyph({ preset }: { preset: LaunchCurvePreset }) {
 function jumpToId(id: string, focus = false) {
   const el = document.getElementById(id);
   if (!el) return;
+  /* A field inside a collapsed step can't take focus — open its fold first.
+     `closest` includes the target itself, so jumping to a step's own id
+     opens it too. */
+  const fold = el.closest('details');
+  if (fold && !fold.open) fold.open = true;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (focus && (el instanceof HTMLInputElement || el instanceof HTMLButtonElement)) {
     el.focus({ preventScroll: true });
@@ -158,6 +162,14 @@ function fieldIdForMissing(field: string): string {
     case 'graduation line': return 'halley-grad';
     default: return 'halley-step-2';
   }
+}
+
+/** Which of the three slip folds is current: name → anchor and quote →
+    economics, following `missingLaunchFields` order. */
+function slipStep(draft: HalleyDraft): 1 | 2 | 3 {
+  if (!draft.name?.trim() || !draft.symbol) return 1;
+  if (!draft.quoteSymbol) return 2;
+  return 3;
 }
 
 /** The estimate's reading as a broker's note — separate clauses when the
@@ -333,19 +345,36 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   /* Stepped accordion state — the desk's own step function decides which
      section stands open (canon: one thing per screen). Completed steps
      collapse to their summary chips; headings stay verbatim for tests. */
-  const progress = launchStep(halley.state.stage, draft);
   const nameSummary = [draft.name?.trim() || null, draft.symbol || null].filter(Boolean).join(' · ');
   const anchorSummary = [draft.anchorSymbol || 'Unanchored', draft.quoteSymbol || null].filter(Boolean).join(' → ');
   /* Delight: hearables that do work, an accordion that respects the hand,
      a living one-line summary, and a small arrival on review/file. */
   const [chipNote, setChipNote] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState<Record<string, boolean>>({});
-  const openStep1 = manualOpen['halley-step-1'] ?? (progress === 1 || blank);
-  const openStep2 = manualOpen['halley-step-2'] ?? progress !== 1;
+  /* Exactly one fold stands open by default: the first undecided step. */
+  const current = slipStep(draft);
+  const autoOpen: Record<string, boolean> = {
+    'halley-step-1': current === 1 || blank,
+    'halley-step-2': current === 2 && !blank,
+    'halley-step-3': current === 3 && !blank,
+  };
+  const isOpen = (id: string) => manualOpen[id] ?? autoOpen[id];
+  /* `toggle` also fires when React sets `open`, so only a state that
+     disagrees with the step function counts as the caller's hand; agreeing
+     with it releases the pin. Without this every auto-opened step pinned
+     itself open and the accordion degraded into the whole form. */
   const onStepToggle = (id: string) => (event: SyntheticEvent<HTMLDetailsElement>) => {
     const open = event.currentTarget.open;
-    setManualOpen(prev => ({ ...prev, [id]: open }));
+    setManualOpen(prev => {
+      if (open === autoOpen[id]) {
+        if (!(id in prev)) return prev;
+        const { [id]: _released, ...rest } = prev;
+        return rest;
+      }
+      return prev[id] === open ? prev : { ...prev, [id]: open };
+    });
   };
+  const econSummary = `${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} supply · grad ${draft.graduationQuote || '—'}`;
   const slipLine = `${draft.symbol || '—'} · ${draft.anchorSymbol || 'Unanchored'} → ${draft.quoteSymbol || '—'} · ${draft.curve ?? 'equity-pair'} · ${draft.supply || '—'} · grad ${draft.graduationQuote || '—'}`;
   const applyHearable = (line: string) => {
     if (liveBusy) return;
@@ -355,9 +384,8 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       jumpToId('halley-step-2');
     } else if (/nvidia/i.test(line)) {
       halley.edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
-      setManualOpen(prev => ({ ...prev, 'halley-step-2': true }));
-      setChipNote('Drafted the NVDA tracker — pick the quote and economics below.');
-      jumpToId('halley-step-2');
+      setChipNote('Drafted the NVDA tracker — set the economics below.');
+      jumpToId('halley-step-3');
     } else if (/draw the curve/i.test(line)) {
       if (complete && halley.state.stage === 'draft') {
         halley.estimate();
@@ -376,16 +404,17 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     if (complete && halley.state.stage === 'draft') halley.estimate();
     else if (missing[0]) jumpToId(fieldIdForMissing(missing[0]), true);
   };
-  /* Auto-advance once: finishing step 1 opens step 2 and lands on the
-     first missing field. Manual toggles always win afterwards. */
-  const prevProgress = useRef(progress);
+  /* Auto-advance: finishing a step opens the next and lands on the first
+     missing field. A step the caller has pinned shut is left alone. */
+  const prevStep = useRef(current);
   useEffect(() => {
-    const before = prevProgress.current;
-    prevProgress.current = progress;
-    if (before === 1 && progress !== 1 && manualOpen['halley-step-2'] === undefined && !blank && missing[0]) {
+    const before = prevStep.current;
+    prevStep.current = current;
+    const next = `halley-step-${current}`;
+    if (current > before && manualOpen[next] !== false && !blank && missing[0]) {
       jumpToId(fieldIdForMissing(missing[0]), true);
     }
-  }, [progress, blank, missing, manualOpen]);
+  }, [current, blank, missing, manualOpen]);
   /* Arrival: review scrolls + focuses its heading; filing lands the stamp's
      thud and returns to the ticket head. Reduced-motion callers still get
      the focus move without the smooth travel. */
@@ -677,7 +706,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       {slipLine}
                     </p>
                   )}
-                  <details className={styles.handForm} id="halley-step-1" open={openStep1} onToggle={onStepToggle('halley-step-1')}>
+                  <details className={styles.handForm} id="halley-step-1" open={isOpen('halley-step-1')} onToggle={onStepToggle('halley-step-1')}>
                     <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Name the tracker</h3>{nameSummary ? <span>{nameSummary}</span> : <span>Start here</span>}</summary>
                   <label htmlFor="halley-name">Tracker name</label>
                   <div className={plate.control}>
@@ -708,7 +737,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </div>
 
                   </details>
-                  <details className={styles.handForm} id="halley-step-2" open={openStep2} onToggle={onStepToggle('halley-step-2')}>
+                  <details className={styles.handForm} id="halley-step-2" open={isOpen('halley-step-2')} onToggle={onStepToggle('halley-step-2')}>
                     <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Anchor the opening</h3>{anchorSummary ? <span>{anchorSummary}</span> : <span>Pick a mark</span>}</summary>
                   <span id="halley-anchor-label">Anchor equity</span>
                   <div className={plate.control}>
@@ -746,8 +775,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                         onClick={() => halley.edit({ quoteSymbol: q.symbol })}>{q.symbol}</button>
                     ))}
                   </div>
-
-                  <h3 className={plate.stageHeading}>Set the economics</h3>
+                  </details>
+                  <details className={styles.handForm} id="halley-step-3" open={isOpen('halley-step-3')} onToggle={onStepToggle('halley-step-3')}>
+                    <summary className={plate.stepSummary}><h3 className={plate.stageHeading}>Set the economics</h3><span>{draft.curve || draft.supply || draft.graduationQuote ? econSummary : 'Curve, supply, graduation'}</span></summary>
                   <span id="halley-curve-label">Curve</span>
                   <div className={plate.control}>
                   <div role="group" aria-labelledby="halley-curve-label" aria-describedby="halley-curve-hint" className={styles.amountChips}>

@@ -67,13 +67,15 @@ Halley stands apart from the tape desks. In the foyer, he is rendered on his own
 
 **Status:** Ratified 2026-10-12 after the Halley verbosity review. Halley was the outlier; Jesse/Hetty/Tennie are the reference.
 
-Every desk follows the same five rules so a caller learns the house once:
+Every desk follows the same six rules so a caller learns the house once:
 
 1. **One thing per screen.** Draft work is a stepped accordion driven by the desk's own step function (`launchStep` on Halley; stage/foreground on tape desks). Only the current step is open; completed steps collapse to a one-line summary chip. Stage headings (`Name the tracker / Anchor the opening / Set the economics`) stay verbatim — they move *inside* the step `<details><summary>`, never removed.
 2. **Voice-first blank.** A blank slip shows a ghost sentence + 3 try-saying chips (`RING_EXAMPLES.<desk>`) + one quiet `Fill by hand` path — never the full form. Reference: Jesse `blankSlip` ghost (`Buy 100 USDC of AAPLx` + caret) and `BlotterHearables`; Hetty identical.
 3. **Hints on demand.** Field help lives in `aria-describedby` targets as today (ids stable for tests/AT), but visually behind an info disclosure or `title` tooltip, revealed on focus/error — not as always-visible paragraphs. Live status (anchor posture, curve hint) renders as a one-line pill (`GapStrip` pattern: `● Pyth live NVDA $xxx` / `● Onchain $xxx · gap xx bps`), full text on tap.
 4. **Gate the ceremony behind review.** The wallet/live ceremony mounts only when there is reviewed, unexpired intent to sign (`reviewIntent !== null`). Draft shows a single link (`Set up wallet first →` to `#halley-live`), not the readiness checklist. Reference: Jesse `JesseLiveSettle` inside review behind a checkbox; Halley condition stays `liveIntent && liveWasEnabled && !viewed` *plus* a review guard.
 5. **One legal stamp.** `TRACKER TOKENS ARE NOT STOCK OWNERSHIP` (footer) + `Paper only: no token is minted` (mode stamp) are the only always-visible compliance lines. All other `tracker ≠ stock / venue never issuer` repetitions collapse into the existing `<details>What a launch is, and what it is not</details>` and the sign-time eligibility checkbox.
+
+6. **Bounded by default.** A surface's height follows the panel, not the session. Anything that grows with use (call captions, slip sections, histories) shows a fixed working set and folds the rest: captions show the newest turn in full and at most two clamped, dimmed prior turns (`LineCaptions`, `CAPTION_TAPE`), with the whole call behind one `Whole call (N lines)` fold owned by `LineCaptions` — panels never re-roll it. Accordion `onToggle` handlers must ignore programmatic toggles (compare against the step function; only disagreement pins), or every auto-opened step stays open forever.
 
 Shared primitives (use these, don't invent new ones): `ModeStamp` ⓘ disclosure, `<details class="assumptionsFold|productDetails|evidenceDrawer">`, `blankSlip` ghost + `slipCaret`, `quietEvidence`, `GapStrip` pill, hearable chips that fill the draft (Jesse blotter pattern).
 

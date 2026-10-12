@@ -45,22 +45,43 @@ export function BrokerLinePlate({ deskId, take, compact = false }: { deskId: Hou
   );
 }
 
-/** The last four lines of the discussion, in order — the tape of the call.
+/** How many turns stand on the tape before receding into the fold. */
+export const CAPTION_TAPE = 3;
+
+/** The tape of the call, sized to the panel rather than the conversation:
+ *  the newest turn in full, the prior turns clamped and dimmed (the tape
+ *  receding), and the whole call behind one fold. Text is never dropped —
+ *  clamping is visual, so assistive tech still reads every turn.
  *  Presentational only; lifecycle and storage stay in the call panels. */
 export function LineCaptions({ captions, brokerName, applied }: {
   captions: readonly Caption[];
   brokerName: string;
   applied: string | null;
 }) {
-  const recent = captions.slice(-4);
+  const recent = captions.slice(-CAPTION_TAPE);
+  const speaker = (c: Caption) => (c.role === 'user' ? 'You' : brokerName);
   return (
     <>
       {recent.map((caption, i) => (
-        <p key={`${caption.at}-${i}`} className={styles.captionLine} data-voice={caption.role === 'agent' ? 'broker' : 'caller'}>
-          <span>{caption.role === 'user' ? 'You' : brokerName}.</span> {caption.text}
+        <p key={`${caption.at}-${i}`} className={styles.captionLine}
+          data-voice={caption.role === 'agent' ? 'broker' : 'caller'}
+          data-tail={i < recent.length - 1 ? 'true' : undefined}>
+          <span>{speaker(caption)}.</span> {caption.text}
         </p>
       ))}
       {applied && <p className={styles.captionApplied}>{applied}</p>}
+      {captions.length > CAPTION_TAPE && (
+        <details className={styles.captionHistory}>
+          <summary>Whole call ({captions.length} lines)</summary>
+          <ol>
+            {captions.map((c, i) => (
+              <li key={`${c.at}-${i}`} data-voice={c.role}>
+                <span>{speaker(c)}.</span> {c.text}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
     </>
   );
 }

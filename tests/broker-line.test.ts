@@ -1,6 +1,7 @@
 import './jsdom-setup';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BrokerLinePlate, LineCaptions } from '../components/desk/BrokerLine';
@@ -43,16 +44,41 @@ describe('broker line plate', () => {
 });
 
 describe('line captions', () => {
-  it('shows the last four lines in order with speaker labels', () => {
-    const captions = ['one', 'two', 'three', 'four', 'five'].map((text, i) => ({ role: (i % 2 === 0 ? 'user' : 'agent') as 'user' | 'agent', text, at: i }));
-    const html = renderToStaticMarkup(createElement(LineCaptions, { captions, brokerName: 'Jesse', applied: 'Applied: AAPLx', discussion: null }));
-    const out = textOf(html);
-    assert.doesNotMatch(out, /\bone\b/);
-    assert.ok(out.indexOf('two') < out.indexOf('three') && out.indexOf('four') < out.indexOf('five'));
-    assert.match(out, /Jesse\. two/);
+  const captions = ['one', 'two', 'three', 'four', 'five'].map((text, i) => ({ role: (i % 2 === 0 ? 'user' : 'agent') as 'user' | 'agent', text, at: i }));
+
+  it('keeps a bounded tape: the last three turns in order, newest in full', () => {
+    const html = renderToStaticMarkup(createElement(LineCaptions, { captions, brokerName: 'Jesse', applied: 'Applied: AAPLx' }));
+    const tape = html.split('<details')[0];
+    const lines = tape.match(/<p class="[^"]*captionLine[^"]*"[^>]*>/g) ?? [];
+    assert.equal(lines.length, 3, 'a long call never stacks more than three turns on the panel');
+    assert.equal(lines.filter(l => l.includes('data-tail="true"')).length, 2, 'all but the newest recede');
+    assert.doesNotMatch(lines[2], /data-tail/);
+    const out = textOf(tape);
+    assert.doesNotMatch(out, /\b(one|two)\b/);
+    assert.ok(out.indexOf('three') < out.indexOf('four') && out.indexOf('four') < out.indexOf('five'));
+    assert.match(out, /Jesse\. four/);
     assert.match(out, /You\. five/);
     assert.match(out, /Applied: AAPLx/);
     assert.match(html, /data-voice="broker"/);
+  });
+
+  it('keeps every turn reachable behind one Whole call fold', () => {
+    const out = textOf(renderToStaticMarkup(createElement(LineCaptions, { captions, brokerName: 'Jesse', applied: null })));
+    assert.match(out, /Whole call \(5 lines\)/);
+    for (const word of ['one', 'two', 'three', 'four', 'five']) assert.match(out, new RegExp(`\\b${word}\\b`));
+    const single = textOf(renderToStaticMarkup(createElement(LineCaptions, { captions: captions.slice(0, 1), brokerName: 'Jesse', applied: null })));
+    assert.doesNotMatch(single, /Whole call/);
+  });
+
+  it('owns the fold in one place — call panels never re-roll their own', () => {
+    for (const panel of ['HalleyCall', 'HettyCallSession', 'JesseCall', 'JesseCallAssemblyAI', 'TennieCall']) {
+      const source = readFileSync(new URL(`../components/desk/${panel}.tsx`, import.meta.url), 'utf8');
+      assert.match(source, /<LineCaptions /, panel);
+      assert.doesNotMatch(source, /captionHistory/, `${panel} duplicates the caption fold`);
+    }
+    const css = readFileSync(new URL('../components/desk/WorkingDesk.module.css', import.meta.url), 'utf8');
+    assert.match(css, /\.captionLine\[data-tail="true"\] \{[^}]*line-clamp/s);
+    assert.doesNotMatch(css, /\.callCaptions \{ max-width: none/);
   });
 });
 
