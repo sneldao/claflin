@@ -41,6 +41,15 @@ function mid(a: string | null, b: string | null): string | null {
   return String((x + y) / 2);
 }
 
+/** Issuer-declared session board, as one short source suffix. */
+function sessionNote(sessions: RobinhoodEvidence['issuerSessions']): string {
+  if (!sessions) return '';
+  const { market, extended, overnight } = sessions;
+  if (market === 'tradable' && extended === 'tradable' && overnight === 'tradable') return ' · all sessions tradable';
+  if (market === 'untradable' && extended === 'untradable' && overnight === 'untradable') return ' · issuer: untradable this session';
+  return ` · market ${market} · extended ${extended} · overnight ${overnight}`;
+}
+
 /** The three-way tape as presented at review or filed: issuer / onchain / venue. */
 function TriplexEvidence({ evidence }: { evidence: RobinhoodEvidence }) {
   return (
@@ -56,7 +65,7 @@ function TriplexEvidence({ evidence }: { evidence: RobinhoodEvidence }) {
             value={evidence.issuer
               ? `$${money(mid(evidence.issuer.tokenBid, evidence.issuer.tokenAsk))}`
               : 'No issuer reading'}
-            source={`Robinhood rhj${evidence.issuer?.halted ? ' · trading halt' : ''}`}
+            source={`Robinhood rhj${evidence.issuer?.halted ? ' · trading halt' : ''}${sessionNote(evidence.issuerSessions)}`}
           />
           <EvidenceRow
             label="Onchain"

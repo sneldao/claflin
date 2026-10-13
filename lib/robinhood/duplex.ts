@@ -9,13 +9,19 @@
  *   venue   — Lighter domain `<SYM>/USDG` spot book: best bid/ask + mid.
  *             Real resting quotes; realized depth is a separate question.
  *
+ * Alongside the issuer quote rides `issuerSessions` — the per-session
+ * trading board from `/assets` ("tradable right now? after hours?
+ * overnight?"), plus a runtime cross-check of the static allowlist against
+ * the live issuer catalog (contract address, asset status). A failed
+ * check is a labelled reason code, never a silent substitution.
+ *
  * Three truthful sources that diverge — labelled, never blended, never
  * called arbitrage. Status 'comparable' only when at least two legs answer.
  */
 
 import { getRobinhoodInstrument } from './catalog';
 import { isRobinhoodInstrumentId, type RobinhoodInstrumentId } from './contracts';
-import { fetchRhjPrices } from './rhj';
+import { fetchRhjPrices, fetchRhjAssets, type RhjAsset, type RhjTradingCapabilities } from './rhj';
 import { fetchLighterBook, fetchLighterBookStats } from './lighter';
 import { createRobinhoodFeedReader } from './chain';
 import { formatAmount } from '../trading/domain';
@@ -29,6 +35,8 @@ export type RobinhoodEvidenceReasonCode =
   | 'unknown-instrument'
   | 'issuer-unavailable'
   | 'issuer-halted'
+  | 'issuer-inactive'
+  | 'issuer-catalog-drift'
   | 'onchain-unavailable'
   | 'onchain-stale'
   | 'venue-unavailable'
@@ -51,6 +59,9 @@ export interface RobinhoodEvidence {
     halted: boolean;
     generatedAt: string | null;
   } | null;
+  /** Issuer-declared session board from `/assets`; null when the
+      issuer catalog could not answer. A label, never a permission. */
+  issuerSessions: RhjTradingCapabilities | null;
   onchain: {
     priceUsd: string;
     updatedAt: number;
@@ -97,6 +108,7 @@ function unavailable(
     observedAt: now,
     status: 'unavailable',
     issuer: null,
+    issuerSessions: null,
     onchain: null,
     venue: null,
     venueVsIssuerBps: null,
@@ -115,6 +127,7 @@ export async function readRobinhoodEvidence(args: {
   instrumentId: string;
   fetchImpl?: typeof fetch;
   readFeeds?: (feeds: readonly string[]) => Promise<({ answer: bigint; decimals: number; updatedAt: number } | null)[]>;
+  readAssets?: () => Promise<Map<string, RhjAsset>>;
   now?: number;
 }): Promise<RobinhoodEvidence> {
   const now = args.now ?? Date.now();
@@ -126,10 +139,12 @@ export async function readRobinhoodEvidence(args: {
 
   const fetchImpl = args.fetchImpl ?? fetch;
   const readFeeds = args.readFeeds ?? createRobinhoodFeedReader();
+  const readAssets = args.readAssets ?? (() => fetchRhjAssets(fetchImpl));
   const reasonCodes: RobinhoodEvidenceReasonCode[] = [];
 
-  const [pricesResult, feedsResult, bookResult, statsResult] = await Promise.allSettled([
+  const [pricesResult, assetsResult, feedsResult, bookResult, statsResult] = await Promise.allSettled([
     fetchRhjPrices(fetchImpl),
+    Promise.resolve(readAssets()),
     Promise.resolve(readFeeds([instrument.chainlinkFeed])),
     fetchLighterBook(instrument.lighterMarketId, fetchImpl, 3),
     fetchLighterBookStats(fetchImpl),
@@ -160,6 +175,25 @@ export async function readRobinhoodEvidence(args: {
     }
   } else {
     reasonCodes.push('issuer-unavailable');
+  }
+
+  /* Session board — issuer-declared per-session status, and the live
+     cross-check of the static allowlist against the issuer catalog.
+     A fetch failure is silence (the leg already says unavailable);
+     a wrong answer from the issuer is a labelled reason code. */
+  let issuerSessions: RhjTradingCapabilities | null = null;
+  if (assetsResult.status === 'fulfilled') {
+    const asset = assetsResult.value.get(instrument.symbol);
+    if (!asset) {
+      reasonCodes.push('issuer-catalog-drift');
+    } else {
+      issuerSessions = asset.tradingCapabilities;
+      if (asset.status !== 'ASSET_STATUS_ACTIVE') reasonCodes.push('issuer-inactive');
+      if (!asset.contractAddress
+        || asset.contractAddress.toLowerCase() !== instrument.contractAddress.toLowerCase()) {
+        reasonCodes.push('issuer-catalog-drift');
+      }
+    }
   }
 
   /* Onchain leg — feed heartbeat is 24h; stale is a label, not a failure. */
@@ -216,6 +250,7 @@ export async function readRobinhoodEvidence(args: {
     observedAt: now,
     status: legs >= 2 ? 'comparable' : 'unavailable',
     issuer,
+    issuerSessions,
     onchain,
     venue,
     venueVsIssuerBps: issuerMid !== null && venueMid !== null ? diff(issuerMid, venueMid) : null,

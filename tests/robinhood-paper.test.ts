@@ -100,6 +100,7 @@ function makeEvidence(i: RobinhoodInstrument): RobinhoodEvidence {
       halted: false,
       generatedAt: '2026-10-01T22:45:48.022470597Z',
     },
+    issuerSessions: { market: 'tradable', extended: 'tradable', overnight: 'tradable' },
     onchain: { priceUsd: '231.39663028', updatedAt: 1_899_999_000, status: 'observed' },
     venue: { marketId: i.lighterMarketId, bestBid: '231.31', bestAsk: '231.35', midPriceUsd: '231.33', dailyQuoteVolumeUsd: '22176.028025' },
     venueVsIssuerBps: '-6.9',

@@ -39,6 +39,50 @@ export interface RhjAsset {
   chainId: number | null;
   currentMultiplier: string | null;
   status: string;
+  tradingCapabilities: RhjTradingCapabilities | null;
+}
+
+export type RhjSessionStatus = 'tradable' | 'untradable' | 'unknown';
+
+/**
+ * Issuer-declared per-session trading state — the answer to "can this
+ * trade right now, after hours, overnight?" sourced from `/assets`
+ * rather than guessed from a clock. The live API nests whole/fractional
+ * status strings under each session; the docs also show flat status
+ * strings. Anything unrecognized fails closed to 'unknown' — a label,
+ * never a permission.
+ */
+export interface RhjTradingCapabilities {
+  market: RhjSessionStatus;
+  extended: RhjSessionStatus;
+  overnight: RhjSessionStatus;
+}
+
+function sessionStatus(raw: unknown): RhjSessionStatus {
+  if (typeof raw === 'string') {
+    if (raw === 'TRADING_STATUS_TRADABLE') return 'tradable';
+    if (raw === 'TRADING_STATUS_UNTRADABLE') return 'untradable';
+    return 'unknown';
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const legs = [
+      (raw as Record<string, unknown>).whole,
+      (raw as Record<string, unknown>).fractional,
+    ];
+    if (legs.some(leg => leg === 'TRADING_STATUS_TRADABLE')) return 'tradable';
+    if (legs.every(leg => leg === 'TRADING_STATUS_UNTRADABLE')) return 'untradable';
+  }
+  return 'unknown';
+}
+
+export function parseTradingCapabilities(value: unknown): RhjTradingCapabilities | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const rec = value as Record<string, unknown>;
+  return {
+    market: sessionStatus(rec.market),
+    extended: sessionStatus(rec.extended),
+    overnight: sessionStatus(rec.overnight),
+  };
 }
 
 function num(v: unknown): number | null {
@@ -75,6 +119,7 @@ function parseAsset(row: Record<string, unknown>): RhjAsset | null {
     chainId: rh ? 4663 : null,
     currentMultiplier: typeof row.currentMultiplier === 'string' ? row.currentMultiplier : null,
     status: typeof row.status === 'string' ? row.status : 'UNKNOWN',
+    tradingCapabilities: parseTradingCapabilities(row.tradingCapabilities),
   };
 }
 

@@ -334,5 +334,9 @@ export function describeTennieEvidence(state: TennieDeskState): string {
   if (evidence.issuer) legs.push('issuer quote');
   if (evidence.onchain) legs.push(`onchain mark at about ${spokenAmount(evidence.onchain.priceUsd)} dollars`);
   if (evidence.venue) legs.push('venue book');
-  return `The three-way tape is on the slip: ${legs.join(', ')} — labelled, never blended.`;
+  const sessions = evidence.issuerSessions;
+  const sessionTail = sessions
+    ? ` The issuer's session board: market ${sessions.market}, extended hours ${sessions.extended}, overnight ${sessions.overnight}.`
+    : '';
+  return `The three-way tape is on the slip: ${legs.join(', ')} — labelled, never blended.${sessionTail}`;
 }

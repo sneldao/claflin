@@ -125,6 +125,8 @@ const estimateSchema = z.object({
   assumptions: z.string().min(1).max(1500),
 }).strict();
 
+const sessionStatusSchema = z.enum(['tradable', 'untradable', 'unknown']);
+
 const evidenceSchema = z.object({
   version: z.literal(1),
   source: z.literal('venue-triplex'),
@@ -141,6 +143,13 @@ const evidenceSchema = z.object({
     halted: z.boolean(),
     generatedAt: z.string().max(60).nullable(),
   }).strict().nullable(),
+  /* Optional for records filed before the session board existed;
+     parseRobinhoodEvidence normalizes a missing key back to null. */
+  issuerSessions: z.object({
+    market: sessionStatusSchema,
+    extended: sessionStatusSchema,
+    overnight: sessionStatusSchema,
+  }).strict().nullable().optional(),
   onchain: z.object({
     priceUsd: z.string().max(40),
     updatedAt: z.number().int().min(0),
@@ -160,6 +169,8 @@ const evidenceSchema = z.object({
     'unknown-instrument',
     'issuer-unavailable',
     'issuer-halted',
+    'issuer-inactive',
+    'issuer-catalog-drift',
     'onchain-unavailable',
     'onchain-stale',
     'venue-unavailable',
@@ -171,7 +182,8 @@ const evidenceSchema = z.object({
 
 /** Validate a triplex evidence payload from the venue-duplex API or storage. */
 export function parseRobinhoodEvidence(input: unknown): RobinhoodEvidence {
-  return evidenceSchema.parse(input);
+  const evidence = evidenceSchema.parse(input);
+  return { ...evidence, issuerSessions: evidence.issuerSessions ?? null };
 }
 
 const recordSchema = z.object({
@@ -226,7 +238,7 @@ export function parseTenniePaperRecord(raw: unknown): TenniePaperRecord {
   const parsed = recordSchema.parse(JSON.parse(text));
   const quote = parseRobinhoodEstimate(parsed.quote);
   const instrument = instrumentSchema.parse(parsed.instrumentSnapshot);
-  const evidence = parsed.evidence === null ? null : evidenceSchema.parse(parsed.evidence);
+  const evidence = parsed.evidence === null ? null : parseRobinhoodEvidence(parsed.evidence);
   /* Cross-record agreement: the record id, the quote, the instrument
      snapshot, and the evidence tape must all describe the same filing. */
   if (parsed.id !== quote.id) throw new Error('Invalid paper record.');
@@ -288,7 +300,7 @@ export function saveTenniePaperRecord(
 ): TenniePaperRecord {
   const quote = parseRobinhoodEstimate(filing.quote);
   const instrument = instrumentSchema.parse(filing.instrument);
-  const evidence = filing.evidence === null ? null : evidenceSchema.parse(filing.evidence);
+  const evidence = filing.evidence === null ? null : parseRobinhoodEvidence(filing.evidence);
   if (now < quote.quotedAt || now >= quote.expiresAt) {
     throw new Error('Request and review a fresh estimate before recording.');
   }
