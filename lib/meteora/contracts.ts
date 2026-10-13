@@ -32,6 +32,61 @@ export type LaunchCurvePreset = 'flat' | 'exponential' | 'long' | 'equity-pair';
 export const LAUNCH_CURVE_PRESETS: readonly LaunchCurvePreset[] =
   Object.freeze(['flat', 'exponential', 'long', 'equity-pair']);
 
+/** Launch profiles — fee, liquidity and post-graduation axes of the DBC
+ *  config (see lib/meteora/profiles.ts for what each one sets). */
+export type HalleyFeeProfile = 'steady' | 'anti-snipe' | 'session';
+export type HalleyLiquidityProfile = 'standard' | 'conviction';
+export type HalleyPostGraduationProfile = 'fixed' | 'dynamic' | 'compounding';
+
+export const HALLEY_FEE_PROFILES: readonly HalleyFeeProfile[] = Object.freeze(['steady', 'anti-snipe', 'session']);
+export const HALLEY_LIQUIDITY_PROFILES: readonly HalleyLiquidityProfile[] = Object.freeze(['standard', 'conviction']);
+export const HALLEY_POST_GRADUATION_PROFILES: readonly HalleyPostGraduationProfile[] =
+  Object.freeze(['fixed', 'dynamic', 'compounding']);
+
+export interface HalleyProfiles {
+  fee: HalleyFeeProfile;
+  liquidity: HalleyLiquidityProfile;
+  postGraduation: HalleyPostGraduationProfile;
+}
+
+/** Serializable profile summary for estimates, records and the builder API. */
+export interface HalleyProfileSummary {
+  profiles: HalleyProfiles;
+  feeSchedule: {
+    mode: 'flat' | 'exponential-decay';
+    startingFeeBps: number;
+    endingFeeBps: number;
+    durationSlots: number;
+    periods: number;
+    dynamicFee: boolean;
+  };
+  liquidity: { lockedBps: number; vestedBps: number; vestingCliffDays: number; vestingDays: number };
+  postGraduation: {
+    dammV2Config: string;
+    migrationFeeOption: 'fixed-25' | 'customizable';
+    poolFeeBps: number;
+    dynamicFee: boolean;
+    collectFeeMode: 'quote' | 'compounding';
+    compoundingFeeBps: number;
+  };
+}
+
+/**
+ * Post-graduation DLMM conviction range — a planned concentrated-liquidity
+ * position around the equity reference. Paper plan only: the desk does not
+ * build or sign the DLMM transaction.
+ */
+export interface HalleyDlmmPlan {
+  /** Price the range centers on, in quote units per base token. */
+  centerPriceQuote: string;
+  centerSource: 'anchor' | 'graduation';
+  binStepBps: number;
+  lowerPriceQuote: string;
+  upperPriceQuote: string;
+  binCount: number;
+  halfWidthBps: number;
+}
+
 /**
  * A launch instruction. The base mint does not exist yet — DBC creates it at
  * launch — so there is no instrumentId; the identity is name + symbol +
@@ -54,6 +109,14 @@ export interface HalleyLaunchIntent {
   supply: string;
   /** Quote units at which the curve migrates to DAMM v2 (e.g. '150' USDC). */
   graduationQuote: string;
+  /** Optional profile overrides — omitted means the house proposes one
+   *  (resolveProfiles). Older filed intents carry none and stay valid. */
+  /** Opening-to-graduation price band in bps; omitted = the house band
+   *  for the curve shape (DEFAULT_BAND_BPS). */
+  bandBps?: number;
+  feeProfile?: HalleyFeeProfile;
+  liquidityProfile?: HalleyLiquidityProfile;
+  postGraduation?: HalleyPostGraduationProfile;
 }
 
 /** An incomplete launch instruction — every field independently nullable. */
@@ -131,9 +194,20 @@ export interface HalleyLaunchEstimate {
     config: string;
     lockedLiquidityBps: number;
   };
-  /** Fees the curve will charge, in bps. */
+  /** Fees the curve will charge, in bps: the steady (post-decay) curve fee
+      and the migrated DAMM v2 pool's base fee. */
   tradingFeeBps: number;
   migrationFeeBps: number;
+  /** Fee schedule, liquidity locks and the post-graduation pool. Optional:
+      older filed estimates predate the field. */
+  profile?: HalleyProfileSummary;
+  /** Opening-to-graduation price band, bps (serialized). */
+  bandBps?: string;
+  /** Tracker tokens the curve + DAMM v2 pool use to raise exactly the
+      graduation line, and the remainder left over to the launcher. */
+  supplySplit?: { circulating: string; leftover: string };
+  /** Planned post-graduation DLMM conviction range — paper plan only. */
+  dlmmConviction?: HalleyDlmmPlan | null;
   quotedAt: number;
   expiresAt: number;
   assumptions: string;
@@ -158,6 +232,10 @@ export function isHalleyLaunchIntent(input: unknown): input is HalleyLaunchInten
   if (!LAUNCH_CURVE_PRESETS.includes(c.curve as LaunchCurvePreset)) return false;
   if (typeof c.supply !== 'string' || !/^[1-9]\d*$/.test(c.supply)) return false;
   if (typeof c.graduationQuote !== 'string' || !POSITIVE_DECIMAL.test(c.graduationQuote) || !/[1-9]/.test(c.graduationQuote)) return false;
+  if (c.bandBps !== undefined && (typeof c.bandBps !== 'number' || !Number.isInteger(c.bandBps) || c.bandBps < 10 || c.bandBps > 90_000)) return false;
+  if (c.feeProfile !== undefined && !HALLEY_FEE_PROFILES.includes(c.feeProfile as HalleyFeeProfile)) return false;
+  if (c.liquidityProfile !== undefined && !HALLEY_LIQUIDITY_PROFILES.includes(c.liquidityProfile as HalleyLiquidityProfile)) return false;
+  if (c.postGraduation !== undefined && !HALLEY_POST_GRADUATION_PROFILES.includes(c.postGraduation as HalleyPostGraduationProfile)) return false;
   return true;
 }
 /* Deliberately not merged into DeskIntentRegistry / QuoteEstimateRegistry:

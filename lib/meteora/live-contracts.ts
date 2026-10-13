@@ -81,3 +81,53 @@ export type HalleyLiveLaunchResult = {
   mintUrl: string | null;
   poolUrl: string | null;
 };
+
+/**
+ * A single-transaction live action against an already-launched DBC pool:
+ * a swap on the curve (buy/sell) or the launcher's trading-fee claim. Same
+ * binding discipline as the launch: the server builds the exact message,
+ * the wallet signs it unchanged, the server verifies the bytes before
+ * broadcast.
+ */
+export interface HalleyTxProposal {
+  version: 1;
+  id: string;
+  deskId: 'halley';
+  network: 'solana:mainnet';
+  mode: 'live';
+  kind: 'swap' | 'claim';
+  wallet: string;
+  pool: string;
+  baseMint: string;
+  quoteMint: string;
+  quoteSymbol: string;
+  /** Swap only. */
+  side: 'buy' | 'sell' | null;
+  /** Raw input amount (smallest units) and the decimals it is in. */
+  amountIn: string;
+  amountInDecimals: number;
+  /** Quoted output before slippage, and the floor the transaction enforces. */
+  expectedOut: string;
+  minimumOut: string;
+  amountOutDecimals: number;
+  slippageBps: number;
+  /** Fee the curve charges on this swap right now (raw, input/quote units). */
+  tradingFee: string;
+  transactionBase64: string;
+  /** sha256 of the unsigned message bytes. */
+  messageHash: string;
+  blockhash: string;
+  lastValidBlockHeight: string | null;
+  quotedAt: number;
+  expiresAt: number;
+  summary: string;
+}
+
+export interface HalleyTxResult {
+  proposalId: string;
+  kind: HalleyTxProposal['kind'];
+  status: 'confirmed' | 'failed' | 'unknown';
+  signature: string | null;
+  message: string;
+  solscanUrl: string | null;
+}

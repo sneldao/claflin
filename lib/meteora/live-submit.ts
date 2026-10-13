@@ -18,12 +18,12 @@ import { signedTransactionBindsToMessage } from './live-prepare';
 import { loadHalleyLiveProposal, markHalleyLiveProposal } from './live-store';
 import type { HalleyLiveLaunchResult } from './live-contracts';
 
-function isZeroSignature(sig: Uint8Array): boolean {
+export function isZeroSignature(sig: Uint8Array): boolean {
   for (const b of sig) if (b !== 0) return false;
   return true;
 }
 
-async function broadcastAndConfirm(
+export async function broadcastAndConfirm(
   connection: Connection,
   raw: Buffer,
   blockhash: string,

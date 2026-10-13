@@ -1,7 +1,7 @@
 import { busyResponse, requestBudget } from '@/lib/trading/http';
 import { resolveAnchor } from '@/lib/meteora/anchor';
 import { quoteMintForSymbol } from '@/lib/meteora/catalog';
-import { estimateLaunch } from '@/lib/meteora/dbc';
+import { HalleyCurveError, estimateLaunch } from '@/lib/meteora/dbc';
 import { isHalleyLaunchIntent, type HalleyLaunchIntent } from '@/lib/meteora/contracts';
 import { HALLEY_PAPER_ENABLED } from '@/lib/meteora/flags';
 
@@ -18,12 +18,18 @@ function intentFromParams(params: URLSearchParams): HalleyLaunchIntent | null {
     curve: (params.get('curve') ?? 'equity-pair'),
     supply: params.get('supply') ?? '1000000',
     graduationQuote: params.get('graduation') ?? '150',
+    /* Optional profile overrides — omitted means the house proposes. */
+    ...(params.get('band') ? { bandBps: Number(params.get('band')) } : {}),
+    ...(params.get('fee') ? { feeProfile: params.get('fee') } : {}),
+    ...(params.get('liquidity') ? { liquidityProfile: params.get('liquidity') } : {}),
+    ...(params.get('post') ? { postGraduation: params.get('post') } : {}),
   } as HalleyLaunchIntent;
   return isHalleyLaunchIntent(intent) ? intent : null;
 }
 
 /**
  * GET /api/desk/halley/estimate?name=…&symbol=NVDA&anchor=NVDA&quote=AAPLx&curve=equity-pair&supply=1000000&graduation=150
+ *   [&band=1000][&fee=steady|anti-snipe|session][&liquidity=standard|conviction][&post=fixed|dynamic|compounding]
  *
  * A projected DBC launch curve anchored to the equity's Pyth mark. Estimate
  * only — it prepares nothing onchain and is never an executable figure.
@@ -69,6 +75,9 @@ export async function GET(req: Request): Promise<Response> {
     const estimate = estimateLaunch(intent, anchor, Date.now(), 'mainnet');
     return Response.json(estimate, { headers });
   } catch (error) {
+    if (error instanceof HalleyCurveError) {
+      return Response.json({ error: error.code, message: error.message }, { status: 422, headers });
+    }
     return Response.json(
       { error: 'estimate_unavailable', message: error instanceof Error ? error.message : 'The launch curve could not be estimated.' },
       { status: 503, headers },

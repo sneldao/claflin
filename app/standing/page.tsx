@@ -56,8 +56,10 @@ export default function StandingPage() {
             <>
               On this deployment <strong>{cap.liveDesks.join(' and ')}</strong> can settle live
               {cap.jesseCaps ? <> — {cap.jesseCaps}</> : null}
+              {cap.halleyCaps ? <> — {cap.halleyCaps}</> : null}
               . Everything else is paper only. Each live path requires <em>two</em> independent
-              server-side flags — one alone never enables real funds.
+              gates — one shipped in the client bundle, one held on the server — and neither
+              alone moves real funds.
             </>
           )}
         </p>

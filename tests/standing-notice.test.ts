@@ -35,15 +35,17 @@ function capabilityInEnv(env: Record<string, string>): string {
 }
 
 describe('the standing notice', () => {
-  it('reports no live capability when both client flags are off', () => {
+  it('reports no live capability when every client flag is off', () => {
     const cap = JSON.parse(capabilityInEnv({
       NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'false',
       NEXT_PUBLIC_LIVE_EXECUTION_ENABLED: 'false',
+      NEXT_PUBLIC_HALLEY_LIVE_ENABLED: 'false',
     }));
     assert.deepEqual(cap.liveDesks, []);
     assert.equal(cap.jesseCaps, null);
+    assert.equal(cap.halleyCaps, null);
     assert.equal(cap.verdict, 'none — paper only');
-    /* Every desk must be named paper, including the two that can go live. */
+    /* Every desk must be named paper, including the three that can go live. */
     assert.deepEqual(cap.paperDesks, [
       'Hetty (Base)', 'Jesse (Solana)', 'Tennie (Robinhood Chain)', 'Halley (Meteora launches)',
     ]);
@@ -61,16 +63,28 @@ describe('the standing notice', () => {
     assert.equal(cap.verdict, 'Jesse live');
   });
 
-  it('never claims Tennie or Halley can settle live', () => {
+  it('reports Halley live and reads the curve cap from the live module', () => {
+    const cap = JSON.parse(capabilityInEnv({
+      NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'false',
+      NEXT_PUBLIC_LIVE_EXECUTION_ENABLED: 'false',
+      NEXT_PUBLIC_HALLEY_LIVE_ENABLED: 'true',
+    }));
+    assert.deepEqual(cap.liveDesks, ['Halley']);
+    /* The number comes from HALLEY_SWAP_LIMITS, so a cap change cannot leave
+       the page claiming a stale one. */
+    assert.match(cap.halleyCaps, /^curve buys capped at 10000 quote units per order$/);
+    assert.equal(cap.verdict, 'Halley live');
+    assert.ok(!cap.paperDesks.includes('Halley (Meteora launches)'));
+  });
+
+  it('never claims Tennie can settle live — no flag may promote her', () => {
     const cap = JSON.parse(capabilityInEnv({
       NEXT_PUBLIC_JESSE_LIVE_ENABLED: 'true',
       NEXT_PUBLIC_LIVE_EXECUTION_ENABLED: 'true',
+      NEXT_PUBLIC_HALLEY_LIVE_ENABLED: 'true',
     }));
-    /* Both are paper-only by design — no flag may promote them. */
     assert.ok(!cap.liveDesks.includes('Tennie'));
-    assert.ok(!cap.liveDesks.includes('Halley'));
     assert.ok(cap.paperDesks.includes('Tennie (Robinhood Chain)'));
-    assert.ok(cap.paperDesks.includes('Halley (Meteora launches)'));
   });
 
   it('reads its capability copy from the standing module, never inline', () => {

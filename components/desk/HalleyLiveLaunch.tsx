@@ -22,6 +22,7 @@ import {
   type HalleyLivePhase,
 } from '@/lib/meteora/live-status';
 import { formatAmount } from '@/lib/trading/domain';
+import { HalleyLiveMarket } from './HalleyLiveMarket';
 import styles from './WorkingDesk.module.css';
 
 type LivePhase = HalleyLivePhase;
@@ -429,6 +430,17 @@ export function HalleyLiveLaunch({
           links={links}
           copied={copied}
           onCopy={() => { void copyTokenLink(); }}
+        />
+      )}
+      {/* The market the launch opened — live price, graduation, premium to
+          the reference, and buy/sell on the curve for any wallet. */}
+      {phase === 'confirmed' && proposal && (
+        <HalleyLiveMarket
+          pool={proposal.pool}
+          anchorSymbol={proposal.intent.anchorSymbol}
+          quoteSymbol={proposal.quoteSymbol}
+          wallet={wallet}
+          account={account}
         />
       )}
       {/* Signatures were broadcast but the mint is not confirmed — say what

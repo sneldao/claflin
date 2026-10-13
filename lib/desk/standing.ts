@@ -10,6 +10,7 @@
 
 import { DESK_CAPABILITIES } from '@/lib/house';
 import { JESSE_LIVE_LIMITS } from '@/lib/solana/live-prepare';
+import { HALLEY_SWAP_LIMITS } from '@/lib/meteora/live-tx';
 
 export interface StandingCapability {
   /** Desks that can settle live on this build, by short name. */
@@ -18,6 +19,8 @@ export interface StandingCapability {
   paperDesks: string[];
   /** One line naming the per-order caps for a live desk, or null if paper. */
   jesseCaps: string | null;
+  /** One line naming the curve buy cap for a live launch desk, or null. */
+  halleyCaps: string | null;
   /** The foot line — what a reader should take away. */
   verdict: string;
 }
@@ -25,10 +28,12 @@ export interface StandingCapability {
 export function standingCapability(): StandingCapability {
   const hettyLive = DESK_CAPABILITIES.hetty.live;
   const jesseLive = DESK_CAPABILITIES.jesse.live;
+  const halleyLive = DESK_CAPABILITIES.halley.live;
 
   const liveDesks = [
     ...(hettyLive ? ['Hetty'] : []),
     ...(jesseLive ? ['Jesse'] : []),
+    ...(halleyLive ? ['Halley'] : []),
   ];
 
   return {
@@ -37,10 +42,13 @@ export function standingCapability(): StandingCapability {
       ...(hettyLive ? [] : ['Hetty (Base)']),
       ...(jesseLive ? [] : ['Jesse (Solana)']),
       'Tennie (Robinhood Chain)',
-      'Halley (Meteora launches)',
+      ...(halleyLive ? [] : ['Halley (Meteora launches)']),
     ],
     jesseCaps: jesseLive
       ? `capped at ${JESSE_LIVE_LIMITS.buyMax} USDC per buy and ${JESSE_LIVE_LIMITS.sellMax} tokens per sell`
+      : null,
+    halleyCaps: halleyLive
+      ? `curve buys capped at ${HALLEY_SWAP_LIMITS.maxBuyQuote} quote units per order`
       : null,
     verdict: liveDesks.length > 0 ? `${liveDesks.join(' and ')} live` : 'none — paper only',
   };

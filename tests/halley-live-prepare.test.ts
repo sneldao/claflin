@@ -1,7 +1,9 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import BN from 'bn.js';
 import { Keypair, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { curveOverflowFor } from '../lib/meteora/dbc';
 import { clearHalleyLiveMemory } from '../lib/meteora/live-store';
 import {
   HALLEY_LIVE_LIMITS,
@@ -177,6 +179,29 @@ describe('halley live prepare', () => {
       (err: unknown) => err instanceof TradingError && err.code === 'demo_limit',
     );
     assert.equal(HALLEY_LIVE_LIMITS.maxSupply, '1000000000000');
+  });
+
+  it('sizes a large-supply curve to its graduation line instead of overflowing', async () => {
+    /* Before 2026-10-13 the graduation line was read as a market-cap delta:
+       1e9 tokens "graduating at 150 USDC" was a near-flat curve whose
+       liquidity overflowed u128. Sized to the line, it is an ordinary band. */
+    let reachedBuilder = false;
+    const mock = mockBuild();
+    const proposal = await prepareHalleyLiveProposal({
+      intent: { ...INTENT, supply: '1000000000' },
+      wallet: WALLET,
+      revision: 1,
+      buildLaunch: async (args: unknown) => { reachedBuilder = true; return mock(args); },
+    });
+    assert.equal(reachedBuilder, true);
+    const raised = Number(proposal.migrationQuoteThreshold) / 1e6;
+    assert.ok(raised >= 150 && raised < 150.01, `threshold ${raised}`);
+  });
+
+  it('keeps the u128 guard for any curve that cannot be encoded', () => {
+    const over = new BN('340282366920938463463374607431768211456');
+    assert.equal(curveOverflowFor({ curve: [{ liquidity: over, sqrtPrice: new BN(1) }] } as never), over.toString(10));
+    assert.equal(curveOverflowFor({ curve: [{ liquidity: new BN(1), sqrtPrice: new BN(1) }] } as never), null);
   });
 
   it('fails closed when a requested anchor cannot be evidenced', async () => {

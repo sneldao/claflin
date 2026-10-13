@@ -36,8 +36,14 @@ SKIP_PATTERNS=(
   # lib/solana/catalog.ts above. The dbc.ts hit is a config key name, not a secret.
   "lib/meteora/catalog.ts"
   "lib/meteora/dbc.ts"
+  # Same class: public DAMM v2 config PDAs and SDK field names over 40 chars
+  # (partnerPermanentLockedLiquidityPercentage et al) are identifiers, not keys.
+  "lib/meteora/profiles.ts"
+  "lib/meteora/pool-reader.ts"
   # Same class again: public devnet mint/program addresses in the smoke script.
   "scripts/halley-devnet-launch.ts"
+  # Same class: public mainnet/devnet USDC mints in the preset publish script.
+  "scripts/halley-publish-presets.ts"
   # The prove-it drawer's receipts — public repository deep-links and the
   # published devnet tx signature already recorded in METEORA_LAUNCH_DESK.md.
   # Kept in its own module so HouseFoyer (which carries the auth/wallet chip)

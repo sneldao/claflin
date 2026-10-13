@@ -85,6 +85,46 @@ const estimateSchema = z.object({
   expiresAt: z.number().int().positive(),
   assumptions: z.string().min(1).max(2000),
   assumptionClauses: z.array(z.string().min(1).max(500)).max(12).optional(),
+  profile: z.object({
+    profiles: z.object({
+      fee: z.enum(['steady', 'anti-snipe', 'session']),
+      liquidity: z.enum(['standard', 'conviction']),
+      postGraduation: z.enum(['fixed', 'dynamic', 'compounding']),
+    }).strict(),
+    feeSchedule: z.object({
+      mode: z.enum(['flat', 'exponential-decay']),
+      startingFeeBps: z.number().int().min(0).max(10_000),
+      endingFeeBps: z.number().int().min(0).max(10_000),
+      durationSlots: z.number().int().min(0),
+      periods: z.number().int().min(0),
+      dynamicFee: z.boolean(),
+    }).strict(),
+    liquidity: z.object({
+      lockedBps: z.number().int().min(0).max(10_000),
+      vestedBps: z.number().int().min(0).max(10_000),
+      vestingCliffDays: z.number().min(0),
+      vestingDays: z.number().min(0),
+    }).strict(),
+    postGraduation: z.object({
+      dammV2Config: z.string().max(60),
+      migrationFeeOption: z.enum(['fixed-25', 'customizable']),
+      poolFeeBps: z.number().int().min(0).max(10_000),
+      dynamicFee: z.boolean(),
+      collectFeeMode: z.enum(['quote', 'compounding']),
+      compoundingFeeBps: z.number().int().min(0).max(10_000),
+    }).strict(),
+  }).strict().optional(),
+  bandBps: z.string().max(40).regex(/^\d+$/).optional(),
+  supplySplit: z.object({ circulating: decimal, leftover: decimal }).strict().optional(),
+  dlmmConviction: z.object({
+    centerPriceQuote: z.string().max(40),
+    centerSource: z.enum(['anchor', 'graduation']),
+    binStepBps: z.number().int().positive().max(10_000),
+    lowerPriceQuote: z.string().max(40),
+    upperPriceQuote: z.string().max(40),
+    binCount: z.number().int().positive().max(70),
+    halfWidthBps: z.number().int().positive().max(10_000),
+  }).strict().nullable().optional(),
 }).strict();
 
 /** Internal consistency only — a filed estimate keeps its provenance even if
