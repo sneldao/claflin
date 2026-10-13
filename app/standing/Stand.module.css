@@ -32,7 +32,7 @@
   color: #6b5a35;
 }
 
-h1 {
+.notice h1 {
   margin: 0 0 4px;
   font-family: var(--font-display), Georgia, serif;
   font-size: clamp(26px, 4.4vw, 38px);
@@ -48,7 +48,7 @@ h1 {
   color: var(--desk-paper-muted);
 }
 
-h2 {
+.notice h2 {
   margin: 30px 0 8px;
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -58,14 +58,14 @@ h2 {
   color: #6b5a35;
 }
 
-p { margin: 0 0 12px; }
-p:last-child { margin-bottom: 0; }
+.notice p { margin: 0 0 12px; }
+.notice p:last-child { margin-bottom: 0; }
 
-ul { margin: 0 0 12px; padding-left: 20px; }
-li { margin-bottom: 7px; }
-li:last-child { margin-bottom: 0; }
+.notice ul { margin: 0 0 12px; padding-left: 20px; }
+.notice li { margin-bottom: 7px; }
+.notice li:last-child { margin-bottom: 0; }
 
-strong { font-weight: 600; }
+.notice strong { font-weight: 600; }
 
 .rule {
   margin: 26px 0;
