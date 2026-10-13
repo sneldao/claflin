@@ -34,7 +34,7 @@ import { decodeBase58 } from '../solana/catalog';
 import { TradingError } from '../trading/domain';
 import { isHalleyLaunchIntent, type HalleyLaunchIntent } from './contracts';
 import { quoteMintForSymbol, type HalleyQuoteMint } from './catalog';
-import { buildLaunchConfig, estimateLaunch } from './dbc';
+import { buildLaunchConfig, curveOverflowFor, estimateLaunch } from './dbc';
 import { resolveAnchor } from './anchor';
 import { halleyLiveEnabled } from './flags';
 import { saveHalleyLiveProposal } from './live-store';
@@ -219,6 +219,14 @@ export async function prepareHalleyLiveProposal(args: {
     throw new TradingError('coverage_pending', 'The DAMM v2 migration config for this network has not been verified yet.', 422);
   }
   const configParams = buildLaunchConfig(intent, quote, anchor);
+  const overflow = curveOverflowFor(configParams);
+  if (overflow) {
+    throw new TradingError(
+      'curve_too_tight',
+      `This curve cannot exist on-chain: ${intent.supply} ${intent.symbol} graduating at only ${intent.graduationQuote} ${intent.quoteSymbol} barely moves the price, and the liquidity that requires overflows the program's curve fields. Raise the graduation line or lower the supply.`,
+      422,
+    );
+  }
   const build = args.buildLaunch ?? createHalleyLaunchBuilder();
   const built = await build({ intent, quote, configParams, wallet, metadataUri: metadataUriFor(intent) });
 
