@@ -513,6 +513,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
         <nav className={foyerStyles.footerLinks} aria-label="House">
           <a href="#house-answers">Straight answers</a>
           <a href="#house-offerings">Product terms</a>
+          <Link href="/standing">What Claflin is</Link>
           <a href="https://github.com/sneldao/claflin" target="_blank" rel="noreferrer">Source ↗</a>
           <GraphicsControl className={foyerStyles.footerGraphics} panelUp />
         </nav>
@@ -520,7 +521,8 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
         <p className={foyerStyles.footerRisk}>
           Tokenized stocks carry issuer, custody, liquidity and smart-contract risk, and their prices can
           differ from the listed share. Claflin is not a broker-dealer and gives no investment advice.
-          Paper records are simulations.
+          Paper records are simulations.{' '}
+          <Link href="/standing">The standing notice says what is live and what is not.</Link>
         </p>
         <details className={foyerStyles.receipts}>
           <summary className={foyerStyles.receiptsSummary}>
