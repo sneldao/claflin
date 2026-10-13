@@ -1702,6 +1702,13 @@
 .liveConsent { margin: 10px 0 0 !important; color: var(--desk-paper-ink); font-size: 13px; font-weight: 600; line-height: 1.5; }
 .liveMeta code { font-size: 11px; overflow-wrap: anywhere; }
 .liveMeta a { color: var(--desk-paper-ink); }
+/* Two-plaque side selector on the live market — same engraved plates as
+   the instrument picker, two wide instead of four narrow. */
+.plaques2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* The curve's walk to graduation — a thin ink fill on the paper rule,
+   matching the watch screen's meter. */
+.marketMeter { height: 4px; margin: 10px 0 2px; background: var(--desk-paper-rule); border-radius: 2px; overflow: hidden; }
+.marketMeterFill { display: block; height: 100%; background: var(--desk-paper-ink); border-radius: 2px; transition: width 600ms var(--ease-swift, ease-out); }
 /* Pre-trade checklist — what the order needs, each row named and state-marked. */
 .readiness { list-style: none; margin: 14px 0 4px; padding: 0; border-top: 1px solid var(--desk-paper-rule); }
 .readiness > li { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--desk-paper-rule); color: var(--desk-paper-ink); font-size: 12px; line-height: 1.5; }

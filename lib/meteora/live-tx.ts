@@ -33,13 +33,9 @@ import { signedTransactionBindsToMessage } from './live-prepare';
 import { broadcastAndConfirm, isZeroSignature } from './live-submit';
 import { loadHalleyTxProposal, markHalleyTxProposal, saveHalleyTxProposal } from './live-tx-store';
 import type { HalleyTxProposal, HalleyTxResult } from './live-contracts';
+import { HALLEY_SWAP_LIMITS } from './limits';
 
-export const HALLEY_SWAP_LIMITS = {
-  /** Largest single buy, whole quote units. */
-  maxBuyQuote: '10000',
-  maxSlippageBps: 1000,
-  defaultSlippageBps: 100,
-} as const;
+export { HALLEY_SWAP_LIMITS };
 
 const REVIEW_WINDOW_MS = 45_000;
 

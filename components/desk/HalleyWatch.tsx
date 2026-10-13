@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { HalleyPaperRecord } from '../../lib/meteora/paper';
 import { watchPaperLaunch } from '../../lib/meteora/watch';
+import { deskChime } from './desk-chime';
 import styles from './HalleyWatch.module.css';
 
 const TICK_MS = 15_000;
@@ -23,26 +24,6 @@ function formatPrice(value: number): string {
   if (value >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
   if (value >= 1) return value.toFixed(2);
   return value.toFixed(4);
-}
-
-/** A soft two-note desk chime. Silent if the browser won't let sound play. */
-function chime(freq: number): void {
-  try {
-    const Ctor = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
-    const ctx = new Ctor();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.9);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 1);
-    setTimeout(() => { void ctx.close(); }, 1200);
-  } catch { /* the desk stays quiet */ }
 }
 
 export function HalleyWatch({ record, onBack }: HalleyWatchProps) {
@@ -64,7 +45,7 @@ export function HalleyWatch({ record, onBack }: HalleyWatchProps) {
     const key = `${record.id}:${tape.crossedMilestone}`;
     if (chimed.current.has(key)) return;
     chimed.current.add(key);
-    chime(tape.crossedMilestone === 1 ? 880 : 660);
+    deskChime(tape.crossedMilestone === 1 ? 880 : 660);
   }, [tape, record.id]);
 
   const estimate = record.estimate;

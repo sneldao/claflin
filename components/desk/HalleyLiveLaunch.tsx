@@ -439,6 +439,7 @@ export function HalleyLiveLaunch({
           pool={proposal.pool}
           anchorSymbol={proposal.intent.anchorSymbol}
           quoteSymbol={proposal.quoteSymbol}
+          trackerSymbol={proposal.intent.symbol}
           wallet={wallet}
           account={account}
         />
