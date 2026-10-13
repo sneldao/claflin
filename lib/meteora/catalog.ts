@@ -92,5 +92,5 @@ export const DBC_POOL_AUTHORITY = 'FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM'
  */
 export const DAMM_V2_MIGRATION_CONFIGS = Object.freeze({
   devnet: '7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd',
-  mainnet: process.env.HALLEY_DAMM_CONFIG ?? '7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd',
+  mainnet: process.env.HALLEY_DAMM_CONFIG?.trim() || '7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd',
 });
