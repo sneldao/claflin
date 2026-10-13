@@ -29,7 +29,8 @@ import type { JesseDesk } from '@/lib/solana/useJesseDesk';
 import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
-import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { BrokerLinePlate, LastCallFold, LineCaptions, hasDiscussion } from './BrokerLine';
+import { spokenText } from '@/lib/desk/caption-text';
 import { RingExample } from './RingExample';
 import styles from './WorkingDesk.module.css';
 
@@ -173,7 +174,7 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
         return s.revision === payload.revision && s.quote?.id === payload.quoteId && Date.now() < payload.expiresAt;
       },
       onStart: text => {
-        addCaption({ role: 'agent', text: text.slice(0, 600), at: Date.now() });
+        addCaption({ role: 'agent', text: spokenText(text).slice(0, 600), at: Date.now() });
         callbacks.current.onAgentSpoken?.(text.slice(0, 600));
       },
       onFallback: () => {
@@ -192,13 +193,13 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
         setHearing(null);
         if (!clean) return;
         userTurnsRef.current += 1;
-        addCaption({ role: 'user', text: clean.slice(0, 600), at: Date.now() });
+        addCaption({ role: 'user', text: spokenText(clean).slice(0, 600), at: Date.now() });
         if (clean.length <= 300) callbacks.current.onUserSpoken?.(clean);
       },
       onAgentTranscript: text => {
         const clean = text.trim();
         if (!clean) return;
-        addCaption({ role: 'agent', text: clean.slice(0, 600), at: Date.now() });
+        addCaption({ role: 'agent', text: spokenText(clean).slice(0, 600), at: Date.now() });
         callbacks.current.onAgentSpoken?.(clean.slice(0, 600));
       },
       onToolCall: async (name, args) => {
@@ -324,14 +325,13 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
       {!live && !ringing && <BrokerLinePlate deskId="jesse" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
-        {!live && !ringing && captions.length > 0 && (
+        {!live && !ringing && hasDiscussion(captions) && (
           <>
             <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>Resume with Jesse</button>
-            <button type="button" className={styles.callButtonSecondary} onClick={() => { setCaptions([]); setEndNote(null); setCallError(null); }}>Start fresh</button>
-            <button type="button" className={styles.callButtonSecondary} onClick={() => { setCaptions([]); void ring('fresh'); }}>Ring fresh</button>
+            <button type="button" className={styles.callButtonSecondary} onClick={() => { setCaptions([]); void ring('fresh'); }}>New call</button>
           </>
         )}
-        {!live && !ringing && captions.length === 0 && (
+        {!live && !ringing && !hasDiscussion(captions) && (
           <>
             <button type="button" className={styles.callButton} data-cue="idle" aria-label={compactPlate ? 'Ring Jesse' : undefined} onClick={() => void ring('fresh')}>
               <span className={styles.ringLamp} aria-hidden="true" />
@@ -367,11 +367,12 @@ export const JesseCallAssemblyAI = memo(function JesseCallAssemblyAI({
           <span aria-hidden="true">Hearing… </span>{hearing}
         </p>
       )}
-      {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
+      {live && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
           <LineCaptions captions={captions} brokerName="Jesse" applied={applied} />
         </div>
       )}
+      {!live && !ringing && <LastCallFold captions={captions} brokerName="Jesse" />}
       {endNote && !live && !ringing && <p className={styles.callFoot} role="status">{endNote}</p>}
       {callError && <p className={styles.callError} role="alert">{callError}</p>}
       {!live && !ringing && !endNote && !callError && (

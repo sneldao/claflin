@@ -95,6 +95,41 @@
   white-space: nowrap;
 }
 
+/* The slip is a single column of sections. It must not reuse the house
+   `.fields` label/control grid: there each <details> became one grid cell,
+   so a section sat in the 100px label column (inputs cut off) beside a
+   closed one (a tall empty block). Inside a section, each label sits above
+   its control — the same reading on desktop and phone. */
+.slipStack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
+.slipStack details > label,
+.slipStack details > span[id$='-label'] {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.slipStack details > summary + label,
+.slipStack details > summary + span[id$='-label'] { margin-top: 0; }
+
+/* The filed view hosts the one-shot comet, which is absolutely placed. */
+.filed { position: relative; }
+
+/* A quiet link-button: "Simple view" back to the launch card. */
+.handLink {
+  margin-left: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  min-height: 44px;
+  font: 11px/1.4 var(--font-mono), monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6b5a35;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Ticket-side helpers: hints under the form, and the first-run lead. */
 .control { display: grid; gap: 6px; min-width: 0; }
 .hint {
@@ -243,6 +278,11 @@
   /* Stacked above the slip, the plate keeps the steps and drops the picture. */
   .plate { margin-top: 18px; padding-top: 16px; }
   .portrait, .lede { display: none; }
+  /* Below the call on a phone the rail is a single line — where you are,
+     not the whole road again (the slip already shows its sections). */
+  .title { display: none; }
+  .step:not([data-state='current']) { display: none; }
+  .stepDetail, .stepGo { display: none; }
   /* The sticky pair: the one-line summary rides the top of the slip while
      its folds scroll underneath; the primary button is sticky at the foot. */
   .slipLine { position: sticky; top: 0; z-index: 3; background: var(--desk-paper); }

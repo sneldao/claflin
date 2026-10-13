@@ -44,10 +44,13 @@ describe('settled context recedes once a draft begins', () => {
   it('the slip folds orientation and the settled path, and puts the wallet note under the one primary action', () => {
     const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
     assert.match(source, /const started = !blank \|\| halley\.state\.stage !== 'draft'/);
-    assert.match(source, /\{!started && productLine\}/);
-    assert.match(source, /\{started && productLine\}/, 'the product line moves into its fold, never deleted');
+    /* The product line always lives in its fold — the blank lead already
+       says what the desk does in one line. */
+    assert.match(source, /<summary>What a launch is, and what it is not<\/summary>\s*\{productLine\}/, 'the product line sits in its fold, never deleted');
+    assert.doesNotMatch(source, /\{!started && productLine\}/);
     assert.match(source, /<summary>\{mode === 'live' \? 'Creating a real token' : 'Exploring on paper'\} · change path<\/summary>/);
-    assert.match(source, /\{!started && preflight\}/);
+    /* The wallet comes after review — never on a blank slip. */
+    assert.doesNotMatch(source, /\{!started && preflight\}/);
     const cta = source.indexOf('Still needed:');
     const preflightAfter = source.indexOf('{started && preflight}');
     assert.ok(cta > 0 && preflightAfter > cta, 'the wallet note follows the primary action once work has begun');

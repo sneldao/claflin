@@ -115,7 +115,7 @@ describe('the working depth and fine-tune disclosure', () => {
   });
 
   it('wires scroll compensation on the fields container', () => {
-    assert.match(source, /className=\{styles\.fields\}\s*onClick=\{onFieldsClick\}/);
+    assert.match(source, /className=\{plate\.slipStack\}\s*onClick=\{onFieldsClick\}/);
     assert.match(source, /window\.scrollBy\(\{\s*top:\s*delta,\s*behavior:\s*'instant'\s*\}\)/);
   });
 

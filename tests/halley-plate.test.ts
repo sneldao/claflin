@@ -153,7 +153,9 @@ describe('Halley first-use guidance', () => {
     assert.match(source, /<HalleyPlate[^>]*mode=\{mode\}/);
     /* While the wallet ceremony runs, review controls and mode changes wait. */
     assert.match(source, /disabled=\{liveBusy\} onClick=\{halley\.revise\}/);
-    assert.match(source, /disabled=\{liveBusy\} onClick=\{halley\.cancel\}/);
+    assert.match(source, /disabled=\{liveBusy\} onClick=\{startOver\}/);
+    /* Starting over still cancels the desk — it only also resets the blank. */
+    assert.match(source, /const startOver = \(\) => \{ setCustomising\(false\); halley\.cancel\(\); \};/);
     assert.match(source, /The wallet ceremony is in motion — let it settle before changing modes/);
   });
   it('keeps one continuous draft → review → wallet journey in live mode', () => {
@@ -224,8 +226,9 @@ describe('Halley first-use guidance', () => {
     assert.match(plate, /mode === 'live' && stage === 'saved' \? 3 : launchStep\(stage, draft\)/);
     /* Paper keeps its saved-means-done reading. */
     assert.equal(launchStep('saved', HALLEY_EXAMPLE), 'done');
-    /* The live stamp names the signer; it never claims the mint happened. */
-    assert.match(plate, /Live path · your wallet signs the mint/);
+    /* One legal stamp, said once: the plate no longer repeats the signer —
+       the mode stamp and the slip foot carry it. */
+    assert.doesNotMatch(plate, /className=\{styles\.stamp\}/);
   });
   it('shows a wallet preflight on the live draft only, with a link to the ceremony', () => {
     const source = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');

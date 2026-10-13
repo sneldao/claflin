@@ -29,7 +29,8 @@ import { halleyToolHandlers } from '@/lib/meteora/desk-tools';
 import type { HalleyDesk } from '@/lib/meteora/useHalleyDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
-import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { BrokerLinePlate, LastCallFold, LineCaptions, hasDiscussion } from './BrokerLine';
+import { spokenText } from '@/lib/desk/caption-text';
 import { RingExample } from './RingExample';
 import styles from './WorkingDesk.module.css';
 
@@ -188,7 +189,7 @@ function HalleyCallInner({
       const text = typeof m.message === 'string' ? m.message.trim() : '';
       if (!text) return;
       const user = m.role === 'user' || m.source === 'user';
-      onCaptionRef.current({ role: user ? 'user' : 'agent', text: text.slice(0, 600), at: Date.now() });
+      onCaptionRef.current({ role: user ? 'user' : 'agent', text: spokenText(text).slice(0, 600), at: Date.now() });
       if (user) {
         if (text.length <= 300) onUserSpoken?.(text);
       } else if (text.length <= 600) {
@@ -409,20 +410,17 @@ function HalleyCallInner({
       {!live && !ringing && <BrokerLinePlate deskId="halley" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
-        {!live && !ringing && captions.length > 0 && (
+        {!live && !ringing && hasDiscussion(captions) && (
           <>
             <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>
               Resume with Halley
             </button>
-            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); }}>
-              Start fresh
-            </button>
             <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); void ring('fresh'); }}>
-              Ring fresh
+              New call
             </button>
           </>
         )}
-        {!live && !ringing && captions.length === 0 && (
+        {!live && !ringing && !hasDiscussion(captions) && (
           <>
             <button
               type="button"
@@ -463,11 +461,12 @@ function HalleyCallInner({
           </>
         )}
       </div>
-      {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
+      {live && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
           <LineCaptions captions={captions} brokerName="Halley" applied={applied} />
         </div>
       )}
+      {!live && !ringing && <LastCallFold captions={captions} brokerName="Halley" />}
       {endNote && !live && !ringing && <p className={styles.callFoot} role="status">{endNote}</p>}
       {callError && <p className={styles.callError} role="alert">{callError}</p>}
       {!live && !ringing && !endNote && !callError && (

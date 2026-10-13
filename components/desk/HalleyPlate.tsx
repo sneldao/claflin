@@ -86,7 +86,7 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
                 {title}
                 {state === 'done' && <span className={styles.srOnly}> (done)</span>}
               </strong>
-              {showDetail && detail}
+              {showDetail && <span className={styles.stepDetail}>{detail}</span>}
               {state !== 'todo' && (
                 <button type="button" className={styles.stepGo} onClick={go} aria-label={`Go to ${title}`}>
                   {state === 'done' ? 'Review' : 'Continue'} →
@@ -96,7 +96,8 @@ export function HalleyPlate({ stage, draft, mode = 'paper', portrait }: {
           );
         })}
       </ol>
-      <p className={styles.stamp}>{mode === 'live' ? 'Live path · your wallet signs the mint' : 'Paper only · no token is minted'}</p>
+      {/* No stamp here: the mode stamp and the slip's foot already say who
+          signs (canon rule 5 — one legal stamp, said once). */}
     </section>
   );
 }

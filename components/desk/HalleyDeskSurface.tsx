@@ -30,7 +30,7 @@ import {
   stageLabel,
 } from '@/lib/meteora/plate';
 import { RING_EXAMPLES } from '@/lib/desk/ui-copy';
-import { BlotterHearables } from './BlotterHearables';
+import { HalleyLaunchCard } from './HalleyLaunchCard';
 import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { countRetrieval } from '@/lib/funnel/client';
@@ -51,6 +51,11 @@ const RoomPresentation = dynamic(
 );
 
 const HalleyCall = dynamic(() => import('./HalleyCall').then(m => m.HalleyCall), { ssr: false });
+/* After-filing surfaces load only when a launch is filed — the canvas
+   share card and the replay tape never weigh on the drafting path. */
+const HalleyWatch = dynamic(() => import('./HalleyWatch').then(m => m.HalleyWatch), { ssr: false });
+const HalleyShareCard = dynamic(() => import('./HalleyShareCard').then(m => m.HalleyShareCard), { ssr: false });
+const HalleyLaunchCelebration = dynamic(() => import('./HalleyLaunchCelebration').then(m => m.HalleyLaunchCelebration), { ssr: false });
 
 /** The three slip sections, in order. They share a `name`, which is what makes
     them mutually exclusive — see the fold ownership note in the surface. */
@@ -442,13 +447,15 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     const summary = (event.target as HTMLElement).closest('summary');
     if (!summary) return;
     const topBefore = summary.getBoundingClientRect().top;
-    requestAnimationFrame(() => {
+    /* After the default toggle has run; reading layout forces it before
+       paint, so the correction never shows as a jump. */
+    setTimeout(() => {
       const topAfter = summary.getBoundingClientRect().top;
       const delta = topAfter - topBefore;
       if (Math.abs(delta) > 1) {
         window.scrollBy({ top: delta, behavior: 'instant' });
       }
-    });
+    }, 0);
   }, []);
 
   /* Section completion feedback: a subtle tick lands with the house stamp
@@ -492,6 +499,18 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
      draft carries intent, settled orientation recedes so the open step and
      its one primary action are what the eye lands on. */
   const started = !blank || halley.state.stage !== 'draft';
+  /* A blank slip is voice-first (canon rule 2): the lead, the ghost, the
+     hearables and one quiet "Fill by hand". The form, its button and its
+     "still needed" list appear once something is written — or on request. */
+  const [customising, setCustomising] = useState(false);
+  const showSlip = customising;
+  /* Starting over — discard or a new instruction — returns the next slip to
+     its voice-first blank, whoever filled the last one. */
+  /* The record a filing just wrote — the watch and the share card read it. */
+  const filedRecord = halley.state.stage === 'saved' && estimate
+    ? halley.records.find(record => record.id === estimate.id) ?? null
+    : null;
+  const startOver = () => { setCustomising(false); halley.cancel(); };
   const productLine = (
     <p className={styles.product}>
       Project a tracker-token launch curve on Meteora using an equity mark
@@ -512,12 +531,16 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           Explore on paper
         </button>
       </div>
-      <p className={plate.hint}>
-        {mode === 'live'
-          ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate.'
-          : 'Paper path — project the curve and file a record in this browser; nothing is minted.'}
-      </p>
     </>
+  );
+  /* The path's plain reading lives behind its fold once chosen — the mode
+     stamp and the foot already say it on the open slip (canon rule 5). */
+  const pathHint = (
+    <p className={plate.hint}>
+      {mode === 'live'
+        ? 'Live path — your wallet creates and signs the mint; voice and this slip only draft and estimate.'
+        : 'Paper path — project the curve and file a record in this browser; nothing is minted.'}
+    </p>
   );
   const preflight = mode === 'live' && halley.state.stage === 'draft' && (
     <div className={plate.preflight}>
@@ -542,7 +565,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       setChipNote('Quoted in AAPLx — the opening reads as an equity ratio.');
       jumpToId('halley-step-2');
     } else if (/nvidia/i.test(line)) {
-      edit({ name: 'NVDA tracker', symbol: 'NVDAT', anchorSymbol: 'NVDA', quoteSymbol: draft.quoteSymbol ?? 'USDC' });
+      edit({ ...HALLEY_EXAMPLE });
       setChipNote('Drafted the NVDA tracker with the house economics — review it, or adjust below.');
       jumpToId('halley-step-3');
     } else if (/draw the curve/i.test(line)) {
@@ -683,26 +706,23 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
         <section id="instruction" className={styles.ticket} aria-labelledby="halley-ticket-title" data-ticket-view="open" data-desk-open="true">
           <div className={styles.paperTop}>
             <span>METEORA LAUNCHES<small>DBC → DAMM V2</small></span>
-            <span className={styles.paperNumber}>
-              {stageLabel(halley.state.stage)}
-              <button
-                type="button"
-                className={styles.densityToggle}
-                onClick={() => setDensity(density === 'full' ? 'brief' : 'full')}
-                aria-pressed={density === 'full'}
-                title="How much folded detail the desk opens by default"
-              >
-                {density === 'full' ? 'Full' : 'Brief'}
-              </button>
-            </span>
+            <span className={styles.paperNumber}>{stageLabel(halley.state.stage)}</span>
+            <button
+              type="button"
+              className={styles.densityToggle}
+              onClick={() => setDensity(density === 'full' ? 'brief' : 'full')}
+              aria-pressed={density === 'full'}
+              title="How much folded detail the desk opens by default"
+            >
+              Detail · {density === 'full' ? 'full' : 'brief'}
+            </button>
           </div>
           <h1 id="halley-ticket-title">The launch desk.</h1>
           {/* Learning furniture is a pre-start surface: once the draft has
               intent, the orientation recedes into its fold (canon rule 6). */}
-          {!started && productLine}
           <details id="halley-what-launch" className={styles.productDetails}>
             <summary>What a launch is, and what it is not</summary>
-            {started && productLine}
+            {productLine}
             <p>
               A launch creates a new tracker token on a Meteora DBC curve anchored
               to an equity’s Pyth mark, quoted in USDC or an xStock. When the
@@ -719,6 +739,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
               <details className={styles.assumptionsFold}>
                 <summary>{mode === 'live' ? 'Creating a real token' : 'Exploring on paper'} · change path</summary>
                 {pathChooser}
+                {pathHint}
               </details>
             ) : pathChooser}
             {liveStatus !== 'enabled' && (
@@ -745,7 +766,6 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 )}
               </p>
             )}
-            {!started && preflight}
             {halley.state.stage === 'review' && estimate ? (
               <div aria-live="polite">
                 <h2 id="halley-review-heading" className={plate.reviewTitle} tabIndex={-1}>
@@ -802,21 +822,34 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     </button>
                   )}
                   <button type="button" className={styles.secondary} disabled={liveBusy} onClick={halley.revise}>Adjust the slip</button>
-                  <button type="button" className={styles.secondary} disabled={liveBusy} onClick={halley.cancel}>Discard</button>
+                  <button type="button" className={styles.secondary} disabled={liveBusy} onClick={startOver}>Discard</button>
                   {liveBusy && <p className={styles.notice} role="status">The wallet ceremony is in motion — the slip waits until it settles.</p>}
                 </div>
                 {expired && <p className={styles.notice} role="status">This estimate has lapsed — the figures above are its last reading.</p>}
               </div>
             ) : halley.state.stage === 'saved' && estimate ? (
-              <div aria-live="polite">
+              <div aria-live="polite" className={plate.filed}>
+                {/* One comet across the slip, once per filing — keyed so a
+                    re-render never replays it; absent under reduced motion. */}
+                <HalleyLaunchCelebration key={estimate.id} symbol={estimate.intent.symbol} />
                 <h2>Filed.</h2>
                 <p className={styles.notice}>A paper launch intent — no mint was created, nothing settled.</p>
+                {filedRecord ? (
+                  <>
+                    <HalleyWatch record={filedRecord} />
+                    <details className={styles.assumptionsFold}>
+                      <summary>Share launch</summary>
+                      <HalleyShareCard record={filedRecord} />
+                    </details>
+                  </>
+                ) : (
+                  <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
+                )}
                 <p className={styles.crossDesk}>
                   <Link href="/?desk=jesse">Watch the anchor mark discover price on Jesse's tape →</Link>
                 </p>
-                <LaunchCurve path={estimate.path} restingQuote={restingQuote} />
                 <div className={styles.slipActions}>
-                  <button type="button" className={styles.primary} disabled={liveBusy} onClick={halley.cancel}>New instruction</button>
+                  <button type="button" className={styles.primary} disabled={liveBusy} onClick={startOver}>New instruction</button>
                 </div>
               </div>
             ) : (
@@ -824,36 +857,28 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                 {blank && filing?.deskId === 'halley' && (
                   <LastFilingLine filing={filing} className={styles.returnFiling} onOpen={() => { countRetrieval('halley', 'last_filing'); halley.openRecord(filing.recordId); }} />
                 )}
-                {blank && (
-                  <div className={plate.lead} id="halley-lead">
-                    <p className={plate.leadText}>Name a tracker. Anchor it to an equity. See the curve.</p>
-                    <p className={styles.slipGhost}>
-                      <span aria-hidden="true">Launch an NVIDIA tracker quoted in USDC<i className={styles.slipCaret} /></span>
-                      <span className={styles.srOnly}>For example: launch an NVIDIA tracker quoted in USDC.</span>
-                    </p>
-                    <BlotterHearables
-                      lines={RING_EXAMPLES.halley}
-                      onSay={applyHearable}
-                    />
-                    <div>
-                      <button
-                        type="button"
-                        className={styles.secondary}
-                        disabled={liveBusy}
-                        onClick={() => {
-                          edit({ ...HALLEY_EXAMPLE });
-                          document.getElementById('halley-name')?.focus({ preventScroll: true });
-                        }}
-                      >
-                        Fill an example (NVDA tracker)
-                      </button>
-                    </div>
-                  </div>
+                {/* The launch card is the default surface — blank and drafting
+                    alike. The full slip is one tap away as Customise. */}
+                {!showSlip && (
+                  <HalleyLaunchCard
+                    draft={draft}
+                    anchorMarkUsd={posture && posture.symbol === draft.anchorSymbol && posture.markUsd ? Number(posture.markUsd) : null}
+                    busy={halley.state.stage === 'estimating' || liveBusy}
+                    canDraw={complete && halley.state.stage === 'draft'}
+                    primaryLabel={halley.state.stage === 'estimating' ? 'Drawing the curve…' : mode === 'live' ? 'Review your launch' : 'See your paper launch'}
+                    onEdit={edit}
+                    onDraw={halley.estimate}
+                    onCustomise={() => setCustomising(true)}
+                    voiceLines={RING_EXAMPLES.halley}
+                    onSay={applyHearable}
+                  />
                 )}
                 {/* Hearable confirmations must outlive the blank state — a
                     chip that fills the draft also unmounts this block's home. */}
                 {chipNote && <p className={plate.hint} role="status">{chipNote}</p>}
-                <div className={styles.fields} onClick={onFieldsClick}>
+                {showSlip && <>
+                <button type="button" className={plate.handLink} onClick={() => setCustomising(false)}>← Simple view</button>
+                <div className={plate.slipStack} onClick={onFieldsClick}>
                   {!blank && (
                     <p className={plate.slipLine} title="Your launch in one line">
                       {slipLine}
@@ -867,7 +892,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       id="halley-name"
                       autoComplete="off"
                       value={draft.name ?? ''}
-                      placeholder="NVDA tracker"
+                      placeholder="e.g. Comet Tracker"
                       aria-describedby="halley-name-hint"
                       onChange={event => edit({ name: event.target.value || null })}
                       onKeyDown={onFieldEnter}
@@ -881,7 +906,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                       id="halley-symbol"
                       autoComplete="off"
                       value={draft.symbol ?? ''}
-                      placeholder="NVDAT"
+                      placeholder="e.g. COMET"
                       aria-describedby="halley-symbol-hint"
                       onChange={event => edit({ symbol: event.target.value.toUpperCase() || null })}
                       onKeyDown={onFieldEnter}
@@ -1023,6 +1048,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </details>
                   </details>
                 </div>
+                </>}
                 {halley.state.notice && <p className={styles.notice} role="alert">{halley.state.notice}</p>}
                 {(halley.state.noticeCode === 'anchor_stale' || halley.state.noticeCode === 'anchor_unavailable') && (
                   <button
@@ -1035,7 +1061,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                   </button>
                 )}
                 {halley.storageError && <p className={styles.notice} role="alert">{halley.storageError}</p>}
-                <div className={plate.stickyCta}>
+                {showSlip && <div className={plate.stickyCta}>
                 <div className={styles.slipActions}>
                   <button
                     type="button"
@@ -1045,11 +1071,11 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onClick={halley.estimate}
                   >
                     {halley.state.stage === 'estimating' ? 'Drawing the curve…' : mode === 'live' ? 'Review projected launch' : 'See paper projection'}
-                    {!complete && halley.state.stage === 'draft' && <span aria-hidden="true"> · {missing.length} left</span>}
+                    {!complete && !blank && halley.state.stage === 'draft' && <span aria-hidden="true"> · {missing.length} left</span>}
                   </button>
                 </div>
-                </div>
-                {!complete && <p id="halley-needed" className={plate.needed}>Still needed: {missing.map((field, i) => (
+                </div>}
+                {!complete && !blank && <p id="halley-needed" className={plate.needed}>Still needed: {missing.map((field, i) => (
                   <span key={field}>{i > 0 && ', '}<button type="button" className={plate.neededLink} onClick={() => jumpToId(fieldIdForMissing(field), true)}>{field}</button></span>
                 ))}.</p>}
                 {/* The wallet comes after review — so once work has begun its

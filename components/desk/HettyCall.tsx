@@ -36,7 +36,7 @@ export const HettyCall = memo(function HettyCall({ desk, liveMode, take = null, 
   const handleSaveState = useCallback((state: TranscriptSaveState) => { setSaveState(state); }, []);
   /* The discussion is the caller's work: it survives across rings and
      remounts. A fresh call begins a fresh save/attempt counter, but keeps
-     what was already said so the caller can resume the thread. "Start fresh"
+     what was already said so the caller can resume the thread. "New call"
      is the deliberate way to clear it. */
   const handleActivity = useCallback(() => { setEndNote(null); setCallError(null); setSaveState({ status: 'idle', attempts: 0 }); }, []);
   const clearDiscussion = useCallback(() => setCaptions([]), []);

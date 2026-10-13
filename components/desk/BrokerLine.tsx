@@ -1,6 +1,7 @@
 'use client';
 
 import { BROKER_VOICE } from '@/lib/desk/broker-voice';
+import { isSpokenTurn, spokenText } from '@/lib/desk/caption-text';
 import { signatureLine } from '@/lib/desk-notes';
 import { getHouseDesk, type HouseDeskId } from '@/lib/house';
 import type { DiscussionCaption as Caption } from '@/lib/hetty/discussion';
@@ -66,7 +67,7 @@ export function LineCaptions({ captions, brokerName, applied }: {
         <p key={`${caption.at}-${i}`} className={styles.captionLine}
           data-voice={caption.role === 'agent' ? 'broker' : 'caller'}
           data-tail={i < recent.length - 1 ? 'true' : undefined}>
-          <span>{speaker(caption)}.</span> {caption.text}
+          <span>{speaker(caption)}.</span> {spokenText(caption.text)}
         </p>
       ))}
       {applied && <p className={styles.captionApplied}>{applied}</p>}
@@ -76,12 +77,37 @@ export function LineCaptions({ captions, brokerName, applied }: {
           <ol>
             {captions.map((c, i) => (
               <li key={`${c.at}-${i}`} data-voice={c.role}>
-                <span>{speaker(c)}.</span> {c.text}
+                <span>{speaker(c)}.</span> {spokenText(c.text)}
               </li>
             ))}
           </ol>
         </details>
       )}
     </>
+  );
+}
+
+/** A discussion worth resuming: the caller actually said something. A call
+ *  where only the broker spoke ("Are you still there?") is not a thread. */
+export function hasDiscussion(captions: readonly Caption[]): boolean {
+  return captions.some(c => c.role === 'user' && isSpokenTurn(c.text));
+}
+
+/** The idle panel's memory of the last call — one line, the transcript a
+ *  tap away. The live tape is for a live call; between calls it recedes. */
+export function LastCallFold({ captions, brokerName }: { captions: readonly Caption[]; brokerName: string }) {
+  if (!hasDiscussion(captions)) return null;
+  const turns = captions.filter(c => isSpokenTurn(c.text));
+  return (
+    <details className={styles.captionHistory} data-last-call="true">
+      <summary>Last call · {turns.length} {turns.length === 1 ? 'line' : 'lines'}</summary>
+      <ol>
+        {turns.map((c, i) => (
+          <li key={`${c.at}-${i}`} data-voice={c.role}>
+            <span>{c.role === 'user' ? 'You' : brokerName}.</span> {spokenText(c.text)}
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }

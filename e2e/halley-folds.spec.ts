@@ -29,6 +29,10 @@ async function openHalley(page: Page) {
   }));
   await page.goto('/?desk=halley');
   await expect(page.getByRole('heading', { name: 'The launch desk.' })).toBeVisible();
+  /* The launch card leads; the three-section slip is Customise. */
+  await expect(page.locator('#halley-card')).toBeVisible();
+  await expect(page.locator('#halley-step-1')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Customise' }).click();
 }
 
 /** Which sections are open right now, in fold order. */

@@ -18,7 +18,8 @@ import type { SlipField, SlipProvenance } from '@/lib/desk/slip-provenance';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { LINE_SIGNAL_EVENT, consumeRingOnArrival } from '@/lib/trading/line-signal';
 import { LINE_FOOT } from '@/lib/desk/ui-copy';
-import { BrokerLinePlate, LineCaptions } from './BrokerLine';
+import { BrokerLinePlate, LastCallFold, LineCaptions, hasDiscussion } from './BrokerLine';
+import { spokenText } from '@/lib/desk/caption-text';
 import { RingExample } from './RingExample';
 import styles from './WorkingDesk.module.css';
 
@@ -113,7 +114,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
   /** Visible transcript save status — owned by the shell, survives remounts. */
   saveState: TranscriptSaveState;
   onSaveState: (state: TranscriptSaveState) => void;
-  /** Deliberate reset of the surviving discussion ("Start fresh"). */
+  /** Deliberate reset of the surviving discussion ("New call"). */
   onClearDiscussion: () => void;
   onLiveChange: (live: boolean) => void;
   onUserSpoken?: (text: string) => void;
@@ -411,9 +412,9 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       const text = typeof m.message === 'string' ? m.message.trim() : '';
       if (!text) return;
       const user = m.role === 'user' || m.source === 'user';
-      const turn = { role: user ? 'user' as const : 'agent' as const, text: text.slice(0, 4000), at: Date.now() };
+      const turn = { role: user ? 'user' as const : 'agent' as const, text: spokenText(text).slice(0, 4000), at: Date.now() };
       turnsRef.current.push(turn);
-      onCaptionRef.current({ role: turn.role, text: text.slice(0, 600), at: turn.at });
+      onCaptionRef.current({ role: turn.role, text: spokenText(text).slice(0, 600), at: turn.at });
       // Two sides of the same exchange: what the caller said, what Hetty
       // actually replied. The ticket carries the caller's words for noisy
       // rooms; the line carries both, because a recognised utterance is not
@@ -704,20 +705,17 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       {!live && !ringing && <BrokerLinePlate deskId="hetty" take={take} compact={compactPlate} />}
       {callNote && <p className={styles.callNote}>{callNote}</p>}
       <div className={styles.callActions}>
-        {!live && !ringing && captions.length > 0 && (
+        {!live && !ringing && hasDiscussion(captions) && (
           <>
             <button type="button" className={styles.callButton} onClick={() => void ring('resume')}>
               Resume with Hetty
             </button>
-            <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); }}>
-              Start fresh
-            </button>
             <button type="button" className={styles.callButtonSecondary} onClick={() => { onClearDiscussion(); void ring('fresh'); }}>
-              Ring fresh
+              New call
             </button>
           </>
         )}
-        {!live && !ringing && captions.length === 0 && (
+        {!live && !ringing && !hasDiscussion(captions) && (
           <>
             <button
               type="button"
@@ -758,11 +756,12 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
           </>
         )}
       </div>
-      {(live || captions.length > 0) && (lastUser || lastAgent || applied) && (
+      {live && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
           <LineCaptions captions={captions} brokerName="Hetty" applied={applied} />
         </div>
       )}
+      {!live && !ringing && <LastCallFold captions={captions} brokerName="Hetty" />}
       {!live && !ringing && auth.authenticated && <SavedCallsPanel />}
       {!live && !ringing && endNote && <p role="status" className={styles.callEnded}>{endNote}</p>}
       {callError && <p role="alert" className={styles.callError}>{callError}</p>}
