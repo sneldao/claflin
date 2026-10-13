@@ -390,6 +390,25 @@ function HalleyCallInner({
   const lastAgent = lastCaption(captions, 'agent');
   const applied = live || captions.length > 0 ? appliedHalleyTicketLine(halley.state, halley.foreground) : null;
 
+  /* Publish the docked call's height so the launch card knows where "in
+     view" sits under it. Set on the section itself; CSS reads it via
+     var(--call-dock) for scroll-margin-top. Measured after layout and on
+     resize — phones rotate, captions change the height. */
+  const dockRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const publish = () => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) el.style.setProperty('--call-dock', `${Math.round(h)}px`);
+    };
+    publish();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [live, ringing]);
+
   const callNote = halley.foreground.kind === 'missing'
     ? 'That paper record is no longer in this browser. Return to the slip.'
     : halley.foreground.kind === 'archive'
@@ -399,7 +418,7 @@ function HalleyCallInner({
         : null;
 
   return (
-    <section id="halley-line" className={styles.call} aria-labelledby="halley-call-title" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
+    <section id="halley-line" ref={dockRef} className={styles.call} aria-labelledby="halley-call-title" data-dock="true" data-live={live ? 'true' : 'false'} data-call={statusKey} data-state={statusKey}>
       <div className={styles.brokerPlate}>
         <h2 id="halley-call-title" className={compactPlate ? styles.srOnly : undefined}>Edmond Halley <small>The Comet Caller · AI broker on Solana launches</small></h2>
         <span className={styles.callLine} data-live={live ? 'true' : 'false'}>

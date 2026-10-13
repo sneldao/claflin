@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { HalleyLaunchCard, formatMove, nudgeFor, priceMoveFor, roundGraduation, tickerFromName } from '../components/desk/HalleyLaunchCard';
+import { HalleyLaunchCard, echoFor, formatMove, nudgeFor, priceMoveFor, regionFor, roundGraduation, tickerFromName } from '../components/desk/HalleyLaunchCard';
 import type { HalleyDraft } from '../lib/meteora/contracts';
 
 const blank: HalleyDraft = {
@@ -48,6 +48,86 @@ describe('the launch card', () => {
     /* Unanchored opens at 1.0: 150 raised on 100 tokens is a real move — no note. */
     const steep = { ...draft, anchorSymbol: null, supply: '100' };
     assert.doesNotMatch(text(card(steep, { canDraw: true })), /barely moves/);
+  });
+
+  it('knows which part of the card answers each write and each explanation', () => {
+    assert.equal(regionFor(null, true), null);
+    assert.equal(regionFor({ said: ['name', 'symbol'], at: 1 }, false), 'name');
+    assert.equal(regionFor({ said: ['anchorSymbol'], at: 1 }, true), 'tiles');
+    assert.equal(regionFor({ said: ['graduationQuote'], at: 1 }, true), 'preview');
+    assert.equal(regionFor({ said: ['supply'], at: 1 }, false), 'tiles', 'no curve yet — the tiles answer for it');
+    /* Halley's explanation targets point into the slip; the card reads them. */
+    assert.equal(regionFor({ target: 'halley-step-2', at: 1 }, true), 'tiles');
+    assert.equal(regionFor({ target: 'halley-step-3', at: 1 }, true), 'preview');
+    assert.equal(regionFor({ target: 'halley-grad', at: 1 }, true), 'preview');
+    assert.equal(regionFor({ target: 'halley-what-launch', at: 1 }, true), null, 'exists on both surfaces already');
+  });
+
+  it('says what Halley just did in one plain line', () => {
+    const draft: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: 'TSLA', quoteSymbol: 'USDC', curve: 'flat', supply: '2000000', graduationQuote: '300' };
+    assert.equal(echoFor(['name', 'symbol'], draft), 'Halley named it Basilisk ($BASILISK).');
+    assert.equal(echoFor(['anchorSymbol'], draft), 'Halley set it to track Tesla.');
+    assert.equal(echoFor(['anchorSymbol'], { ...draft, anchorSymbol: null }), 'Halley set it to track nothing — it opens at 1.0.');
+    assert.equal(echoFor(['curve'], draft), 'Halley chose the flat curve.');
+    assert.equal(echoFor(['supply'], draft), 'Halley set 2,000,000 tokens.');
+    assert.equal(echoFor(['graduationQuote'], draft), 'Halley moved the open-market line to 300 USDC.');
+    assert.equal(echoFor(undefined, draft), null);
+  });
+
+  it('answers a spoken write: a pulse on the touched part and an echo line', () => {
+    const draft: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: 'TSLA', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' };
+    const html = card(draft, { canDraw: true, heard: { said: ['anchorSymbol'], at: 42 } });
+    /* Exactly one pulse, inside the tiles. */
+    assert.equal((html.match(/class="[^"]*heard[^"]*"/g) ?? []).length, 1);
+    assert.match(html, /data-region="tiles"[^>]*><span class="[^"]*heard/);
+    assert.match(html, /role="status" aria-live="polite" data-heard="true"[^>]*><span>Halley set it to track Tesla\.<\/span>/);
+    /* Nothing heard, nothing pulses — the echo line stays mounted but empty. */
+    const quiet = card(draft, { canDraw: true });
+    assert.doesNotMatch(quiet, /class="[^"]*heard[^"]*"/);
+    assert.match(quiet, /data-heard="false"[^>]*><\/p>/);
+  });
+
+  it('answers a refusal too — amber pulse, note in the echo, no invented write', () => {
+    const draft: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: 'TSLA', quoteSymbol: 'USDC' };
+    const refused = card(draft, {
+      canDraw: true,
+      heard: { kind: 'refused', said: ['anchorSymbol'], note: '“GameStop” isn’t an anchor on this desk.', at: 7 },
+    });
+    /* One pulse, in the tiles, in the refused tone — and the echo carries her no. */
+    assert.equal((refused.match(/class="[^"]*heard[^"]*"/g) ?? []).length, 1);
+    assert.match(refused, /class="heard heardRefused"/);
+    assert.match(refused, /data-heard="true" data-refused="true"[^>]*><span>“GameStop” isn’t an anchor on this desk\.<\/span>/);
+    /* The draft is untouched — a refusal never rewrites what the card shows. */
+    assert.doesNotMatch(refused, /Halley set it/);
+  });
+
+  it('breathes while the line is deciding, and shows the wash while the curve is drawn', () => {
+    const draft: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: 'TSLA', quoteSymbol: 'USDC' };
+    const waiting = card(draft, { canDraw: true, awaiting: true });
+    assert.match(waiting, /data-awaiting="true"/);
+    assert.match(waiting, /class="awaiting" aria-hidden="true">· · ·/);
+    /* A fresh echo outranks the cue — nothing breathes over an answer. */
+    const answered = card(draft, { canDraw: true, awaiting: true, heard: { said: ['anchorSymbol'], at: 9 } });
+    assert.match(answered, /data-awaiting="false"/);
+    const anticipating = card(draft, { canDraw: true, anticipating: true });
+    assert.match(anticipating, /data-region="preview"[^>]*data-anticipate="true"/);
+    assert.doesNotMatch(card(draft, { canDraw: true }), /data-anticipate="true"/);
+    /* Reduced motion: the cue goes still, the final state identical. */
+    const css = readFileSync(new URL('../components/desk/HalleyLaunchCard.module.css', import.meta.url), 'utf8');
+    const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+    assert.match(reduced, /\.card\[data-awaiting='true'\] \{ animation: none/);
+  });
+
+  it('docks the live call on a phone so the card stays in view', () => {
+    const call = readFileSync(new URL('../components/desk/HalleyCall.tsx', import.meta.url), 'utf8');
+    assert.match(call, /id="halley-line"[^>]*className=\{styles\.call\}[^>]*data-dock="true"/);
+    const css = readFileSync(new URL('../components/desk/WorkingDesk.module.css', import.meta.url), 'utf8');
+    assert.match(css, /@media \(max-width: 760px\) \{\s*\.call\[data-dock='true'\]\[data-live='true'\] \{\s*position: fixed; top: 0;/);
+    const cardCss = readFileSync(new URL('../components/desk/HalleyLaunchCard.module.css', import.meta.url), 'utf8');
+    assert.match(cardCss, /scroll-margin-top: var\(--call-dock/);
+    assert.match(cardCss, /@media \(prefers-reduced-motion: reduce\) \{[^}]*\.heard \{ animation: heardHold/s);
+    const surface = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(surface, /heard=\{cardHeard\}/);
   });
 
   it('names the one thing still between the caller and the launch', () => {

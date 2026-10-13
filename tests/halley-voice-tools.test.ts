@@ -17,7 +17,7 @@ import {
 import { estimateLaunch } from '../lib/meteora/dbc';
 import { halleyToolHandlers, type HalleyToolName } from '../lib/meteora/desk-tools';
 import type { HalleyDesk, HalleyDeskState } from '../lib/meteora/useHalleyDesk';
-import type { HalleyLaunchIntent } from '../lib/meteora/contracts';
+import type { HalleyDraft, HalleyLaunchIntent } from '../lib/meteora/contracts';
 import type { DeskForegroundDocument } from '../lib/desk/contracts';
 
 const emptyState = (): HalleyDeskState => ({
@@ -142,6 +142,8 @@ describe('halley desk tools', () => {
       state: emptyState(),
       uiReveal: null,
       reveal: () => {},
+      lineWrite: null,
+      refuse: () => {},
       inFlight: false,
       records: [],
       historyReady: true,
@@ -201,11 +203,30 @@ describe('halley desk tools', () => {
     assert.match(unnamed, /suggest USDC as the plain choice/);
   });
 
+  it('tags every write the line makes, so the card can answer the voice', async () => {
+    const calls: { partial: Record<string, unknown>; by: unknown }[] = [];
+    const desk = fakeDesk({ edit: (partial, by) => { calls.push({ partial, by }); } });
+    const table = handlers(desk);
+    await table.name_launch({ name: 'Basilisk', symbol: 'BASILISK' });
+    await table.choose_quote({ quote: 'USDC' });
+    await table.choose_anchor({ anchor: 'NVIDIA' });
+    await table.choose_anchor({ anchor: 'none' });
+    await table.choose_curve({ curve: 'flat' });
+    await table.set_supply({ supply: '2000000' });
+    await table.set_graduation({ amount: '300' });
+    assert.equal(calls.length, 7);
+    for (const call of calls) assert.equal(call.by, 'line', JSON.stringify(call.partial));
+  });
+
   it('refuses unknown quotes, anchors, and curves rather than guessing', async () => {
-    const desk = fakeDesk();
+    const refused: [keyof HalleyDraft | null, string][] = [];
+    const desk = fakeDesk({ refuse: (field, note) => { refused.push([field, note]); } });
     assert.match(await handlers(desk).choose_quote({ quote: 'DOGE' }), /not a launch quote/);
     assert.match(await handlers(desk).choose_anchor({ anchor: 'GameStop' }), /not an anchor/);
     assert.match(await handlers(desk).choose_curve({ curve: 'zigzag' }), /not a curve/);
+    /* Each refusal names the field the card should answer in its softer voice. */
+    assert.deepEqual(refused.map(([field]) => field), ['quoteSymbol', 'anchorSymbol', 'curve']);
+    assert.ok(refused.every(([, note]) => /isn’t/.test(note)), JSON.stringify(refused));
   });
 
   it('answers explain_concept with reviewed copy or the honest menu', async () => {

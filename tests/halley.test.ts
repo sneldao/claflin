@@ -475,6 +475,29 @@ describe('halley desk session', () => {
     assert.equal(desk!.state.lastWritten, 'supply');
   });
 
+  it('records what the line wrote — and the caller’s own hand retires it', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    await act(async () => desk!.edit({ name: 'Basilisk', symbol: 'BASILISK' }, 'line'));
+    assert.deepEqual(desk!.lineWrite?.said, ['name', 'symbol']);
+    /* A spoken quote also pencils the economics — the card sees all of it. */
+    await act(async () => desk!.edit({ quoteSymbol: 'USDC' }, 'line'));
+    assert.deepEqual(desk!.lineWrite?.said, ['quoteSymbol']);
+    assert.deepEqual([...(desk!.lineWrite?.changed ?? [])].sort(), ['graduationQuote', 'quoteSymbol', 'supply']);
+    const spokenAt = desk!.lineWrite!.at;
+    assert.ok(spokenAt > 0);
+    /* Halley explains; then the caller types — both answers retire. */
+    await act(async () => desk!.reveal('halley-step-3'));
+    assert.equal(desk!.uiReveal?.target, 'halley-step-3');
+    await act(async () => desk!.edit({ supply: '5000' }));
+    assert.equal(desk!.lineWrite, null, 'the hand retires the echo');
+    assert.equal(desk!.uiReveal, null, 'and the reveal, so it never replays');
+    await act(async () => desk!.edit({ supply: '6000' }, 'line'));
+    assert.ok(desk!.lineWrite);
+    await act(async () => desk!.cancel());
+    assert.equal(desk!.lineWrite, null, 'a fresh slip has heard nothing');
+  });
+
   it('filing names the record as viewed — the surface yields it to the saved block', async () => {
     const estimate = estimateLaunch(intent, observedAnchor(now), now);
     await render(async () => estimate);

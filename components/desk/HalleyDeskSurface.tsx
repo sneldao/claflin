@@ -30,7 +30,7 @@ import {
   stageLabel,
 } from '@/lib/meteora/plate';
 import { RING_EXAMPLES } from '@/lib/desk/ui-copy';
-import { HalleyLaunchCard } from './HalleyLaunchCard';
+import { HalleyLaunchCard, type CardHeard } from './HalleyLaunchCard';
 import { LastFilingLine } from './LastFilingLine';
 import { useLatestFiling } from '@/lib/trading/useLatestFiling';
 import { countRetrieval } from '@/lib/funnel/client';
@@ -260,6 +260,10 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   // Bootstrap still; the shared preference hook applies Room only after hydration.
   const [presentationMode, applyMode] = useState<DeskPresentation>('compact');
   const [lineLive, setLineLive] = useState(false);
+  /* The caller just spoke and the line has not answered yet — the card waits
+     visibly. Set on the user's caption, retired the moment Halley speaks
+     (her answer may be words, a write, or a refusal). */
+  const [awaitingLine, setAwaitingLine] = useState(false);
   /* The runtime status endpoint is the only authority for the live path —
      the build-time flag never shows live on its own (Jesse's probe pattern). */
   const [liveStatus, setLiveStatus] = useState<HalleyLiveStatus>('checking');
@@ -294,6 +298,7 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   }, [mode]);
   const handleLineLive = useCallback((live: boolean) => {
     setLineLive(live);
+    if (!live) setAwaitingLine(false);
     if (live) pinModeForCall();
   }, [pinModeForCall]);
   const handleRinging = useCallback((ringing: boolean) => {
@@ -511,6 +516,18 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
   const showSlip = customising;
   /* Starting over — discard or a new instruction — returns the next slip to
      its voice-first blank, whoever filled the last one. */
+  /* What the card answers: the line's newest write or explanation. Either
+     one retires when the caller's own hand edits the draft. */
+  const lineWrite = halley.lineWrite;
+  const uiRevealForCard = halley.uiReveal;
+  const cardHeard = useMemo<CardHeard | null>(() => {
+    const write = lineWrite
+      ? { kind: lineWrite.kind, said: lineWrite.said, note: lineWrite.note, at: lineWrite.at }
+      : null;
+    const reveal = uiRevealForCard ? { target: uiRevealForCard.target, at: uiRevealForCard.at } : null;
+    if (write && reveal) return write.at >= reveal.at ? write : reveal;
+    return write ?? reveal;
+  }, [lineWrite, uiRevealForCard]);
   /* The record a filing just wrote — the watch and the share card read it. */
   const filedRecord = halley.state.stage === 'saved' && estimate
     ? halley.records.find(record => record.id === estimate.id) ?? null
@@ -697,7 +714,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
           <DeskObjects />
         </>}
         <aside className={styles.support} aria-label="The launch desk’s direct line">
-          <HalleyCall halley={halley} deskMode={mode} liveBusy={liveBusy} onLiveChange={handleLineLive} onRingingChange={handleRinging} />
+          <HalleyCall halley={halley} deskMode={mode} liveBusy={liveBusy} onLiveChange={handleLineLive} onRingingChange={handleRinging}
+            onUserSpoken={() => setAwaitingLine(true)}
+            onAgentSpoken={() => setAwaitingLine(false)} />
           <ReceiverShell
             stage={receiverStage}
             label={reviewing ? 'REVIEW LAUNCH CURVE' : mode === 'live' ? 'LAUNCH DESK / WALLET SIGNS' : 'PAPER LAUNCH / NO MINT'}
@@ -881,6 +900,9 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
                     onCustomise={() => setCustomising(true)}
                     voiceLines={RING_EXAMPLES.halley}
                     onSay={applyHearable}
+                    heard={cardHeard}
+                    awaiting={awaitingLine && lineLive}
+                    anticipating={halley.inFlight}
                   />
                 )}
                 {/* Hearable confirmations must outlive the blank state — a

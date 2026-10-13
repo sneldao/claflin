@@ -30,10 +30,27 @@
   fill: var(--desk-paper-muted);
 }
 .fill { fill: var(--desk-brass); opacity: .12; }
-.line { stroke: var(--desk-paper-ink); stroke-width: 1.8; }
+.line { stroke: var(--desk-paper-ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* Each time the curve's path changes (preset/supply/graduation), a fresh
+   element is keyed in — the dash pulls the line in like ink being laid. */
+.line {
+  stroke-dasharray: 480;
+  stroke-dashoffset: 480;
+  animation: lineDraw 700ms var(--ease-swift, ease) both;
+}
+@keyframes lineDraw {
+  to { stroke-dashoffset: 0; }
+}
+.marker { transform: translate(var(--mx, 0px), var(--my, 0px)); transform-box: fill-box; transform-origin: center; animation: markerIn 420ms var(--ease-swift, ease) both; }
+@keyframes markerIn {
+  0%   { transform: translate(var(--mx, 0px), var(--my, 0px)) scale(.35); opacity: 0; }
+  60%  { transform: translate(var(--mx, 0px), var(--my, 0px)) scale(1.15); opacity: 1; }
+  100% { transform: translate(var(--mx, 0px), var(--my, 0px)) scale(1); opacity: 1; }
+}
 .drop { stroke: var(--desk-paper-rule); stroke-width: 1; stroke-dasharray: 3 3; }
 .flag { fill: var(--desk-brass); }
 .grabPad { fill: transparent; }
+.grabbed { transform: translate(var(--mx, 0px), var(--my, 0px)); transform-box: fill-box; transform-origin: center; }
 .grabbed .flag { stroke: var(--desk-brass); stroke-width: 5; stroke-opacity: .35; }
 .markerControl {
   position: absolute;
@@ -60,4 +77,10 @@
 .readout strong {
   font-family: var(--font-mono), monospace;
   color: var(--desk-brass);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The line still appears in full, the marker still sits where it should —
+     no draw-in, no pop. */
+  .line { animation: none; stroke-dashoffset: 0; }
+  .marker { animation: none; }
 }

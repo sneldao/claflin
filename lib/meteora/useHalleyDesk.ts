@@ -52,6 +52,17 @@ export interface HalleyDeskState {
   noticeCode: string | null;
 }
 
+export interface HalleyLineWrite {
+  /** 'write' — the line changed the draft; 'refused' — it heard the request
+      and answered it with a no. Both deserve a visible answer on the card. */
+  kind: 'write' | 'refused';
+  said: (keyof HalleyDraft)[];
+  changed: (keyof HalleyDraft)[];
+  at: number;
+  /** A refused ask: the plain sentence the card's echo carries. */
+  note?: string;
+}
+
 export interface HalleyDesk extends DeskDocumentSession {
   state: HalleyDeskState;
   /** A one-shot "bring this to the caller's eyes" nudge — the id of a slip
@@ -67,7 +78,14 @@ export interface HalleyDesk extends DeskDocumentSession {
   storageError: string | null;
   viewedRecordId: string | null;
   foreground: DeskForegroundDocument;
-  edit: (partial: Partial<HalleyDraft>) => void;
+  /** `by: 'line'` marks a write the voice made, so the card can answer it. */
+  edit: (partial: Partial<HalleyDraft>, by?: 'line') => void;
+  /** The last write the line made: what Halley said, what that changed (house
+      pencils included), and when — the card's "it heard me" signal. */
+  lineWrite: HalleyLineWrite | null;
+  /** The line heard a request it could not make. The card answers it in a
+      distinct, softer voice — silence at a refusal is the worst moment. */
+  refuse: (field: keyof HalleyDraft | null, note: string) => void;
   /** Leave review and return to the slip with the draft untouched. */
   revise: () => void;
   estimate: () => void;
@@ -189,8 +207,21 @@ export function useHalleyDesk(
     } catch { /* draft resume is optional — never block the desk */ }
   }, [storageOf]);
 
-  const edit = useCallback((partial: Partial<HalleyDraft>) => {
+  const [uiReveal, setUiReveal] = useState<{ target: string; at: number } | null>(null);
+  const reveal = useCallback((target: string) => setUiReveal({ target, at: Date.now() }), []);
+  const [lineWrite, setLineWrite] = useState<HalleyLineWrite | null>(null);
+  const edit = useCallback((partial: Partial<HalleyDraft>, by?: 'line') => {
     genRef.current += 1;
+    if (by === 'line') {
+      const before = stateRef.current;
+      const { draft: after } = applyDraftEdit(before.draft, before.pencil, partial);
+      const changed = (Object.keys(after) as (keyof HalleyDraft)[]).filter(f => after[f] !== before.draft[f]);
+      setLineWrite({ kind: 'write', said: Object.keys(partial) as (keyof HalleyDraft)[], changed, at: Date.now() });
+    } else {
+      /* The caller's own hand retires the echo — it described Halley's act. */
+      setLineWrite(null);
+      setUiReveal(null);
+    }
     setState(current => {
       /* The house pencils only what the caller has not written — hand,
          hearable and voice all arrive through this one path. */
@@ -214,11 +245,18 @@ export function useHalleyDesk(
     setViewedRecordId(null);
   }, [persistDraft]);
 
+  const refuse = useCallback((field: keyof HalleyDraft | null, note: string) => {
+    /* Nothing was written — but the card still answers, in the softer voice. */
+    setLineWrite({ kind: 'refused', said: field ? [field] : [], changed: [], at: Date.now(), note });
+    setUiReveal(null);
+  }, []);
+
   const cancel = useCallback(() => {
     genRef.current += 1;
     const storage = storageOf();
     if (storage) { try { clearHalleyDraft(storage); } catch { /* optional */ } }
     setState(emptyState());
+    setLineWrite(null);
   }, [storageOf]);
 
   const runEstimate = useCallback((draft: HalleyDraft, pencil: DraftPencil) => {
@@ -295,8 +333,6 @@ export function useHalleyDesk(
     }
   }, [now, storageOf, persistDraft]);
 
-  const [uiReveal, setUiReveal] = useState<{ target: string; at: number } | null>(null);
-  const reveal = useCallback((target: string) => setUiReveal({ target, at: Date.now() }), []);
 
   const openRecord = useCallback((id: string) => setViewedRecordId(id), []);
   const dismissRecord = useCallback(() => setViewedRecordId(null), []);
@@ -321,6 +357,8 @@ export function useHalleyDesk(
     state,
     uiReveal,
     reveal,
+    lineWrite,
+    refuse,
     inFlight: state.stage === 'estimating',
     records,
     historyReady,

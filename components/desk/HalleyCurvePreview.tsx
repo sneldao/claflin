@@ -104,12 +104,25 @@ export function HalleyCurvePreview({
         >
           {ready ? (
             <>
-              <polygon points={`0,${H} ${polyline} ${W},${H}`} className={styles.fill} />
-              <polyline points={polyline} className={styles.line} fill="none" />
+              <polygon
+                key={`fill-${preset}-${graduationQuote}-${supply}-${openingPrice}`}
+                points={`0,${H} ${polyline} ${W},${H}`}
+                className={styles.fill}
+              />
+              <polyline
+                key={`line-${preset}-${graduationQuote}-${supply}-${openingPrice}`}
+                points={polyline}
+                className={styles.line}
+                fill="none"
+              />
               <text x={4} y={H - 4} className={styles.priceTag}>{openingPrice!.toFixed(2)}</text>
               {end && <text x={W - 16} y={12} textAnchor="end" className={styles.priceTag}>{end.price.toFixed(2)}</text>}
               {marker && (
-                <g transform={`translate(${marker[0]},${marker[1]})`} className={grabbed ? styles.grabbed : undefined}>
+                <g
+                  key={`marker-${graduationQuote}`}
+                  className={grabbed ? styles.grabbed : styles.marker}
+                  style={{ '--mx': marker[0], '--my': marker[1] } as React.CSSProperties}
+                >
                   <line x1={0} y1={4} x2={0} y2={H} className={styles.drop} />
                   <circle r={7} className={styles.flag} />
                   <circle r={12} className={styles.grabPad} />

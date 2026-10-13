@@ -42,6 +42,16 @@
 .tile:focus-visible { outline: 2px solid #6b5a35; outline-offset: 2px; }
 .tile[data-active='true'] { border-color: #6b5a35; background: var(--desk-paper-light); box-shadow: inset 0 0 0 1px #6b5a35; }
 .tile[data-active='true'] span { color: #6b5a35; }
+/* A brief ink ring when a tile *becomes* the active one — keyed by the
+   write's timestamp so each voice-set or hand-set re-runs it. */
+.tile[data-active='true'][data-flipped] {
+  animation: tileFlip 1.6s var(--ease-swift, ease) both;
+}
+@keyframes tileFlip {
+  0%   { box-shadow: inset 0 0 0 0 #6b5a3500, 0 0 0 0 #6b5a3500; background: var(--desk-paper-light); }
+  18%  { box-shadow: inset 0 0 0 2px #6b5a35, 0 0 0 6px #6b5a3522; background: #6b5a351a; }
+  100% { box-shadow: inset 0 0 0 1px #6b5a35, 0 0 0 0 #6b5a3500; background: var(--desk-paper-light); }
+}
 
 .preview { display: grid; gap: 6px; animation: cardRise var(--dur-2, 320ms) var(--ease-swift, ease) both; }
 .terms { margin: 0 !important; font: 12px/1.5 var(--font-mono), monospace; letter-spacing: .02em; color: var(--desk-paper-muted); }
@@ -77,4 +87,79 @@
   .tile, .launch { transition: none; }
   .tile:active, .launch:active:not(:disabled) { transform: none; }
   .preview { animation: none; }
+  /* A static step at the peak so the ring is still visible. */
+  .tile[data-active='true'][data-flipped] { animation: none; background: #6b5a3522; }
+}
+
+/* The card answers the conversation. The part Halley just touched takes one
+   ink pulse (restarted per write by a fresh key, never by remounting the
+   inputs), and one quiet line says what changed. On a phone the docked call
+   sits above, so a region scrolled into view clears it. */
+.nameRow, .tiles, .preview { position: relative; scroll-margin-top: var(--call-dock, 132px); }
+.heard {
+  position: absolute; inset: -6px; z-index: 0; pointer-events: none;
+  border-radius: 3px;
+  background: var(--desk-paper-wash, #27362b14);
+  box-shadow: 0 0 0 1px #6b5a3566;
+  animation: heardPulse 1.4s var(--ease-swift, ease) forwards;
+}
+/* A refusal — heard, and answered with a no. The same gesture in a softer,
+   warmer voice than the write: brick instead of brass. */
+.heardRefused {
+  background: #8a4a2d12;
+  box-shadow: 0 0 0 1px #8a4a2d4d;
+}
+.tiles > .heard { inset: -6px; }
+@keyframes heardPulse {
+  0% { opacity: 0; transform: scale(.985); }
+  18% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+.echo {
+  min-height: 18px; margin: -4px 0 0 !important;
+  font: italic 400 14px/1.4 var(--font-display), serif;
+  color: #6b5a35;
+}
+.echo[data-refused='true'] { color: #8a4a2d; }
+.echo > span { display: inline-block; animation: echoIn var(--dur-2, 320ms) var(--ease-swift, ease) both; }
+.echo[data-stale='true'] { animation: echoOut 1.2s var(--ease-swift, ease) forwards; }
+@keyframes echoOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes heardHold { from { opacity: .9; } to { opacity: 0; } }
+@keyframes echoIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* The caller just spoke and the line has not answered yet: the card waits
+   visibly — a slow breath at its edge, three quiet dots in the echo slot.
+   The answer (words, a write, a refusal) retires both. */
+.card[data-awaiting='true'] { animation: awaitingBreathe 2.6s ease-in-out infinite; }
+@keyframes awaitingBreathe {
+  0%, 100% { outline: 1px solid transparent; }
+  50%      { outline: 1px solid #6b5a3533; }
+}
+.awaiting { color: #6b5a35; letter-spacing: .3em; padding-left: .15em; animation: awaitingDots 1.7s ease-in-out infinite; }
+@keyframes awaitingDots {
+  0%, 100% { opacity: .3; }
+  50%      { opacity: .85; }
+}
+
+/* The estimate ceremony is in motion — the preview anticipates it with a
+   slow wash behind the chart, behind everything it would dim. */
+.preview[data-anticipate='true']::after {
+  content: ''; position: absolute; inset: -6px; z-index: -1; pointer-events: none;
+  border-radius: 3px;
+  background: var(--desk-paper-wash, #27362b14);
+  animation: anticipateBreathe 1.9s ease-in-out infinite;
+}
+@keyframes anticipateBreathe {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: .55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still answered: a steady outline for the moment, no motion. */
+  .heard { animation: heardHold 1.4s steps(1, end) forwards; }
+  .echo > span { animation: none; }
+  .echo[data-stale='true'] { animation: none; opacity: 0; }
+  .card[data-awaiting='true'] { animation: none; outline: 1px solid #6b5a3526; }
+  .awaiting { animation: none; opacity: .6; }
+  .preview[data-anticipate='true']::after { animation: none; opacity: .4; }
 }

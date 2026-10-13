@@ -2411,3 +2411,25 @@ dialog.drawerPanel::backdrop { background: var(--scrim-focus); }
 @media (prefers-reduced-motion: reduce) {
   .grid[data-slip-led='true'] .ticket { transition: none; }
 }
+
+/* Phone: the live call docks to the top of the viewport, so the launch card
+   stays on screen while Halley writes it — speak, and see it answer. Only
+   while live; between calls the panel returns to the flow. The card scrolls
+   a touched region into view clear of the dock (--call-dock). */
+@media (max-width: 760px) {
+  .call[data-dock='true'][data-live='true'] {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+    margin: 0; padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+    max-height: 38vh; overflow: hidden;
+    background: color-mix(in srgb, var(--desk-room, #0c1814) 94%, transparent);
+    border-bottom: 1px solid var(--desk-line);
+    box-shadow: 0 8px 22px #0006;
+    animation: none;
+  }
+  .call[data-dock='true'][data-live='true'] .brokerPlate h2 small { display: none; }
+  .call[data-dock='true'][data-live='true'] .brokerPlate h2 { font-size: 18px; margin: 0; }
+  .call[data-dock='true'][data-live='true'] .callActions { margin-top: 8px; gap: 8px; }
+  .call[data-dock='true'][data-live='true'] .callCaptions { margin-top: 8px; max-width: none; padding: 8px 10px; }
+  .call[data-dock='true'][data-live='true'] .callCaptions .captionHistory,
+  .call[data-dock='true'][data-live='true'] .callFoot { display: none; }
+}

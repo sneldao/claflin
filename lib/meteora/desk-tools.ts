@@ -98,12 +98,14 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       const name = String(p.name ?? '').trim();
       const symbol = String(p.symbol ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!name || name.length < 2 || name.length > 40) {
+        d.refuse('name', 'A name comes first — two to forty characters.');
         return 'The launch needs a name — two to forty characters, like "NVDA Tracker".';
       }
       if (!/^[A-Z0-9]{2,10}$/.test(symbol)) {
+        d.refuse('name', `“${symbol || 'That'}” can’t be a ticker — two to ten letters or digits.`);
         return `The symbol needs to be two to ten letters or digits — "${symbol || 'that'}" is not usable.`;
       }
-      d.edit({ name, symbol });
+      d.edit({ name, symbol }, 'line');
       const draft = d.state.draft;
       if (!draft.quoteSymbol) {
         return `${name} (${symbol}) is on the slip. Next is what buyers pay with — suggest USDC as the plain choice, or an xStock (AAPLx, NVDAx, TSLAx) to make it an equity pair. Once the quote is set the house pencils in the supply and graduation line.`;
@@ -118,13 +120,14 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       const query = String(p.quote ?? '');
       const quote = resolveHalleyQuote(query);
       if (!quote) {
+        d.refuse('quoteSymbol', `“${query || 'That'}” isn’t a launch quote here.`);
         return `"${query || 'That'}" is not a launch quote here. The desk carries USDC and the badged xStocks — ${HALLEY_QUOTE_MINTS.filter(q => q.underlyingSymbol).map(q => q.symbol).join(', ')}.`;
       }
       const before = d.state.draft;
       /* Preview what the house will pencil, so the spoken line describes the
          slip the caller is about to see. */
       const preview = applyDraftEdit(before, d.state.pencil, { quoteSymbol: quote });
-      d.edit({ quoteSymbol: quote });
+      d.edit({ quoteSymbol: quote }, 'line');
       const lead = quote === 'USDC'
         ? 'Quoted in USDC — the opening will anchor to the equity mark directly.'
         : `Quoted in ${quote} — this becomes an equity pair${preview.draft.anchorSymbol && !before.anchorSymbol ? `, anchored to ${preview.draft.anchorSymbol}` : ''}, priced on the ratio of the two marks.`;
@@ -137,14 +140,15 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       if (ceremonyBusy()) return CEREMONY_BUSY;
       const query = String(p.anchor ?? '');
       if (/^(none|no\s+anchor|unanchored|nothing)$/i.test(query.trim())) {
-        d.edit({ anchorSymbol: null });
+        d.edit({ anchorSymbol: null }, 'line');
         return 'No anchor — the curve opens at 1.0 and that will be disclosed on the slip.';
       }
       const anchor = resolveHalleyAnchor(query);
       if (!anchor) {
+        d.refuse('anchorSymbol', `“${query || 'That'}” isn’t an anchor on this desk.`);
         return `"${query || 'That'}" is not an anchor on this desk. The verified marks are Apple, NVIDIA, and Tesla.`;
       }
-      d.edit({ anchorSymbol: anchor });
+      d.edit({ anchorSymbol: anchor }, 'line');
       return `Anchored to ${anchor} — the opening price moors to its Pyth mark.`;
     },
 
@@ -155,9 +159,10 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       const query = String(p.curve ?? '');
       const curve = resolveHalleyCurve(query);
       if (!curve) {
+        d.refuse('curve', `“${query || 'That'}” isn’t a curve here.`);
         return `"${query || 'That'}" is not a curve here. The choices are ${LAUNCH_CURVE_PRESETS.join(', ')}.`;
       }
-      d.edit({ curve });
+      d.edit({ curve }, 'line');
       return `${curve === 'equity-pair' ? 'Equity pair' : curve} curve — the projected path will show its shape.`;
     },
 
@@ -167,9 +172,10 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       if (ceremonyBusy()) return CEREMONY_BUSY;
       const clean = String(p.supply ?? '').trim().replace(/[,_\s]/g, '');
       if (!/^[1-9]\d*$/.test(clean)) {
+        d.refuse('supply', `“${clean || 'That'}” isn’t a usable supply.`);
         return `"${clean || 'That'}" is not a usable supply — say a whole number of tokens, like a million.`;
       }
-      d.edit({ supply: clean });
+      d.edit({ supply: clean }, 'line');
       return `${clean} tokens is on the slip.`;
     },
 
@@ -179,9 +185,10 @@ export function halleyToolHandlers({ desk, mode, busy, userTurn }: HalleyToolCon
       if (ceremonyBusy()) return CEREMONY_BUSY;
       const clean = String(p.amount ?? '').trim().replace(/[,_\s]/g, '');
       if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(clean) || !/[1-9]/.test(clean)) {
+        d.refuse('graduationQuote', `“${clean || 'That'}” isn’t a usable graduation line.`);
         return `"${clean || 'That'}" is not a usable graduation line — say a positive amount of the quote asset.`;
       }
-      d.edit({ graduationQuote: clean });
+      d.edit({ graduationQuote: clean }, 'line');
       return `Graduation at ${clean} ${d.state.draft.quoteSymbol ?? 'quote'} collected — the pool migrates to DAMM v2 there.`;
     },
 

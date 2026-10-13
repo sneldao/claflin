@@ -11,6 +11,7 @@
  * reads it and proposes edits through the same `onEdit` every other path uses.
  */
 
+import { useEffect, useRef, useState } from 'react';
 import type { HalleyDraft } from '@/lib/meteora/contracts';
 import { HOUSE_SUPPLY, houseGraduation } from '@/lib/meteora/plate';
 import { SOLANA_INSTRUMENTS } from '@/lib/solana/catalog';
@@ -59,8 +60,72 @@ export function nudgeFor(draft: HalleyDraft, chosen: boolean): string {
   return 'Almost there — open Customise to finish the figures.';
 }
 
+export type CardRegion = 'name' | 'tiles' | 'preview';
+
+/** What the line just did that the card should answer: a write (the fields
+    Halley said), a refusal (heard, and answered with a no), or an
+    explanation (a slip target). `at` restarts the pulse. */
+export interface CardHeard {
+  kind?: 'write' | 'refused';
+  said?: readonly (keyof HalleyDraft)[];
+  /** A refused ask: the plain sentence the card's echo carries. */
+  note?: string;
+  target?: string;
+  at: number;
+}
+
+const REGION_FOR_FIELD: Record<keyof HalleyDraft, CardRegion> = {
+  name: 'name', symbol: 'name',
+  anchorSymbol: 'tiles', quoteSymbol: 'tiles',
+  curve: 'preview', supply: 'preview', graduationQuote: 'preview',
+};
+/* The slip's explanation targets, read on the card. Anything else (the
+   orientation fold, the path, the plate) exists on both surfaces already. */
+const REGION_FOR_TARGET: Record<string, CardRegion> = {
+  'halley-step-1': 'name',
+  'halley-step-2': 'tiles',
+  'halley-step-3': 'preview',
+  'halley-fine-tune': 'preview',
+  'halley-grad': 'preview',
+  'halley-supply': 'preview',
+};
+
+/** The part of the card that answers what was heard. The curve only exists
+    once the launch tracks something, so until then the tiles answer for it. */
+export function regionFor(heard: CardHeard | null, chosen: boolean): CardRegion | null {
+  if (!heard) return null;
+  const region = heard.said?.length ? REGION_FOR_FIELD[heard.said[0]] : heard.target ? REGION_FOR_TARGET[heard.target] ?? null : null;
+  return region === 'preview' && !chosen ? 'tiles' : region;
+}
+
+/** One plain sentence for what Halley just wrote — the card's echo line. */
+export function echoFor(said: readonly (keyof HalleyDraft)[] | undefined, draft: HalleyDraft): string | null {
+  const field = said?.[0];
+  if (!field) return null;
+  const quote = draft.quoteSymbol ?? 'USDC';
+  switch (field) {
+    case 'name':
+    case 'symbol':
+      return draft.name ? `Halley named it ${draft.name}${draft.symbol ? ` ($${draft.symbol})` : ''}.` : null;
+    case 'anchorSymbol':
+      return draft.anchorSymbol
+        ? `Halley set it to track ${EQUITY_NAMES[draft.anchorSymbol] ?? draft.anchorSymbol}.`
+        : 'Halley set it to track nothing — it opens at 1.0.';
+    case 'quoteSymbol':
+      return `Halley set it to be paid in ${quote}.`;
+    case 'curve':
+      return draft.curve ? `Halley chose the ${draft.curve === 'equity-pair' ? 'equity pair' : draft.curve} curve.` : null;
+    case 'supply':
+      return draft.supply ? `Halley set ${Number(draft.supply).toLocaleString('en-US')} tokens.` : null;
+    case 'graduationQuote':
+      return draft.graduationQuote ? `Halley moved the open-market line to ${draft.graduationQuote} ${quote}.` : null;
+    default:
+      return null;
+  }
+}
+
 export function HalleyLaunchCard({
-  draft, anchorMarkUsd, busy, canDraw, primaryLabel, onEdit, onDraw, onCustomise, voiceLines, onSay,
+  draft, anchorMarkUsd, busy, canDraw, primaryLabel, onEdit, onDraw, onCustomise, voiceLines, onSay, heard = null, awaiting = false, anticipating = false,
 }: {
   draft: HalleyDraft;
   /** The selected anchor's live USD mark, when the desk has read one. */
@@ -73,6 +138,13 @@ export function HalleyLaunchCard({
   onCustomise: () => void;
   voiceLines: readonly string[];
   onSay: (line: string) => void;
+  /** The line's latest write or explanation — the card answers it visibly. */
+  heard?: CardHeard | null;
+  /** The caller just spoke and the line has not answered yet — the card
+      waits, visibly, so the silence between sentences feels inhabited. */
+  awaiting?: boolean;
+  /** The estimate ceremony is in motion — the preview anticipates it. */
+  anticipating?: boolean;
 }) {
   const anchors = SOLANA_INSTRUMENTS.map(i => i.underlyingSymbol);
   const chosen = draft.quoteSymbol !== null;
@@ -83,6 +155,36 @@ export function HalleyLaunchCard({
      dollar mark, or 1.0 unanchored. An xStock quote is a ratio of two marks
      the card does not hold — the preview rests and review shows the truth. */
   const openingPrice = quote !== 'USDC' ? null : draft.anchorSymbol ? anchorMarkUsd : 1;
+
+  /* The card answers the conversation: the part Halley just touched takes a
+     brief ink pulse, one line says what changed, and on a phone — where the
+     docked call sits above — that part is brought into view. A refusal is
+     answered in a softer, warmer voice than a write. */
+  const region = regionFor(heard, chosen);
+  const refused = heard?.kind === 'refused';
+  const echo = refused ? (heard?.note ?? null) : echoFor(heard?.said, draft);
+  const regionRefs = useRef<Partial<Record<CardRegion, HTMLDivElement | null>>>({});
+  const heardAt = heard?.at ?? null;
+  useEffect(() => {
+    if (heardAt === null || !region) return;
+    if (!window.matchMedia?.('(max-width: 760px)').matches) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    regionRefs.current[region]?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+  }, [heardAt, region]);
+
+  /* The echo breathes. A fresh write shows it; after five seconds of quiet
+     it fades, so the next wave does not pile on the last. Restarts whenever
+     a new write arrives (heardAt is the dependency). */
+  const [echoStale, setEchoStale] = useState(false);
+  useEffect(() => {
+    if (!echo || heardAt === null) { setEchoStale(false); return; }
+    setEchoStale(false);
+    const id = window.setTimeout(() => setEchoStale(true), 5200);
+    return () => window.clearTimeout(id);
+  }, [echo, heardAt]);
+  const pulse = (r: CardRegion) => (region === r && heardAt !== null
+    ? <span key={heardAt} className={refused ? `${styles.heard} ${styles.heardRefused}` : styles.heard} aria-hidden="true" />
+    : null);
 
   const setName = (value: string) => {
     const name = value || null;
@@ -95,9 +197,10 @@ export function HalleyLaunchCard({
   };
 
   return (
-    <div className={styles.card} id="halley-card">
+    <div className={styles.card} id="halley-card" data-awaiting={awaiting && !echo && !refused ? 'true' : 'false'}>
       <label className={styles.nameLabel} htmlFor="halley-card-name">Name your tracker</label>
-      <div className={styles.nameRow}>
+      <div className={styles.nameRow} data-region="name" ref={el => { regionRefs.current.name = el; }}>
+        {pulse('name')}
         <input
           id="halley-card-name"
           className={styles.name}
@@ -112,24 +215,41 @@ export function HalleyLaunchCard({
       </div>
 
       <p className={styles.askLabel} id="halley-card-tracks">What does it track?</p>
-      <div className={styles.tiles} role="group" aria-labelledby="halley-card-tracks">
+      <div className={styles.tiles} role="group" aria-labelledby="halley-card-tracks" data-region="tiles" ref={el => { regionRefs.current.tiles = el; }}>
+        {pulse('tiles')}
         {anchors.map(sym => {
           const active = chosen && draft.anchorSymbol === sym;
           return (
-            <button key={sym} type="button" className={styles.tile} aria-pressed={active} data-active={active} onClick={() => pick(sym)}>
+            <button
+              key={sym}
+              type="button"
+              className={styles.tile}
+              aria-pressed={active}
+              data-active={active}
+              data-flipped={active && heard?.at && region === 'tiles' ? heard.at : undefined}
+              onClick={() => pick(sym)}
+            >
               <strong>{EQUITY_NAMES[sym] ?? sym}</strong>
               <span>{active && anchorMarkUsd ? `$${anchorMarkUsd.toFixed(2)}` : sym}</span>
             </button>
           );
         })}
-        <button type="button" className={styles.tile} aria-pressed={chosen && draft.anchorSymbol === null} data-active={chosen && draft.anchorSymbol === null} onClick={() => pick(null)}>
+        <button
+          type="button"
+          className={styles.tile}
+          aria-pressed={chosen && draft.anchorSymbol === null}
+          data-active={chosen && draft.anchorSymbol === null}
+          data-flipped={chosen && draft.anchorSymbol === null && heard?.at && region === 'tiles' ? heard.at : undefined}
+          onClick={() => pick(null)}
+        >
           <strong>Nothing</strong>
           <span>opens at 1.0</span>
         </button>
       </div>
 
       {chosen && (
-        <div className={styles.preview}>
+        <div className={styles.preview} data-region="preview" data-anticipate={anticipating ? 'true' : 'false'} ref={el => { regionRefs.current.preview = el; }}>
+          {pulse('preview')}
           <HalleyCurvePreview
             openingPrice={openingPrice}
             supply={Number.isFinite(supply) && supply > 0 ? supply : null}
@@ -154,6 +274,14 @@ export function HalleyLaunchCard({
           })()}
         </div>
       )}
+
+      <p className={styles.echo} role="status" aria-live="polite" data-heard={echo ? 'true' : 'false'} data-refused={refused ? 'true' : 'false'} data-stale={echoStale ? 'true' : 'false'}>
+        {echo
+          ? <span key={heardAt ?? 0}>{echo}</span>
+          : awaiting
+            ? <span key="awaiting" className={styles.awaiting} aria-hidden="true">· · ·</span>
+            : null}
+      </p>
 
       <div className={styles.actions}>
         <button type="button" className={styles.launch} disabled={!canDraw || busy} onClick={onDraw}>
