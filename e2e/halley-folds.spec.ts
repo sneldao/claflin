@@ -71,14 +71,18 @@ test.describe('the launch slip folds', () => {
     expect(await openFolds(page)).toEqual(['halley-step-3']);
   });
 
-  test('writing a field opens the section that owns it', async ({ page }) => {
+  test('a still-needed link opens the section that owns it, and a write there keeps it', async ({ page }) => {
     await openHalley(page);
     await page.locator('#halley-name').fill('Basilisk');
     await page.locator('#halley-symbol').fill('BASILISK');
     await page.locator('#halley-step-3 > summary').click();
     expect(await openFolds(page)).toEqual(['halley-step-3']);
 
-    /* The anchor belongs to the middle section — the slip follows the hand. */
+    /* The quote lives in the anchor section — its jump link opens that one. */
+    await page.locator('#halley-needed').getByRole('button', { name: 'quote asset' }).click();
+    expect(await openFolds(page)).toEqual(['halley-step-2']);
+
+    /* A single-section write keeps the caller where their hand is. */
     await page.getByRole('button', { name: 'NVDA', exact: true }).click();
     expect(await openFolds(page)).toEqual(['halley-step-2']);
   });
@@ -106,6 +110,8 @@ test.describe('the launch slip folds', () => {
     await expect(supply).toHaveAttribute('data-pencil', 'house');
 
     await page.locator('#halley-step-3 > summary').click();
+    /* Raw figures live one depth down, behind Fine-tune. */
+    await page.locator('#halley-fine-tune > summary').click();
     await page.locator('#halley-supply').fill('2000000');
     const touched = page.locator('[data-pencil]').filter({ hasText: '2,000,000' }).first();
     await expect(touched).toHaveAttribute('data-pencil', 'caller');

@@ -205,7 +205,8 @@ export const SECTION_FOR_FIELD: Record<keyof HalleyDraft, string> = {
   name: 'halley-step-1',
   symbol: 'halley-step-1',
   anchorSymbol: 'halley-step-2',
-  quoteSymbol: 'halley-step-3',
+  /* The quote chips sit in the anchor section ("Anchor the opening"). */
+  quoteSymbol: 'halley-step-2',
   curve: 'halley-step-3',
   supply: 'halley-step-3',
   graduationQuote: 'halley-step-3',

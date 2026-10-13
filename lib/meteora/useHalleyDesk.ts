@@ -32,7 +32,7 @@ import {
   type HalleyPaperRecord,
 } from './paper';
 import { createHalleyEstimatePort } from './desk-ports';
-import { applyDraftEdit, type DraftPencil } from './plate';
+import { SECTION_FOR_FIELD, applyDraftEdit, type DraftPencil } from './plate';
 
 export type HalleyStage = 'draft' | 'estimating' | 'review' | 'saved';
 
@@ -203,7 +203,12 @@ export function useHalleyDesk(
          claims none and hands the choice back to the step function, so a
          completed slip rests on its chips again. */
       const fields = Object.keys(partial) as (keyof HalleyDraft)[];
-      const lastWritten = fields.length === 1 ? fields[0] : null;
+      const changed = (Object.keys(draft) as (keyof HalleyDraft)[])
+        .filter(field => draft[field] !== current.draft[field]);
+      /* A quote tap that also pencils supply and graduation spans two
+         sections, so it claims none and a completed slip rests closed. */
+      const sections = new Set(changed.map(field => SECTION_FOR_FIELD[field]));
+      const lastWritten = fields.length === 1 && sections.size <= 1 ? fields[0] : null;
       return { stage: 'draft', draft, pencil, lastWritten, estimate: null, notice: null, noticeCode: null };
     });
     setViewedRecordId(null);

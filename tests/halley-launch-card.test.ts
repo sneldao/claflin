@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { HalleyLaunchCard, nudgeFor, roundGraduation, tickerFromName } from '../components/desk/HalleyLaunchCard';
+import { HalleyLaunchCard, formatMove, nudgeFor, priceMoveFor, roundGraduation, tickerFromName } from '../components/desk/HalleyLaunchCard';
 import type { HalleyDraft } from '../lib/meteora/contracts';
 
 const blank: HalleyDraft = {
@@ -34,6 +34,20 @@ describe('the launch card', () => {
     assert.equal(roundGraduation(1234.56), '1235');
     assert.equal(roundGraduation(12.345), '12.3');
     assert.equal(roundGraduation(0.456), '0.46');
+  });
+
+  it('says plainly when an anchored launch barely moves, and stays quiet when it does', () => {
+    /* raised ÷ market cap: 150 USDC against 1M × $227 is a vanishing move. */
+    assert.ok(Math.abs(priceMoveFor(227.16, 1_000_000, 150)! - 150 / 227_160_000) < 1e-15);
+    assert.equal(priceMoveFor(null, 1_000_000, 150), null, 'no opening price, no claim');
+    assert.equal(formatMove(150 / 227_160_000), 'under 0.01%');
+    assert.equal(formatMove(0.0005), '+0.05%');
+    assert.equal(formatMove(0.05), '+5.0%');
+    const draft: HalleyDraft = { ...blank, name: 'Basilisk', symbol: 'BASILISK', anchorSymbol: 'NVDA', quoteSymbol: 'USDC', supply: '1000000', graduationQuote: '150' };
+    assert.match(text(card(draft, { anchorMarkUsd: 227.16, canDraw: true })), /barely moves \(under 0\.01%\)/);
+    /* Unanchored opens at 1.0: 150 raised on 100 tokens is a real move — no note. */
+    const steep = { ...draft, anchorSymbol: null, supply: '100' };
+    assert.doesNotMatch(text(card(steep, { canDraw: true })), /barely moves/);
   });
 
   it('names the one thing still between the caller and the launch', () => {

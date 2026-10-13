@@ -344,7 +344,12 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
     ? 'confirmation' as const
     : lineLive || halley.inFlight ? 'conversation' as const : 'arrival' as const;
 
-  const viewed = halley.viewedRecordId
+  /* A launch just filed lands on the saved block — the comet, the watch and
+     the share card — not on its archive view. The desk still names the
+     receipt as its foreground (voice reads it); only the surface yields.
+     Reopening any record from the ledger still shows the record view. */
+  const justFiled = halley.state.stage === 'saved' && halley.state.estimate?.id === halley.viewedRecordId;
+  const viewed = halley.viewedRecordId && !justFiled
     ? halley.records.find(record => record.id === halley.viewedRecordId) ?? null
     : null;
 
@@ -565,8 +570,13 @@ export function HalleyDeskSurface({ desk }: { desk: Desk }) {
       setChipNote('Quoted in AAPLx — the opening reads as an equity ratio.');
       jumpToId('halley-step-2');
     } else if (/nvidia/i.test(line)) {
-      edit({ ...HALLEY_EXAMPLE });
-      setChipNote('Drafted the NVDA tracker with the house economics — review it, or adjust below.');
+      edit({
+        name: draft.name ?? HALLEY_EXAMPLE.name,
+        symbol: draft.symbol ?? HALLEY_EXAMPLE.symbol,
+        anchorSymbol: 'NVDA',
+        quoteSymbol: draft.quoteSymbol ?? HALLEY_EXAMPLE.quoteSymbol,
+      });
+      setChipNote('Anchored to NVIDIA — the house filled anything still empty. Review it, or adjust.');
       jumpToId('halley-step-3');
     } else if (/draw the curve/i.test(line)) {
       if (complete && halley.state.stage === 'draft') {

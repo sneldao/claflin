@@ -88,6 +88,12 @@ describe('Halley first-use guidance', () => {
     ]);
     assert.equal(SECTION_FOR_FIELD.name, 'halley-step-1');
     assert.equal(SECTION_FOR_FIELD.anchorSymbol, 'halley-step-2');
+    /* The map must match where the control lives in the slip, or a tap opens
+       the wrong fold: the quote chips render inside halley-step-2. */
+    assert.equal(SECTION_FOR_FIELD.quoteSymbol, 'halley-step-2');
+    const surface = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    const step2 = surface.slice(surface.indexOf('id="halley-step-2"'), surface.indexOf('id="halley-step-3"'));
+    assert.match(step2, /id="halley-quote-label"/);
     assert.equal(SECTION_FOR_FIELD.graduationQuote, 'halley-step-3');
   });
 
@@ -118,7 +124,10 @@ describe('Halley first-use guidance', () => {
       assert.ok(source.includes(`id="${id}"`));
       assert.ok(source.includes(`aria-describedby="${id}"`));
     }
-    assert.match(source, /\bedit\(\{ \.\.\.HALLEY_EXAMPLE \}\)/);
+    /* The NVIDIA hearable fills only what is empty — never over the caller. */
+    assert.match(source, /name: draft\.name \?\? HALLEY_EXAMPLE\.name/);
+    assert.match(source, /quoteSymbol: draft\.quoteSymbol \?\? HALLEY_EXAMPLE\.quoteSymbol/);
+    assert.doesNotMatch(source, /edit\(\{ \.\.\.HALLEY_EXAMPLE \}\)/);
     assert.match(source, /Paper only: no token is minted/);
     assert.match(source, /Still needed:/);
     assert.match(source, /<HalleyPlate stage=\{viewed \? 'saved'/);

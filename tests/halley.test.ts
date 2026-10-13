@@ -1,6 +1,7 @@
 import './jsdom-setup';
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { resetContainer, getRootElement } from './jsdom-setup';
@@ -458,6 +459,35 @@ describe('halley desk session', () => {
     await act(async () => {});
     assert.equal(desk!.state.stage, 'review');
     assert.equal(desk!.state.lastWritten, null);
+  });
+
+  it('a quote tap that pencils the economics claims no section — a completed slip rests closed', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    await act(async () => desk!.edit({ name: 'Basilisk' }));
+    await act(async () => desk!.edit({ symbol: 'BASILISK' }));
+    /* One key given, three fields changed across two sections. */
+    await act(async () => desk!.edit({ quoteSymbol: 'USDC' }));
+    assert.equal(desk!.state.draft.supply, '1000000');
+    assert.equal(desk!.state.lastWritten, null, 'the edit spans sections, so the step function decides');
+    /* The caller's next single-field edit claims its own section again. */
+    await act(async () => desk!.edit({ supply: '2000000' }));
+    assert.equal(desk!.state.lastWritten, 'supply');
+  });
+
+  it('filing names the record as viewed — the surface yields it to the saved block', async () => {
+    const estimate = estimateLaunch(intent, observedAnchor(now), now);
+    await render(async () => estimate);
+    await act(async () => desk!.edit({ ...intent }));
+    await act(async () => desk!.estimate());
+    await act(async () => {});
+    await act(async () => { desk!.file(); });
+    assert.equal(desk!.state.stage, 'saved');
+    assert.equal(desk!.viewedRecordId, desk!.state.estimate?.id, 'the desk still treats the filing as its receipt');
+    assert.equal(desk!.foreground.kind, 'receipt');
+    const surface = readFileSync(new URL('../components/desk/HalleyDeskSurface.tsx', import.meta.url), 'utf8');
+    assert.match(surface, /const justFiled = halley\.state\.stage === 'saved' && halley\.state\.estimate\?\.id === halley\.viewedRecordId;/);
+    assert.match(surface, /const viewed = halley\.viewedRecordId && !justFiled/);
   });
 
   it('never lets a house default outlive a caller decision, across the whole session', async () => {

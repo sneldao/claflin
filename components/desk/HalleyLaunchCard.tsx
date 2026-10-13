@@ -36,6 +36,20 @@ export function roundGraduation(quote: number): string {
   return String(Number(quote.toFixed(2)));
 }
 
+/** How far the price travels from opening to the open market, as a fraction:
+    in this projection it is exactly raised ÷ (opening price × supply). */
+export function priceMoveFor(openingPrice: number | null, supply: number, graduationQuote: number): number | null {
+  if (openingPrice === null || !(openingPrice > 0) || !(supply > 0) || !(graduationQuote > 0)) return null;
+  return graduationQuote / (openingPrice * supply);
+}
+
+/** A small move in words a person can read: "+0.07%", "under 0.01%". */
+export function formatMove(move: number): string {
+  const pct = move * 100;
+  if (pct < 0.01) return 'under 0.01%';
+  return `+${pct < 0.1 ? pct.toFixed(2) : pct.toFixed(1)}%`;
+}
+
 /** The one thing still between the caller and the launch, in plain words. */
 export function nudgeFor(draft: HalleyDraft, chosen: boolean): string {
   const needName = !draft.name?.trim() || !draft.symbol;
@@ -130,6 +144,14 @@ export function HalleyLaunchCard({
             Paid in {quote} · {supply.toLocaleString('en-US')} tokens
             {draft.anchorSymbol ? ` · starts at ${EQUITY_NAMES[draft.anchorSymbol] ?? draft.anchorSymbol}’s price` : ''}
           </p>
+          {(() => {
+            const move = priceMoveFor(openingPrice, supply, graduation);
+            return move !== null && move < 0.01 ? (
+              <p className={styles.terms} data-flat="true">
+                At this size the price barely moves ({formatMove(move)}) — a tracker that opens at a share’s price needs a large raise to shift it.
+              </p>
+            ) : null;
+          })()}
         </div>
       )}
 
