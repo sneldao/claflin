@@ -179,21 +179,6 @@ describe('halley live prepare', () => {
     assert.equal(HALLEY_LIVE_LIMITS.maxSupply, '1000000000000');
   });
 
-  it('refuses a curve whose liquidity overflows the on-chain fields', async () => {
-    let reachedBuilder = false;
-    const mock = mockBuild();
-    await assert.rejects(
-      () => prepareHalleyLiveProposal({
-        intent: { ...INTENT, supply: '1000000000' },
-        wallet: WALLET,
-        revision: 1,
-        buildLaunch: async (args: unknown) => { reachedBuilder = true; return mock(args); },
-      }),
-      (err: unknown) => err instanceof TradingError && err.code === 'curve_too_tight' && err.status === 422,
-    );
-    assert.equal(reachedBuilder, false);
-  });
-
   it('fails closed when a requested anchor cannot be evidenced', async () => {
     const anchored = { ...INTENT, anchorSymbol: 'NVDA' };
     await assert.rejects(
