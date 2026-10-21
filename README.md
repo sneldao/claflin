@@ -126,6 +126,7 @@ The [2026-10-03 validation record](docs/RELEASE_VALIDATION.md) covers the integr
 - [Stocklana build plan](docs/STOCKLANA_BUILD_PLAN.md): four-engineer Jesse integration brief and remaining acceptance.
 - [Product Direction](docs/PRODUCT_DIRECTION.md): jobs, principles, and information hierarchy — not page anatomy.
 - [The Foyer Is the Line](docs/FOYER_LINE.md): foyer anatomy (voice-first dealer turret) and its build phases.
+- [UX improvement plan](docs/UX_IMPROVEMENT_PLAN.md): design/UI/utility phases, exit gates, and what each phase is blocked on.
 - [Jesse on AssemblyAI's Voice Agent API](docs/ASSEMBLYAI_VOICE_AGENT.md): flag, protocol, progressive tool reveal, verification.
 - [AssemblyAI Voice Agent Hackathon submission pack](docs/ASSEMBLYAI_SUBMISSION.md): URLs, copy, video script, checklist.
 - [World's Fair entry plan](docs/WORLDS_FAIR_PLAN.md): one house submission tagged Solana + Base + Robinhood Chain; Tennie marks-first slice scope and the day sequence to 12 Oct.
