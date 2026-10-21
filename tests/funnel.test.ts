@@ -150,7 +150,7 @@ describe('funnel store', () => {
     assert.equal(parseBatch({ ...batch, userId: 'did:privy:1' }), null, 'no identifiers');
     assert.equal(parseBatch({ ...batch, visit: 'x' }), null);
     assert.equal(parseBatch({ ...batch, events: [] }), null);
-    assert.equal(parseBatch({ ...batch, events: [{ event: 'record_filed', desk: 'tennie' }] }), null);
+    assert.equal(parseBatch({ ...batch, events: [{ event: 'record_filed', desk: 'arbitrum' }] }), null, 'planned desks are not funnel desks');
   });
 
   it('writes day-scoped counters and unique-visit sketches', () => {
@@ -209,6 +209,23 @@ describe('funnel report', () => {
     assert.equal(report.estimates.hetty!.availability, 0.75);
     assert.equal(report.journey.new.find(row => row.step === 'filed')!.ofVisits, 0.2, 'share of first visits that file a record');
     assert.deepEqual(parseField('record_filed|desk=hetty'), { event: 'record_filed', dims: { desk: 'hetty' } });
+  });
+
+  it('counts Phase 0 comprehension aids without touching the journey', () => {
+    const report = summarizeFunnel({
+      'example_call_played|hours=closed|new=1': 5,
+      'offering_dossier_opened|hours=closed|new=1': 8,
+      'gap_explainer_opened|desk=hetty|hours=closed|new=1': 3,
+    }, {} as never);
+    assert.equal(report.comprehension.examplePlays, 5);
+    assert.equal(report.comprehension.dossierOpens, 8);
+    assert.deepEqual(report.comprehension.gapExplains, { hetty: 3 });
+    assert.ok(report.journey.new.every(row => row.visits === 0));
+  });
+
+  it('accepts tennie + halley as funnel desks (Phase 0)', () => {
+    assert.ok(parseBatch({ visit: 'visit_abcdefghijklmnop', newcomer: true, events: [{ event: 'record_filed', desk: 'tennie' }] }));
+    assert.ok(parseBatch({ visit: 'visit_abcdefghijklmnop', newcomer: true, events: [{ event: 'record_filed', desk: 'halley' }] }));
   });
 });
 

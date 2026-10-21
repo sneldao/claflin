@@ -374,7 +374,9 @@ describe('house foyer', () => {
     assert.ok(solItem, 'Solana mark on the wire');
     assert.equal(solItem!.getAttribute('aria-label'), 'AAPLx $227.41 on Solana');
     assert.match(text(solItem), /SOL/);
-    assert.match(text(solItem), /\+13\.6 bps vs stock/, 'the gap names what it is measured against');
+    /* The gap sits beside the mark as its own control, not inside it. */
+    const gap = solItem!.closest('.wireCell')?.querySelector('.wireGap');
+    assert.match(text(gap!), /\+13\.6 bps vs stock/, 'the gap names what it is measured against');
     const page = text(getRootElement());
     assert.doesNotMatch(page, /Jesse’s take/);
     assert.doesNotMatch(page, /Hetty’s take/);

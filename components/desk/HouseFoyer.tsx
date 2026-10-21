@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, useId, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketBell } from '@/lib/use-market-clock';
@@ -9,11 +9,12 @@ import { requestRingOnArrival } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
-import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
+import { FOYER_BOUNDARY, FOYER_HEADLINES, FOYER_LEDE, WIRE_GAP_EXPLAINER, WIRE_GAP_REFERENCE } from '@/lib/desk/ui-copy';
 import { entryIntentFromInstruction, entryIntentWithInstruction, type EntryIntent } from '@/lib/house-entry';
 import { soleOfferingForDesk } from '@/lib/desk/offerings-presentation';
 import { instructionMatch, readInstruction } from '@/lib/desk/turret';
 import { trackFunnel, trackInstruction } from '@/lib/funnel/client';
+import { type FunnelDesk } from '@/lib/funnel/events';
 import { useHouseFilings } from '@/lib/trading/useLatestFiling';
 import { LastFilingLine } from './LastFilingLine';
 import { SessionEpilogue } from './SessionEpilogue';
@@ -198,6 +199,39 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
     setInstructionSource('picked');
     commitInstruction(instruction, 'picked');
   };
+
+  /* The gap explainer — opened from a wire gap, at most once per visit. */
+  const [gapOpen, setGapOpen] = useState(false);
+  const gapDialogId = useId();
+  const gapDialogRef = useRef<HTMLDialogElement | null>(null);
+  const gapCloseRef = useRef<HTMLButtonElement | null>(null);
+  const gapEmitted = useRef(false);
+
+  const onGapOpen = (desk: FunnelDesk) => {
+    /* One event per visit: the first gap a visitor opens is the one the
+       funnel records, and the dialog copy is the same either way. */
+    if (gapEmitted.current) return;
+    gapEmitted.current = true;
+    setGapOpen(true);
+    trackFunnel({ event: 'gap_explainer_opened', desk });
+  };
+  const closeGap = () => {
+    setGapOpen(false);
+    const panel = gapDialogRef.current;
+    if (panel) {
+      try { panel.close?.(); } catch { panel.removeAttribute('open'); }
+    }
+  };
+
+  /* Open the dialog and move focus to its close button when it opens. */
+  useEffect(() => {
+    if (!gapOpen || !gapDialogRef.current) return;
+    try {
+      if (typeof gapDialogRef.current.showModal === 'function') gapDialogRef.current.showModal();
+      else gapDialogRef.current.setAttribute('open', '');
+    } catch { /* stay shut */ }
+    gapCloseRef.current?.focus();
+  }, [gapOpen]);
 
   const sharedScene = useHouseScene({ visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: !sceneLive });
   const graphics = useHouseGraphics();
@@ -413,7 +447,26 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} marks={wireMarks} market={market} onPick={pickFromWire} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} marks={wireMarks} market={market} onPick={pickFromWire} onGapOpen={onGapOpen} />
+        {gapOpen && (
+          <dialog
+            ref={gapDialogRef}
+            className={foyerStyles.gapDialog}
+            aria-labelledby={gapDialogId}
+            onClose={closeGap}
+            onCancel={event => { event.preventDefault(); closeGap(); }}
+            onClick={event => { if (event.target === gapDialogRef.current) closeGap(); }}
+          >
+            <div className={foyerStyles.gapBody}>
+              <p className={foyerStyles.gapKicker}>{WIRE_GAP_EXPLAINER.kicker}</p>
+              <h2 id={gapDialogId}>{WIRE_GAP_EXPLAINER.title}</h2>
+              <p>{WIRE_GAP_EXPLAINER.body}</p>
+            </div>
+            <button ref={gapCloseRef} type="button" className={foyerStyles.gapClose} onClick={closeGap}>
+              {WIRE_GAP_EXPLAINER.close}
+            </button>
+          </dialog>
+        )}
 
         <AnnotatedExampleCall />
 
@@ -546,6 +599,20 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
 }
 
 /**
+ * The rail a wire mark rides on maps to the desk that published it — the
+ * funnel counts the gap explainer per desk, so a gap opened on the wire is
+ * attributed to that desk's line.
+ */
+function deskOfRail(rail: 'BASE' | 'SOL' | 'RH'): FunnelDesk | null {
+  switch (rail) {
+    case 'BASE': return 'hetty';
+    case 'SOL': return 'jesse';
+    case 'RH': return 'tennie';
+  }
+  return null;
+}
+
+/**
  * The live wire — reference marks from every desk that publishes them,
  * merged into one band. Indicative observations only: ticks are computed
  * from successive real readings, never invented.
@@ -560,7 +627,7 @@ function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null, tennie: MarksRea
   ];
 }
 
-function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; marks: WireMark[]; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void }) {
+function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick, onGapOpen }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; marks: WireMark[]; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void; /** Opens the gap explainer for the desk that published a given wire mark, once per visit. */ onGapOpen: (desk: FunnelDesk) => void }) {
   const failed = hetty.failed && (jesse?.failed ?? true) && (tennie?.failed ?? true);
 
   const [ticks, setTicks] = useState<Record<string, 'up' | 'down'>>({});
@@ -643,6 +710,7 @@ function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick }: { 
                     tick={ticks[wire.key]}
                     disabled={copy === 1}
                     onPick={onPick}
+                    onGapOpen={onGapOpen}
                   />
                 ))}
               </div>
@@ -666,29 +734,69 @@ function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick }: { 
   );
 }
 
-function WireItem({ wire, tick, disabled, onPick }: { wire: WireMark; tick?: 'up' | 'down'; disabled?: boolean; onPick: (symbol: string) => void }) {
+function WireItem({ wire, tick, disabled, onPick, onGapOpen }: { wire: WireMark; tick?: 'up' | 'down'; disabled?: boolean; onPick: (symbol: string) => void; /** Fired once per visit when the visitor opens this mark's gap explainer, attributed to the mark's desk. */ onGapOpen: (desk: FunnelDesk) => void }) {
   const price = markPrice(wire.mark);
   const stale = wire.mark.reference.status === 'stale';
   const instruction = instructionForMark(wire.mark);
   const gapBps = wire.mark.reference.status === 'observed' ? Number(wire.mark.stockReference?.differenceBps ?? NaN) : NaN;
   const gap = Number.isFinite(gapBps) ? `${gapBps > 0 ? '+' : gapBps < 0 ? '−' : ''}${Math.abs(gapBps).toFixed(1)} bps ${WIRE_GAP_REFERENCE}` : null;
+  /* Which desk published this mark — the gap explainer is attributed to it. */
+  const desk = deskOfRail(wire.rail);
+  return (
+    /* The cell holds two sibling buttons, never one inside the other: the
+       mark itself is picked, and the gap beside it is explained. Nesting a
+       second control inside the mark's button is invalid HTML and hides the
+       gap's own label from assistive tech. */
+    <div className={foyerStyles.wireCell}>
+      <button
+        type="button"
+        className={foyerStyles.wireItem}
+        disabled={disabled}
+        tabIndex={disabled ? -1 : 0}
+        onClick={() => onPick(instruction)}
+        aria-label={`${wire.mark.symbol} ${price ? `$${price}` : 'reference unavailable'} on ${wire.rail === 'BASE' ? 'Base' : wire.rail === 'SOL' ? 'Solana' : 'Robinhood Chain'}`}
+      >
+        <span className={foyerStyles.wireSymbol}>{wire.mark.symbol}</span>
+        <span className={foyerStyles.wirePrice} data-tick={tick}>
+          {price ? `$${price}` : '—'}
+          {tick && <span className={foyerStyles.wireTickGlyph} aria-hidden="true">{tick === 'up' ? '▲' : '▼'}</span>}
+        </span>
+        <span className={foyerStyles.wireRail}>{wire.rail}</span>
+        {stale && <span className={foyerStyles.wireStale}>STALE</span>}
+      </button>
+      {gap && <GapTrigger gap={gap} disabled={disabled} desk={desk} onOpen={onGapOpen} />}
+    </div>
+  );
+}
+
+/**
+ * A wire-gap disclosure: the gap text is its own button beside the mark, and
+ * it opens the house's gap explainer dialog (rendered by HouseFoyer so it is
+ * never nested inside the mark's button). Opening fires
+ * `gap_explainer_opened` exactly once per visit via `onOpen`.
+ */
+function GapTrigger({ gap, disabled, desk, onOpen }: {
+  gap: string;
+  disabled?: boolean;
+  /** The desk that published this mark; null if the rail isn't a funnel desk. */
+  desk: FunnelDesk | null;
+  onOpen: (desk: FunnelDesk) => void;
+}) {
+  /* Disabled tape copies are the seamless duplicate — show the gap, don't
+     expose a second trigger. */
+  if (disabled) return <span className={foyerStyles.wireGap}>{gap}</span>;
+  /* A mark on a rail with no funnel desk has nothing to attribute to. */
+  if (!desk) return <span className={foyerStyles.wireGap}>{gap}</span>;
+
   return (
     <button
       type="button"
-      className={foyerStyles.wireItem}
-      disabled={disabled}
-      tabIndex={disabled ? -1 : 0}
-      onClick={() => onPick(instruction)}
-      aria-label={`${wire.mark.symbol} ${price ? `$${price}` : 'reference unavailable'} on ${wire.rail === 'BASE' ? 'Base' : wire.rail === 'SOL' ? 'Solana' : 'Robinhood Chain'}`}
+      data-gap-trigger
+      aria-label={`What the ${gap} gap means`}
+      onClick={() => onOpen(desk)}
+      className={foyerStyles.wireGap}
     >
-      <span className={foyerStyles.wireSymbol}>{wire.mark.symbol}</span>
-      <span className={foyerStyles.wirePrice} data-tick={tick}>
-        {price ? `$${price}` : '—'}
-        {tick && <span className={foyerStyles.wireTickGlyph} aria-hidden="true">{tick === 'up' ? '▲' : '▼'}</span>}
-      </span>
-      <span className={foyerStyles.wireRail}>{wire.rail}</span>
-      {gap && <span className={foyerStyles.wireGap}>{gap}</span>}
-      {stale && <span className={foyerStyles.wireStale}>STALE</span>}
+      {gap}
     </button>
   );
 }

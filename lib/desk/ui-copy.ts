@@ -140,6 +140,20 @@ export const TURRET_COPY = {
 /** What an onchain gap on the wire is measured against. */
 export const WIRE_GAP_REFERENCE = 'vs stock';
 
+/**
+ * The wire-gap explainer — the panel a visitor meets when they open a gap
+ * disclosure on the live wire. Reviewed copy: what the gap is, what it is
+ * not (an estimate, a prediction, a trade signal), and that readings are
+ * indicative. Never recommends, never predicts direction, never advises.
+ */
+export const WIRE_GAP_EXPLAINER = {
+  kicker: 'THE GAP',
+  title: 'What the gap on the wire means',
+  body:
+    'The gap is the difference between a token’s onchain venue mark and the desk’s stock reference, in basis points. It shows how far the venue price has moved from the reference — context only, not an estimate to trade on, not a prediction, and not a signal to act. Venue marks are indicative readings; refresh the tape for fresh ones.',
+  close: 'Close explanation',
+} as const;
+
 export const FOYER_BOUNDARY = 'Paper by default. Only you can sign.';
 
 /** First-exposure captions that teach an ambient signal once, then retire.

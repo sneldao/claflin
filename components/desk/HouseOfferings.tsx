@@ -16,6 +16,7 @@ import {
 } from '@/lib/desk/offerings-presentation';
 import { offeringForId } from '@/lib/desk/offerings';
 import { boardRows, formatGap, formatObservedAt, shortAddress, type BoardRow } from '@/lib/desk/board';
+import { trackFunnel } from '@/lib/funnel/client';
 import type { DeskMark, MarksResult } from '@/lib/trading/marks-shared';
 import foyerStyles from './HouseFoyer.module.css';
 
@@ -104,6 +105,9 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
           Each row is one token on one rail. The same company on two rails is two
           different products, and the house never swaps one for the other.
         </p>
+        <p className={foyerStyles.boardRailNote}>
+          Same stock, different token + rail = different offering. No silent substitution.
+        </p>
       </div>
 
       <div className={foyerStyles.boardWrap} aria-live="polite">
@@ -161,7 +165,11 @@ export function HouseOfferings({ onEnter, instruction = '', instructionSource = 
                           className={foyerStyles.boardToggle}
                           aria-expanded={expanded}
                           aria-controls={detailsId}
-                          onClick={() => setOpen(expanded ? null : row.offeringId)}
+                          onClick={() => {
+                            const opening = !expanded;
+                            setOpen(expanded ? null : row.offeringId);
+                            if (opening) trackFunnel({ event: 'offering_dossier_opened' });
+                          }}
                         >
                           <span className={foyerStyles.boardSymbol}>{row.symbol}</span>
                           <span className={foyerStyles.boardName}>{row.name}</span>
@@ -263,8 +271,16 @@ function DeskLinks({ row, enter, unsafe = false }: { row: BoardRow; enter: (offe
 
 function RowDetails({ row }: { row: BoardRow }) {
   const offering = offeringForId(row.offeringId);
+  const whyDesk = offering
+    ? offeringCapabilityText(offering, openDesksForOffering(offering).map(d => d.id))
+    : null;
   return (
     <div className={foyerStyles.boardDossier}>
+      {whyDesk && (
+        <p className={foyerStyles.boardWhy}>
+          <strong>Why this desk?</strong> {whyDesk}.
+        </p>
+      )}
       {row.facts && (
         <dl>
           <div><dt>What it is</dt><dd>{row.facts.what}</dd></div>

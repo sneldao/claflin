@@ -34,6 +34,8 @@ export interface FunnelReport {
   estimates: Record<string, { quoted: number; unavailable: number; availability: number | null }>;
   filed: Record<string, number>;
   retrieved: Record<string, number>;
+  /** Comprehension aids — counted apart from the journey steps. */
+  comprehension: { examplePlays: number; dossierOpens: number; gapExplains: Record<string, number> };
 }
 
 const share = (part: number, whole: number) => (whole > 0 ? part / whole : null);
@@ -52,6 +54,7 @@ export function summarizeFunnel(counts: Record<string, number>, reach: Record<`$
     estimates: {},
     filed: {},
     retrieved: {},
+    comprehension: { examplePlays: 0, dossierOpens: 0, gapExplains: {} },
   };
   let matched = 0;
   let afterHours = 0;
@@ -91,6 +94,15 @@ export function summarizeFunnel(counts: Record<string, number>, reach: Record<`$
         break;
       case 'record_retrieved':
         bump(report.retrieved, `${dims.desk}:${dims.via}`, n);
+        break;
+      case 'example_call_played':
+        report.comprehension.examplePlays += n;
+        break;
+      case 'offering_dossier_opened':
+        report.comprehension.dossierOpens += n;
+        break;
+      case 'gap_explainer_opened':
+        bump(report.comprehension.gapExplains, dims.desk, n);
         break;
     }
   }

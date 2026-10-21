@@ -7,7 +7,7 @@
  * Retention and storage are documented in docs/FUNNEL_METRICS.md.
  */
 
-export const FUNNEL_DESKS = ['hetty', 'jesse'] as const;
+export const FUNNEL_DESKS = ['hetty', 'jesse', 'tennie', 'halley'] as const;
 export type FunnelDesk = (typeof FUNNEL_DESKS)[number];
 
 export const INSTRUCTION_SOURCES = ['spoken', 'typed', 'picked'] as const;
@@ -34,7 +34,13 @@ export type FunnelEvent =
   | { event: 'desk_entered'; desk: FunnelDesk; via: (typeof ENTRY_ROUTES)[number]; carried: boolean }
   | { event: 'estimate_returned'; desk: FunnelDesk; outcome: (typeof ESTIMATE_OUTCOMES)[number] }
   | { event: 'record_filed'; desk: FunnelDesk }
-  | { event: 'record_retrieved'; desk: FunnelDesk; via: (typeof RETRIEVAL_ROUTES)[number] };
+  | { event: 'record_retrieved'; desk: FunnelDesk; via: (typeof RETRIEVAL_ROUTES)[number] }
+  /** Comprehension aid: example call played (accepted recording only). */
+  | { event: 'example_call_played' }
+  /** Comprehension aid: offering dossier row expanded on the house board. */
+  | { event: 'offering_dossier_opened' }
+  /** Comprehension aid: gap explainer opened on the live wire, attributed to the desk. */
+  | { event: 'gap_explainer_opened'; desk: FunnelDesk };
 
 export type FunnelEventName = FunnelEvent['event'];
 
@@ -63,6 +69,9 @@ export function stepsFor(event: FunnelEvent): FunnelStep[] {
     case 'record_filed': return ['filed'];
     case 'record_retrieved': return ['retrieved'];
     case 'mic_blocked': return [];
+    case 'example_call_played': return [];
+    case 'offering_dossier_opened': return [];
+    case 'gap_explainer_opened': return [];
   }
 }
 

@@ -78,8 +78,8 @@
   background: rgba(13, 18, 24, 0.5);
   color: #d4c4a2;
   font-family: var(--font-mono), monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
   max-width: 220px;
@@ -1127,6 +1127,14 @@ button.authChip:hover {
   align-items: stretch;
 }
 
+/* One tape cell: the mark's own button plus the gap disclosure beside it.
+   Siblings, never nested — two controls in one cell. */
+.wireCell {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid rgba(179, 144, 90, 0.22);
+}
+
 .wireItem {
   display: flex;
   align-items: center;
@@ -1134,7 +1142,7 @@ button.authChip:hover {
   padding: 12px 26px;
   background: transparent;
   border: 0;
-  border-right: 1px solid rgba(179, 144, 90, 0.22);
+  border-right: 0;
   color: var(--ink);
   white-space: nowrap;
   cursor: pointer;
@@ -1198,6 +1206,84 @@ button.authChip:hover {
   letter-spacing: 0.04em;
   color: var(--brass);
 }
+
+/* The gap disclosure is a real button, so it must not carry the browser's
+   button chrome — it reads as a link-ish note on the tape. */
+button.wireGap {
+  background: transparent;
+  border: 0;
+  padding: 4px 10px 4px 0;
+  white-space: nowrap;
+}
+
+[data-gap-trigger] {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+[data-gap-trigger]:hover { color: var(--brass); }
+[data-gap-trigger]:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+
+/* The wire-gap explainer — a paper panel, same furniture as the desk
+   education dialogs, so a gap explanation reads as house material. */
+.gapDialog {
+  width: min(420px, 100vw);
+  max-height: min(80dvh, 600px);
+  margin: auto;
+  padding: 20px 24px 28px;
+  border: none;
+  border-radius: 2px;
+  background: linear-gradient(145deg, var(--desk-paper-light, #f0eadb), var(--desk-paper, #e7dfc9));
+  color: var(--desk-paper-ink, #27362b);
+  box-shadow: -8px 0 40px var(--desk-shadow, #030b0873);
+  overflow-y: auto;
+  font-family: var(--font-body), 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+}
+.gapDialog::backdrop { background: var(--scrim-focus); }
+.gapDialog[open] { display: block; }
+@media (max-width: 720px) {
+  .gapDialog {
+    width: 100%;
+    margin: auto 0 0;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -8px 40px var(--desk-shadow, #030b0873);
+  }
+}
+.gapDialog .gapKicker {
+  margin: 0 0 .35rem;
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--desk-paper-muted, #59614d);
+}
+.gapDialog h2 {
+  margin: .25rem 0 .75rem;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.28rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--desk-paper-ink, #27362b);
+}
+.gapDialog .gapBody {
+  margin: 0 0 1rem;
+  line-height: 1.55;
+  color: var(--desk-paper-ink, #27362b);
+}
+.gapDialog .gapClose {
+  display: block;
+  width: 100%;
+  margin-top: .5rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--desk-paper-edge, #b6a985);
+  background: var(--desk-paper, #e7dfc9);
+  color: var(--desk-paper-ink, #27362b);
+  font: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.gapDialog .gapClose:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.gapDialog .gapClose:hover { background: var(--desk-paper-wash, #27362b08); }
 
 .wireStale {
   font-family: var(--font-mono), monospace;
@@ -1393,7 +1479,7 @@ button.authChip:hover {
   content: 'Details ▾';
   margin-top: 4px;
   font-family: var(--font-mono), monospace;
-  font-size: 0.54rem;
+  font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--brass-dim);
@@ -1497,8 +1583,8 @@ button.authChip:hover {
 
 .boardDossier dt {
   font-family: var(--font-mono), monospace;
-  font-size: 0.54rem;
-  letter-spacing: 0.16em;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #8f8265;
 }
@@ -1518,6 +1604,26 @@ button.authChip:hover {
 .boardAddress {
   font-family: var(--font-mono), monospace;
   font-size: 0.74rem;
+}
+
+/* Phase 1B: rail-note under the board intro + Why-this-desk line in the dossier. */
+.boardRailNote {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.boardWhy {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #d6c9aa;
+}
+
+.boardWhy strong {
+  color: var(--brass);
 }
 
 .srOnly {

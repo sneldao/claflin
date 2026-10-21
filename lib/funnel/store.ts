@@ -29,6 +29,9 @@ const eventSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('estimate_returned'), desk, outcome: z.enum(ESTIMATE_OUTCOMES) }).strict(),
   z.object({ event: z.literal('record_filed'), desk }).strict(),
   z.object({ event: z.literal('record_retrieved'), desk, via: z.enum(RETRIEVAL_ROUTES) }).strict(),
+  z.object({ event: z.literal('example_call_played') }).strict(),
+  z.object({ event: z.literal('offering_dossier_opened') }).strict(),
+  z.object({ event: z.literal('gap_explainer_opened'), desk }).strict(),
 ]);
 
 export const batchSchema = z.object({

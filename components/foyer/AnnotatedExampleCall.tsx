@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CURRENT_EXAMPLE_CALL, EXAMPLE_CALL_CRITERIA, EXAMPLE_CALL_LABEL, type ExampleCall, type ExampleCallState } from '@/lib/foyer/example-call';
 import { HouseSheet } from './HouseSheet';
+import { trackFunnel } from '@/lib/funnel/client';
 import foyerStyles from '@/components/desk/HouseFoyer.module.css';
 
 /**
@@ -33,6 +34,7 @@ function AcceptedExampleCall({ call }: { call: ExampleCall }) {
 
   const onPlay = () => {
     setAudioUnlocked(true);
+    trackFunnel({ event: 'example_call_played' });
     if (audioRef.current) {
       void audioRef.current.play().catch(() => {
         // Browser autoplay refused; captions stay on as the default.

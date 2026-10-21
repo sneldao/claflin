@@ -72,6 +72,8 @@ function print(r: FunnelReport) {
   }
   console.log(`Records filed: ${fmt(r.filed)}`);
   console.log(`Records retrieved (desk:via): ${fmt(r.retrieved)}`);
+  const c = r.comprehension;
+  console.log(`Comprehension aids (not journey steps): example plays ${c.examplePlays} · dossier opens ${c.dossierOpens} · gap explains ${fmt(c.gapExplains)}`);
 }
 
 function fmt(map: Record<string, number>): string {

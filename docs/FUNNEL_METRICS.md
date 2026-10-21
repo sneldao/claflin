@@ -15,6 +15,11 @@ The event source for docs/FOYER_LINE.md §8 and ROADMAP §1a Phase 5. Baselines 
 | `estimate_returned` | desk · outcome: quoted/unavailable | `useDeskDocuments.requestQuote`, Jesse quote port + `run()` |
 | `record_filed` | desk | Hetty `save`, Jesse `file-paper` |
 | `record_retrieved` | desk · via: ledger/last_filing/foyer/link | ledger buttons, last-filing lines, `?record=` entry |
+| `example_call_played` | — | `AnnotatedExampleCall` Play (accepted recording only) |
+| `offering_dossier_opened` | — | `HouseOfferings` board row expand |
+| `gap_explainer_opened` | desk | `HouseFoyer` wire-gap disclosure (live tape, Phase 1) |
+
+The last three are comprehension aids, not journey steps: they are counted and reported separately from the funnel stages, so they never distort the step counts below. `gap_explainer_opened` fires at most once per visit, attributed to the desk that published the mark.
 
 Never sent: instruction text, amounts, instruments, record/quote ids, account ids, wallets. The envelope carries a random per-tab `visit` id (sessionStorage, gone when the tab closes) and `newcomer` (true when the browser holds no `claflin.` storage; the client then writes `claflin.seen.v1 = 1`). `hours` (NYSE open/closed) is stamped server-side from `lib/market-clock.ts`.
 
