@@ -102,7 +102,9 @@ describe('house foyer', () => {
     micDescriptor = Object.getOwnPropertyDescriptor(window.navigator, 'mediaDevices');
     Object.defineProperty(window.navigator, 'mediaDevices', {
       configurable: true,
-      value: { getUserMedia: () => { micCalls += 1; return Promise.reject(new Error('foyer must not use the mic')); } },
+      /* A stream the prime can take and release — the count is the contract:
+         the mic may open only inside the click that asks for a line. */
+      value: { getUserMedia: () => { micCalls += 1; return Promise.resolve({ getTracks: () => [{ stop() {} }] }); } },
     });
     /* Count writes but keep them real — ring-on-arrival must leave a readable key. */
     mock.method(window.Storage.prototype, 'setItem', function (this: Storage, key: string, value: string) {
@@ -256,6 +258,9 @@ describe('house foyer', () => {
     const pending = JSON.parse(raw!) as { deskId?: string; at?: number };
     assert.equal(pending.deskId, 'hetty');
     assert.equal(typeof pending.at, 'number');
+    /* The ring primes the mic in the click itself, so the desk's session
+       opens prompt-free on arrival. */
+    assert.equal(micCalls, 1, 'the click that asks for a line primes the mic once');
   });
 
   it('an offering link dispatches desk and offering once; meta-click is untouched', async () => {
@@ -285,6 +290,7 @@ describe('house foyer', () => {
     assert.equal(entered, 'jesse');
     assert.equal(selectedOffering, offering.offeringId);
     assert.equal(enterCount, 1);
+    assert.equal(micCalls, 0, 'a plain desk entry never touches the mic');
 
     const modified = new (window as any).MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true });
     let prevented = false;

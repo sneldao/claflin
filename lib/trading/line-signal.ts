@@ -49,3 +49,20 @@ export function consumeRingOnArrival(deskId: HouseDeskId, now = Date.now()): boo
     return false;
   }
 }
+
+/**
+ * The desk's own getUserMedia would surface its prompt on the arriving page,
+ * a navigation and two async hops away from the click that asked for the
+ * line. Ask here instead — inside the gesture that means "ring" — then
+ * release: the call SDK opens its own stream a beat later, prompt-free.
+ * Best-effort and never awaited: a refusal or a missing device is the
+ * desk's error to show, not the foyer's.
+ */
+export function primeLineMicrophone(): void {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+  try {
+    void navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => stream.getTracks().forEach(track => track.stop()))
+      .catch(() => { /* The desk's ring surfaces the reason. */ });
+  } catch { /* Synchronous refusal — same answer. */ }
+}

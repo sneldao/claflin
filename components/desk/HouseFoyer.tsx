@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketBell } from '@/lib/use-market-clock';
 import { bellLine, formatBellCountdown, type MarketClock, type NextBell } from '@/lib/market-clock';
-import { requestRingOnArrival } from '@/lib/trading/line-signal';
+import { requestRingOnArrival, primeLineMicrophone } from '@/lib/trading/line-signal';
 import { useReferenceMarks } from '@/lib/trading/useReferenceMarks';
 import { markPrice, type DeskMark, type MarksResult } from '@/lib/trading/marks-shared';
 import { offeringForInstrument } from '@/lib/desk/offerings';
@@ -372,6 +372,9 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
   const ring = (id: HouseDeskId) => () => {
     commitInstruction(wireInstruction, instructionSource);
     requestRingOnArrival(id);
+    /* Ask for the mic in the click that means "ring" — the arriving desk's
+       session then opens prompt-free. */
+    primeLineMicrophone();
     window.scrollTo({ top: 0, behavior: 'instant' });
     const { offeringId, intent } = carried(id);
     onEnter(id, offeringId ?? undefined, intent);
