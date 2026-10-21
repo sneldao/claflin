@@ -139,10 +139,18 @@ describe('house foyer — gap explainer', () => {
     assert.equal(gapEvents.length, 1, 'one gap_explainer_opened');
     assert.equal(gapEvents[0]!.desk, 'jesse', 'attributed to Jesse\u2019s desk');
 
-    // Opening another desk's gap must not re-emit (one-time tracking).
+    // Closing the explainer and opening another desk's gap must not
+    // re-emit — but the dialog itself reopens: only the event is once
+    // per visit, not the reading.
+    const close = getRootElement().querySelector('.gapClose') as HTMLElement | null;
+    assert.ok(close, 'a close button renders');
+    await act(async () => click(close!));
+    assert.equal(getRootElement().querySelectorAll('dialog').length, 0, 'the dialog closes');
+
     const hetty2 = triggers.find(t => t.textContent?.includes('+93.3'));
     assert.ok(hetty2, 'the Hetty gap trigger renders');
     await act(async () => click(hetty2!));
+    assert.ok(getRootElement().querySelector('dialog'), 'the explainer reopens for a second gap');
     forceFlush();
     assert.equal(sentFunnels.length, 1, 'no second beacon on a second gap open');
     const allGapEvents = (sentFunnels[0] as { events: unknown[] }).events as { event: string; desk: string }[];

@@ -208,11 +208,13 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
   const gapEmitted = useRef(false);
 
   const onGapOpen = (desk: FunnelDesk) => {
-    /* One event per visit: the first gap a visitor opens is the one the
-       funnel records, and the dialog copy is the same either way. */
+    /* The dialog reopens freely — a visitor who dismissed it is asking
+       again. Only the funnel event is once per visit: the first gap a
+       visitor opens is the one recorded, and the copy is the same either
+       way. */
+    setGapOpen(true);
     if (gapEmitted.current) return;
     gapEmitted.current = true;
-    setGapOpen(true);
     trackFunnel({ event: 'gap_explainer_opened', desk });
   };
   const closeGap = () => {
