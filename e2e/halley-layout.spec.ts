@@ -10,6 +10,10 @@ import { test, expect, type Page } from '@playwright/test';
 
 const SHOTS = '/tmp/halley-pass';
 const DESK = '/?desk=halley';
+/* The stored per-desk view preference — seeded to Room so reduced motion
+   (which prefers Compact for a first visit) keeps the layout this spec
+   exists to shoot. */
+const HALLEY_VIEW_KEY = 'claflin.presentation.v1.halley';
 
 async function shoot(page: Page, name: string) {
   /* Best-effort pixels for the human eye — the 3D backdrop can stall a
@@ -18,14 +22,24 @@ async function shoot(page: Page, name: string) {
     .catch(() => undefined);
 }
 
-async function openFreshCard(page: Page, width: number, height: number, live = true) {
+async function openFreshCard(page: Page, width: number, height: number, live: 'on' | 'off' = 'off') {
   await page.setViewportSize({ width, height });
-  if (!live) {
-    await page.route('**/api/desk/halley/live/status', route => route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({ enabled: false }),
-    }));
-  }
+  /* Deterministic in headless CI, as in journey.spec: reduced motion keeps
+     WebGL out of the run and stills the celebration and comet, so actionability
+     checks are not starved on a software rasteriser. Room is pinned explicitly —
+     reduced motion would otherwise prefer Compact on a fresh visit. The init
+     script re-seeds after the storage clear below. */
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(key => {
+    try { window.localStorage.setItem(key, JSON.stringify({ mode: 'room' })); } catch { /* storage optional */ }
+  }, HALLEY_VIEW_KEY);
+  /* The status endpoint is the only authority for the live path — stub it
+     either way so the spec does not depend on the deployment's flags. */
+  await page.route('**/api/desk/halley/live/status', route => route.fulfill({
+    status: live === 'on' ? 200 : 403,
+    contentType: 'application/json',
+    body: JSON.stringify({ enabled: live === 'on' }),
+  }));
   await page.goto(DESK);
   await expect(page.locator('#halley-card')).toBeVisible();
   await page.evaluate(() => window.localStorage.clear());
@@ -94,7 +108,7 @@ test.describe('launch to filed record', () => {
   test('card → review → filed: celebration, watch tape, share fold', async ({ page }) => {
     test.setTimeout(180_000);
     /* Paper path: the live probe is stubbed closed, as in the folds spec. */
-    await openFreshCard(page, 1440, 900, false);
+    await openFreshCard(page, 1440, 900, 'off');
     const card = page.locator('#halley-card');
     await page.fill('#halley-card-name', 'Comet Ledger');
     await nvidiaTile(card).click();
@@ -152,7 +166,9 @@ test.describe('launch to filed record', () => {
 
   test('live path: review hands off to the wallet, note under the button', async ({ page }) => {
     test.setTimeout(180_000);
-    await openFreshCard(page, 1440, 900);
+    /* The probe is stubbed open — the desk takes the live path and review
+       hands off to the wallet anchor instead of filing. */
+    await openFreshCard(page, 1440, 900, 'on');
     const card = page.locator('#halley-card');
     await page.fill('#halley-card-name', 'Comet Ledger');
     await nvidiaTile(card).click();
