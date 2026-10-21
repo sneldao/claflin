@@ -42,6 +42,26 @@ pnpm exec tsx --env-file=.env.local scripts/funnel-report.mts --days=7 [--json]
 
 There is no HTTP read endpoint. Caveats: `link` entries include reloads of a desk URL; the mic denied rate is `denied / (spoken instructions + mic failures)`; React StrictMode double-fires entry effects in `next dev` only.
 
+---
+
+## Baseline — 2026-10-21 (Phase 0.5)
+
+Run with `pnpm exec tsx --env-file=.env.local scripts/funnel-report.mts --days=7`:
+
+```
+Journey — first-time browsers: visited 1 · instructed 0 · matched 0 · entered 1 · quoted 0 · filed 0 · retrieved 0
+Journey — returning browsers:  all zero
+Instructions: 0 · Landings: desk 1 · Desk entries: jesse:link 2
+Comprehension aids: example plays 0 · dossier opens 0 · gap explains none
+```
+
+**One visit is not a baseline.** The whole retention window (90 days) holds a single day of data — 2026-10-03, one `visit_started` (landing `desk`) and two `desk_entered` (desk `jesse`, via `link`). The 7-day window is empty, so the figures above and the 90-day figures are the same single visit. The reason is traffic, not instrumentation: the funnel client is present in the deployed `app/page` chunk and the ingest route answers, so a browser visit writes a `funnel:counts` hash.
+
+Because Phase 1's exit gate is a +20% conversion comparison, that comparison cannot be drawn yet. Treat the numbers above as a **floor of one**, not a measurement to improve on. Re-run the report after a week of real traffic and replace this section before making any further funnel-impacting change.
+
+`gap_explainer_opened` has never fired in the wild: the feature shipped in commit `542ff6d` on 2026-10-21, after the last recorded visit.
+
+---
 
 ---
 

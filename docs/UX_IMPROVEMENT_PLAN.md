@@ -6,7 +6,7 @@
 
 ## Progress tracker
 
-- [ ] Phase 0 — Baseline + instrumentation (0.5 wk) — **0.5 blocked on Redis creds**
+- [ ] Phase 0 — Baseline + instrumentation (0.5 wk) — **0.5 run 2026-10-21; baseline is one visit, not yet a baseline**
 - [x] Phase 1 — Teach faster: comprehension + cognitive load (1.5 wk) — code shipped; exit gate not yet measurable (see below)
 - [ ] Phase 2 — Distinct rooms, not nameplates (1 wk)
 - [ ] Phase 3 — Real utility: Hetty gap + live readiness (2 wk)
@@ -20,7 +20,7 @@
 - [x] 0.2 Emit from UI: example-call Play, RowDetails expand, gap explainer open
 - [x] 0.3 Freeze visual baselines: Playwright chromium + room-budget before
 - [x] 0.4 Gates green: typecheck, desk-copy, broker-voice, test, comprehension
-- [ ] 0.5 Baseline funnel report --days=7
+- [x] 0.5 Baseline funnel report --days=7 — run 2026-10-21; see docs/FUNNEL_METRICS.md "Baseline". One visit in 90 days, so the +20% comparison still has no "before".
 
 ## Phase 1 — Teach faster (highest EV)
 **Exit gate:** example play to first quote +20%; 5-user test names token/rail/record.
@@ -63,6 +63,8 @@ typecheck, check-desk-copy, check-broker-voice, test, playwright chromium, check
 - 2026-10-20: Plan created from 7.4/10 review. Phase 0 started.
 - 2026-10-20 (Phase 0 partial): funnel extended to tennie+halley, 3 comprehension events added + emitted, report prints comprehension line, funnel tests 20/20, comprehension 90/90, typecheck + copy gates clean. Existing room-budget metrics (2026-10-05) kept as before-baseline. 0.5 funnel report needs Redis creds.
 - 2026-10-20 (Phase 1): wire-gap explainer landed on the live tape — the gap is its own button beside the mark (siblings, never nested), opens a house paper dialog, emits `gap_explainer_opened` once per visit attributed to the mark's desk. 1A example call label/play, 1B rail note + "Why this desk?", 1C legibility floor also in. Gates: typecheck, desk-copy, broker-voice, css-token-scope, comprehension 90/90, full suite 1591/1591. Room budget needs a production build (not run here).
+- 2026-10-21 (Phase 0.5): funnel baseline run for the first time. The whole 90-day retention window holds one visit (2026-10-03, jesse via link) — the 7-day window is empty. Instrumentation verified working, not broken: the funnel client ships in the deployed `app/page` chunk and a probe batch wrote and was cleaned from `funnel:counts`. Baseline written to docs/FUNNEL_METRICS.md as a floor of one. The +20% gate therefore still has no "before" and needs a week of traffic, not more credentials.
+- 2026-10-21 (build fix): the Phase 1 gap explainer's bare `[data-gap-trigger]` selectors were impure CSS Modules and failed `next build`, breaking the Build, Docker and Browser acceptance CI jobs on main. Scoped to `.wireGap`. The test suite could not catch it — purity is a build-time rule. Production build now compiles; `check:room-budget` ran against it and passed on the second run (first run tripped the documented SwiftShader timing noise, 948ms vs 272ms baseline).
 
 ## Phase 1 — what shipped, and what is still open
 
@@ -70,9 +72,12 @@ Phase 1's *code* is done. Its *exit gate* is not yet measurable, and the two
 reasons are both Phase 0/Phase 5 work, not Phase 1 work:
 
 - **"Example play → first quote +20%"** needs a before/after funnel
-  comparison. There is no "before" yet: item 0.5 has never run, because
-  `scripts/funnel-report.mts` needs Redis credentials. Until 0.5 has run
-  once and the baseline is written down, +20% cannot be claimed or denied.
+  comparison. Item 0.5 has now run (2026-10-21) and the baseline is
+  written down in docs/FUNNEL_METRICS.md — but it is **one visit in the
+  whole 90-day retention window**, so it is a floor, not a "before" you
+  can measure +20% against. The comparison becomes drawable only once
+  the house has a week of real traffic. Until then +20% can be neither
+  claimed nor denied.
 - **"5-user test names token/rail/record"** is the Phase 5 study. The
   instrumentation it depends on is in place (`example_call_played`,
   `offering_dossier_opened`, `gap_explainer_opened` are all emitted and
@@ -102,19 +107,21 @@ prediction, not a signal to act.
 
 | Phase | Scope | Blocked on | Gate |
 |---|---|---|---|
-| **0.5** | Baseline funnel report `--days=7` | **Redis credentials** (the only hard blocker in the plan) | Baseline written down before any Phase 2 change |
+| **0.5** | Baseline funnel report `--days=7` | Done 2026-10-21 — but the baseline is one visit; re-run after a week of traffic | Baseline written down before any Phase 2 change |
 | **2** | Distinct rooms: per-desk accent vars, per-desk tour poses, per-desk hero order | Nothing — can start now | 5-second screenshot sort, 4/4 rooms distinct, no new payload |
 | **3** | Real utility: 3A Hetty stock reference (Pyth Pro, honest fallback), 3B live hardening | 3A needs a stock-reference source decision (FOYER_LINE §9 open decision) | Hetty gap observed >95%, live devnet demo, paper stays default |
-| **4** | Mobile-certify Room: lightweight default on coarse/save-data, tape rAF pause, 40px targets + safe-area | A production build (`check:room-budget` refuses to run without one) | JS <350kb gz, first frame <1.8s throttled, iOS/Android video |
+| **4** | Mobile-certify Room: lightweight default on coarse/save-data, tape rAF pause, 40px targets + safe-area | Nothing (a production build now compiles, and `check:room-budget` runs against it) | JS <350kb gz, first frame <1.8s throttled, iOS/Android video |
 | **5** | 5-user moderated study, weekly Market Letter cadence | Phase 1's teaching must exist first (it does); study recruiting | 4/5 users answer token/rail/money/record + gap |
 
-**Recommended order:** 0.5 → 2 → 5 → 3 → 4.
+**Recommended order:** 2 → 5 → 3 → 4, with 0.5 re-run before 3 and 4.
 
-- **0.5 first.** It is small, it is the only thing fully blocked on an
-  external input, and every later phase's exit gate is measured against
-  it. Getting it unblocked first converts every remaining phase from
-  "ship and hope" to "ship and compare".
-- **Phase 2 second.** It is self-contained, needs no external dependency,
+- **0.5 is done, and it changed the plan.** It ran on 2026-10-21 and
+  found one visit in the entire retention window, so the +20% gate still
+  has no "before". The report needs no further unblocking — only
+  traffic. Re-run it after a week of real visitors and replace the
+  baseline section before Phase 3 and Phase 4 land, since both change
+  what the funnel sees.
+- **Phase 2 first.** It is self-contained, needs no external dependency,
   and carries no new payload — the cheapest real improvement in the plan.
 - **Phase 5 (the study) third, not last.** It is listed last in the plan
   but it is the only phase that *proves* Phase 1, and it has the longest
