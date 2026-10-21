@@ -1216,13 +1216,15 @@ button.wireGap {
   white-space: nowrap;
 }
 
-[data-gap-trigger] {
+/* Scoped to the local class: a bare attribute selector is impure in CSS
+   Modules and fails the production build. */
+.wireGap[data-gap-trigger] {
   cursor: pointer;
   text-decoration: underline dotted;
   text-underline-offset: 2px;
 }
-[data-gap-trigger]:hover { color: var(--brass); }
-[data-gap-trigger]:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.wireGap[data-gap-trigger]:hover { color: var(--brass); }
+.wireGap[data-gap-trigger]:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
 
 /* The wire-gap explainer — a paper panel, same furniture as the desk
    education dialogs, so a gap explanation reads as house material. */
