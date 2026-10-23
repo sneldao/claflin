@@ -846,18 +846,21 @@
   }
   .handForm[open]::details-content { block-size: auto; opacity: 1; }
   /* The height leads; the content fades and rises just behind it, so the
-     text never appears over a still-collapsing box. */
-  .handForm::details-content > * {
+     text never appears over a still-collapsing box.
+     ::details-content wraps every non-summary child of <details>, so
+     `> :not(summary)` selects the same boxes without a combinator after a
+     pseudo-element (which LightningCSS/Turbopack rejects). */
+  .handForm > :not(summary) {
     transition: transform var(--dur-1, 240ms) var(--ease-swift, ease);
     transform: translateY(4px);
   }
-  .handForm[open]::details-content > * { transform: translateY(0); }
+  .handForm[open] > :not(summary) { transform: translateY(0); }
   .handForm:not([open])::details-content {
     transition-duration: var(--dur-1, 240ms), var(--dur-1, 240ms), 160ms;
   }
   @media (prefers-reduced-motion: reduce) {
     .handForm::details-content,
-    .handForm::details-content > * { transition: none; transform: none; }
+    .handForm > :not(summary) { transition: none; transform: none; }
   }
 }
 .ringLamp {

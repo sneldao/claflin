@@ -20,13 +20,6 @@ const nextConfig = {
     return 'build-' + Date.now()
   },
 
-  // Server actions configuration
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '1mb',
-    },
-  },
-
   // Headers for security. CORS for /api/* is handled centrally in
   // proxy.ts (dynamic origin reflection + preflight handling), so we
   // deliberately do NOT set static Access-Control-* headers here — duplicate
@@ -115,13 +108,14 @@ const nextConfig = {
     ];
   },
 
-  webpack: (config, { webpack }) => {
-    // Privy ships optional Farcaster mini-app imports that are not installed.
-    config.plugins.push(
-      new webpack.IgnorePlugin({ resourceRegExp: /^@farcaster\/mini-app-solana$/ }),
-      new webpack.IgnorePlugin({ resourceRegExp: /^@farcaster\/mini-app-wagmi-connector$/ }),
-    );
-    return config;
+  // Privy ships optional Farcaster mini-app imports that are not installed;
+  // resolve them to an empty module (the Turbopack equivalent of webpack's
+  // IgnorePlugin — the imports are dynamic and wrapped in try/catch upstream).
+  turbopack: {
+    resolveAlias: {
+      '@farcaster/mini-app-solana': './lib/empty-module.ts',
+      '@farcaster/mini-app-wagmi-connector': './lib/empty-module.ts',
+    },
   },
 };
 

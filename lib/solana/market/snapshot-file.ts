@@ -27,7 +27,7 @@ type SnapshotMap = Record<string, FeedSnapshot>;
 /** Parse the document once. Missing/corrupt → null (never throws). */
 export function readSnapshotFile(file = snapshotFilePath()): SnapshotMap | null {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const parsed: unknown = JSON.parse(fs.readFileSync(/* turbopackIgnore: true */ file, 'utf8'));
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
     return parsed as SnapshotMap;
   } catch {
