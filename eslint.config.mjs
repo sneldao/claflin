@@ -22,7 +22,7 @@ const config = [
     },
   },
   {
-    ignores: ['.next/', 'out/', 'node_modules/'],
+    ignores: ['.next/', 'out/', 'node_modules/', 'demo-video/'],
   },
 ];
 
