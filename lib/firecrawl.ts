@@ -5,6 +5,8 @@
 // Uses the REST API directly to avoid SDK compatibility issues with Next.js.
 
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v2';
+const SANDBASE_BASE_URL = () =>
+  (process.env.SANDBASE_BASE_URL || 'https://api.sandbase.ai').replace(/\/+$/, '');
 const CRAWL_POLL_INTERVAL_MS = 2000;
 const CRAWL_TIMEOUT_MS = 30000;
 
@@ -24,6 +26,8 @@ export interface FirecrawlSearchResponse {
   query: string;
   results: FirecrawlSearchResult[];
   totalResults: number;
+  /** Which route served the result — 'native' (Firecrawl) or 'sandbase'. */
+  provider?: FirecrawlProvider;
 }
 
 // ============================================
@@ -36,7 +40,35 @@ function getApiKey(): string {
   return key;
 }
 
-async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+function getSandbaseKey(): string {
+  return process.env.SANDBASE_API_KEY || '';
+}
+
+type FetchRoute = 'native' | 'sandbase';
+
+// SandBase can proxy Firecrawl's SYNC endpoints only; crawl / batch-scrape /
+// extract are async on SandBase and stay native-only.
+const SANDBABLE_PATHS: Record<string, string> = {
+  '/search': 'firecrawl/search',
+  '/scrape': 'firecrawl/scrape',
+  '/map': 'firecrawl/map',
+};
+
+/** Ordered routes for a call: keyless routes dropped. */
+function routeOrder(): FetchRoute[] {
+  const order =
+    (process.env.SEARCH_ROUTE_ORDER || '').trim().toLowerCase() === 'sandbase,native'
+      ? (['sandbase', 'native'] as const)
+      : (['native', 'sandbase'] as const);
+  return order.filter((r) =>
+    r === 'native' ? !!process.env.FIRECRAWL_API_KEY : !!getSandbaseKey()
+  );
+}
+
+/** Which route served a response — provenance for "which routes stick". */
+export type FirecrawlProvider = 'native' | 'sandbase';
+
+async function nativeFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`${FIRECRAWL_API_URL}${path}`, {
     method: 'POST',
     headers: {
@@ -52,6 +84,64 @@ async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): P
   }
 
   return res.json() as Promise<T>;
+}
+
+async function sandbaseFetch<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${SANDBASE_BASE_URL()}/v1/api/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getSandbaseKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`SandBase API error ${res.status}: ${text}`);
+  }
+
+  const envelope = (await res.json()) as { status?: string; output?: unknown };
+  if (envelope?.status !== 'completed' || !envelope.output || typeof envelope.output !== 'object') {
+    throw new Error('SandBase response not completed');
+  }
+  return envelope.output as T;
+}
+
+async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const routed = await firecrawlFetchRouted<T>(path, body);
+  return routed.data;
+}
+
+async function firecrawlFetchRouted<T>(
+  path: string,
+  body: Record<string, unknown>
+): Promise<{ data: T; provider: FirecrawlProvider }> {
+  const sandbaseEndpoint = SANDBABLE_PATHS[path];
+  if (!sandbaseEndpoint) {
+    // crawl / extract: async on SandBase — native only.
+    return { data: await nativeFetch<T>(path, body), provider: 'native' };
+  }
+
+  const routes = routeOrder();
+  let lastErr: unknown = new Error('no search route configured (FIRECRAWL_API_KEY / SANDBASE_API_KEY)');
+  for (const route of routes) {
+    try {
+      if (route === 'sandbase') {
+        // SandBase scrape requires proxy:"basic" alongside url + formats.
+        const sbBody =
+          path === '/scrape' ? { proxy: 'basic', ...body } : body;
+        return {
+          data: await sandbaseFetch<T>(sandbaseEndpoint, sbBody),
+          provider: 'sandbase',
+        };
+      }
+      return { data: await nativeFetch<T>(path, body), provider: 'native' };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
 }
 
 // ============================================
@@ -81,7 +171,8 @@ export async function firecrawlSearch(
   if (options?.country) body.country = options.country;
   if (options?.lang) body.lang = options.lang;
 
-  const response = await firecrawlFetch<any>('/search', body);
+  const routed = await firecrawlFetchRouted<any>('/search', body);
+  const response = routed.data;
 
   // API returns { success: true, data: { web: [...] } }
   const webResults = response.data?.web ?? response.web ?? [];
@@ -94,7 +185,7 @@ export async function firecrawlSearch(
     source: item.url ? new URL(item.url).hostname : 'unknown',
   }));
 
-  return { query, results, totalResults: results.length };
+  return { query, results, totalResults: results.length, provider: routed.provider };
 }
 
 /**

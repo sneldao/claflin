@@ -598,7 +598,11 @@ export class ResearchSkill {
   private apiKey: string;
 
   constructor(_wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
-    this.apiKey = process.env.FIRECRAWL_API_KEY || process.env.TAVILY_API_KEY || '';
+    this.apiKey =
+      process.env.FIRECRAWL_API_KEY ||
+      process.env.TAVILY_API_KEY ||
+      process.env.SANDBASE_API_KEY ||
+      '';
   }
 
   /**
@@ -625,13 +629,15 @@ export class ResearchSkill {
       if (!this.apiKey) {
         return {
           success: false,
-          error: 'No search API key configured. Set FIRECRAWL_API_KEY or TAVILY_API_KEY in environment.',
+          error: 'No search API key configured. Set FIRECRAWL_API_KEY, TAVILY_API_KEY, or SANDBASE_API_KEY in environment.',
           timestamp: new Date(),
         };
       }
 
-      // Use Firecrawl if available, otherwise fall back to Tavily
-      if (process.env.FIRECRAWL_API_KEY) {
+      // Use the Firecrawl path when its native key or a SandBase key exists —
+      // SandBase proxies firecrawl/search, so a SandBase-only deployment
+      // still takes the Firecrawl shape. Otherwise fall back to Tavily.
+      if (process.env.FIRECRAWL_API_KEY || process.env.SANDBASE_API_KEY) {
         return this.executeFirecrawl(params);
       }
       return this.executeTavily(params);
@@ -673,6 +679,7 @@ export class ResearchSkill {
         results,
         totalResults: results.length,
         summary,
+        provider: response.provider ?? 'native',
       } as unknown as Record<string, unknown>,
       timestamp: new Date(),
     };
@@ -683,28 +690,76 @@ export class ResearchSkill {
    */
   private async executeTavily(params: ResearchParams): Promise<SkillResult> {
     const maxResults = params.maxResults || 5;
+    const sandbaseKey = process.env.SANDBASE_API_KEY || '';
+    const sandbaseBase = (
+      process.env.SANDBASE_BASE_URL || 'https://api.sandbase.ai'
+    ).replace(/\/+$/, '');
 
-    const tavilyResponse = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: this.apiKey,
-        query: params.query,
-        max_results: maxResults,
-        search_depth: params.includeSummary ? 'advanced' : 'basic',
-        include_answer: params.includeSummary ?? false,
-      }),
-    });
-
-    if (!tavilyResponse.ok) {
-      const errorText = await tavilyResponse.text();
-      throw new Error(`Tavily API error ${tavilyResponse.status}: ${errorText}`);
+    const routes: Array<'native' | 'sandbase'> = [];
+    const preferSandbase =
+      (process.env.SEARCH_ROUTE_ORDER || '').trim().toLowerCase() === 'sandbase,native';
+    for (const route of preferSandbase ? ['sandbase', 'native'] : ['native', 'sandbase']) {
+      if (route === 'native' && this.apiKey) routes.push('native');
+      if (route === 'sandbase' && sandbaseKey) routes.push('sandbase');
     }
 
-    const data = await tavilyResponse.json() as {
+    type TavilyPayload = {
       results: Array<{ title: string; url: string; content: string; score: number }>;
       answer?: string;
     };
+    const baseBody = {
+      query: params.query,
+      max_results: Math.min(20, Math.max(1, maxResults)),
+      search_depth: params.includeSummary ? 'advanced' : 'basic',
+      include_answer: params.includeSummary ?? false,
+    };
+
+    let data: TavilyPayload | undefined;
+    let provider: 'native' | 'sandbase' = 'native';
+    let lastErr: unknown = new Error('no search route configured');
+    for (const route of routes) {
+      try {
+        const res = await fetch(
+          route === 'sandbase'
+            ? `${sandbaseBase}/v1/api/tavily/search`
+            : 'https://api.tavily.com/search',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(route === 'sandbase'
+                ? { Authorization: `Bearer ${sandbaseKey}` }
+                : {}),
+            },
+            body: JSON.stringify(
+              route === 'sandbase'
+                ? baseBody
+                : { ...baseBody, api_key: this.apiKey }
+            ),
+          }
+        );
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`${route} search ${res.status}: ${errorText}`);
+        }
+        const json = (await res.json()) as Record<string, unknown>;
+        if (route === 'sandbase') {
+          const env2 = json as { status?: string; output?: TavilyPayload };
+          if (env2.status !== 'completed' || !env2.output || typeof env2.output !== 'object') {
+            throw new Error('SandBase response not completed');
+          }
+          data = env2.output;
+          provider = 'sandbase';
+        } else {
+          data = json as unknown as TavilyPayload;
+          provider = 'native';
+        }
+        break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (!data) throw lastErr;
 
     const results: ResearchResult['results'] = data.results.map(r => ({
       title: r.title,
@@ -713,13 +768,14 @@ export class ResearchSkill {
       snippet: r.content,
     }));
 
-    const researchResult: ResearchResult = {
+    const researchResult = {
       query: params.query,
       results,
       totalResults: results.length,
       summary: data.answer ?? (params.includeSummary
         ? `Found ${results.length} results for "${params.query}".`
         : undefined),
+      provider,
     };
 
     return {
