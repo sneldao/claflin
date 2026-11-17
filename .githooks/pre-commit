@@ -116,8 +116,8 @@ for file in $STAGED_FILES; do
     continue
   fi
 
-  # Skip binary files
-  if [[ "$file" =~ \.(png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|mp3|mp4|wav)$ ]]; then
+  # Skip binary files (3D avatar models ride along with the media types)
+  if [[ "$file" =~ \.(png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|mp3|mp4|wav|vrm|glb)$ ]]; then
     continue
   fi
 
