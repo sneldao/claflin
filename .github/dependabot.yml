@@ -11,6 +11,13 @@ updates:
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
+    ignore:
+      # @solana/web3.js v3 is a breaking rewrite (async Keypair/sign/serialize,
+      # bigint numerics, Uint8Array account data). Our Halley live-launch stack
+      # (DynamicBondingCurveClient 1.5.x + @solana/spl-token 0.4.x) expects the
+      # v1 class API, so stay on 1.x until that migration is planned.
+      - dependency-name: "@solana/web3.js"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
