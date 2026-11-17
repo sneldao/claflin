@@ -133,6 +133,7 @@ The [2026-10-03 validation record](docs/RELEASE_VALIDATION.md) covers the integr
 - [World's Fair submission pack](docs/WORLDS_FAIR_SUBMISSION.md): judge links, prior-work disclosure, demo scripts, checklist — due 12 Oct.
 - [Eligibility & venue compliance](docs/ELIGIBILITY.md): house policy on restricted-security instruments — who owns the check per desk, what paper surfaces never carry, and what a live flag requires first.
 - [Meteora Launch Desk — design plan](docs/METEORA_LAUNCH_DESK.md): Halley — LINE 4, **Scope 1 built paper-first** (pair-first tracker-token launch, USDC fallback, Pyth-anchored curve estimates, DAMM v2 graduation path, ConvAI voice line); devnet spike green; live launch designed, not implemented.
+- [Live Desk Avatar plan](docs/LIVE_DESK_AVATAR_PLAN.md): Stocks Maxxing experiment — Feel.cash stock-paired coin launch, VRM avatar broker in the room, LiveKit state-sync broadcast; audio-extraction spike resolved via ConvAI WebRTC transport. Due 5 Dec.
 - [Roadmap](ROADMAP.md): current state and next release gates.
 - [Release validation](docs/RELEASE_VALIDATION.md): dated integration evidence, deferred dependency upgrades, and outstanding acceptance.
 - [Auth and access](docs/AUTH_AND_ACCESS.md): capability tiers and what the account scaffold actually does.
