@@ -2,7 +2,7 @@ import { FUNNEL_STEPS, type FunnelStep } from './events';
 import type { Audience } from './store';
 
 /**
- * Turns stored funnel counters into the §8 measures (docs/FOYER_LINE.md).
+ * Turns stored funnel counters into the §8 measures (docs/UX.md).
  * Pure — the report script supplies the Redis reads.
  */
 

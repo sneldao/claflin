@@ -5,7 +5,7 @@
 
    This module holds only public identifiers — repository deep-links and a
    devnet transaction signature that is already published in
-   docs/METEORA_LAUNCH_DESK.md. It lives apart from HouseFoyer (which carries
+   docs/DESKS.md. It lives apart from HouseFoyer (which carries
    the auth/wallet chip) so the secret-scanning pre-commit hook can allowlist
    the public-identifier module without blinding the wallet-bearing component,
    the same way it allowlists lib/meteora/catalog.ts and scripts/halley-devnet-launch.ts. */

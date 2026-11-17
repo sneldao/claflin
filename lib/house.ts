@@ -117,7 +117,7 @@ export const DESK_CAPABILITIES: Record<HouseDeskId, DeskCapabilities> = {
   jesse: { quote: true, paper: JESSE_PAPER_ENABLED, voice: JESSE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: JESSE_LIVE_CLIENT_ENABLED },
   /* Tennie paper filing is gated by NEXT_PUBLIC_TENNIE_PAPER_ENABLED, same
      release-flag shape as Jesse's. There is no live flag — her desk is
-     paper-only by design (docs/ELIGIBILITY.md §5). */
+     paper-only by design (docs/PRODUCT.md §5). */
   tennie: { quote: true, paper: TENNIE_PAPER_ENABLED, voice: TENNIE_PAPER_ENABLED ? 'elevenlabs-convai' : null, live: false },
   /* Halley's live launch is a dual env gate (client + server), same shape as
      Jesse's — a real DBC launch needs both flags, and neither alone moves

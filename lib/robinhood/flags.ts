@@ -5,7 +5,7 @@
  *
  * There is deliberately no Tennie live flag — the desk is paper-only, and
  * any live path is a separate product/access/compliance gate
- * (docs/ELIGIBILITY.md §5), never an env flip.
+ * (docs/PRODUCT.md §5), never an env flip.
  */
 
 /* Legacy NEXT_PUBLIC_ISABEL_PAPER_ENABLED still closes the desk — the flag

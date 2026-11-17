@@ -3,6 +3,8 @@
 > **Status:** Spike S1 resolved (2026-11-17) — see findings below.
 > Building Phase A next. This doc tracks the experiment;
 > checkboxes are the source of truth for progress.
+> Phases A–C here are sprint-local to this experiment (unrelated to the
+> desk-slip stages in [DESK_SLIPS.md](DESK_SLIPS.md) or Halley's slip UX phases).
 
 Deadline: **Dec 5** (Stocks Maxxing submission close).
 Judging: 50% traction verified onchain · 25% product · 25% build in public.
@@ -186,6 +188,6 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 - Hetty ConvAI session + client tools: `components/desk/HettyCallSession.tsx`
 - Shared tool-handler pattern: `lib/jesse/desk-tools.ts`
 - Session routes (token-server pattern): `app/api/hetty/session`, `app/api/desk/jesse/session`
-- Existing docs: `docs/DESK_CANON.md`, `docs/PRODUCT_DIRECTION.md`, `docs/JESSE_DESK.md`
+- Existing docs: `docs/PRODUCT.md`, `docs/PRODUCT.md`, `docs/DESKS.md`
 - Avatar research: gabber.dev VRM+Next.js guide; TalkingHead (Mixamo/ARKit visemes); Anam & Simli audio-passthrough docs; forasoft real-time avatar architecture
 - Contest: base.org/stocksmaxxing · docs.feel.cash (launch mechanics, Base pairings)

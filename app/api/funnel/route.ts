@@ -5,7 +5,7 @@ import { clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/
 export const dynamic = 'force-dynamic';
 
 /**
- * Write-only funnel beacon (docs/FUNNEL_METRICS.md). Anonymous by design:
+ * Write-only funnel beacon (docs/UX.md). Anonymous by design:
  * the body is enums and booleans only, the caller's IP is used for the
  * in-memory abuse budget and never stored, and there is no read endpoint —
  * reports are pulled with scripts/funnel-report.mts against Redis directly.

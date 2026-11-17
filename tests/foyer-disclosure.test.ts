@@ -69,8 +69,8 @@ describe('foyer — prove-it drawer', () => {
   it('devnet receipt points at a Solscan devnet tx the docs actually record', () => {
     const sig = receiptsBlock().match(/solscan\.io\/tx\/([A-Za-z0-9]+)\?cluster=devnet/);
     assert.ok(sig, 'a devnet Solscan tx link must be present');
-    const doc = readFileSync(p('docs/METEORA_LAUNCH_DESK.md'), 'utf8');
-    assert.ok(doc.includes(sig[1]), `the receipt's tx ${sig[1].slice(0, 12)}… must be recorded in METEORA_LAUNCH_DESK.md`);
+    const doc = readFileSync(p('docs/DESKS.md'), 'utf8');
+    assert.ok(doc.includes(sig[1]), `the receipt's tx ${sig[1].slice(0, 12)}… must be recorded in DESKS.md`);
   });
 
   it('fail-closed receipt points at the real env-example file', () => {

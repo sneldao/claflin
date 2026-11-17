@@ -2,7 +2,7 @@
  * The house board — one row per verified offering, with each number's source
  * and freshness beside it. Pure: no React, no fetch. A gap is shown only when
  * the desk itself observed a comparable stock reference; it is never computed
- * across sources (docs/FOYER_LINE.md §4.5).
+ * across sources (docs/UX.md §4.5).
  */
 import type { MarketMandateId, InstrumentOffering } from './contracts';
 import type { HouseDeskId } from '../house';
@@ -12,7 +12,7 @@ import { mandateLabel, openDesksForOffering, railLabel, venueLabel, type Offerin
 /**
  * What the token legally is and who it is for, per product family. Sources
  * are the issuers' own documents; re-check before release.
- * - Coinbase: docs/AGENTIC_ARCHITECTURE.md → Coinbase Tokenized Stocks
+ * - Coinbase: docs/ARCHITECTURE.md → Coinbase Tokenized Stocks
  *   integration baseline (Base guide, reviewed 2026-09-05).
  * - Backed: docs.xstocks.fi/docs/product-legal-overview and xstocks.fi
  *   (fetched 2026-09-24).

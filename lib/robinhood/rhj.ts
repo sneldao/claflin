@@ -1,6 +1,6 @@
 /**
  * Robinhood issuer REST client — the keyless `rhj` surface exercised in the
- * venue spike (docs/WORLDS_FAIR_PLAN.md §4a/§4b). Server-side only.
+ * venue spike (docs/HISTORY.md §4a/§4b). Server-side only.
  *
  * `/prices` returns *underlying-equity* bid/ask plus `tokenBid`/`tokenAsk`
  * (multiplier-adjusted server-side, verified across all 194 assets on

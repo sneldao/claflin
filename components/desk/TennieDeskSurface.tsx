@@ -224,7 +224,7 @@ function TennieInstrumentField({ instrumentId, onPick }: {
  * Tennie's desk — Robinhood Chain stock tokens, paper only. Pick a token,
  * size it in USDG (or tokens to sell), get a Lighter orderbook estimate,
  * review the three-way tape, file a paper record. No voice line, no live
- * path — by design (docs/ELIGIBILITY.md §5).
+ * path — by design (docs/PRODUCT.md §5).
  */
 export function TennieDeskSurface({ desk }: { desk: Desk }) {
   const tennie = desk.tennie;

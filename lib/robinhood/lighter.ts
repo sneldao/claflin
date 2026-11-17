@@ -3,7 +3,7 @@
  * (`https://api.rh.lighter.xyz`, verified live 2026-10-01). Server-side only.
  *
  * Reads are public and keyless; order placement is a Lighter account
- * relationship and out of scope for the paper desk (docs/ELIGIBILITY.md §5).
+ * relationship and out of scope for the paper desk (docs/PRODUCT.md §5).
  * The books quote `<SYM>/USDG` spot with market-makers posting real depth —
  * SPY printed $1.17M / 8,356 trades in 24h at verification while tail names
  * ran thin. Depth is evidence, not a promise: the walker reports what the

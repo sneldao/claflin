@@ -8,7 +8,7 @@ import {
 
 /**
  * Server side of the house funnel. Two Redis shapes, both per UTC day and
- * both expiring after RETENTION_DAYS (docs/FUNNEL_METRICS.md):
+ * both expiring after RETENTION_DAYS (docs/UX.md):
  *
  *   funnel:counts:{day}              Hash  field = event|dim=value|… → count
  *   funnel:reach:{day}:{step}:{who}  HLL   approximate unique visits reaching a step

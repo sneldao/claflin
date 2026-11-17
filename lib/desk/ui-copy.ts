@@ -118,7 +118,7 @@ export const FOYER_HEADLINES = {
 /** Said once per open line so a human name never reads as a human broker. */
 export const LINE_IDENTITY = 'AI broker';
 
-/** The house turret — one line in, lamps out (docs/FOYER_LINE.md §4.1). */
+/** The house turret — one line in, lamps out (docs/UX.md §4.1). */
 export const TURRET_COPY = {
   hold: 'Hold to dictate',
   listening: 'Listening — release to send',

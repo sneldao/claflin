@@ -1,7 +1,7 @@
 /**
  * "Questions callers ask" — the foyer's straight answers. Each answer must be
  * true of this build: sources are the product facts in lib/desk/board.ts,
- * the capability flags in lib/house.ts, and docs/AUTH_AND_ACCESS.md. When a
+ * the capability flags in lib/house.ts, and docs/PRODUCT.md. When a
  * fact changes, change it here and in its owning doc together.
  */
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk } from '../house';

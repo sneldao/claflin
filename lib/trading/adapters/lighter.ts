@@ -28,7 +28,7 @@ import type { QuoteAdapter } from '../adapters';
  * estimate walks the visible `<SYM>/USDG` book level-by-level in fixed
  * point: what fills is the output; what the book cannot cover is labelled
  * unfilled, never silently extended. Paper only — order placement is a
- * Lighter account matter (docs/ELIGIBILITY.md §5).
+ * Lighter account matter (docs/PRODUCT.md §5).
  *
  * Environment: ROBINHOOD_RPC_URL selects the provider endpoint for onchain
  * reads (Chainlink mark + ERC-8056 multiplier); the keyless public dRPC

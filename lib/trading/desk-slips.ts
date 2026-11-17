@@ -2,7 +2,7 @@
  * Desk slips — commemorative provenance of an instruction or Base fill.
  *
  * Not a security. Not the tokenized stock. Not a wallet holding.
- * See docs/DESK_SLIPS.md.
+ * See docs/PRODUCT.md.
  */
 
 import { z } from 'zod';

@@ -24,7 +24,7 @@
  *   - Stock tokens are ERC-20, 18 decimals, issued by Robinhood Assets
  *     (Jersey) Limited — debt securities with US-person restrictions. The
  *     tokens are transferable; eligibility is our product's policy surface
- *     (docs/ELIGIBILITY.md), never the chain's.
+ *     (docs/PRODUCT.md), never the chain's.
  *   - The ERC-8056 multiplier is live state (`uiMultiplier()`, e.g. CRM was
  *     already at 1.001148 on verification day). It is NEVER stored here —
  *     read it at quote time.

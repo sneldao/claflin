@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { shouldUseLightweightGraphics, parseGraphicsPreference, GRAPHICS_STORAGE_KEY, type GraphicsPreference } from '../lib/desk/graphics';
 
 /**
- * The motion budget (docs/PERFORMANCE_ROOM_VIEW.md) calls for a clear
+ * The motion budget (docs/OPERATIONS.md) calls for a clear
  * contract between user preference, device signals, and the WebGL
  * mount decision. These tests protect that contract — the user can
  * always opt in to Room, but auto-default respects reduced motion,

@@ -1,10 +1,10 @@
 /**
- * The house funnel — the §8 measures in docs/FOYER_LINE.md, as events.
+ * The house funnel — the §8 measures in docs/UX.md, as events.
  *
  * Every field is an enum or a boolean. No instruction text, amounts,
  * instrument ids, record ids, account ids or wallet addresses ever travel:
  * the funnel answers "how far did people get", never "who did what".
- * Retention and storage are documented in docs/FUNNEL_METRICS.md.
+ * Retention and storage are documented in docs/UX.md.
  */
 
 export const FUNNEL_DESKS = ['hetty', 'jesse', 'tennie', 'halley'] as const;

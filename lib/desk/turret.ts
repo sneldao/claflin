@@ -1,7 +1,7 @@
 /**
  * The house turret — what the foyer heard, and which lines that lights.
  * Pure: reads the offering book, never picks a rail for the caller. Several
- * matching desks stay several; the caller chooses (docs/FOYER_LINE.md §4.1).
+ * matching desks stay several; the caller chooses (docs/UX.md §4.1).
  */
 import { getHouseDesk, HOUSE_DESKS, type HouseDeskId } from '../house';
 import { instructionIssue } from '../trading/instruction-safety';

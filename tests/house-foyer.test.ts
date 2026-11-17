@@ -134,7 +134,7 @@ describe('house foyer', () => {
     assert.match(html, /Paper by default\. Only you can sign\./);
     assert.match(html, /Talk with Hetty/);
     assert.match(html, /Talk with Jesse/);
-    /* Character comes after comprehension (docs/FOYER_LINE.md §4.7): the
+    /* Character comes after comprehension (docs/UX.md §4.7): the
        first screen carries no epithet or quote; "Meet the brokers" below may. */
     const hero = html.slice(html.indexOf('aria-labelledby="foyer-title"'), html.indexOf('id="house-offerings"'));
     assert.ok(hero.length > 0, 'hero section found');

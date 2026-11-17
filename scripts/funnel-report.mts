@@ -1,10 +1,10 @@
 /**
- * House funnel report — the §8 measures from docs/FOYER_LINE.md.
+ * House funnel report — the §8 measures from docs/UX.md.
  *
  *   pnpm exec tsx --env-file=.env.local scripts/funnel-report.mts [--days=7] [--json]
  *
  * Reads Upstash directly (UPSTASH_REDIS_REST_URL / _TOKEN); there is
- * deliberately no HTTP read endpoint. Days are UTC. See docs/FUNNEL_METRICS.md.
+ * deliberately no HTTP read endpoint. Days are UTC. See docs/UX.md.
  */
 import { Redis } from '@upstash/redis';
 import { FUNNEL_STEPS, type FunnelStep } from '../lib/funnel/events.ts';

@@ -6,7 +6,7 @@
  *  it. The scene renders on demand: frame fields are gated only when BOTH runs
  *  caught an active scene (draws during sampling) — an idle run measures
  *  nothing about frame cost. The real-device gate in
- *  docs/PERFORMANCE_ROOM_VIEW.md is unchanged. */
+ *  docs/OPERATIONS.md is unchanged. */
 const TOLERANCE = {
   jsGzipBytes: 0.15,
   firstPaintMs: 2,

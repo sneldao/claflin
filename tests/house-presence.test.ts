@@ -103,7 +103,7 @@ describe('house presence grammar', () => {
   });
 
   it('locks the Stocklana judge URL to Room view', () => {
-    const pack = source('docs/STOCKLANA_SUBMISSION.md');
+    const pack = source('docs/HISTORY.md');
     assert.match(pack, /\?desk=jesse&view=room/);
     assert.match(pack, /Ring first/);
   });
@@ -112,7 +112,7 @@ describe('house presence grammar', () => {
     const foyer = source('components/desk/HouseFoyer.tsx');
     assert.doesNotMatch(foyer, /from 'lucide-react'/);
     /* The plain lede sits under the headline so the theme never has to
-       explain the product (docs/FOYER_LINE.md §4.1). */
+       explain the product (docs/UX.md, foyer line §4.1). */
     assert.match(foyer, /FOYER_LEDE/);
     assert.match(foyer, /FOYER_BOUNDARY/);
     const turret = source('components/desk/HouseTurret.tsx');
