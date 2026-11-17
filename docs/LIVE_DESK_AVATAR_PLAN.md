@@ -95,24 +95,22 @@ session.
 In-scene VRM avatar (not a photoreal overlay): Deco-stylized, fits the
 house, $0/min, and can *walk to the evidence board* — a video head can't.
 
-- [ ] Choose VRM model + rig (viseme/ARKit blendshapes required)
-- [ ] Integrate `@pixiv/three-vrm` (or TalkingHead) into
-      `lib/night-desk-scene.ts` — avatar placed at the desk
-- [ ] Lip sync: `onAudioAlignment` timing → viseme map on the VRM
-      blendshapes (character alignment is provided by the SDK — no
-      audio analysis needed on the host; relay alignment over the data
-      channel for observer-side sync)
-- [ ] Idle/talk gesture set; avatar anchor point added to scene anchors
-- [ ] New client tools on Hetty's broadcast session, following the
+- [x] Choose VRM model + rig (viseme/ARKit blendshapes required) — Eugenia (Polygonal Mind, CC0, VRM 0.x) at `public/avatars/hetty.vrm`
+- [x] Integrate `@pixiv/three-vrm` into
+      `lib/night-desk-scene.ts` — avatar placed at the desk (dynamic import, payload budget untouched)
+- [x] Lip sync: `onAudioAlignmentPlayback` timing → viseme map on the VRM
+      blendshapes (`lib/desk/avatar-mouth.ts` + `lib/night-desk-avatar.ts`); volume fallback via `getOutputVolume`
+- [x] Idle/talk gesture set; avatar anchor point added to scene anchors
+- [x] New client tools on Hetty's broadcast session, following the
       `useConversationClientTool` pattern in
       `components/desk/HettyCallSession.tsx`:
-      - [ ] `move_to(view)` → `controller.setView()`
-      - [ ] `walk_room(progress)` → `controller.setTour()`
-      - [ ] `show_premium()` → premium-vs-stock chart focus + readout
-      - [ ] `highlight_mark(symbol)` → board/lamp aim at a pinned mark
-- [ ] Broker prompt update: commentary persona, **reads the market,
+      - [x] `move_to(view)` → `controller.setView()`
+      - [x] `walk_room(progress)` → `controller.setTour()`
+      - [x] `show_premium()` → premium-vs-stock chart focus + readout
+      - [x] `highlight_mark(symbol)` → board/lamp aim at a pinned mark
+- [x] Broker prompt update: commentary persona, **reads the market,
       never advises** — no "buy" language, consistent with existing
-      voice-can't-sign policy
+      voice-can't-sign policy (`scripts/hetty-agent-config.mjs`)
 
 ## Phase B — The house goes live
 

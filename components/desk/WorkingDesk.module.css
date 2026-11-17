@@ -970,6 +970,38 @@
   margin-top: 20px;
   padding: 12px 0 0;
 }
+/* Scene-drive overlay: premium readout raised by show_premium. */
+.scenePremium {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--desk-brass-dim);
+  background: color-mix(in srgb, var(--desk-deep) 88%, transparent);
+}
+.scenePremiumNote, .scenePremiumEmpty {
+  margin: 8px 0 0 !important;
+  color: var(--desk-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.scenePremiumList {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.scenePremiumList li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.scenePremiumList strong {
+  color: var(--desk-ink);
+  font-family: var(--font-mono), monospace;
+  letter-spacing: .04em;
+}
 @media (prefers-reduced-motion: reduce) {
   .roomViewOverlay { animation: none; }
 }

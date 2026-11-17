@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { GRAPHICS_STORAGE_KEY, parseGraphicsPreference, shouldUseLightweightGraphics, type GraphicsPreference } from '@/lib/desk/graphics';
 import type { NightDeskStage, NightDeskView } from '@/lib/night-desk-fixtures';
 import type { NightDeskAnchors, NightDeskLayout } from '@/lib/night-desk-scene';
+import { onSceneDrive } from '@/lib/desk/scene-drive';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import styles from './HouseScene.module.css';
 
@@ -28,6 +29,8 @@ type HouseSceneApi = {
   /** Scroll-driven camera walk — progress 0..1 through the room's poses,
       `null` hands the camera back to discrete views. No-op without WebGL. */
   setTour(progress: number | null): void;
+  /** Aim the desk lamp at a room — the broker's pointing hand. No-op without WebGL. */
+  aimLamp(at: 'evidence' | 'home'): void;
 };
 
 /* The provider starts still so a desk URL (?view=compact) that passes through
@@ -37,6 +40,17 @@ type HouseSceneApi = {
 const INITIAL_SCENE: HouseSceneState = { visible: true, layout: 'foyer', view: 'desk', stage: 'arrival', still: true };
 
 const HouseSceneContext = createContext<HouseSceneApi | null>(null);
+
+/** What a live broker call asks the room's HTML overlays to show — the
+ *  premium-vs-stock readout raised, a mark flashed on the board. Driven
+ *  by the scene-drive bus (show_premium / highlight_mark client tools). */
+export type SceneDriveOverlay = { premium: boolean; highlight: string | null };
+
+const SceneDriveOverlayContext = createContext<SceneDriveOverlay>({ premium: false, highlight: null });
+
+export function useSceneDriveOverlay(): SceneDriveOverlay {
+  return useContext(SceneDriveOverlayContext);
+}
 
 type HouseGraphicsApi = {
   preference: GraphicsPreference;
@@ -132,29 +146,53 @@ export function HouseSceneProvider({ children }: { children: ReactNode }) {
     lastTour.current = progress;
     controllerRef.current?.setTour(progress);
   }, []);
-  const api = useMemo<HouseSceneApi>(() => ({ update, subscribeAnchors, setTour }), [update, subscribeAnchors, setTour]);
+  const aimLamp = useCallback((at: 'evidence' | 'home') => {
+    controllerRef.current?.aimLamp(at);
+  }, []);
+  /* A live broker call drives the room: move_to re-frames the camera,
+     walk_room rides the walk, show_premium/highlight_mark raise the room's
+     overlays. Subscribed once here so the scene, overlays and desk HTML
+     all hear the same voice. */
+  const [overlay, setOverlay] = useState<SceneDriveOverlay>({ premium: false, highlight: null });
+  useEffect(() => onSceneDrive(event => {
+    if (event.type === 'view') {
+      lastTour.current = null;
+      controllerRef.current?.setView(event.view);
+      setScene(old => (old.view === event.view ? old : { ...old, view: event.view }));
+    } else if (event.type === 'tour') {
+      lastTour.current = event.progress;
+      controllerRef.current?.setTour(event.progress);
+    } else if (event.type === 'premium') {
+      setOverlay(old => (old.premium === event.focus ? old : { ...old, premium: event.focus }));
+    } else if (event.type === 'highlight') {
+      setOverlay(old => (old.highlight === event.symbol ? old : { ...old, highlight: event.symbol }));
+    }
+  }), []);
+  const api = useMemo<HouseSceneApi>(() => ({ update, subscribeAnchors, setTour, aimLamp }), [update, subscribeAnchors, setTour, aimLamp]);
   return (
     <HouseSceneContext.Provider value={api}>
       <HouseGraphicsContext.Provider value={graphics}>
-        <div className={styles.house} data-house-scene={scene.layout}>
-          <div className={styles.scene} hidden={!scene.visible} aria-hidden="true">
-            <NightDeskScene
-              view={scene.view}
-              stage={scene.stage}
-              layout={scene.layout}
-              still={scene.still || !graphics.ready || graphics.lightweight}
-              tape={scene.tape}
-              tapeAt={scene.tapeAt}
-              filedAt={scene.filedAt}
-              onAnchors={emitAnchors}
-              onController={controller => {
-                controllerRef.current = controller;
-                if (controller && lastTour.current !== null) controller.setTour(lastTour.current);
-              }}
-            />
+        <SceneDriveOverlayContext.Provider value={overlay}>
+          <div className={styles.house} data-house-scene={scene.layout}>
+            <div className={styles.scene} hidden={!scene.visible} aria-hidden="true">
+              <NightDeskScene
+                view={scene.view}
+                stage={scene.stage}
+                layout={scene.layout}
+                still={scene.still || !graphics.ready || graphics.lightweight}
+                tape={scene.tape}
+                tapeAt={scene.tapeAt}
+                filedAt={scene.filedAt}
+                onAnchors={emitAnchors}
+                onController={controller => {
+                  controllerRef.current = controller;
+                  if (controller && lastTour.current !== null) controller.setTour(lastTour.current);
+                }}
+              />
+            </div>
+            <div className={styles.content}>{children}</div>
           </div>
-          <div className={styles.content}>{children}</div>
-        </div>
+        </SceneDriveOverlayContext.Provider>
       </HouseGraphicsContext.Provider>
     </HouseSceneContext.Provider>
   );

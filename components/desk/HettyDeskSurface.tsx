@@ -27,6 +27,8 @@ import { useLineHotkey } from '@/lib/desk/use-line-hotkey';
 import { scrollToDeskTarget } from '@/lib/desk/scroll-to';
 import { carriedIntentNote } from '@/lib/desk/carried-note';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
+import { useSceneDriveOverlay } from './HouseScene';
+import { ScenePremiumPanel } from './SceneDriveOverlays';
 import { TradeTicket } from './TradeTicket';
 import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
@@ -137,6 +139,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
     rememberSlipDedication('agent', text);
   }, []);
   const marks = useReferenceMarks(desk.deskId);
+  const overlay = useSceneDriveOverlay();
   const clock = useMarketClock();
   /* Lamp channel: the shared scene warms while the tape is fresh. */
   const tapeAt = marks.result?.asOf ?? null;
@@ -506,12 +509,15 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
             <TapeMachine />
             <TickerTape marks={marks.result?.marks ?? NO_MARKS} failed={marks.failed} stale={marks.stale} asOf={marks.result?.asOf} onSelect={loadInstrument} disabled={desk.state.stage === 'quoting'} />
           </div>
-          <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} /></div>
+          <div id="on-desk"><DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} highlight={overlay.highlight} /></div>
         </>
+      )}
+      {roomView && overlay.premium && (
+        <ScenePremiumPanel marks={marks.result?.marks ?? NO_MARKS} />
       )}
       {roomView && (
         <div id="on-desk" className={styles.roomViewBoard}>
-          <DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} />
+          <DeskBoard desk={desk} marks={marks.result?.marks ?? NO_MARKS} stale={marks.stale} asOf={marks.result?.asOf} highlight={overlay.highlight} />
         </div>
       )}
     </>

@@ -40,6 +40,11 @@ TOOLS ARE THE DESK
 - explain_concept is for questions (“what is the tape / slippage / paper / certificate?”) and for broker lenses (“how would Jesse look at this?”). It returns the same reviewed catalog the screen shows. Speak it nearly verbatim. Never invent a lesson, never use it to urge a trade. Do not volunteer explanations during an active review — hold silence for the terms — but if the caller asks what a word means while reviewing, call explain_concept. Prefer explain_concept over improvising when they ask what something means; prefer share_desk_note when they want the house’s note of the day. If asked who you are or who a broker is named for, explain_concept returns the reviewed namesake story — speak it nearly verbatim and never improvise a biography.
 - You cannot read account balances, news, or anything off this desk — the tools are the whole world.
 
+ROOM COMMENTARY (reads the market, never advises)
+- You have a body in the room and four scene tools: move_to (desk/evidence/review/ledger), walk_room (0 to 1, or end), show_premium (token mark beside the stock reference), highlight_mark (lamp to a mark).
+- Use them sparingly and only when the caller asks to look: "Show me the evidence," "Walk me through the room," "What is the premium," "Where is Apple." Never move the camera unprompted during a review — the slip owns attention then.
+- Commentary describes what the desk shows — prices, venues, paper/live state — and stops there. No direction, no prediction, no pressure. The record stays theirs to make.
+
 THE REVIEW IS QUIET
 - An estimate carries a short validity window. Read it once: what they would spend and receive, the venue, whether the desk is paper or live, and the seconds left to review.
 - Then hold a comfortable silence. Do not fill "for your review" with a desk note, another suggestion, or repeated prompts. Narration must not consume the time the client needs to understand the terms.
@@ -141,6 +146,59 @@ export const tools = [
     description: 'Fetch the house\'s note for the day — a short observation from the era the desk is drawn from (how its financiers worked, principles that held). Speak it once per call, verbatim with its attribution, as color between trades; never as advice and never during an active review. Returns the already-shared line if called twice.',
     expects_response: true,
     response_timeout_secs: 10,
+  },
+  {
+    type: 'client',
+    name: 'move_to',
+    description: 'Reframe the room camera: desk, evidence, review or ledger. Call only when the caller asks to look at a view. Presentation only — never signs or submits.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        view: { type: 'string', description: 'desk, evidence, review or ledger' },
+      },
+      required: ['view'],
+    },
+  },
+  {
+    type: 'client',
+    name: 'walk_room',
+    description: 'Walk the camera through the room, progress 0 to 1. Call only when the caller asks for a walkthrough; pass "end" to hand the camera back. Presentation only.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        progress: { type: 'string', description: 'Number from 0 to 1, or "end"' },
+      },
+    },
+  },
+  {
+    type: 'client',
+    name: 'show_premium',
+    description: 'Raise or lower the premium readout (token mark beside the stock reference with the difference in basis points). Call when the caller asks about the premium. Readout is context, never a spread to act on.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        focus: { type: 'string', description: '"on" to raise, "off" to lower' },
+      },
+    },
+  },
+  {
+    type: 'client',
+    name: 'highlight_mark',
+    description: 'Aim the desk lamp at a mark on the board and flash its row. Call when the caller names an instrument to look at (NVIDIA, Apple, Meta, Google). Pass an empty symbol to return the lamp to the blotter.',
+    expects_response: true,
+    response_timeout_secs: 10,
+    parameters: {
+      type: 'object',
+      properties: {
+        symbol: { type: 'string', description: 'Company name or ticker — omit to clear the highlight' },
+      },
+    },
   },
   {
     type: 'client',

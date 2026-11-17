@@ -2,11 +2,14 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import type { NightDeskStage, NightDeskView } from './night-desk-fixtures';
+import type { NightDeskAvatarController } from './night-desk-avatar';
 
 export interface NightDeskAnchors {
   evidence: { x: number; y: number; visible: boolean };
   review: { x: number; y: number; visible: boolean };
   ledger: { x: number; y: number; visible: boolean };
+  /** The broker's body, when the desk has a live call to sit through. */
+  avatar: { x: number; y: number; visible: boolean };
 }
 
 export type NightDeskLayout = 'foyer' | 'room' | 'compact';
@@ -18,6 +21,8 @@ export interface NightDeskSceneController {
   setTour(progress: number | null): void;
   setStage(stage: NightDeskStage): void;
   setLayout(layout: NightDeskLayout): void;
+  /** Aim the desk lamp's light at a room — the broker's pointing hand. */
+  aimLamp(at: 'evidence' | 'home'): void;
   dispose(): void;
 }
 
@@ -37,6 +42,8 @@ const ANCHOR_POINTS = {
   evidence: new THREE.Vector3(1, 1.85, -1),
   review: new THREE.Vector3(0, 0.2, 0.5),
   ledger: new THREE.Vector3(3, 0.5, 2),
+  /* Head height of the seated broker (see lib/night-desk-avatar.ts). */
+  avatar: new THREE.Vector3(-2.0, 2.0, -1.0),
 };
 
 /** The scroll walk: the same four poses, strung into a path through the room
@@ -123,7 +130,7 @@ export function createNightDeskScene(
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
   } catch {
     onUnavailable();
-    return { setView() {}, setTour() {}, setStage() {}, setLayout() {}, dispose() {} };
+    return { setView() {}, setTour() {}, setStage() {}, setLayout() {}, aimLamp() {}, dispose() {} };
   }
   renderer.setClearColor(0x0d1218, 1);
   const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
@@ -703,11 +710,13 @@ export function createNightDeskScene(
     if (paperPos.distanceTo(paperGoal) < 0.01 && paperGoal.x < -4) paperSlip.visible = false;
     camera.position.set(camPos.x + parallax.x, camPos.y + parallax.y * 0.6, camPos.z);
     camera.lookAt(camTarget.x + parallax.x * 0.4, camTarget.y + parallax.y * 0.3, camTarget.z);
+    const avatarUnsettled = avatar ? avatar.update(delta, time) : 0;
     renderer.render(scene, camera);
     onAnchors?.({
       evidence: projectAnchor(ANCHOR_POINTS.evidence),
       review: projectAnchor(ANCHOR_POINTS.review),
       ledger: projectAnchor(ANCHOR_POINTS.ledger),
+      avatar: projectAnchor(ANCHOR_POINTS.avatar),
     });
     if (firstFrame) {
       firstFrame = false;
@@ -719,7 +728,8 @@ export function createNightDeskScene(
       Math.abs(ledgerTarget - ledgerOpen) + Math.abs(lampTarget - lampGlow) +
       lampAim.distanceTo(lampAimGoal) +
       (tour ? Math.abs(tourGoal - tourT) : 0) +
-      paperPos.distanceTo(paperGoal) + Math.abs(paperSpinGoal - paperSpin);
+      paperPos.distanceTo(paperGoal) + Math.abs(paperSpinGoal - paperSpin) +
+      avatarUnsettled;
     if (unsettled > 0.0008) frame = requestAnimationFrame(renderFrame);
     else lastTime = 0;
   }
@@ -792,6 +802,21 @@ export function createNightDeskScene(
   canvas.addEventListener('webglcontextlost', contextLost);
   resize();
 
+  /* The broker's body arrives on demand — a dynamic import keeps the VRM
+     loader and its payload out of the room view's budget until a live
+     call puts someone in the chair. Speech on the scene-drive bus wakes
+     the loop through the same schedule() every other channel uses. */
+  let avatar: NightDeskAvatarController | null = null;
+  void import('./night-desk-avatar').then(({ createNightDeskAvatar }) => {
+    if (disposed || lost) return;
+    avatar = createNightDeskAvatar(scene, {
+      camera,
+      reducedMotion: reducedMotion.matches,
+      schedule,
+    });
+    schedule();
+  });
+
   return {
     setView(nextView) {
       view = nextView;
@@ -822,8 +847,14 @@ export function createNightDeskScene(
       applyView();
       schedule();
     },
+    aimLamp(at) {
+      lampAimGoal.copy(at === 'evidence' ? ANCHOR_POINTS.evidence : LAMP_AIM_HOME);
+      schedule();
+    },
     dispose() {
       disposed = true;
+      avatar?.dispose();
+      avatar = null;
       cancelAnimationFrame(frame);
       frame = 0;
       sizeObserver.disconnect();

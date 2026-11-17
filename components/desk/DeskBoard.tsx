@@ -17,7 +17,7 @@ import board from "./DeskBoard.module.css";
  * lands fresh on the next visit. Reference marks only — labelled, never
  * offers, never advice.
  */
-export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: { desk: ReturnType<typeof useTradingDesk>; marks: DeskMark[]; asOf?: number; stale?: boolean }) {
+export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale, highlight }: { desk: ReturnType<typeof useTradingDesk>; marks: DeskMark[]; asOf?: number; stale?: boolean; highlight?: string | null }) {
   const { state, edit, watched, watch, unwatch, deskId, foreground } = desk;
   const points = marksToPoints(marks);
 
@@ -97,8 +97,9 @@ export const DeskBoard = memo(function DeskBoard({ desk, marks, asOf, stale }: {
           if (!stock) return null;
           const delta = deltaFor(id);
           const mark = marks.find(m => m.instrumentId === id);
+          const highlighted = highlight === id;
           return (
-            <li key={id}>
+            <li key={id} data-highlight={highlighted ? 'true' : undefined}>
               <span className={board.boardTag}>WATCHING</span>
               <strong>{stock.symbol} · {stock.name}</strong>
               {mark ? <span className={board.boardRef}>Reference ${markPrice(mark)}{mark.reference.status === 'stale' ? ' · stale' : ''}</span> : <span className={board.boardRef}>Reference unavailable</span>}

@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConversation, useConversationClientTool } from '@elevenlabs/react';
+import { emitSceneDrive } from '@/lib/desk/scene-drive';
+import { useHouseSceneApi } from './HouseScene';
+import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
 import { fetchJson } from '@/lib/api-client';
 import {
@@ -72,7 +75,17 @@ type HettyTools = {
   watch_mark: (p: ToolParams) => ToolResult;
   share_desk_note: () => ToolResult;
   explain_concept: (p: ToolParams) => ToolResult;
+  move_to: (p: ToolParams) => ToolResult;
+  walk_room: (p: ToolParams) => ToolResult;
+  show_premium: (p: ToolParams) => ToolResult;
+  highlight_mark: (p: ToolParams) => ToolResult;
 };
+
+const SCENE_VIEWS: readonly NightDeskView[] = ['desk', 'evidence', 'review', 'ledger'];
+function parseSceneView(raw: unknown): NightDeskView | null {
+  const value = String(raw ?? '').trim().toLowerCase();
+  return (SCENE_VIEWS as readonly string[]).includes(value) ? (value as NightDeskView) : null;
+}
 
 /** A ring that has not connected within this window is treated as failed. */
 const DIAL_TIMEOUT_MS = 20_000;
@@ -274,6 +287,59 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     return explainConceptResult(String(p.topic ?? ''));
   });
 
+  /* Scene-drive tools — camera, walk, readout, lamp. Presentation only:
+     they reframe the room or raise an overlay, never sign or submit. */
+  const sceneApi = useHouseSceneApi();
+  const sceneApiRef = useRef(sceneApi);
+  useEffect(() => { sceneApiRef.current = sceneApi; });
+  /* Last alignment arrival — the volume fallback only speaks when the
+     provider goes quiet for more than a beat. */
+  const lastAlignmentAtRef = useRef(0);
+  const modeRef = useRef<string>('listening');
+
+  useConversationClientTool<HettyTools>('move_to', async (p) => {
+    const view = parseSceneView(p.view);
+    if (!view) return 'Say desk, evidence, review or ledger and the room will reframe.';
+    emitSceneDrive({ type: 'view', view });
+    return `The room is on ${view}.`;
+  });
+
+  useConversationClientTool<HettyTools>('walk_room', async (p) => {
+    const raw = p.progress;
+    if (raw === null || raw === undefined || raw === '' || raw === 'end') {
+      emitSceneDrive({ type: 'tour', progress: null });
+      return 'The walk is done — the room is back on the ticket.';
+    }
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return 'Walk the room with a number from 0 to 1, or end the walk.';
+    const progress = Math.max(0, Math.min(1, value));
+    emitSceneDrive({ type: 'tour', progress });
+    return 'Walking the room.';
+  });
+
+  useConversationClientTool<HettyTools>('show_premium', async (p) => {
+    const raw = String(p.focus ?? p.visible ?? 'on').trim().toLowerCase();
+    const focus = raw !== 'off' && raw !== 'false' && raw !== 'hide' && raw !== 'no';
+    emitSceneDrive({ type: 'premium', focus });
+    return focus
+      ? 'The premium readout is up — token mark beside the stock reference.'
+      : 'The premium readout is put away.';
+  });
+
+  useConversationClientTool<HettyTools>('highlight_mark', async (p) => {
+    const query = String(p.symbol ?? p.query ?? '').trim();
+    if (!query) {
+      emitSceneDrive({ type: 'highlight', symbol: null });
+      sceneApiRef.current?.aimLamp('home');
+      return 'The lamp is back on the blotter.';
+    }
+    const instrument = resolveDeskAlias(query);
+    if (!instrument) return 'Name one of the four marks — NVIDIA, Apple, Meta or Google — and the lamp will find it.';
+    emitSceneDrive({ type: 'highlight', symbol: instrument.id });
+    sceneApiRef.current?.aimLamp('evidence');
+    return `${instrument.symbol} is on the board — the lamp is on it.`;
+  });
+
   /* Immediate, cancellable dialling. The SDK only reports `connecting`
      after startSession — this flag acknowledges the ring the moment it is
      pressed, stays cancellable through the session-URL fetch, and guards
@@ -383,6 +449,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
+    emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
     onSessionEnded(note);
   }, [flushTranscript, onSessionEnded]);
@@ -392,6 +459,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
     setDialing(false);
+    emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
     onSessionFailed(message);
   }, [flushTranscript, onSessionFailed]);
@@ -457,6 +525,29 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       endedByUserRef.current = false;
       fireEnded(note);
     },
+    onInterruption: () => {
+      emitSceneDrive({ type: 'speech-end', reason: 'interrupted' });
+    },
+    onModeChange: (mode: { mode: string }) => {
+      const next = mode?.mode ?? '';
+      const prev = modeRef.current;
+      modeRef.current = next;
+      if (prev === 'speaking' && next === 'listening') {
+        emitSceneDrive({ type: 'speech-end', reason: 'idle' });
+      }
+    },
+    onAudioAlignmentPlayback: (playback: { event_id: number; alignment?: { chars?: string[]; char_start_times_ms?: number[]; char_durations_ms?: number[] } }) => {
+      const alignment = playback?.alignment;
+      if (!alignment || !Array.isArray(alignment.chars) || alignment.chars.length === 0) return;
+      lastAlignmentAtRef.current = performance.now();
+      emitSceneDrive({
+        type: 'speech',
+        eventId: playback.event_id,
+        chars: alignment.chars,
+        charStartsMs: alignment.char_start_times_ms ?? [],
+        charDurationsMs: alignment.char_durations_ms ?? [],
+      });
+    },
   });
   const live = conversation.status === 'connected';
   const sdkConnecting = conversation.status === 'connecting';
@@ -477,6 +568,27 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
   }, [conversation]);
 
   useEffect(() => { onLiveChange(live); }, [live, onLiveChange]);
+
+  /* Volume fallback: when alignment never arrives over the socket, drive
+     the avatar mouth from aggregate output volume. Only speaks when the
+     last alignment is stale, so the two sources never fight. */
+  const conversationRef = useRef(conversation);
+  useEffect(() => { conversationRef.current = conversation; });
+  useEffect(() => {
+    if (!live) return;
+    let frame = 0;
+    const tick = () => {
+      try {
+        const volume = conversationRef.current.getOutputVolume();
+        if (volume > 0.05 && performance.now() - lastAlignmentAtRef.current > 400) {
+          emitSceneDrive({ type: 'speech-activity', level: Math.max(0, Math.min(1, volume)) });
+        }
+      } catch { /* no audio pipeline to sample */ }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [live]);
 
   /* Bounded checkpoint loop: while the call is live, save every 20s when
      there is something unsaved. The terminal flush covers the rest; the

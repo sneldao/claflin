@@ -20,6 +20,17 @@
 .boardList { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .board { margin-top: 64px; }
 .boardList li { border: 1px solid var(--desk-line); padding: 20px; background: var(--desk-room); box-shadow: inset 0 3px 12px var(--desk-occlusion), 0 3px 0 var(--desk-walnut-edge); }
+.boardList li[data-highlight="true"] {
+  border-color: var(--desk-brass);
+  box-shadow: inset 0 3px 12px var(--desk-occlusion), 0 0 0 1px var(--desk-brass-dim);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .boardList li[data-highlight="true"] { animation: boardFlash 1.2s ease-out; }
+}
+@keyframes boardFlash {
+  0% { box-shadow: inset 0 3px 12px var(--desk-occlusion), 0 0 0 3px var(--desk-brass); }
+  100% { box-shadow: inset 0 3px 12px var(--desk-occlusion), 0 0 0 1px var(--desk-brass-dim); }
+}
 /* ————— Working tray: since-you-last-sat-down deltas ————— */
 .boardSince { margin: 10px 0 0 !important; color: var(--desk-muted); font-size: 11px; line-height: 1.6; }
 .boardRef { color: var(--desk-paper-muted); font-size: 11px; line-height: 1.5; }
