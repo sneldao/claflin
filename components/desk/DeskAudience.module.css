@@ -70,21 +70,32 @@
   color: var(--brass-dim);
 }
 
-/* The lamp breathes while the broker is actually speaking — driven by the
-   same wire events that move her mouth. */
+/* The lamp glows with her voice — --voice is the wire's own activity
+   level, so the glow swells on loud phrases and rests between them. The
+   transition is the envelope; a steady lamp, not a strobing one. */
 .audience[data-speaking='true'] .lamp {
-  animation: audienceLampPulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 calc(4px + var(--voice, 0) * 8px) var(--brass);
+  transition: box-shadow 0.22s ease-out;
 }
 
-@keyframes audienceLampPulse {
-  0%, 100% { box-shadow: 0 0 4px var(--brass); }
-  50% { box-shadow: 0 0 11px var(--brass); }
+/* A new line rises rather than swaps — the key on the element replays it. */
+.caption {
+  animation: captionRise 0.45s ease-out both;
+}
+
+@keyframes captionRise {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .audience[data-speaking='true'] .lamp {
-    animation: none;
+    transition: none;
     box-shadow: 0 0 8px var(--brass);
+  }
+
+  .caption {
+    animation: none;
   }
 }
 

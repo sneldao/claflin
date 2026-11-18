@@ -27,6 +27,8 @@ export function DeskAudience() {
   const [speaking, setSpeaking] = useState(false);
   const [count, setCount] = useState(0);
   const observerRef = useRef<DeskObserver | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const speakHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!HETTY_BROADCAST_ENABLED) return;
@@ -36,17 +38,34 @@ export function DeskAudience() {
 
   /* The door reads the same bus the scene does: the broker's line and her
      cadence arrive on it whether this browser is the host or a listener.
-     A muted or blocked listener still gets the words. */
+     A muted or blocked listener still gets the words. The lamp glows with
+     her voice — the raw level as --voice, and a short hold on "speaking"
+     so the rest between her phrases never strobes it. */
   useEffect(() => onSceneDrive(event => {
-    if (event.type === 'line') setLine(event.text);
-    else if (event.type === 'speech' || event.type === 'speech-activity') setSpeaking(true);
-    else if (event.type === 'speech-end') setSpeaking(false);
+    if (event.type === 'line') { setLine(event.text); return; }
+    if (event.type === 'speech' || (event.type === 'speech-activity' && event.level > 0.05)) {
+      setSpeaking(true);
+      rootRef.current?.style.setProperty('--voice', event.type === 'speech-activity' ? event.level.toFixed(2) : '0.5');
+      if (speakHoldRef.current) clearTimeout(speakHoldRef.current);
+      speakHoldRef.current = setTimeout(() => {
+        setSpeaking(false);
+        rootRef.current?.style.setProperty('--voice', '0');
+      }, 350);
+    } else if (event.type === 'speech-end') {
+      if (speakHoldRef.current) clearTimeout(speakHoldRef.current);
+      speakHoldRef.current = setTimeout(() => {
+        setSpeaking(false);
+        rootRef.current?.style.setProperty('--voice', '0');
+      }, 120);
+    }
   }), []);
 
   const leave = useCallback(() => {
     const observer = observerRef.current;
     observerRef.current = null;
     if (observer) void observer.stop();
+    if (speakHoldRef.current) { clearTimeout(speakHoldRef.current); speakHoldRef.current = null; }
+    rootRef.current?.style.setProperty('--voice', '0');
     setPhase('idle');
     setNote(null);
     setLine(null);
@@ -55,7 +74,11 @@ export function DeskAudience() {
   }, []);
 
   /* A page that unmounts mid-listen must not leave audio playing. */
-  useEffect(() => () => { void observerRef.current?.stop(); observerRef.current = null; }, []);
+  useEffect(() => () => {
+    void observerRef.current?.stop();
+    observerRef.current = null;
+    if (speakHoldRef.current) clearTimeout(speakHoldRef.current);
+  }, []);
 
   const listen = useCallback(async () => {
     if (!room || phase === 'connecting') return;
@@ -87,6 +110,8 @@ export function DeskAudience() {
       observer.onEnded(reason => {
         observerRef.current = null;
         void observer.stop();
+        if (speakHoldRef.current) { clearTimeout(speakHoldRef.current); speakHoldRef.current = null; }
+        rootRef.current?.style.setProperty('--voice', '0');
         setPhase('ended');
         setSpeaking(false);
         setCount(0);
@@ -126,14 +151,14 @@ export function DeskAudience() {
     : { label: phase === 'blocked' ? 'Listen again' : 'Listen', run: () => void listen() };
 
   return (
-    <div className={styles.audience} data-live={phase === 'live' ? 'true' : 'false'} data-speaking={speaking ? 'true' : 'false'} role="status" aria-live="polite">
+    <div ref={rootRef} className={styles.audience} data-live={phase === 'live' ? 'true' : 'false'} data-speaking={speaking ? 'true' : 'false'} role="status" aria-live="polite">
       <span className={styles.lamp} aria-hidden="true" />
       <p className={styles.copy}>{copy}</p>
       <button type="button" className={styles.action} onClick={action.run} disabled={phase === 'connecting'}>
         {action.label}
       </button>
       {(phase === 'live' || phase === 'blocked') && line && (
-        <p className={styles.caption}><span className={styles.captionSpeaker}>Hetty</span>{line}</p>
+        <p className={styles.caption} key={line}><span className={styles.captionSpeaker}>Hetty</span>{line}</p>
       )}
       {note && <p className={styles.note}>{note}</p>}
     </div>

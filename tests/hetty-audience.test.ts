@@ -98,6 +98,20 @@ describe('audience mode', () => {
     assert.doesNotMatch(session, /user\) \{\s*[^}]*type: 'line'/, 'caller words stay off the wire');
   });
 
+  it('lets the room hear her voice, not just her mouth', () => {
+    /* The activity level that already crosses the wire warms the lamp:
+       fast attack, slow cool, dead to zero — and listeners get the same
+       lift because they ride the same bus. */
+    const scene = source('lib/night-desk-scene.ts');
+    assert.match(scene, /onSceneDrive/);
+    assert.match(scene, /speech-activity/);
+    assert.match(scene, /lampLight\.intensity = 45 \* lampGlow \* \(1 \+ voiceLevel/);
+    assert.match(scene, /voiceLevel < 0\.02\) voiceLevel = 0/, 'silence never flickers');
+    const door = source('components/desk/DeskAudience.tsx');
+    assert.match(door, /--voice/, 'the door lamp swells with the same level');
+    assert.match(door, /key=\{line\}/, 'a new line rises rather than swaps');
+  });
+
   it('never asks the token route for host rights or an unnamed room', () => {
     const door = source('components/desk/DeskAudience.tsx');
     assert.match(door, /role: 'observer', room/);

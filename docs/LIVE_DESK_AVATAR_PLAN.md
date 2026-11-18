@@ -170,8 +170,12 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         the room's own participant count ("3 listening"), not an estimate
       - the door reads the same scene-drive bus: the broker's line lands
         as a caption strip (readable muted or autoplay-blocked), the live
-        listener count sits in the copy, and the lamp pulses while she
-        speaks — driven by the wire events, not the audio element
+        listener count sits in the copy, and the lamp swells with her
+        voice — driven by the wire's activity level, not the audio element
+      - the room hears her too: `speech-activity` lifts the desk lamp's
+        intensity and bulb in the scene itself — fast attack, slow cool,
+        deadbanded to zero — so her voice warms the room for the host
+        and every listener identically, with no new wire traffic
       - a host leaving an occupied room ends the show: the door finishes
         on the `hetty-host-*` identity departing, so nobody sits "live"
         in a room whose broker already left
@@ -268,6 +272,7 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | 2026-11-19 | Admin client over plain HTTP/Twirp, hand-minted grants | The token route already signs JWTs by hand; the room service needs the same shape, not a second SDK |
 | 2026-11-20 | The broker's line rides the wire; the caller's never does | `{t:'line'}` carries agent speech only — no role field, so caller words structurally cannot leak; a listener reads the desk muted or sound-blocked |
 | 2026-11-20 | Host departure ends the show, not the last listener leaving | Presence keys on `hetty-host-*`; a room of orphaned listeners is a stale link, not a broadcast |
+| 2026-11-20 | The wire's activity level warms the room, not just her mouth | One smoothed signal fans out like Codrops' scroll velocity — voice lifts the lamp for host and listener alike at zero extra wire cost; deadband to zero keeps silence calm |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references

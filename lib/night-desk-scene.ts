@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { onSceneDrive } from './desk/scene-drive';
 import type { NightDeskStage, NightDeskView } from './night-desk-fixtures';
 import type { NightDeskAvatarController } from './night-desk-avatar';
 
@@ -585,6 +586,13 @@ export function createNightDeskScene(
   let ledgerTarget = 0;
   let lampGlow = 1;
   let lampTarget = 1;
+  /* Her voice warms the room, not only her mouth: the activity level that
+     drives her lips lifts the lamp a little — quick to brighten, slow to
+     cool, dead to zero so silence never flickers. Listeners ride the same
+     bus, so the room glows for them exactly as it does for the host. */
+  let voiceLevel = 0;
+  let voiceReported = 0;
+  let voiceSeenAt = 0;
   const lampAim = LAMP_AIM_HOME.clone();
   const lampAimGoal = LAMP_AIM_HOME.clone();
   /* The walk: engaged by the foyer's scroll listener. tourT is the damped
@@ -703,7 +711,16 @@ export function createNightDeskScene(
     paperPos.lerp(paperGoal, blend);
     paperSpin += (paperSpinGoal - paperSpin) * blend;
     coverPivot.rotation.z = ledgerOpen;
-    lampLight.intensity = 45 * lampGlow;
+    /* A level older than ~250ms is silence — the wire rests between her
+       phrases, so staleness, not a gap, is what cools the lamp. Under
+       reduced motion the lift stays off entirely: ambient flicker is
+       exactly what that preference is for. */
+    const voiceGoal = !reducedMotion.matches && voiceSeenAt && time - voiceSeenAt < 250 ? voiceReported : 0;
+    const voiceRate = voiceGoal > voiceLevel ? 14 : 3;
+    voiceLevel += (voiceGoal - voiceLevel) * (1 - Math.exp(-delta * voiceRate));
+    if (voiceLevel < 0.02) voiceLevel = 0;
+    lampLight.intensity = 45 * lampGlow * (1 + voiceLevel * 0.14);
+    bulbGlow.scale.setScalar(1 + voiceLevel * 0.12);
     lampLight.target.position.copy(lampAim);
     paperSlip.position.copy(paperPos);
     paperSlip.rotation.y = paperSpin;
@@ -726,7 +743,7 @@ export function createNightDeskScene(
       camPos.distanceTo(posGoal) + camTarget.distanceTo(targetGoal) +
       Math.abs(parallax.x - parallaxGoal.x) + Math.abs(parallax.y - parallaxGoal.y) +
       Math.abs(ledgerTarget - ledgerOpen) + Math.abs(lampTarget - lampGlow) +
-      lampAim.distanceTo(lampAimGoal) +
+      lampAim.distanceTo(lampAimGoal) + voiceLevel +
       (tour ? Math.abs(tourGoal - tourT) : 0) +
       paperPos.distanceTo(paperGoal) + Math.abs(paperSpinGoal - paperSpin) +
       avatarUnsettled;
@@ -782,6 +799,19 @@ export function createNightDeskScene(
     frame = 0;
     onUnavailable();
   }
+
+  /* Voice arrives on the bus whether this browser hosts or listens. */
+  const unsubscribeVoice = onSceneDrive(event => {
+    if (event.type === 'speech-activity') {
+      voiceReported = Math.max(0, Math.min(1, event.level));
+      voiceSeenAt = performance.now();
+      schedule();
+    } else if (event.type === 'speech-end') {
+      voiceReported = 0;
+      voiceSeenAt = 0;
+      schedule();
+    }
+  });
 
   const sizeObserver = new ResizeObserver(resize);
   const visibilityObserver = new IntersectionObserver(([entry]) => {
@@ -855,6 +885,7 @@ export function createNightDeskScene(
       disposed = true;
       avatar?.dispose();
       avatar = null;
+      unsubscribeVoice();
       cancelAnimationFrame(frame);
       frame = 0;
       sizeObserver.disconnect();
