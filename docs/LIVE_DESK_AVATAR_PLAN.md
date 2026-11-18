@@ -1,7 +1,8 @@
 # Live Desk Avatar Plan — Stocks Maxxing
 
 > **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B in progress —
-> the LiveKit token route is minted and tested, host publish next.
+> token minting and host publish are in, observer mode is next. Host publish
+> is flag-gated and has not yet been heard with a real microphone.
 > This doc tracks the experiment; checkboxes are the source of truth for
 > progress.
 > Phases A–C here are sprint-local to this experiment (unrelated to the
@@ -127,11 +128,25 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         revived into a live microphone
       - awaits `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET`;
         documented in `.env.local.example`, 503 while unset
-- [ ] Host mode: start ConvAI with `connectionType: "webrtc"`, reach
+- [x] Host mode: start ConvAI with `connectionType: "webrtc"`, reach
       `connection.getRoom()`, republish the agent's
       `RemoteAudioTrack.mediaStreamTrack` into our LiveKit room +
       data channel messages for scene state (view, tour progress,
       stage, transcript lines, premium value, audio alignment)
+      - `?transport=webrtc` on `/api/hetty/session` mints a conversation
+        token (the SDK refuses a signed URL with WebRTC); WebSocket stays
+        the default and unchanged
+      - `lib/hetty/broadcast.ts` is the only module that reads the
+        `protected` connection — the plan's "wrap it in one adapter"
+      - the house room is joined **before** `startSession` so the greeting
+        is not lost; the host microphone is never published, only the
+        agent's track
+      - `lib/hetty/broadcast-state.ts` is the versioned, size-capped wire
+        format; observers drop unknown versions rather than guess
+      - behind `NEXT_PUBLIC_HETTY_BROADCAST=true`; with the flag off the
+        line is byte-for-byte the old WebSocket path
+      - still owed: stage and transcript lines on the wire, and a live
+        hearing test — nothing here is verified with a real microphone yet
 - [ ] Observer mode: join room, subscribe audio, apply data-channel
       state to a locally-rendered scene; read-only — no client tools
 - [ ] "The desk is open" presence: house lamp/live indicator on `/`,
@@ -189,12 +204,15 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | 2026-11-17 | LiveKit Cloud state-sync over video fan-out | No media servers; observers render locally; ephemeral rooms |
 | 2026-11-18 | Observer tokens are subscribe-only in the signed grant | Read-only enforced server-side; a tampered observer client still cannot publish |
 | 2026-11-18 | Missing role defaults to observer, host rooms never reused | Least privilege; a forwarded link cannot carry publish rights or revive a dead mic |
+| 2026-11-18 | Host broadcast behind `NEXT_PUBLIC_HETTY_BROADCAST` | It moves the line to WebRTC; that path has to be heard with a real mic before it is the default |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references
 
 - Scene controller: `lib/night-desk-scene.ts` (poses, tour, lamp, `setView`/`setTour`/`setStage`)
 - Hetty ConvAI session + client tools: `components/desk/HettyCallSession.tsx`
+- Host broadcast adapter (the one off-label read): `lib/hetty/broadcast.ts`
+- Broadcast wire format: `lib/hetty/broadcast-state.ts`
 - Shared tool-handler pattern: `lib/jesse/desk-tools.ts`
 - Session routes (token-server pattern): `app/api/hetty/session`, `app/api/desk/jesse/session`
 - Existing docs: `docs/PRODUCT.md`, `docs/PRODUCT.md`, `docs/DESKS.md`

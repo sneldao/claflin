@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConversation, useConversationClientTool } from '@elevenlabs/react';
-import { emitSceneDrive } from '@/lib/desk/scene-drive';
+import { emitSceneDrive, onSceneDrive } from '@/lib/desk/scene-drive';
+import { HETTY_BROADCAST_ENABLED } from '@/lib/hetty/broadcast-flags';
+import { openHostBroadcast, type HostBroadcast } from '@/lib/hetty/broadcast';
+import { broadcastStateFor } from '@/lib/hetty/broadcast-state';
 import { useHouseSceneApi } from './HouseScene';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
@@ -355,6 +358,22 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
      together, and only the first may decide how the session is reported. */
   const terminalFiredRef = useRef(false);
   const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Host broadcast: the house room is joined before the session starts so
+     the broker's first word is not lost, and it is torn down through the
+     same terminal funnels as the line itself. Null on any ring that is not
+     a broadcast (the flag is off, or the room was not available). */
+  const broadcastRef = useRef<HostBroadcast | null>(null);
+  const broadcastRelayRef = useRef<(() => void) | null>(null);
+  const stopBroadcast = useCallback(() => {
+    broadcastRelayRef.current?.();
+    broadcastRelayRef.current = null;
+    const handle = broadcastRef.current;
+    broadcastRef.current = null;
+    if (handle) void handle.stop();
+  }, []);
+  /* A provider remount must never leave a live room behind. */
+  useEffect(() => () => { stopBroadcast(); }, [stopBroadcast]);
   const auth = useDeskAuth();
   const authRef = useRef(auth);
   useEffect(() => { authRef.current = auth; });
@@ -449,20 +468,22 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
+    stopBroadcast();
     emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
     onSessionEnded(note);
-  }, [flushTranscript, onSessionEnded]);
+  }, [flushTranscript, onSessionEnded, stopBroadcast]);
 
   const fireFailed = useCallback((message: string) => {
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
+    stopBroadcast();
     setDialing(false);
     emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
     onSessionFailed(message);
-  }, [flushTranscript, onSessionFailed]);
+  }, [flushTranscript, onSessionFailed, stopBroadcast]);
 
   const conversation = useConversation({
     onError: (message: unknown, context?: unknown) => {
@@ -494,6 +515,12 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       }
     },
     onConversationMetadata: (m: { conversation_id?: string }) => { convIdRef.current = m?.conversation_id ?? null; },
+    onConversationCreated: (created: unknown) => {
+      /* The adapter reaches the agent's own room here — the only route to
+         its audio track. A failure leaves the line untouched: broadcast is
+         additive, never required. */
+      broadcastRef.current?.attach(created);
+    },
     onConnect: () => {
       // A late connection must never open after the client has left.
       if (dialCancelledRef.current) {
@@ -695,6 +722,25 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     }, 2000);
   }, [hangUp, fireEnded]);
 
+  /* Mint a publisher token and join the house room before the line is
+     asked for, so the broker's greeting has somewhere to land. Null on any
+     refusal — the caller stays on the WebSocket line, which is the same
+     desk without an audience. */
+  const openBroadcastRoom = useCallback(async (): Promise<HostBroadcast | null> => {
+    const minted = await fetchJson<{ url?: string; token?: string; room?: string }>('/api/hetty/livekit-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'host' }),
+      cache: 'no-store',
+    });
+    if (!minted.ok || !minted.data.url || !minted.data.token || !minted.data.room) return null;
+    try {
+      return await openHostBroadcast({ url: minted.data.url, token: minted.data.token, room: minted.data.room });
+    } catch {
+      return null;
+    }
+  }, []);
+
   const ring = async (mode: 'fresh' | 'resume' = 'fresh') => {
     if (dialing || sdkConnecting || live) return;
     dialCancelledRef.current = false;
@@ -707,7 +753,29 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     setDialing(true);
     onActivity();
     receiverClick();
-    const result = await fetchJson<{ signedUrl?: string }>('/api/hetty/session', { method: 'POST', cache: 'no-store' });
+
+    /* Broadcast is opt-in and additive. If the house room cannot be opened
+       — no LiveKit keys, a failed join — the ring still goes out over the
+       WebSocket line. Observers are the extra, not the requirement. */
+    let transport: 'webrtc' | 'websocket' = 'websocket';
+    if (HETTY_BROADCAST_ENABLED) {
+      const handle = await openBroadcastRoom();
+      if (dialCancelledRef.current || ringGenRef.current !== gen) {
+        if (handle) void handle.stop();
+        return;
+      }
+      if (handle) {
+        broadcastRef.current = handle;
+        broadcastRelayRef.current = onSceneDrive(event => {
+          const state = broadcastStateFor(event);
+          if (state) handle.send(state);
+        });
+        transport = 'webrtc';
+      }
+    }
+
+    const endpoint = transport === 'webrtc' ? '/api/hetty/session?transport=webrtc' : '/api/hetty/session';
+    const result = await fetchJson<{ signedUrl?: string; conversationToken?: string }>(endpoint, { method: 'POST', cache: 'no-store' });
     if (dialCancelledRef.current || ringGenRef.current !== gen) return;
     if (!result.ok) {
       const e = result.error;
@@ -719,7 +787,10 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       fireFailed(msg);
       return;
     }
-    if (!result.data.signedUrl) {
+    const credentials = transport === 'webrtc'
+      ? { conversationToken: result.data.conversationToken, connectionType: 'webrtc' as const }
+      : { signedUrl: result.data.signedUrl };
+    if (transport === 'webrtc' ? !result.data.conversationToken : !result.data.signedUrl) {
       fireFailed('Hetty’s line is unavailable. Please try again shortly.');
       return;
     }
@@ -732,7 +803,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     const opening = resume ? openingWithResume(ticketOpening, captionsRef.current) : ticketOpening;
     try {
       await (conversation.startSession as unknown as (opts: Record<string, unknown>) => unknown)({
-        signedUrl: result.data.signedUrl,
+        ...credentials,
         overrides: { agent: { firstMessage: opening } },
         dynamicVariables: {
           desk_foreground: d.foreground.kind,

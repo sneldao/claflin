@@ -11,6 +11,11 @@ export const dynamic = 'force-dynamic';
  * Hetty. The API key and agent id stay server-side; the browser only
  * ever sees a short-lived signed URL. Hetty's desk tools are client
  * tools — she can draft, quote and record paper trades, never execute.
+ *
+ * `?transport=webrtc` mints a conversation token instead of a signed URL.
+ * WebRTC is the only transport that exposes the agent's audio track, so it
+ * is what the host broadcast needs; the WebSocket path stays the default
+ * and is unchanged.
  */
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
@@ -45,6 +50,18 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   try {
+    if (req.nextUrl.searchParams.get('transport') === 'webrtc') {
+      /* WebRTC sessions take a conversation token, not a signed URL; the
+         SDK refuses signedUrl with connectionType "webrtc". */
+      const response = await fetch(`${ELEVENLABS_API_URL}/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`, {
+        headers: { 'xi-api-key': apiKey },
+      });
+      if (!response.ok) throw new Error(`elevenlabs_${response.status}`);
+      const body = (await response.json()) as { token?: string };
+      if (!body.token) throw new Error('no_conversation_token');
+      return Response.json({ conversationToken: body.token, account: userId ? 'bound' : 'anonymous' }, { headers });
+    }
+
     const response = await fetch(`${ELEVENLABS_API_URL}/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`, {
       headers: { 'xi-api-key': apiKey },
     });
