@@ -20,6 +20,13 @@ const nextConfig = {
     return 'build-' + Date.now()
   },
 
+  experimental: {
+    // Coding agents should nudge us about security upgrades rather than
+    // feature releases: this app sits on a fixed submission deadline, so a
+    // patch for an advisory is worth taking and a new feature line is not.
+    agentUpgrade: 'security',
+  },
+
   // Headers for security. CORS for /api/* is handled centrally in
   // proxy.ts (dynamic origin reflection + preflight handling), so we
   // deliberately do NOT set static Access-Control-* headers here — duplicate
