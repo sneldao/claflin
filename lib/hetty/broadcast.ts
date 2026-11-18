@@ -21,7 +21,9 @@
 
 import {
   BROADCAST_TOPIC,
+  BROADCAST_VERSION,
   encodeBroadcastState,
+  type BroadcastEndReason,
   type BroadcastState,
 } from './broadcast-state';
 
@@ -40,6 +42,12 @@ export type HostBroadcast = {
   attach: (conversation: unknown) => boolean;
   /** Publish one scene-state message. Never throws. */
   send: (state: BroadcastState) => void;
+  /**
+   * Say the desk is closing, then disconnect. The message is awaited so a
+   * listener is told before the room goes quiet, rather than left guessing
+   * at a dropped connection.
+   */
+  close: (reason: BroadcastEndReason) => Promise<void>;
   /** How many observers are in the house room right now. */
   audience: () => number;
   /** Subscribe to that count. Fires once immediately, then on every join/leave. */
@@ -154,11 +162,22 @@ export async function openHostBroadcast(ticket: BroadcastTicket): Promise<HostBr
     try { await out.disconnect(); } catch { /* the call is over; the room may already be gone */ }
   };
 
+  const close = async (reason: BroadcastEndReason): Promise<void> => {
+    try {
+      await out.localParticipant.publishData(
+        encodeBroadcastState({ v: BROADCAST_VERSION, t: 'end', reason }),
+        { reliable: true, topic: BROADCAST_TOPIC },
+      );
+    } catch { /* nobody left to tell */ }
+    await stop();
+  };
+
   return {
     room: ticket.room,
     attached: () => attachedToAgentRoom,
     attach,
     send,
+    close,
     audience: () => out.remoteParticipants.size,
     observeAudience: (listener: (count: number) => void) => {
       audienceListeners.add(listener);

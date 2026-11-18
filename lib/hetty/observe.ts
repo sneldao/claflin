@@ -24,6 +24,14 @@ import { BROADCAST_TOPIC, decodeBroadcastState, sceneDriveFor } from './broadcas
 
 export type ObserverTicket = { url: string; token: string; room: string };
 
+/**
+ * How the broadcast ended for this observer: the host said the desk is
+ * closed, or the room went quiet without a word. The wire's routine
+ * 'idle'/'interrupted' speech ends never reach this — they are turn
+ * boundaries, not endings.
+ */
+export type ObserverEndReason = 'closed' | 'dropped';
+
 export type DeskObserver = {
   /** The room this observer joined — the value from the audience link. */
   readonly room: string;
@@ -34,6 +42,13 @@ export type DeskObserver = {
    * sound, so this belongs inside the Listen click, not in an effect.
    */
   startAudio: () => Promise<boolean>;
+  /**
+   * Fires once when the broadcast ends — the host's own 'closed', the
+   * host's 'disconnected', the last publisher leaving, or our own line
+   * dropping. The listener is how the door says "the broadcast is over"
+   * instead of leaving a live label over silence.
+   */
+  onEnded: (listener: (reason: ObserverEndReason) => void) => () => void;
   stop: () => Promise<void>;
 };
 
@@ -53,6 +68,17 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
   const sinks = new Map<string, HTMLMediaElement>();
   let audible = false;
 
+  /* The broadcast ends exactly once: whichever signal lands first — the
+     host's own word, an emptied room, or our line dropping — is the one
+     that reports it. */
+  const endListeners = new Set<(reason: ObserverEndReason) => void>();
+  let ended = false;
+  const finish = (reason: ObserverEndReason) => {
+    if (ended) return;
+    ended = true;
+    endListeners.forEach(listener => listener(reason));
+  };
+
   const detachAll = () => {
     for (const element of sinks.values()) element.remove();
     sinks.clear();
@@ -66,6 +92,12 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
     if (!state) return;
     const event = sceneDriveFor(state);
     if (event) emitSceneDrive(event);
+    /* Only 'closed' and 'disconnected' are broadcast endings; 'idle' and
+       'interrupted' are Hetty pausing, and the show goes on. */
+    if (state.t === 'end') {
+      if (state.reason === 'closed') finish('closed');
+      else if (state.reason === 'disconnected') finish('dropped');
+    }
   };
 
   const onSubscribed = (track: { kind: string; sid?: string; attach: () => HTMLMediaElement }) => {
@@ -90,12 +122,19 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
   room.on(livekit.RoomEvent.DataReceived, onData);
   room.on(livekit.RoomEvent.TrackSubscribed, onSubscribed);
   room.on(livekit.RoomEvent.TrackUnsubscribed, onUnsubscribed);
+  /* The host is the room's only publisher; when the last remote
+     participant leaves, the broadcast is over whether or not a 'closed'
+     message ever made it out. */
+  room.on(livekit.RoomEvent.ParticipantDisconnected, () => {
+    if (room.remoteParticipants.size === 0) finish('dropped');
+  });
   room.on(livekit.RoomEvent.Disconnected, () => {
     detachAll();
     audible = false;
     /* A host who drops mid-sentence would otherwise leave the mouth open
        forever. The room is over; say so on the bus. */
     emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
+    finish('dropped');
   });
 
   await room.connect(ticket.url, ticket.token);
@@ -118,8 +157,13 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
     room: ticket.room,
     audible: () => audible,
     startAudio,
+    onEnded: (listener: (reason: ObserverEndReason) => void) => {
+      endListeners.add(listener);
+      return () => { endListeners.delete(listener); };
+    },
     stop: async () => {
       detachAll();
+      endListeners.clear();
       for (const event of [livekit.RoomEvent.DataReceived, livekit.RoomEvent.TrackSubscribed, livekit.RoomEvent.TrackUnsubscribed]) {
         try { room.off(event, event === livekit.RoomEvent.DataReceived ? onData : event === livekit.RoomEvent.TrackSubscribed ? onSubscribed : onUnsubscribed); } catch { /* already gone */ }
       }

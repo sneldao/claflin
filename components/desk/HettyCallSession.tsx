@@ -5,7 +5,8 @@ import { useConversation, useConversationClientTool } from '@elevenlabs/react';
 import { emitSceneDrive, onSceneDrive } from '@/lib/desk/scene-drive';
 import { HETTY_BROADCAST_ENABLED } from '@/lib/hetty/broadcast-flags';
 import { openHostBroadcast, type HostBroadcast } from '@/lib/hetty/broadcast';
-import { broadcastStateFor } from '@/lib/hetty/broadcast-state';
+import { broadcastStateFor, type BroadcastEndReason } from '@/lib/hetty/broadcast-state';
+import { HETTY_BROADCAST_MAX_MS } from '@/lib/hetty/broadcast-flags';
 import { useHouseSceneApi } from './HouseScene';
 import type { NightDeskView } from '@/lib/night-desk-fixtures';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
@@ -367,18 +368,28 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
   const broadcastRef = useRef<HostBroadcast | null>(null);
   const broadcastRelayRef = useRef<(() => void) | null>(null);
   const audienceOffRef = useRef<(() => void) | null>(null);
+  const capTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endCallRef = useRef<(() => void) | null>(null);
   const [audienceRoom, setAudienceRoom] = useState<string | null>(null);
   const [audienceCount, setAudienceCount] = useState(0);
-  const stopBroadcast = useCallback(() => {
+  /* Every broadcast ends by telling the room, not by vanishing: 'closed' is
+     the desk saying so, 'disconnected' is the line going out from under it.
+     The message is published and awaited before disconnect, so a listener
+     hears the ending instead of guessing at silence. */
+  const stopBroadcast = useCallback((reason: BroadcastEndReason = 'closed') => {
     broadcastRelayRef.current?.();
     broadcastRelayRef.current = null;
     audienceOffRef.current?.();
     audienceOffRef.current = null;
+    if (capTimerRef.current) {
+      clearTimeout(capTimerRef.current);
+      capTimerRef.current = null;
+    }
     setAudienceRoom(null);
     setAudienceCount(0);
     const handle = broadcastRef.current;
     broadcastRef.current = null;
-    if (handle) void handle.stop();
+    if (handle) void handle.close(reason);
   }, []);
   /* A provider remount must never leave a live room behind. */
   useEffect(() => () => { stopBroadcast(); }, [stopBroadcast]);
@@ -476,7 +487,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
-    stopBroadcast();
+    stopBroadcast('closed');
     emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
     onSessionEnded(note);
@@ -486,7 +497,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (terminalFiredRef.current) return;
     terminalFiredRef.current = true;
     sessionActiveRef.current = false;
-    stopBroadcast();
+    stopBroadcast('disconnected');
     setDialing(false);
     emitSceneDrive({ type: 'speech-end', reason: 'disconnected' });
     void flushTranscript();
@@ -729,6 +740,8 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
       fireEnded(hettyClosingLine(d.state, d.foreground, 'ended'));
     }, 2000);
   }, [hangUp, fireEnded]);
+  /* The session-cap timer fires the same deliberate end the button does. */
+  useEffect(() => { endCallRef.current = endCall; }, [endCall]);
 
   /* Mint a publisher token and join the house room before the line is
      asked for, so the broker's greeting has somewhere to land. Null on any
@@ -769,7 +782,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
     if (HETTY_BROADCAST_ENABLED) {
       const handle = await openBroadcastRoom();
       if (dialCancelledRef.current || ringGenRef.current !== gen) {
-        if (handle) void handle.stop();
+        if (handle) void handle.close('closed');
         return;
       }
       if (handle) {
@@ -782,6 +795,13 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
         setAudienceRoom(handle.room);
         audienceOffRef.current?.();
         audienceOffRef.current = handle.observeAudience(setAudienceCount);
+        /* The session cap: a broadcast left running all night is a bill,
+           not a feature. At the bound the call ends the deliberate way —
+           observers hear 'closed', not a vanished room. */
+        capTimerRef.current = setTimeout(() => {
+          capTimerRef.current = null;
+          endCallRef.current?.();
+        }, HETTY_BROADCAST_MAX_MS);
         transport = 'webrtc';
       }
     }

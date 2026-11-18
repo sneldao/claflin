@@ -377,6 +377,36 @@ button.authChip:hover {
   background: #b98a4e;
 }
 
+/* "The desk is open" — a lit line under the lede, brass like the kicker's
+   own lamp. It renders only while a host is actually in the room. */
+.broadcastLine {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: -8px 0 22px;
+  max-width: 42ch;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.broadcastLine a {
+  color: var(--brass);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.broadcastLamp {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 0 0 8px rgba(197, 172, 120, 0.9);
+}
+
 .title {
   margin: 0 0 22px;
   max-width: 14ch;

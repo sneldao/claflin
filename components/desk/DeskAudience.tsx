@@ -7,7 +7,7 @@ import { joinObservedRoom, type DeskObserver } from '@/lib/hetty/observe';
 import { audienceLinkFor, isLivekitRoomName } from '@/lib/hetty/room-name';
 import styles from './DeskAudience.module.css';
 
-type Phase = 'idle' | 'connecting' | 'live' | 'blocked' | 'failed';
+type Phase = 'idle' | 'connecting' | 'live' | 'blocked' | 'ended' | 'failed';
 
 /**
  * The observer's door. It appears only when the URL carries a room name that
@@ -66,6 +66,16 @@ export function DeskAudience() {
     try {
       const observer = await joinObservedRoom({ url: minted.data.url, token: minted.data.token, room });
       observerRef.current = observer;
+      /* The broadcast ending under us is not a failure — it is the desk
+         closing or the line dropping, and the bar says which. */
+      observer.onEnded(reason => {
+        observerRef.current = null;
+        void observer.stop();
+        setPhase('ended');
+        setNote(reason === 'closed'
+          ? 'The host has closed the desk.'
+          : 'The line went quiet — the broadcast may be over.');
+      });
       const audible = observer.audible();
       setPhase(audible ? 'live' : 'blocked');
       setNote(audible ? null : 'Your browser is blocking the sound. Press Listen again to allow it.');
@@ -83,9 +93,11 @@ export function DeskAudience() {
       ? 'Opening the room…'
       : phase === 'blocked'
         ? 'In the room, sound blocked.'
-        : phase === 'failed'
-          ? 'The room did not open.'
-          : 'This link is an open room at the desk.';
+        : phase === 'ended'
+          ? 'The broadcast is over.'
+          : phase === 'failed'
+            ? 'The room did not open.'
+            : 'This link is an open room at the desk.';
   /* Blocked is still "in the room": the retry resumes audio, it does not
      re-join. Only a live line offers Leave, so nobody drops by accident. */
   const action = phase === 'live'

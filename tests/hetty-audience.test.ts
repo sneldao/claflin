@@ -20,10 +20,13 @@ describe('broadcast room names', () => {
     }
   });
 
-  it('builds an audience link that carries the room and nothing else', () => {
+  it('builds an audience link that enters the desk and carries the room and nothing else', () => {
     const room = livekitRoomName();
     const link = audienceLinkFor(room, 'https://desk.example');
-    assert.equal(link, `https://desk.example/?room=${room}`);
+    assert.equal(link, `https://desk.example/?desk=hetty&room=${room}`);
+    /* The door mounts inside the desk surface — a bare `?room=` would land
+       on the foyer and never open it. */
+    assert.equal(link.includes('desk=hetty'), true);
     assert.equal(link.includes('token'), false);
     assert.equal(link.includes('key'), false);
   });
@@ -55,6 +58,18 @@ describe('audience mode', () => {
   it('says the room ended rather than leaving a mouth open', () => {
     assert.match(observe, /RoomEvent\.Disconnected/);
     assert.match(observe, /type: 'speech-end', reason: 'disconnected'/);
+  });
+
+  it('tells its listener how the broadcast ended — closed or dropped', () => {
+    assert.match(observe, /onEnded/);
+    assert.match(observe, /RoomEvent\.ParticipantDisconnected/, 'a host leaving an emptied room ends the show');
+    assert.match(observe, /state\.reason === 'closed'/, 'the wire "closed" is the host saying so');
+    /* Routine speech ends are turn boundaries, not endings — the observer
+       must not let an 'idle' close the door. */
+    assert.match(observe, /'disconnected'\) finish\('dropped'\)|reason === 'disconnected'/);
+    const door = source('components/desk/DeskAudience.tsx');
+    assert.match(door, /'ended'/);
+    assert.match(door, /The broadcast is over/);
   });
 
   it('never asks the token route for host rights or an unnamed room', () => {

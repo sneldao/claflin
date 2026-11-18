@@ -29,6 +29,35 @@ type MintBody = { url?: string; token?: string; room?: string; identity?: string
 
 const ROOM = livekitRoomName();
 
+/* The route asks LiveKit's own admin surface who is in a room. These stubs
+   answer the Twirp POSTs the way LiveKit would — a room's roster is the
+   only truth the cap and the session check read. */
+const realFetch = globalThis.fetch;
+
+function stubAdmin(rooms: Array<{ name: string; participants: number }>, rosters: Record<string, string[]>): void {
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes('ListRooms')) {
+      return Response.json({ rooms: rooms.map(r => ({ name: r.name, num_participants: r.participants })) });
+    }
+    if (url.includes('ListParticipants')) {
+      const room = init?.body ? (JSON.parse(String(init.body)) as { room?: string }).room : undefined;
+      const list = room ? rosters[room] : undefined;
+      if (!list) return new Response('room does not exist', { status: 404 });
+      return Response.json({ participants: list.map(identity => ({ identity })) });
+    }
+    return new Response('not found', { status: 404 });
+  }) as typeof fetch;
+}
+
+function stubAdminDown(): void {
+  globalThis.fetch = (async () => { throw new Error('admin unreachable'); }) as typeof fetch;
+}
+
+function restoreFetch(): void {
+  globalThis.fetch = realFetch;
+}
+
 function saveEnv() {
   return { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
 }
@@ -71,6 +100,7 @@ describe('/api/hetty/livekit-token host', () => {
   it('mints a fresh room with publish+subscribe+data grants', async () => {
     const saved = saveEnv();
     connectEnv();
+    stubAdmin([], {});
     try {
       const response = await POST(post('198.51.100.22', { role: 'host' }));
       assert.equal(response.status, 200);
@@ -92,12 +122,14 @@ describe('/api/hetty/livekit-token host', () => {
       assert.equal((payload.exp as number) - (payload.iat as number), 600);
     } finally {
       restoreEnv(saved);
+      restoreFetch();
     }
   });
 
   it('never reuses a room an observer named', async () => {
     const saved = saveEnv();
     connectEnv();
+    stubAdmin([], {});
     try {
       const response = await POST(post('198.51.100.23', { role: 'host', room: ROOM }));
       assert.equal(response.status, 200);
@@ -105,6 +137,57 @@ describe('/api/hetty/livekit-token host', () => {
       assert.notEqual(body.room, ROOM);
     } finally {
       restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('refuses a second host while a broadcast is live — the house has one voice', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    const other = livekitRoomName();
+    stubAdmin(
+      [{ name: other, participants: 3 }],
+      { [other]: ['hetty-host-u9', 'hetty-observer-a', 'hetty-observer-b'] },
+    );
+    try {
+      const response = await POST(post('198.51.100.28', { role: 'host' }));
+      assert.equal(response.status, 409);
+      assert.equal(((await response.json()) as Record<string, unknown>).error, 'session_active');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('lets a host ring past a room that holds only listeners — a stale link is not a session', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    const zombie = livekitRoomName();
+    stubAdmin(
+      [{ name: zombie, participants: 2 }],
+      { [zombie]: ['hetty-observer-a', 'hetty-observer-b'] },
+    );
+    try {
+      const response = await POST(post('198.51.100.29', { role: 'host' }));
+      assert.equal(response.status, 200);
+      assert.equal(((await response.json()) as MintBody).role, 'host');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('mints a host token when the room list cannot be read — the admin surface is advisory', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    stubAdminDown();
+    try {
+      const response = await POST(post('198.51.100.30', { role: 'host' }));
+      assert.equal(response.status, 200);
+      assert.equal(((await response.json()) as MintBody).role, 'host');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
     }
   });
 });
@@ -113,6 +196,10 @@ describe('/api/hetty/livekit-token observer', () => {
   it('mints subscribe-only grants for the room it was given', async () => {
     const saved = saveEnv();
     connectEnv();
+    stubAdmin(
+      [{ name: ROOM, participants: 1 }],
+      { [ROOM]: ['hetty-host-u9'] },
+    );
     try {
       const response = await POST(post('198.51.100.24', { role: 'observer', room: ROOM }));
       assert.equal(response.status, 200);
@@ -128,6 +215,7 @@ describe('/api/hetty/livekit-token observer', () => {
       assert.equal(payload.video?.canPublishData, false);
     } finally {
       restoreEnv(saved);
+      restoreFetch();
     }
   });
 
@@ -166,6 +254,71 @@ describe('/api/hetty/livekit-token observer', () => {
       assert.equal(((await response.json()) as Record<string, unknown>).error, 'invalid_room');
     } finally {
       restoreEnv(saved);
+    }
+  });
+
+  it('refuses a room the server cannot see — a stale link is not a broadcast', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    stubAdmin([], {});
+    try {
+      const response = await POST(post('198.51.100.31', { role: 'observer', room: ROOM }));
+      assert.equal(response.status, 409);
+      assert.equal(((await response.json()) as Record<string, unknown>).error, 'room_not_open');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('refuses a room whose host already left — listeners alone are not a show', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    stubAdmin(
+      [{ name: ROOM, participants: 2 }],
+      { [ROOM]: ['hetty-observer-a', 'hetty-observer-b'] },
+    );
+    try {
+      const response = await POST(post('198.51.100.32', { role: 'observer', room: ROOM }));
+      assert.equal(response.status, 409);
+      assert.equal(((await response.json()) as Record<string, unknown>).error, 'room_not_open');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('refuses a seat when the audience is full', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    const cap = process.env.HETTY_OBSERVER_CAP;
+    process.env.HETTY_OBSERVER_CAP = '2';
+    stubAdmin(
+      [{ name: ROOM, participants: 3 }],
+      { [ROOM]: ['hetty-host-u9', 'hetty-observer-a', 'hetty-observer-b'] },
+    );
+    try {
+      const response = await POST(post('198.51.100.33', { role: 'observer', room: ROOM }));
+      assert.equal(response.status, 409);
+      assert.equal(((await response.json()) as Record<string, unknown>).error, 'room_full');
+    } finally {
+      if (cap === undefined) delete process.env.HETTY_OBSERVER_CAP; else process.env.HETTY_OBSERVER_CAP = cap;
+      restoreEnv(saved);
+      restoreFetch();
+    }
+  });
+
+  it('admits a listener when the room list cannot be read — the admin surface is advisory', async () => {
+    const saved = saveEnv();
+    connectEnv();
+    stubAdminDown();
+    try {
+      const response = await POST(post('198.51.100.34', { role: 'observer', room: ROOM }));
+      assert.equal(response.status, 200);
+      assert.equal(((await response.json()) as MintBody).role, 'observer');
+    } finally {
+      restoreEnv(saved);
+      restoreFetch();
     }
   });
 });

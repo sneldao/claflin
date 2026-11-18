@@ -121,6 +121,11 @@ describe('broadcast state wire format', () => {
   it('refuses an unknown end reason', () => {
     assert.equal(decodeBroadcastState(raw({ v: 1, t: 'end', reason: 'hung-up' })), null);
   });
+
+  it('carries "closed" — the host saying the desk shut, distinct from a drop', () => {
+    const closed: BroadcastState = { v: 1, t: 'end', reason: 'closed' };
+    assert.deepEqual(roundTrip(closed), closed);
+  });
 });
 
 describe('sceneDriveFor', () => {
@@ -154,5 +159,10 @@ describe('sceneDriveFor', () => {
   it('returns null rather than guessing at an unknown message', () => {
     const unknown = { v: 1, t: 'nonsense' } as unknown as BroadcastState;
     assert.equal(sceneDriveFor(unknown), null);
+  });
+
+  it('drives "closed" as a disconnect on the scene bus — the mouth shuts either way', () => {
+    const state: BroadcastState = { v: 1, t: 'end', reason: 'closed' };
+    assert.deepEqual(sceneDriveFor(state), { type: 'speech-end', reason: 'disconnected' });
   });
 });

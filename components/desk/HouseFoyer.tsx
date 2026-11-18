@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useId, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, useId, useSyncExternalStore, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { DESK_CAPABILITIES, HOUSE_DESKS, isOpenDesk, type HouseDeskId } from '@/lib/house';
 import { useMarketBell } from '@/lib/use-market-clock';
@@ -27,6 +27,10 @@ import { HouseDesks } from './HouseDesks';
 import { HouseAnswers } from './HouseAnswers';
 import { AnnotatedExampleCall } from '../foyer/AnnotatedExampleCall';
 import { type WireMark } from '../foyer/QuoteColumn';
+import { HETTY_BROADCAST_ENABLED } from '@/lib/hetty/broadcast-flags';
+import { useDeskPresence, type DeskPresence } from '@/lib/hetty/presence';
+import { audienceLinkFor } from '@/lib/hetty/room-name';
+import { formatBroadcastWindow, nextBroadcastWindow, type BroadcastWindow } from '@/lib/hetty/desk-hours';
 import { NightDeskScene } from '../night-desk/NightDeskScene';
 import { FOYER_RECEIPTS } from './foyer-receipts';
 import { useDeskAuth } from '@/components/auth/AuthProvider';
@@ -183,6 +187,17 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
   };
   const filings = useHouseFilings();
   const filing = filings[0] ?? null;
+
+  /* "The desk is open" — presence read from the room itself, polled while
+     the page is up. The lamp renders only on 'open'; 'unknown' is dark. */
+  const presence = useDeskPresence();
+  /* Posted desk hours resolve on the client — the server's "next" would
+     disagree with the browser's, so the server snapshot is always null. */
+  const nextWindow = useSyncExternalStore(
+    () => () => {},
+    () => nextBroadcastWindow(Date.now()),
+    () => null,
+  );
 
   /* The funnel counts each distinct instruction once, however it arrived.
      Only the house book's answer (none/one/several) is sent, never the words. */
@@ -415,6 +430,13 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
               {headlineBottom}
             </h1>
             <p className={foyerStyles.lede}>{FOYER_LEDE}</p>
+            {presence.state === 'open' && (
+              <p className={foyerStyles.broadcastLine} role="status">
+                <span className={foyerStyles.broadcastLamp} aria-hidden="true" />
+                Hetty’s desk is open{presence.listening > 0 ? ` — ${presence.listening} listening` : ''}.{' '}
+                <a href={audienceLinkFor(presence.room, window.location.origin)}>Listen in →</a>
+              </p>
+            )}
             {filings.length >= 2 ? (
               <SessionEpilogue
                 filings={filings}
@@ -452,7 +474,7 @@ export function HouseFoyer({ onEnter, sceneLive = true }: { onEnter: (id: HouseD
           />
         </section>
 
-        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} marks={wireMarks} market={market} onPick={pickFromWire} onGapOpen={onGapOpen} />
+        <LiveWire hetty={hettyMarks} jesse={jesseMarks} tennie={tennieMarks} marks={wireMarks} market={market} presence={presence} nextWindow={nextWindow} onPick={pickFromWire} onGapOpen={onGapOpen} />
         {gapOpen && (
           <dialog
             ref={gapDialogRef}
@@ -632,7 +654,7 @@ function wireMarksOf(hetty: MarksRead, jesse: MarksRead | null, tennie: MarksRea
   ];
 }
 
-function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick, onGapOpen }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; marks: WireMark[]; market: { clock: MarketClock; bell: NextBell | null } | null; onPick: (symbol: string) => void; /** Opens the gap explainer for the desk that published a given wire mark, once per visit. */ onGapOpen: (desk: FunnelDesk) => void }) {
+function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, presence, nextWindow, onPick, onGapOpen }: { hetty: MarksRead; jesse: MarksRead | null; tennie: MarksRead | null; marks: WireMark[]; market: { clock: MarketClock; bell: NextBell | null } | null; presence: DeskPresence; nextWindow: BroadcastWindow | null; onPick: (symbol: string) => void; /** Opens the gap explainer for the desk that published a given wire mark, once per visit. */ onGapOpen: (desk: FunnelDesk) => void }) {
   const failed = hetty.failed && (jesse?.failed ?? true) && (tennie?.failed ?? true);
 
   const [ticks, setTicks] = useState<Record<string, 'up' | 'down'>>({});
@@ -734,6 +756,16 @@ function LiveWire({ hetty, jesse, tennie, marks: wireMarks, market, onPick, onGa
         <span data-state="open">SOLANA open</span>
         <span data-state="open">BASE open</span>
         <span data-state="open">RH CHAIN open</span>
+        {/* The broadcast desk keeps sittings, not sessions: it is open
+            while a host is in the room, and between them the posted hours
+            name the next one. 'Unknown' renders nothing, never a lit cell. */}
+        {HETTY_BROADCAST_ENABLED && presence.state !== 'unknown' && (
+          <span data-state={presence.state}>
+            HETTY’S DESK {presence.state === 'open'
+              ? `open${presence.listening > 0 ? ` · ${presence.listening} listening` : ''}`
+              : `closed${nextWindow ? ` · ${formatBroadcastWindow(nextWindow)}` : ''}`}
+          </span>
+        )}
       </p>
     </section>
   );

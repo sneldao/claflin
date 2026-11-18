@@ -2,6 +2,13 @@ import { createHmac } from 'node:crypto';
 import { busyResponse, clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/http';
 import { accountFromRequest } from '@/lib/auth';
 import { isLivekitRoomName, livekitRoomName } from '@/lib/hetty/room-name';
+import {
+  HOST_IDENTITY_PREFIX,
+  OBSERVER_IDENTITY_PREFIX,
+  listRoomParticipants,
+  listRooms,
+  liveBroadcasts,
+} from '@/lib/hetty/livekit-admin';
 import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +32,11 @@ export const dynamic = 'force-dynamic';
  *
  * The host's room is always minted here and single-use per ring; an
  * existing room is never reused for a new host, so a stale link cannot
- * be revived into a live microphone.
+ * be revived into a live microphone. Two bounds ride on the same mint:
+ * the house carries one broadcast at a time (a second host ring is 409),
+ * and an observer joins only a room that exists with a host in it, up
+ * to the observer cap — both read from LiveKit's own admin surface, and
+ * both advisory: when the room list cannot be read the mint proceeds.
  *
  * Mirrors /api/hetty/session's budget posture (instance + per-user /
  * per-anon-IP), with a second, wider instance budget for observers —
@@ -50,6 +61,16 @@ const hostUserBudget = keyedBudget(5);
 const observerInstanceBudget = requestBudget(240);
 const observerAnonIpBudget = keyedBudget(12);
 const observerUserBudget = keyedBudget(20);
+
+/**
+ * How many listeners a room carries before a join is refused. The egress
+ * bill grows per observer, and a room that reads as packed is kinder than
+ * one that degrades silently — the cap is a posted limit, not a queue.
+ */
+function observerCap(): number {
+  const raw = Number(process.env.HETTY_OBSERVER_CAP);
+  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 48;
+}
 
 /* Room names live in lib/hetty/room-name.ts so the audience client applies
    exactly the same check the server does. Re-exported here because this
@@ -164,9 +185,51 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ error: 'not_connected', message: 'Hetty’s room is not connected on this deployment.' }, { status: 503, headers });
   }
 
+  const admin = { url, apiKey, apiSecret };
+
+  /* The house has one voice. A second host ring while a broadcast is live
+     is refused outright — never joined into the room to share it. An
+     unreadable room list does not block: the admin surface is advisory. */
+  if (role === 'host') {
+    const live = await liveBroadcasts(admin);
+    if (live && live.length > 0) {
+      return Response.json(
+        { error: 'session_active', message: 'The desk is already live. The broadcast is one room at a time.' },
+        { status: 409, headers },
+      );
+    }
+  } else {
+    const room = ask.room as string;
+    /* A dead link must not mint a seat in an empty room: the room list is
+       definitive on existence, the roster on whether a host is present —
+       observer-only zombie rooms are not the desk. Both admin reads are
+       advisory: unreachable means allow, and LiveKit refuses what it must. */
+    const [rooms, parts] = await Promise.all([
+      listRooms(admin),
+      listRoomParticipants(admin, room),
+    ]);
+    const roomExists = rooms === null ? null : rooms.some(entry => entry.name === room);
+    const hostPresent = parts === null ? null : parts.some(p => p.identity.startsWith(HOST_IDENTITY_PREFIX));
+    if (roomExists === false || hostPresent === false) {
+      return Response.json(
+        { error: 'room_not_open', message: 'The desk is not open right now.' },
+        { status: 409, headers },
+      );
+    }
+    if (parts !== null) {
+      const seated = parts.filter(p => !p.identity.startsWith(HOST_IDENTITY_PREFIX)).length;
+      if (seated >= observerCap()) {
+        return Response.json(
+          { error: 'room_full', message: 'The room is full. Try again shortly — listeners come and go.' },
+          { status: 409, headers },
+        );
+      }
+    }
+  }
+
   const identity = role === 'host'
-    ? (userId ? `hetty-host-${userId}` : `hetty-host-anon-${crypto.randomUUID().slice(0, 8)}`)
-    : (userId ? `hetty-observer-${userId}` : `hetty-observer-anon-${crypto.randomUUID().slice(0, 8)}`);
+    ? (userId ? `${HOST_IDENTITY_PREFIX}${userId}` : `${HOST_IDENTITY_PREFIX}anon-${crypto.randomUUID().slice(0, 8)}`)
+    : (userId ? `${OBSERVER_IDENTITY_PREFIX}${userId}` : `${OBSERVER_IDENTITY_PREFIX}anon-${crypto.randomUUID().slice(0, 8)}`);
 
   // Hosts always get a fresh room; observers only ever join one that was named.
   const room = role === 'host' ? livekitRoomName() : (ask.room as string);

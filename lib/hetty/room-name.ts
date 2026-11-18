@@ -21,10 +21,12 @@ export function isLivekitRoomName(value: string): boolean {
 }
 
 /**
- * The audience link — the only thing an observer receives. The desk URL plus
- * one room name: no key, no host token, nothing that could be replayed into a
- * microphone. Built here so the client and the share strip cannot drift.
+ * The audience link — the only thing an observer receives. The desk URL
+ * plus one room name: no key, no host token, nothing that could be
+ * replayed into a microphone. `?desk=hetty` enters the desk itself —
+ * a bare `?room=` would land in the foyer, where the door is not mounted.
+ * Built here so the client and the share strip cannot drift.
  */
 export function audienceLinkFor(room: string, origin: string): string {
-  return `${origin}/?room=${encodeURIComponent(room)}`;
+  return `${origin}/?desk=hetty&room=${encodeURIComponent(room)}`;
 }

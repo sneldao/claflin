@@ -22,7 +22,9 @@ export const BROADCAST_VERSION = 1;
 const SPEECH_CHARS_MAX = 240;
 const SYMBOL_MAX = 16;
 const VIEWS: readonly NightDeskView[] = ['desk', 'evidence', 'review', 'ledger'];
-const END_REASONS = ['interrupted', 'disconnected', 'idle'] as const;
+/* 'closed' is the host saying so, as opposed to a line that dropped. It is
+   only ever sent by the host's own close path, never inferred by an observer. */
+const END_REASONS = ['interrupted', 'disconnected', 'idle', 'closed'] as const;
 
 export type BroadcastEndReason = (typeof END_REASONS)[number];
 
@@ -121,7 +123,7 @@ export function sceneDriveFor(state: BroadcastState): SceneDriveEvent | null {
     case 'activity':
       return { type: 'speech-activity', level: state.level };
     case 'end':
-      return { type: 'speech-end', reason: state.reason };
+      return { type: 'speech-end', reason: state.reason === 'closed' ? 'disconnected' : state.reason };
     default:
       return null;
   }

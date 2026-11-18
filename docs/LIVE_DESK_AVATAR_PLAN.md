@@ -1,9 +1,9 @@
 # Live Desk Avatar Plan — Stocks Maxxing
 
-> **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B in progress —
-> token minting, host publish and observer mode are in; presence and session
-> caps are next. Broadcast is flag-gated and has not yet been heard between
-> two real browsers.
+> **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B engineering is
+> complete — token minting, host publish, observer mode, presence, and
+> session caps are all in. Broadcast is flag-gated and has not yet been
+> heard between two real browsers.
 > This doc tracks the experiment; checkboxes are the source of truth for
 > progress.
 > Phases A–C here are sprint-local to this experiment (unrelated to the
@@ -163,9 +163,35 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         the room's own participant count ("3 listening"), not an estimate
       - still owed: a live hearing test between two real browsers, and
         stage/transcript lines on the wire
-- [ ] "The desk is open" presence: house lamp/live indicator on `/`,
+- [x] "The desk is open" presence: house lamp/live indicator on `/`,
       desk-hours schedule surfaced in the foyer
-- [ ] Session limits: max session length, observer cap, graceful close
+      - `GET /api/hetty/presence` answers from LiveKit's own admin
+        surface: a room counts as a broadcast only when a `hetty-host-*`
+        participant is in it — a stale link someone still has open never
+        lights the lamp
+      - three states stay distinct end-to-end: `open` (room + listener
+        count), `closed` (the list was read), `unknown` (LiveKit could
+        not be asked) — only `open` renders
+      - `useDeskPresence` polls while the page is up; the foyer hero
+        carries the lit line with a Listen-in link, and the wire-hours
+        strip shows the desk's state beside the venues
+      - `lib/hetty/desk-hours.ts` is the posted-hours list; the foyer's
+        closed state names the next sitting when one is scheduled
+- [x] Session limits: max session length, observer cap, graceful close
+      - `HETTY_BROADCAST_MAX_MS` (env `NEXT_PUBLIC_HETTY_BROADCAST_MAX_MINUTES`,
+        default 6h) ends the call the deliberate way — observers hear
+        'closed', not a vanished room
+      - `HETTY_OBSERVER_CAP` (default 48) is enforced at the mint, read
+        from the room's own roster — the cap counts listeners, not the host
+      - an observer joins only a room that exists **with a host in it**
+        (`room_not_open` otherwise); a second host ring while a broadcast
+        is live is refused (`session_active`) — the house has one voice
+      - the admin reads are advisory: an unreachable room list never
+        locks listeners out of a working room, and never blocks a host
+      - `close(reason)` publishes the terminal state on the reliable
+        data channel **before** disconnecting — 'closed' is the desk
+        saying so, 'disconnected' is the line going out from under it,
+        and the observer's bar says which
 
 ## Phase C — Marathon event & build-in-public
 
@@ -221,6 +247,11 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | 2026-11-18 | Host broadcast behind `NEXT_PUBLIC_HETTY_BROADCAST` | It moves the line to WebRTC; that path has to be heard with a real mic before it is the default |
 | 2026-11-18 | Observers decode onto the local scene bus instead of a second render path | One bus drives both rooms, so the observer's scene cannot drift from the host's without a test noticing |
 | 2026-11-18 | Audience joins only on a press, never on load | Autoplay rules make a silent "listening" bar a lie; the press is both the browser's gesture and the listener's consent |
+| 2026-11-19 | Presence reads LiveKit's admin surface, not a flag or a guess | A room is a broadcast only while a `hetty-host-*` participant is in it; observer-only zombie rooms never light the lamp |
+| 2026-11-19 | Admin reads are advisory everywhere | An unreachable room list means unknown/allow, never a fabricated closed and never a locked door |
+| 2026-11-19 | One broadcast at a time, refused at the mint | The desk is one voice; a second host ring gets `session_active`, not a shared room |
+| 2026-11-19 | The cap ends the call, not just the room | `HETTY_BROADCAST_MAX_MS` runs the same deliberate end as the button, so listeners hear 'closed' |
+| 2026-11-19 | Admin client over plain HTTP/Twirp, hand-minted grants | The token route already signs JWTs by hand; the room service needs the same shape, not a second SDK |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references
