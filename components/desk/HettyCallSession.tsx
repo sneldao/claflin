@@ -27,6 +27,7 @@ import { LINE_FOOT } from '@/lib/desk/ui-copy';
 import { BrokerLinePlate, LastCallFold, LineCaptions, hasDiscussion } from './BrokerLine';
 import { spokenText } from '@/lib/desk/caption-text';
 import { RingExample } from './RingExample';
+import { DeskAudienceShare } from './DeskAudience';
 import styles from './WorkingDesk.module.css';
 
 type Desk = ReturnType<typeof useTradingDesk>;
@@ -365,9 +366,16 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
      a broadcast (the flag is off, or the room was not available). */
   const broadcastRef = useRef<HostBroadcast | null>(null);
   const broadcastRelayRef = useRef<(() => void) | null>(null);
+  const audienceOffRef = useRef<(() => void) | null>(null);
+  const [audienceRoom, setAudienceRoom] = useState<string | null>(null);
+  const [audienceCount, setAudienceCount] = useState(0);
   const stopBroadcast = useCallback(() => {
     broadcastRelayRef.current?.();
     broadcastRelayRef.current = null;
+    audienceOffRef.current?.();
+    audienceOffRef.current = null;
+    setAudienceRoom(null);
+    setAudienceCount(0);
     const handle = broadcastRef.current;
     broadcastRef.current = null;
     if (handle) void handle.stop();
@@ -770,6 +778,10 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
           const state = broadcastStateFor(event);
           if (state) handle.send(state);
         });
+        /* The link and the count are the host's proof the room is real. */
+        setAudienceRoom(handle.room);
+        audienceOffRef.current?.();
+        audienceOffRef.current = handle.observeAudience(setAudienceCount);
         transport = 'webrtc';
       }
     }
@@ -939,6 +951,7 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
           </>
         )}
       </div>
+      {audienceRoom && <DeskAudienceShare room={audienceRoom} listening={audienceCount} />}
       {live && (lastUser || lastAgent || applied) && (
         <div className={styles.callCaptions} aria-live="polite">
           <LineCaptions captions={captions} brokerName="Hetty" applied={applied} />

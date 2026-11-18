@@ -1,8 +1,9 @@
 # Live Desk Avatar Plan — Stocks Maxxing
 
 > **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B in progress —
-> token minting and host publish are in, observer mode is next. Host publish
-> is flag-gated and has not yet been heard with a real microphone.
+> token minting, host publish and observer mode are in; presence and session
+> caps are next. Broadcast is flag-gated and has not yet been heard between
+> two real browsers.
 > This doc tracks the experiment; checkboxes are the source of truth for
 > progress.
 > Phases A–C here are sprint-local to this experiment (unrelated to the
@@ -147,8 +148,21 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         line is byte-for-byte the old WebSocket path
       - still owed: stage and transcript lines on the wire, and a live
         hearing test — nothing here is verified with a real microphone yet
-- [ ] Observer mode: join room, subscribe audio, apply data-channel
+- [x] Observer mode: join room, subscribe audio, apply data-channel
       state to a locally-rendered scene; read-only — no client tools
+      - `lib/hetty/observe.ts` joins with the subscribe-only token and
+        attaches the broker's track to a hidden sink; it has no publish
+        call, no microphone and no local participant at all
+      - `sceneDriveFor` inverts the wire format onto the **same**
+        scene-drive bus the host uses, so camera moves, overlays and the
+        avatar mouth are driven by one path in both rooms
+      - `components/desk/DeskAudience.tsx` is the door: it appears only
+        for a `?room=` name the server would accept, and it never joins
+        on page load — Listen is the gesture that unlocks audio
+      - the host sees `DeskAudienceShare` under the line: the link plus
+        the room's own participant count ("3 listening"), not an estimate
+      - still owed: a live hearing test between two real browsers, and
+        stage/transcript lines on the wire
 - [ ] "The desk is open" presence: house lamp/live indicator on `/`,
       desk-hours schedule surfaced in the foyer
 - [ ] Session limits: max session length, observer cap, graceful close
@@ -205,6 +219,8 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | 2026-11-18 | Observer tokens are subscribe-only in the signed grant | Read-only enforced server-side; a tampered observer client still cannot publish |
 | 2026-11-18 | Missing role defaults to observer, host rooms never reused | Least privilege; a forwarded link cannot carry publish rights or revive a dead mic |
 | 2026-11-18 | Host broadcast behind `NEXT_PUBLIC_HETTY_BROADCAST` | It moves the line to WebRTC; that path has to be heard with a real mic before it is the default |
+| 2026-11-18 | Observers decode onto the local scene bus instead of a second render path | One bus drives both rooms, so the observer's scene cannot drift from the host's without a test noticing |
+| 2026-11-18 | Audience joins only on a press, never on load | Autoplay rules make a silent "listening" bar a lie; the press is both the browser's gesture and the listener's consent |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references

@@ -40,6 +40,10 @@ export type HostBroadcast = {
   attach: (conversation: unknown) => boolean;
   /** Publish one scene-state message. Never throws. */
   send: (state: BroadcastState) => void;
+  /** How many observers are in the house room right now. */
+  audience: () => number;
+  /** Subscribe to that count. Fires once immediately, then on every join/leave. */
+  observeAudience: (listener: (count: number) => void) => () => void;
   stop: () => Promise<void>;
 };
 
@@ -72,6 +76,16 @@ export async function openHostBroadcast(ticket: BroadcastTicket): Promise<HostBr
   let attachedToAgentRoom = false;
   let agentRoom: Room | null = null;
   let detach: (() => void) | null = null;
+
+  /* The house room holds observers and nothing else — the agent lives in its
+     own room — so remote participants are exactly the audience. */
+  const audienceListeners = new Set<(count: number) => void>();
+  const announceAudience = () => {
+    const count = out.remoteParticipants.size;
+    audienceListeners.forEach(listener => listener(count));
+  };
+  out.on(livekit.RoomEvent.ParticipantConnected, announceAudience);
+  out.on(livekit.RoomEvent.ParticipantDisconnected, announceAudience);
 
   const publishAudio = async (track: RemoteTrack | undefined): Promise<void> => {
     if (!track || track.kind !== 'audio') return;
@@ -136,8 +150,21 @@ export async function openHostBroadcast(ticket: BroadcastTicket): Promise<HostBr
     detach?.();
     detach = null;
     agentRoom = null;
+    audienceListeners.clear();
     try { await out.disconnect(); } catch { /* the call is over; the room may already be gone */ }
   };
 
-  return { room: ticket.room, attached: () => attachedToAgentRoom, attach, send, stop };
+  return {
+    room: ticket.room,
+    attached: () => attachedToAgentRoom,
+    attach,
+    send,
+    audience: () => out.remoteParticipants.size,
+    observeAudience: (listener: (count: number) => void) => {
+      audienceListeners.add(listener);
+      listener(out.remoteParticipants.size);
+      return () => { audienceListeners.delete(listener); };
+    },
+    stop,
+  };
 }

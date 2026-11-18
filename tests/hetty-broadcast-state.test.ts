@@ -5,8 +5,10 @@ import {
   broadcastStateFor,
   decodeBroadcastState,
   encodeBroadcastState,
+  sceneDriveFor,
   type BroadcastState,
 } from '../lib/hetty/broadcast-state';
+import type { SceneDriveEvent } from '../lib/desk/scene-drive';
 
 function roundTrip(state: BroadcastState): BroadcastState | null {
   return decodeBroadcastState(encodeBroadcastState(state));
@@ -118,5 +120,39 @@ describe('broadcast state wire format', () => {
 
   it('refuses an unknown end reason', () => {
     assert.equal(decodeBroadcastState(raw({ v: 1, t: 'end', reason: 'hung-up' })), null);
+  });
+});
+
+describe('sceneDriveFor', () => {
+  it('round-trips every scene event the wire carries', () => {
+    const events: SceneDriveEvent[] = [
+      { type: 'view', view: 'ledger' },
+      { type: 'tour', progress: 0.5 },
+      { type: 'tour', progress: null },
+      { type: 'premium', focus: true },
+      { type: 'highlight', symbol: 'nvda' },
+      { type: 'highlight', symbol: null },
+      { type: 'speech', eventId: 4, chars: ['h', 'i'], charStartsMs: [0, 90], charDurationsMs: [90, 90] },
+      { type: 'speech-activity', level: 0.3 },
+      { type: 'speech-end', reason: 'idle' },
+    ];
+    for (const event of events) {
+      const state = broadcastStateFor(event);
+      assert.ok(state, `${event.type} should be broadcastable`);
+      assert.deepEqual(sceneDriveFor(state), event, `${event.type} should survive the round trip`);
+    }
+  });
+
+  it('survives encode → decode → drive, which is the observer path', () => {
+    const original: SceneDriveEvent = { type: 'speech', eventId: 9, chars: ['y', 'o'], charStartsMs: [10, 80], charDurationsMs: [70, 70] };
+    const wire = encodeBroadcastState(broadcastStateFor(original) as BroadcastState);
+    const driven = decodeBroadcastState(wire);
+    assert.ok(driven);
+    assert.deepEqual(sceneDriveFor(driven), original);
+  });
+
+  it('returns null rather than guessing at an unknown message', () => {
+    const unknown = { v: 1, t: 'nonsense' } as unknown as BroadcastState;
+    assert.equal(sceneDriveFor(unknown), null);
   });
 });

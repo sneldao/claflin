@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { busyResponse, clientKeyFromRequest, keyedBudget, requestBudget } from '@/lib/trading/http';
 import { accountFromRequest } from '@/lib/auth';
+import { isLivekitRoomName, livekitRoomName } from '@/lib/hetty/room-name';
 import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -50,16 +51,10 @@ const observerInstanceBudget = requestBudget(240);
 const observerAnonIpBudget = keyedBudget(12);
 const observerUserBudget = keyedBudget(20);
 
-const ROOM_PATTERN = /^hetty-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-/** Room names are single-use per ring — one room per broadcast. */
-export function livekitRoomName(): string {
-  return `hetty-${crypto.randomUUID()}`;
-}
-
-export function isLivekitRoomName(value: string): boolean {
-  return ROOM_PATTERN.test(value);
-}
+/* Room names live in lib/hetty/room-name.ts so the audience client applies
+   exactly the same check the server does. Re-exported here because this
+   route is where the pattern is enforced and where the tests look. */
+export { livekitRoomName, isLivekitRoomName } from '@/lib/hetty/room-name';
 
 function base64url(input: Buffer): string {
   return input.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

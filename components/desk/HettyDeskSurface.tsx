@@ -29,6 +29,7 @@ import { carriedIntentNote } from '@/lib/desk/carried-note';
 import { projectHettyToRoom } from '@/lib/room-view-projection';
 import { useSceneDriveOverlay } from './HouseScene';
 import { ScenePremiumPanel } from './SceneDriveOverlays';
+import { DeskAudience } from './DeskAudience';
 import { TradeTicket } from './TradeTicket';
 import { PaperLedger } from './PaperLedger';
 import { DeskBoard } from './DeskBoard';
@@ -389,6 +390,7 @@ export function HettyDeskSurface({ desk }: { desk: Desk }) {
 
   const work = (
     <>
+      <DeskAudience />
       <ModeStamp
         live={liveMode}
         presentation={presentation}

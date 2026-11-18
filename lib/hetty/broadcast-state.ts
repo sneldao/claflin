@@ -94,6 +94,39 @@ export function broadcastStateFor(event: SceneDriveEvent): BroadcastState | null
   }
 }
 
+/**
+ * The inverse of {@link broadcastStateFor}: turn a decoded message back into
+ * a scene-drive event. This is what makes an observer's room the same room —
+ * the local scene subscribes to one bus, and it does not know or care whether
+ * an event came from the broker's own callbacks or from the wire.
+ */
+export function sceneDriveFor(state: BroadcastState): SceneDriveEvent | null {
+  switch (state.t) {
+    case 'view':
+      return { type: 'view', view: state.view };
+    case 'tour':
+      return { type: 'tour', progress: state.progress };
+    case 'premium':
+      return { type: 'premium', focus: state.focus };
+    case 'highlight':
+      return { type: 'highlight', symbol: state.symbol };
+    case 'speech':
+      return {
+        type: 'speech',
+        eventId: state.eventId,
+        chars: state.chars,
+        charStartsMs: state.starts,
+        charDurationsMs: state.durations,
+      };
+    case 'activity':
+      return { type: 'speech-activity', level: state.level };
+    case 'end':
+      return { type: 'speech-end', reason: state.reason };
+    default:
+      return null;
+  }
+}
+
 /** Encoded as a plain ArrayBuffer-backed view: LiveKit's data publish takes
  *  `Uint8Array<ArrayBuffer>`, and a shared-buffer view does not qualify. */
 export function encodeBroadcastState(state: BroadcastState): Uint8Array<ArrayBuffer> {
