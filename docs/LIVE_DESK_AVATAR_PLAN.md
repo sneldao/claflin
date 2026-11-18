@@ -1,8 +1,9 @@
 # Live Desk Avatar Plan — Stocks Maxxing
 
-> **Status:** Spike S1 resolved (2026-11-17) — see findings below.
-> Building Phase A next. This doc tracks the experiment;
-> checkboxes are the source of truth for progress.
+> **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B in progress —
+> the LiveKit token route is minted and tested, host publish next.
+> This doc tracks the experiment; checkboxes are the source of truth for
+> progress.
 > Phases A–C here are sprint-local to this experiment (unrelated to the
 > desk-slip stages in [DESK_SLIPS.md](DESK_SLIPS.md) or Halley's slip UX phases).
 
@@ -116,8 +117,16 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 
 - [ ] LiveKit Cloud account + room model (ephemeral rooms, pay per
       participant-minute)
-- [ ] `app/api/desk/hetty/broadcast/token` — issue observer/publisher
-      tokens, mirroring the existing `session` routes (keys server-side)
+- [x] `app/api/hetty/livekit-token` — issue observer/publisher tokens,
+      mirroring the existing `session` routes (keys server-side)
+      - `{ role: "host" }` → fresh `hetty-<uuid>` room, publish + data
+      - `{ role: "observer", room }` → that room, **subscribe-only in the
+        signed grant** (a modified observer page still can't publish)
+      - missing role is an observer; an unknown role is 400, never publish
+      - host rooms are always freshly minted, so a stale link can't be
+        revived into a live microphone
+      - awaits `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET`;
+        documented in `.env.local.example`, 503 while unset
 - [ ] Host mode: start ConvAI with `connectionType: "webrtc"`, reach
       `connection.getRoom()`, republish the agent's
       `RemoteAudioTrack.mediaStreamTrack` into our LiveKit room +
@@ -178,6 +187,8 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | --- | --- | --- |
 | 2026-11-17 | VRM in-scene over photoreal API avatar | Drives the scene, on-brand, no per-minute cost or session caps |
 | 2026-11-17 | LiveKit Cloud state-sync over video fan-out | No media servers; observers render locally; ephemeral rooms |
+| 2026-11-18 | Observer tokens are subscribe-only in the signed grant | Read-only enforced server-side; a tampered observer client still cannot publish |
+| 2026-11-18 | Missing role defaults to observer, host rooms never reused | Least privilege; a forwarded link cannot carry publish rights or revive a dead mic |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references
