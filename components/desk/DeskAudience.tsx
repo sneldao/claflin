@@ -5,6 +5,7 @@ import { fetchJson } from '@/lib/api-client';
 import { HETTY_BROADCAST_ENABLED } from '@/lib/hetty/broadcast-flags';
 import { joinObservedRoom, type DeskObserver } from '@/lib/hetty/observe';
 import { audienceLinkFor, isLivekitRoomName } from '@/lib/hetty/room-name';
+import { onSceneDrive } from '@/lib/desk/scene-drive';
 import styles from './DeskAudience.module.css';
 
 type Phase = 'idle' | 'connecting' | 'live' | 'blocked' | 'ended' | 'failed';
@@ -22,6 +23,9 @@ export function DeskAudience() {
   const [room, setRoom] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [note, setNote] = useState<string | null>(null);
+  const [line, setLine] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [count, setCount] = useState(0);
   const observerRef = useRef<DeskObserver | null>(null);
 
   useEffect(() => {
@@ -30,12 +34,24 @@ export function DeskAudience() {
     setRoom(requested && isLivekitRoomName(requested) ? requested : null);
   }, []);
 
+  /* The door reads the same bus the scene does: the broker's line and her
+     cadence arrive on it whether this browser is the host or a listener.
+     A muted or blocked listener still gets the words. */
+  useEffect(() => onSceneDrive(event => {
+    if (event.type === 'line') setLine(event.text);
+    else if (event.type === 'speech' || event.type === 'speech-activity') setSpeaking(true);
+    else if (event.type === 'speech-end') setSpeaking(false);
+  }), []);
+
   const leave = useCallback(() => {
     const observer = observerRef.current;
     observerRef.current = null;
     if (observer) void observer.stop();
     setPhase('idle');
     setNote(null);
+    setLine(null);
+    setSpeaking(false);
+    setCount(0);
   }, []);
 
   /* A page that unmounts mid-listen must not leave audio playing. */
@@ -72,10 +88,15 @@ export function DeskAudience() {
         observerRef.current = null;
         void observer.stop();
         setPhase('ended');
+        setSpeaking(false);
+        setCount(0);
         setNote(reason === 'closed'
           ? 'The host has closed the desk.'
           : 'The line went quiet — the broadcast may be over.');
       });
+      /* The room's own count, live — a listener sees the audience they
+         joined, not a guess at one. Fires once immediately. */
+      observer.onAudience(setCount);
       const audible = observer.audible();
       setPhase(audible ? 'live' : 'blocked');
       setNote(audible ? null : 'Your browser is blocking the sound. Press Listen again to allow it.');
@@ -88,7 +109,7 @@ export function DeskAudience() {
   if (!room) return null;
 
   const copy = phase === 'live'
-    ? 'Listening to the desk.'
+    ? `Listening to the desk.${count > 1 ? ` ${count} listening.` : ''}`
     : phase === 'connecting'
       ? 'Opening the room…'
       : phase === 'blocked'
@@ -105,12 +126,15 @@ export function DeskAudience() {
     : { label: phase === 'blocked' ? 'Listen again' : 'Listen', run: () => void listen() };
 
   return (
-    <div className={styles.audience} data-live={phase === 'live' ? 'true' : 'false'} role="status" aria-live="polite">
+    <div className={styles.audience} data-live={phase === 'live' ? 'true' : 'false'} data-speaking={speaking ? 'true' : 'false'} role="status" aria-live="polite">
       <span className={styles.lamp} aria-hidden="true" />
       <p className={styles.copy}>{copy}</p>
       <button type="button" className={styles.action} onClick={action.run} disabled={phase === 'connecting'}>
         {action.label}
       </button>
+      {(phase === 'live' || phase === 'blocked') && line && (
+        <p className={styles.caption}><span className={styles.captionSpeaker}>Hetty</span>{line}</p>
+      )}
       {note && <p className={styles.note}>{note}</p>}
     </div>
   );

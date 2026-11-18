@@ -21,6 +21,7 @@
 
 import { emitSceneDrive } from '@/lib/desk/scene-drive';
 import { BROADCAST_TOPIC, decodeBroadcastState, sceneDriveFor } from './broadcast-state';
+import { HOST_IDENTITY_PREFIX } from './room-name';
 
 export type ObserverTicket = { url: string; token: string; room: string };
 
@@ -49,6 +50,15 @@ export type DeskObserver = {
    * instead of leaving a live label over silence.
    */
   onEnded: (listener: (reason: ObserverEndReason) => void) => () => void;
+  /**
+   * How many people are listening right now — this observer included. The
+   * room's own remote count happens to equal it: the remotes are the host
+   * plus the other listeners, so swap host for self and the number is the
+   * same the host sees.
+   */
+  audience: () => number;
+  /** Subscribe to that count. Fires once immediately, then on every join/leave. */
+  onAudience: (listener: (count: number) => void) => () => void;
   stop: () => Promise<void>;
 };
 
@@ -119,14 +129,25 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
     } catch { /* the track may already be gone */ }
   };
 
+  /* The audience count is the room's own bookkeeping, not an estimate:
+     remotes are the host plus the other listeners — host for self, same sum. */
+  const audienceListeners = new Set<(count: number) => void>();
+  const announceAudience = () => {
+    const count = room.remoteParticipants.size;
+    audienceListeners.forEach(listener => listener(count));
+  };
+
   room.on(livekit.RoomEvent.DataReceived, onData);
   room.on(livekit.RoomEvent.TrackSubscribed, onSubscribed);
   room.on(livekit.RoomEvent.TrackUnsubscribed, onUnsubscribed);
-  /* The host is the room's only publisher; when the last remote
-     participant leaves, the broadcast is over whether or not a 'closed'
-     message ever made it out. */
-  room.on(livekit.RoomEvent.ParticipantDisconnected, () => {
-    if (room.remoteParticipants.size === 0) finish('dropped');
+  room.on(livekit.RoomEvent.ParticipantConnected, announceAudience);
+  /* The show is the host, not the room: a dropped host ends it even while
+     listeners are still seated, and an emptied room does too. */
+  room.on(livekit.RoomEvent.ParticipantDisconnected, (participant: { identity?: string }) => {
+    announceAudience();
+    if (participant?.identity?.startsWith(HOST_IDENTITY_PREFIX) || room.remoteParticipants.size === 0) {
+      finish('dropped');
+    }
   });
   room.on(livekit.RoomEvent.Disconnected, () => {
     detachAll();
@@ -161,9 +182,16 @@ export async function joinObservedRoom(ticket: ObserverTicket): Promise<DeskObse
       endListeners.add(listener);
       return () => { endListeners.delete(listener); };
     },
+    audience: () => room.remoteParticipants.size,
+    onAudience: (listener: (count: number) => void) => {
+      audienceListeners.add(listener);
+      listener(room.remoteParticipants.size);
+      return () => { audienceListeners.delete(listener); };
+    },
     stop: async () => {
       detachAll();
       endListeners.clear();
+      audienceListeners.clear();
       for (const event of [livekit.RoomEvent.DataReceived, livekit.RoomEvent.TrackSubscribed, livekit.RoomEvent.TrackUnsubscribed]) {
         try { room.off(event, event === livekit.RoomEvent.DataReceived ? onData : event === livekit.RoomEvent.TrackSubscribed ? onSubscribed : onUnsubscribed); } catch { /* already gone */ }
       }

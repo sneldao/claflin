@@ -21,6 +21,8 @@ export const BROADCAST_VERSION = 1;
 /** Alignment chunks are the largest message; keep well under LiveKit's cap. */
 const SPEECH_CHARS_MAX = 240;
 const SYMBOL_MAX = 16;
+/** A spoken line, bounded the same way the host's own captions are. */
+const LINE_TEXT_MAX = 600;
 const VIEWS: readonly NightDeskView[] = ['desk', 'evidence', 'review', 'ledger'];
 /* 'closed' is the host saying so, as opposed to a line that dropped. It is
    only ever sent by the host's own close path, never inferred by an observer. */
@@ -42,7 +44,10 @@ export type BroadcastState =
       durations: number[];
     }
   | { v: 1; t: 'activity'; level: number }
-  | { v: 1; t: 'end'; reason: BroadcastEndReason };
+  | { v: 1; t: 'end'; reason: BroadcastEndReason }
+  /* One of the broker's spoken lines. There is no role field: only agent
+     speech crosses the wire at all, so the caller's words cannot leak. */
+  | { v: 1; t: 'line'; text: string };
 
 function clamp01(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
@@ -91,6 +96,10 @@ export function broadcastStateFor(event: SceneDriveEvent): BroadcastState | null
     }
     case 'speech-end':
       return { v: BROADCAST_VERSION, t: 'end', reason: event.reason };
+    case 'line': {
+      const text = event.text.slice(0, LINE_TEXT_MAX);
+      return text.length === 0 ? null : { v: BROADCAST_VERSION, t: 'line', text };
+    }
     default:
       return null;
   }
@@ -124,6 +133,8 @@ export function sceneDriveFor(state: BroadcastState): SceneDriveEvent | null {
       return { type: 'speech-activity', level: state.level };
     case 'end':
       return { type: 'speech-end', reason: state.reason === 'closed' ? 'disconnected' : state.reason };
+    case 'line':
+      return { type: 'line', text: state.text };
     default:
       return null;
   }
@@ -214,6 +225,11 @@ export function decodeBroadcastState(data: Uint8Array): BroadcastState | null {
       const reason = message.reason;
       if (typeof reason !== 'string' || !(END_REASONS as readonly string[]).includes(reason)) return null;
       return { v: BROADCAST_VERSION, t: 'end', reason: reason as BroadcastEndReason };
+    }
+    case 'line': {
+      const text = message.text;
+      if (typeof text !== 'string' || text.length === 0 || text.length > LINE_TEXT_MAX) return null;
+      return { v: BROADCAST_VERSION, t: 'line', text };
     }
     default:
       return null;

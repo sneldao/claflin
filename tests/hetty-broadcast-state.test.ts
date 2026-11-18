@@ -72,6 +72,17 @@ describe('broadcastStateFor', () => {
       assert.deepEqual(broadcastStateFor({ type: 'speech-end', reason }), { v: 1, t: 'end', reason });
     }
   });
+
+  it('carries the broker\u2019s line bounded like the host\u2019s own captions', () => {
+    assert.deepEqual(broadcastStateFor({ type: 'line', text: 'the tape is thin today' }), {
+      v: 1, t: 'line', text: 'the tape is thin today',
+    });
+    const long = broadcastStateFor({ type: 'line', text: 'x'.repeat(900) });
+    assert.equal(long?.t, 'line');
+    assert.equal((long as { text: string }).text.length, 600);
+    /* A blank line is not worth the wire. */
+    assert.equal(broadcastStateFor({ type: 'line', text: '' }), null);
+  });
 });
 
 describe('broadcast state wire format', () => {
@@ -85,6 +96,7 @@ describe('broadcast state wire format', () => {
       { v: 1, t: 'speech', eventId: 9, chars: ['h', 'i'], starts: [0, 70], durations: [70, 70] },
       { v: 1, t: 'activity', level: 0.5 },
       { v: 1, t: 'end', reason: 'interrupted' },
+      { v: 1, t: 'line', text: 'the tape is thin today' },
     ];
     for (const state of states) assert.deepEqual(roundTrip(state), state);
   });
@@ -126,6 +138,13 @@ describe('broadcast state wire format', () => {
     const closed: BroadcastState = { v: 1, t: 'end', reason: 'closed' };
     assert.deepEqual(roundTrip(closed), closed);
   });
+
+  it('refuses a line that is empty, oversized, or not text', () => {
+    assert.equal(decodeBroadcastState(raw({ v: 1, t: 'line', text: '' })), null);
+    assert.equal(decodeBroadcastState(raw({ v: 1, t: 'line', text: 'x'.repeat(601) })), null);
+    assert.equal(decodeBroadcastState(raw({ v: 1, t: 'line', text: 42 })), null);
+    assert.equal(decodeBroadcastState(raw({ v: 1, t: 'line' })), null);
+  });
 });
 
 describe('sceneDriveFor', () => {
@@ -164,5 +183,10 @@ describe('sceneDriveFor', () => {
   it('drives "closed" as a disconnect on the scene bus — the mouth shuts either way', () => {
     const state: BroadcastState = { v: 1, t: 'end', reason: 'closed' };
     assert.deepEqual(sceneDriveFor(state), { type: 'speech-end', reason: 'disconnected' });
+  });
+
+  it('drives a line back onto the bus word for word', () => {
+    const state: BroadcastState = { v: 1, t: 'line', text: 'the tape is thin today' };
+    assert.deepEqual(sceneDriveFor(state), { type: 'line', text: 'the tape is thin today' });
   });
 });

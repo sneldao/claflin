@@ -1,9 +1,12 @@
 # Live Desk Avatar Plan — Stocks Maxxing
 
 > **Status:** Phase A landed (`72552fc`, 2026-11-17); Phase B engineering is
-> complete — token minting, host publish, observer mode, presence, and
-> session caps are all in. Broadcast is flag-gated and has not yet been
-> heard between two real browsers.
+> complete — token minting, host publish, observer mode, presence, session
+> caps, and the broker's line on the wire. The ElevenLabs adapter chain is
+> verified live against production (session token mints, `getRoom()` returns
+> the agent's room, a live agent audio track exists). Still unproven: the
+> republish into our room and a listener hearing it — that needs LiveKit
+> credentials and two browsers.
 > This doc tracks the experiment; checkboxes are the source of truth for
 > progress.
 > Phases A–C here are sprint-local to this experiment (unrelated to the
@@ -146,8 +149,12 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         format; observers drop unknown versions rather than guess
       - behind `NEXT_PUBLIC_HETTY_BROADCAST=true`; with the flag off the
         line is byte-for-byte the old WebSocket path
-      - still owed: stage and transcript lines on the wire, and a live
-        hearing test — nothing here is verified with a real microphone yet
+      - `{v:1,t:'line'}` carries the broker's spoken line, agent speech
+        only — no role field exists, so the caller's words structurally
+        cannot cross; bounded at 600 chars, oversized/empty refused
+      - still owed: a live hearing test — the agent-room side of the
+        adapter is verified live (token, `getRoom()`, a live subscribed
+        agent audio track); the republish into our room is not yet heard
 - [x] Observer mode: join room, subscribe audio, apply data-channel
       state to a locally-rendered scene; read-only — no client tools
       - `lib/hetty/observe.ts` joins with the subscribe-only token and
@@ -161,8 +168,15 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
         on page load — Listen is the gesture that unlocks audio
       - the host sees `DeskAudienceShare` under the line: the link plus
         the room's own participant count ("3 listening"), not an estimate
+      - the door reads the same scene-drive bus: the broker's line lands
+        as a caption strip (readable muted or autoplay-blocked), the live
+        listener count sits in the copy, and the lamp pulses while she
+        speaks — driven by the wire events, not the audio element
+      - a host leaving an occupied room ends the show: the door finishes
+        on the `hetty-host-*` identity departing, so nobody sits "live"
+        in a room whose broker already left
       - still owed: a live hearing test between two real browsers, and
-        stage/transcript lines on the wire
+        a last-utterance catch-up for listeners who join mid-sentence
 - [x] "The desk is open" presence: house lamp/live indicator on `/`,
       desk-hours schedule surfaced in the foyer
       - `GET /api/hetty/presence` answers from LiveKit's own admin
@@ -252,6 +266,8 @@ house, $0/min, and can *walk to the evidence board* — a video head can't.
 | 2026-11-19 | One broadcast at a time, refused at the mint | The desk is one voice; a second host ring gets `session_active`, not a shared room |
 | 2026-11-19 | The cap ends the call, not just the room | `HETTY_BROADCAST_MAX_MS` runs the same deliberate end as the button, so listeners hear 'closed' |
 | 2026-11-19 | Admin client over plain HTTP/Twirp, hand-minted grants | The token route already signs JWTs by hand; the room service needs the same shape, not a second SDK |
+| 2026-11-20 | The broker's line rides the wire; the caller's never does | `{t:'line'}` carries agent speech only — no role field, so caller words structurally cannot leak; a listener reads the desk muted or sound-blocked |
+| 2026-11-20 | Host departure ends the show, not the last listener leaving | Presence keys on `hetty-host-*`; a room of orphaned listeners is a stale link, not a broadcast |
 | 2026-11-17 | Coin launch gated on avatar | The differentiator is the broadcast persona; launch without it is just another Feel coin |
 
 ## Key references

@@ -531,6 +531,9 @@ export function HettyCallSession({ desk, liveMode, take = null, compactPlate = f
         if (text.length <= 300) onUserSpoken?.(text);
       } else {
         if (text.length <= 600) onAgentSpoken?.(text);
+        /* The broker's words ride the same bus as her mouth, so a listener
+           can read the desk — the caller's side never leaves the room. */
+        emitSceneDrive({ type: 'line', text: spokenText(text).slice(0, 600) });
       }
     },
     onConversationMetadata: (m: { conversation_id?: string }) => { convIdRef.current = m?.conversation_id ?? null; },

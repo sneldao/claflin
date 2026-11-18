@@ -11,6 +11,14 @@
 
 const ROOM_PATTERN = /^hetty-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/**
+ * The identity prefix the token route writes into every host grant. Both
+ * sides read it: the admin surface uses it to tell the broadcaster from
+ * the crowd, and an observer's room uses it to know the show is over when
+ * the host leaves — even while listeners remain.
+ */
+export const HOST_IDENTITY_PREFIX = 'hetty-host-';
+
 /** A fresh room per ring — a broadcast link is never reused. */
 export function livekitRoomName(): string {
   return `hetty-${crypto.randomUUID()}`;

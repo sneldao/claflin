@@ -13,14 +13,14 @@
  */
 
 import { createHmac } from 'node:crypto';
-import { isLivekitRoomName } from './room-name';
+import { HOST_IDENTITY_PREFIX, isLivekitRoomName } from './room-name';
 
-/**
- * The identity prefixes the token route writes into every grant. An admin
- * listing uses them to tell the broadcaster from the crowd — the only
- * definition of "the desk is live" that survives zombie rooms.
- */
-export const HOST_IDENTITY_PREFIX = 'hetty-host-';
+/* HOST_IDENTITY_PREFIX lives in room-name.ts — the observer's client reads
+   it too, and that module is client-safe (this one is not). Re-exported so
+   the token route and the tests keep one import site. */
+export { HOST_IDENTITY_PREFIX } from './room-name';
+
+/** The identity prefix the token route writes into every observer grant. */
 export const OBSERVER_IDENTITY_PREFIX = 'hetty-observer-';
 
 /** LiveKit serves HTTP where it serves websockets — same origin, other scheme. */

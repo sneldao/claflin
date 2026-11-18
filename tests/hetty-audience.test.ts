@@ -72,6 +72,32 @@ describe('audience mode', () => {
     assert.match(door, /The broadcast is over/);
   });
 
+  it('ends the show when the host leaves, even while listeners remain', () => {
+    /* A room with no host is a stale link, not a broadcast: the door must
+       not sit live in it. The identity prefix is the single source both
+       sides read. */
+    assert.match(observe, /HOST_IDENTITY_PREFIX/);
+    assert.match(source('lib/hetty/room-name.ts'), /export const HOST_IDENTITY_PREFIX/);
+  });
+
+  it('reads the broker\u2019s line and the room\u2019s own count', () => {
+    const door = source('components/desk/DeskAudience.tsx');
+    /* The caption strip subscribes to the same bus the scene drives on —
+       words arrive whether this browser hosts or listens. */
+    assert.match(door, /onSceneDrive/);
+    assert.match(door, /event\.type === 'line'/);
+    assert.match(door, /styles\.caption/);
+    /* The count is the room's bookkeeping, live — not an estimate. */
+    assert.match(door, /onAudience/);
+    assert.match(observe, /remoteParticipants\.size/);
+    assert.match(observe, /RoomEvent\.ParticipantConnected/);
+    /* The host puts only the broker's side on the bus — the caller's
+       words never leave the room. */
+    const session = source('components/desk/HettyCallSession.tsx');
+    assert.match(session, /type: 'line'/);
+    assert.doesNotMatch(session, /user\) \{\s*[^}]*type: 'line'/, 'caller words stay off the wire');
+  });
+
   it('never asks the token route for host rights or an unnamed room', () => {
     const door = source('components/desk/DeskAudience.tsx');
     assert.match(door, /role: 'observer', room/);

@@ -48,6 +48,46 @@
   color: var(--muted);
 }
 
+/* The broker's latest line — a listener who cannot hear can still read
+   the desk. Speaker name in the house mono, the words in the room's ink. */
+.caption {
+  flex-basis: 100%;
+  margin: 0.1rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink);
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.captionSpeaker {
+  flex: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+}
+
+/* The lamp breathes while the broker is actually speaking — driven by the
+   same wire events that move her mouth. */
+.audience[data-speaking='true'] .lamp {
+  animation: audienceLampPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes audienceLampPulse {
+  0%, 100% { box-shadow: 0 0 4px var(--brass); }
+  50% { box-shadow: 0 0 11px var(--brass); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audience[data-speaking='true'] .lamp {
+    animation: none;
+    box-shadow: 0 0 8px var(--brass);
+  }
+}
+
 .action {
   min-height: 36px;
   margin-left: auto;
