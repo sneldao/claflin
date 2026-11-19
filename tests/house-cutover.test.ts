@@ -271,7 +271,8 @@ describe('one canonical house', () => {
   });
   it('never surfaces a raw parse error from the ring button or the tape', () => {
     const call = source('components/desk/HettyCallSession.tsx');
-    assert.match(call, /fetchJson<\{ signedUrl\?: string \}>\('\/api\/hetty\/session'/);
+    assert.match(call, /fetchJson<\{ signedUrl\?: string; conversationToken\?: string \}>\(endpoint/);
+    assert.match(call, /'\/api\/hetty\/session\?transport=webrtc' : '\/api\/hetty\/session'/);
     assert.doesNotMatch(call, /await response\.json\(\)/);
     const marksHook = source('lib/trading/useReferenceMarks.ts');
     assert.match(marksHook, /fetchJson<MarksResult>\(`\/api\/desk\/\$\{deskId\}\/marks`\)/);

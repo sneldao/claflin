@@ -27,7 +27,10 @@ export type SceneDriveEvent =
     }
   /** Aggregate mouth drive when the provider gives no alignment. */
   | { type: 'speech-activity'; level: number }
-  | { type: 'speech-end'; reason: 'interrupted' | 'disconnected' | 'idle' };
+  | { type: 'speech-end'; reason: 'interrupted' | 'disconnected' | 'idle' }
+  /** The broker's spoken line, for listeners who read the room. Only agent
+     speech ever rides this — the caller's words stay in the room. */
+  | { type: 'line'; text: string };
 
 type Listener = (event: SceneDriveEvent) => void;
 
